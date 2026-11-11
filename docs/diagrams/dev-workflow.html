@@ -10,7 +10,7 @@
   href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@500;600;700&display=swap"
 />
 <style>
-  /* Layout concept: one whiteboard-style figure in two horizontal lanes, a short status note beneath. */
+  /* Layout concept: one whiteboard-style figure in two lanes, then a numbered walkthrough that matches it. */
   :root {
     --bg: #f2f5f6;
     --surface: #ffffff;
@@ -19,6 +19,7 @@
     --muted: #55656f;
     --line: #c4d0d6;
     --accent: #0a6c8a;
+    --on-accent: #ffffff;
     --ok: #1c7a4b;
     --ok-bg: #e0f2e8;
     --pending: #8a5a00;
@@ -37,6 +38,7 @@
       --muted: #93a4ae;
       --line: #2c3b44;
       --accent: #5cc4e0;
+      --on-accent: #0e1417;
       --ok: #5fd09a;
       --ok-bg: #153227;
       --pending: #e8b65c;
@@ -53,6 +55,7 @@
     --muted: #93a4ae;
     --line: #2c3b44;
     --accent: #5cc4e0;
+    --on-accent: #0e1417;
     --ok: #5fd09a;
     --ok-bg: #153227;
     --pending: #e8b65c;
@@ -66,7 +69,7 @@
     color: var(--ink);
     font-family: var(--font-ui);
     line-height: 1.5;
-    padding-block: 28px 48px;
+    padding-block: 28px 56px;
     padding-left: max(16px, env(safe-area-inset-left, 0px));
     padding-right: max(16px, env(safe-area-inset-right, 0px));
   }
@@ -74,7 +77,7 @@
     max-width: 1040px;
     margin-inline: auto;
     display: grid;
-    gap: 22px;
+    gap: 26px;
   }
   h1 {
     font-family: var(--font-head);
@@ -84,6 +87,12 @@
     line-height: 1.1;
     margin: 0;
     text-wrap: balance;
+  }
+  h2 {
+    font-family: var(--font-head);
+    font-size: 1.25rem;
+    margin: 0;
+    letter-spacing: -0.01em;
   }
   .lede {
     margin: 6px 0 0;
@@ -109,11 +118,13 @@
     height: auto;
     color: var(--accent);
   }
-  figcaption {
+  figcaption,
+  .hint {
     color: var(--muted);
     font-size: 0.9rem;
     max-width: 78ch;
     min-width: 0;
+    margin: 0;
   }
 
   /* diagram parts */
@@ -211,6 +222,154 @@
     stroke: var(--pending);
     stroke-dasharray: 4 3;
   }
+  .badge {
+    fill: var(--accent);
+  }
+  .badge-t {
+    font: 700 10.5px var(--font-head);
+    fill: var(--on-accent);
+  }
+  .hit {
+    cursor: pointer;
+  }
+  .hit:hover > .box,
+  .hit:hover > .group {
+    stroke-width: 2.5;
+  }
+  .hit:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  /* walkthrough */
+  .walk {
+    display: grid;
+    gap: 14px;
+  }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 14px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 16px 14px;
+    min-width: 0;
+    scroll-margin-top: 20px;
+  }
+  .card.wide {
+    grid-column: 1 / -1;
+  }
+  .card.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  .card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .num {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--on-accent);
+    font: 700 13px var(--font-head);
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+  .card h3 {
+    font-family: var(--font-head);
+    font-size: 1.05rem;
+    margin: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .tag {
+    font: 600 11px var(--font-ui);
+    padding: 2px 9px;
+    border-radius: 999px;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+  .tag.ok {
+    color: var(--ok);
+    background: var(--ok-bg);
+    border-color: var(--ok);
+  }
+  .tag.pending {
+    color: var(--pending);
+    background: var(--pending-bg);
+    border-color: var(--pending);
+  }
+  dl {
+    margin: 0;
+    display: grid;
+    gap: 8px;
+  }
+  dt {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  dd {
+    margin: 0;
+    font-size: 0.92rem;
+    min-width: 0;
+  }
+  dd code,
+  li code,
+  .hint code {
+    font-family: var(--font-mono);
+    font-size: 0.84em;
+    background: var(--lane);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  ol.ci {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    gap: 8px 22px;
+    counter-reset: ci;
+  }
+  ol.ci li {
+    counter-increment: ci;
+    padding-left: 30px;
+    position: relative;
+    font-size: 0.92rem;
+    min-width: 0;
+  }
+  ol.ci li::before {
+    content: counter(ci);
+    position: absolute;
+    left: 0;
+    top: 1px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    font: 600 11px var(--font-head);
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+  }
+  ol.ci li.fail::before {
+    border-color: var(--warn);
+    color: var(--warn);
+  }
+  ol.ci strong {
+    font-family: var(--font-head);
+  }
 
   /* status note */
   .status {
@@ -219,7 +378,6 @@
     gap: 14px 28px;
   }
   .status h2 {
-    font-family: var(--font-head);
     font-size: 0.95rem;
     margin: 0 0 6px;
     display: flex;
@@ -264,7 +422,8 @@
     <h1>SceneRoom Dev Flow</h1>
     <p class="lede">
       How one edit travels from Claude Code on your Mac to a green check on
-      GitHub, and what each part of the setup does along the way.
+      GitHub, and what each part of the setup does along the way. Click a
+      numbered box to jump to its explanation.
     </p>
   </header>
 
@@ -273,8 +432,8 @@
       <svg
         class="diagram"
         viewBox="0 0 980 632"
-        role="img"
-        aria-label="Edits made in Claude Code are formatted by a Prettier hook, checked locally with Turborepo, committed, pushed through GitHub Desktop, and then verified by a GitHub Actions workflow with eight steps. The hook, the skill and the second-PC setup are written but not yet confirmed."
+        role="group"
+        aria-label="Diagram. Edits made in Claude Code (1) are written to files (2), formatted by a Prettier hook (3), checked locally with Turborepo (4), committed and pushed through GitHub Desktop (5) to the GitHub repository (6), where a GitHub Actions workflow with eight steps verifies them (7). A second PC (8) pulls from the repository. Repo files (A) and a skill (B) support the process."
       >
         <defs>
           <marker
@@ -295,64 +454,139 @@
         <text class="lane-label" x="28" y="34">ON YOUR MAC</text>
 
         <!-- Step 1 -->
-        <rect class="box ok" x="28" y="48" width="150" height="100" rx="10" />
-        <text class="t-title" x="40" y="72">Claude Code</text>
-        <text class="t-sub" x="40" y="92">you ask, Claude works</text>
-        <text class="t-sub" x="40" y="107">in VS Code</text>
-        <rect class="pill-ok" x="40" y="118" width="64" height="18" rx="9" />
-        <text class="pt-ok" x="72" y="130.5" text-anchor="middle">working</text>
+        <g
+          class="hit"
+          data-card="c1"
+          tabindex="0"
+          role="button"
+          aria-label="1, Claude Code: show explanation"
+        >
+          <rect class="box ok" x="28" y="48" width="150" height="100" rx="10" />
+          <text class="t-title" x="40" y="72">Claude Code</text>
+          <text class="t-sub" x="40" y="92">you ask, Claude works</text>
+          <text class="t-sub" x="40" y="107">in VS Code</text>
+          <rect class="pill-ok" x="40" y="118" width="64" height="18" rx="9" />
+          <text class="pt-ok" x="72" y="130.5" text-anchor="middle">
+            working
+          </text>
+          <circle class="badge" cx="162" cy="64" r="9" />
+          <text class="badge-t" x="162" y="68" text-anchor="middle">1</text>
+        </g>
 
         <!-- Step 2 -->
-        <rect class="box ok" x="222" y="48" width="150" height="100" rx="10" />
-        <text class="t-title" x="234" y="72">Edit a file</text>
-        <text class="t-sub" x="234" y="92">Write / Edit tool</text>
-        <text class="t-sub" x="234" y="107">inside the project</text>
-        <rect class="pill-ok" x="234" y="118" width="64" height="18" rx="9" />
-        <text class="pt-ok" x="266" y="130.5" text-anchor="middle">
-          working
-        </text>
+        <g
+          class="hit"
+          data-card="c2"
+          tabindex="0"
+          role="button"
+          aria-label="2, Edit a file: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="222"
+            y="48"
+            width="150"
+            height="100"
+            rx="10"
+          />
+          <text class="t-title" x="234" y="72">Edit a file</text>
+          <text class="t-sub" x="234" y="92">Write / Edit tool</text>
+          <text class="t-sub" x="234" y="107">inside the project</text>
+          <rect class="pill-ok" x="234" y="118" width="64" height="18" rx="9" />
+          <text class="pt-ok" x="266" y="130.5" text-anchor="middle">
+            working
+          </text>
+          <circle class="badge" cx="356" cy="64" r="9" />
+          <text class="badge-t" x="356" y="68" text-anchor="middle">2</text>
+        </g>
 
         <!-- Step 3 -->
-        <rect
-          class="box pending"
-          x="416"
-          y="48"
-          width="150"
-          height="100"
-          rx="10"
-        />
-        <text class="t-title" x="428" y="72">Prettier hook</text>
-        <text class="t-sub" x="428" y="92">PostToolUse hook</text>
-        <text class="t-sub" x="428" y="107">matcher Write|Edit</text>
-        <rect
-          class="pill-pending"
-          x="428"
-          y="118"
-          width="126"
-          height="18"
-          rx="9"
-        />
-        <text class="pt-pending" x="491" y="130.5" text-anchor="middle">
-          needs /hooks reload
-        </text>
+        <g
+          class="hit"
+          data-card="c3"
+          tabindex="0"
+          role="button"
+          aria-label="3, Prettier hook: show explanation"
+        >
+          <rect
+            class="box pending"
+            x="416"
+            y="48"
+            width="150"
+            height="100"
+            rx="10"
+          />
+          <text class="t-title" x="428" y="72">Prettier hook</text>
+          <text class="t-sub" x="428" y="92">PostToolUse hook</text>
+          <text class="t-sub" x="428" y="107">matcher Write|Edit</text>
+          <rect
+            class="pill-pending"
+            x="428"
+            y="118"
+            width="126"
+            height="18"
+            rx="9"
+          />
+          <text class="pt-pending" x="491" y="130.5" text-anchor="middle">
+            needs /hooks reload
+          </text>
+          <circle class="badge" cx="550" cy="64" r="9" />
+          <text class="badge-t" x="550" y="68" text-anchor="middle">3</text>
+        </g>
 
         <!-- Step 4 -->
-        <rect class="box ok" x="610" y="48" width="150" height="100" rx="10" />
-        <text class="t-title" x="622" y="72">Local checks</text>
-        <text class="t-sub" x="622" y="92">pnpm → Turborepo</text>
-        <text class="t-sub" x="622" y="107">lint · types · build</text>
-        <rect class="pill-ok" x="622" y="118" width="58" height="18" rx="9" />
-        <text class="pt-ok" x="651" y="130.5" text-anchor="middle">passes</text>
+        <g
+          class="hit"
+          data-card="c4"
+          tabindex="0"
+          role="button"
+          aria-label="4, Local checks: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="610"
+            y="48"
+            width="150"
+            height="100"
+            rx="10"
+          />
+          <text class="t-title" x="622" y="72">Local checks</text>
+          <text class="t-sub" x="622" y="92">pnpm → Turborepo</text>
+          <text class="t-sub" x="622" y="107">lint · types · build</text>
+          <rect class="pill-ok" x="622" y="118" width="58" height="18" rx="9" />
+          <text class="pt-ok" x="651" y="130.5" text-anchor="middle">
+            passes
+          </text>
+          <circle class="badge" cx="744" cy="64" r="9" />
+          <text class="badge-t" x="744" y="68" text-anchor="middle">4</text>
+        </g>
 
         <!-- Step 5 -->
-        <rect class="box ok" x="804" y="48" width="150" height="100" rx="10" />
-        <text class="t-title" x="816" y="72">Commit + push</text>
-        <text class="t-sub" x="816" y="92">git commit locally</text>
-        <text class="t-sub" x="816" y="107">push: GitHub Desktop</text>
-        <rect class="pill-ok" x="816" y="118" width="64" height="18" rx="9" />
-        <text class="pt-ok" x="848" y="130.5" text-anchor="middle">
-          working
-        </text>
+        <g
+          class="hit"
+          data-card="c5"
+          tabindex="0"
+          role="button"
+          aria-label="5, Commit and push: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="804"
+            y="48"
+            width="150"
+            height="100"
+            rx="10"
+          />
+          <text class="t-title" x="816" y="72">Commit + push</text>
+          <text class="t-sub" x="816" y="92">git commit locally</text>
+          <text class="t-sub" x="816" y="107">push: GitHub Desktop</text>
+          <rect class="pill-ok" x="816" y="118" width="64" height="18" rx="9" />
+          <text class="pt-ok" x="848" y="130.5" text-anchor="middle">
+            working
+          </text>
+          <circle class="badge" cx="938" cy="64" r="9" />
+          <text class="badge-t" x="938" y="68" text-anchor="middle">5</text>
+        </g>
 
         <!-- Row arrows -->
         <line
@@ -400,40 +634,60 @@
           pass
         </text>
 
-        <!-- Repo docs group -->
-        <rect class="group" x="28" y="184" width="560" height="116" rx="10" />
-        <text class="lane-label" x="44" y="204">
-          IN THE REPO, READ AT SESSION START
-        </text>
+        <!-- Repo docs group (A) -->
+        <g
+          class="hit"
+          data-card="cA"
+          tabindex="0"
+          role="button"
+          aria-label="A, repo files Claude reads: show explanation"
+        >
+          <rect class="group" x="28" y="184" width="560" height="116" rx="10" />
+          <text class="lane-label" x="44" y="204">
+            IN THE REPO, READ AT SESSION START
+          </text>
+          <rect class="chip" x="44" y="216" width="92" height="26" rx="6" />
+          <text class="t-mono" x="90" y="233" text-anchor="middle">
+            CLAUDE.md
+          </text>
+          <rect class="chip" x="144" y="216" width="110" height="26" rx="6" />
+          <text class="t-mono" x="199" y="233" text-anchor="middle">
+            docs/PLAN.md
+          </text>
+          <rect class="chip" x="262" y="216" width="140" height="26" rx="6" />
+          <text class="t-mono" x="332" y="233" text-anchor="middle">
+            docs/DECISIONS.md
+          </text>
+          <rect class="chip" x="410" y="216" width="158" height="26" rx="6" />
+          <text class="t-mono" x="489" y="233" text-anchor="middle">
+            docs/WHAT-WE-USED.md
+          </text>
+          <circle class="badge" cx="570" cy="200" r="9" />
+          <text class="badge-t" x="570" y="204" text-anchor="middle">A</text>
+        </g>
 
-        <rect class="chip" x="44" y="216" width="92" height="26" rx="6" />
-        <text class="t-mono" x="90" y="233" text-anchor="middle">
-          CLAUDE.md
-        </text>
-        <rect class="chip" x="144" y="216" width="110" height="26" rx="6" />
-        <text class="t-mono" x="199" y="233" text-anchor="middle">
-          docs/PLAN.md
-        </text>
-        <rect class="chip" x="262" y="216" width="140" height="26" rx="6" />
-        <text class="t-mono" x="332" y="233" text-anchor="middle">
-          docs/DECISIONS.md
-        </text>
-        <rect class="chip" x="410" y="216" width="158" height="26" rx="6" />
-        <text class="t-mono" x="489" y="233" text-anchor="middle">
-          docs/WHAT-WE-USED.md
-        </text>
-
-        <rect
-          class="chip pending"
-          x="372"
-          y="264"
-          width="196"
-          height="26"
-          rx="6"
-        />
-        <text class="t-mono" x="470" y="281" text-anchor="middle">
-          skill /update-what-we-used
-        </text>
+        <!-- Skill (B) -->
+        <g
+          class="hit"
+          data-card="cB"
+          tabindex="0"
+          role="button"
+          aria-label="B, update-what-we-used skill: show explanation"
+        >
+          <rect
+            class="chip pending"
+            x="372"
+            y="264"
+            width="196"
+            height="26"
+            rx="6"
+          />
+          <text class="t-mono" x="470" y="281" text-anchor="middle">
+            skill /update-what-we-used
+          </text>
+          <circle class="badge" cx="354" cy="277" r="9" />
+          <text class="badge-t" x="354" y="281" text-anchor="middle">B</text>
+        </g>
 
         <!-- group -> step 1 -->
         <line
@@ -481,40 +735,60 @@
           GITHUB, CI AND THE SECOND PC
         </text>
 
-        <!-- GitHub repo -->
-        <rect class="box ok" x="28" y="388" width="200" height="84" rx="10" />
-        <text class="t-title" x="40" y="410">GitHub repository</text>
-        <text class="t-sub" x="40" y="426">Rekt-Cat/sceneroom · main</text>
-        <rect class="pill-ok" x="40" y="440" width="124" height="18" rx="9" />
-        <text class="pt-ok" x="102" y="452.5" text-anchor="middle">
-          in sync with local
-        </text>
+        <!-- GitHub repo (6) -->
+        <g
+          class="hit"
+          data-card="c6"
+          tabindex="0"
+          role="button"
+          aria-label="6, GitHub repository: show explanation"
+        >
+          <rect class="box ok" x="28" y="388" width="200" height="84" rx="10" />
+          <text class="t-title" x="40" y="410">GitHub repository</text>
+          <text class="t-sub" x="40" y="426">Rekt-Cat/sceneroom · main</text>
+          <rect class="pill-ok" x="40" y="440" width="124" height="18" rx="9" />
+          <text class="pt-ok" x="102" y="452.5" text-anchor="middle">
+            in sync with local
+          </text>
+          <circle class="badge" cx="210" cy="406" r="9" />
+          <text class="badge-t" x="210" y="410" text-anchor="middle">6</text>
+        </g>
 
-        <!-- Second PC -->
-        <rect
-          class="box pending"
-          x="700"
-          y="388"
-          width="252"
-          height="84"
-          rx="10"
-        />
-        <text class="t-title" x="712" y="410">Second PC</text>
-        <text class="t-sub" x="712" y="426">clone → fnm install →</text>
-        <text class="t-sub" x="712" y="440">
-          corepack enable → pnpm install
-        </text>
-        <rect
-          class="pill-pending"
-          x="712"
-          y="448"
-          width="104"
-          height="18"
-          rx="9"
-        />
-        <text class="pt-pending" x="764" y="460.5" text-anchor="middle">
-          not tested yet
-        </text>
+        <!-- Second PC (8) -->
+        <g
+          class="hit"
+          data-card="c8"
+          tabindex="0"
+          role="button"
+          aria-label="8, second PC: show explanation"
+        >
+          <rect
+            class="box pending"
+            x="700"
+            y="388"
+            width="252"
+            height="84"
+            rx="10"
+          />
+          <text class="t-title" x="712" y="410">Second PC</text>
+          <text class="t-sub" x="712" y="426">clone → fnm install →</text>
+          <text class="t-sub" x="712" y="440">
+            corepack enable → pnpm install
+          </text>
+          <rect
+            class="pill-pending"
+            x="712"
+            y="448"
+            width="104"
+            height="18"
+            rx="9"
+          />
+          <text class="pt-pending" x="764" y="460.5" text-anchor="middle">
+            not tested yet
+          </text>
+          <circle class="badge" cx="934" cy="406" r="9" />
+          <text class="badge-t" x="934" y="410" text-anchor="middle">8</text>
+        </g>
 
         <line
           class="arrow"
@@ -541,74 +815,101 @@
           a push to main starts CI
         </text>
 
-        <!-- CI group -->
-        <rect class="group" x="28" y="508" width="924" height="92" rx="10" />
-        <text class="lane-label" x="44" y="529">GITHUB ACTIONS · CI</text>
-        <rect class="pill-ok" x="806" y="514" width="130" height="20" rx="10" />
-        <text class="pt-ok" x="871" y="528" text-anchor="middle">
-          green on b33fe6b
-        </text>
+        <!-- CI group (7) -->
+        <g
+          class="hit"
+          data-card="c7"
+          tabindex="0"
+          role="button"
+          aria-label="7, GitHub Actions CI: show explanation"
+        >
+          <rect class="group" x="28" y="508" width="924" height="92" rx="10" />
+          <text class="lane-label" x="44" y="529">GITHUB ACTIONS · CI</text>
+          <circle class="badge" cx="214" cy="525" r="9" />
+          <text class="badge-t" x="214" y="529" text-anchor="middle">7</text>
+          <rect
+            class="pill-ok"
+            x="806"
+            y="514"
+            width="130"
+            height="20"
+            rx="10"
+          />
+          <text class="pt-ok" x="871" y="528" text-anchor="middle">
+            green on b33fe6b
+          </text>
 
-        <!-- 8 CI steps -->
-        <rect class="box" x="44" y="540" width="100" height="48" rx="8" />
-        <text class="t-step" x="94" y="560" text-anchor="middle">checkout</text>
-        <text class="t-mono-sm" x="94" y="576" text-anchor="middle">v7</text>
+          <rect class="box" x="44" y="540" width="100" height="48" rx="8" />
+          <text class="t-step" x="94" y="560" text-anchor="middle">
+            checkout
+          </text>
+          <text class="t-mono-sm" x="94" y="576" text-anchor="middle">v7</text>
 
-        <rect class="box" x="156" y="540" width="100" height="48" rx="8" />
-        <text class="t-step" x="206" y="560" text-anchor="middle">
-          setup-node
-        </text>
-        <text class="t-mono-sm" x="206" y="576" text-anchor="middle">
-          .node-version
-        </text>
+          <rect class="box" x="156" y="540" width="100" height="48" rx="8" />
+          <text class="t-step" x="206" y="560" text-anchor="middle">
+            setup-node
+          </text>
+          <text class="t-mono-sm" x="206" y="576" text-anchor="middle">
+            .node-version
+          </text>
 
-        <rect class="box" x="268" y="540" width="100" height="48" rx="8" />
-        <text class="t-step" x="318" y="560" text-anchor="middle">
-          corepack
-        </text>
-        <text class="t-mono-sm" x="318" y="576" text-anchor="middle">
-          enable
-        </text>
+          <rect class="box" x="268" y="540" width="100" height="48" rx="8" />
+          <text class="t-step" x="318" y="560" text-anchor="middle">
+            corepack
+          </text>
+          <text class="t-mono-sm" x="318" y="576" text-anchor="middle">
+            enable
+          </text>
 
-        <rect class="box" x="380" y="540" width="100" height="48" rx="8" />
-        <text class="t-step" x="430" y="560" text-anchor="middle">install</text>
-        <text class="t-mono-sm" x="430" y="576" text-anchor="middle">
-          frozen lockfile
-        </text>
+          <rect class="box" x="380" y="540" width="100" height="48" rx="8" />
+          <text class="t-step" x="430" y="560" text-anchor="middle">
+            install
+          </text>
+          <text class="t-mono-sm" x="430" y="576" text-anchor="middle">
+            frozen lockfile
+          </text>
 
-        <rect class="box" x="492" y="540" width="100" height="48" rx="8" />
-        <text class="t-step" x="542" y="560" text-anchor="middle">format</text>
-        <text class="t-mono-sm" x="542" y="576" text-anchor="middle">
-          prettier check
-        </text>
+          <rect class="box" x="492" y="540" width="100" height="48" rx="8" />
+          <text class="t-step" x="542" y="560" text-anchor="middle">
+            format
+          </text>
+          <text class="t-mono-sm" x="542" y="576" text-anchor="middle">
+            prettier check
+          </text>
 
-        <rect class="box" x="604" y="540" width="100" height="48" rx="8" />
-        <text class="t-step" x="654" y="560" text-anchor="middle">lint</text>
-        <text class="t-mono-sm" x="654" y="576" text-anchor="middle">
-          eslint
-        </text>
+          <rect class="box" x="604" y="540" width="100" height="48" rx="8" />
+          <text class="t-step" x="654" y="560" text-anchor="middle">lint</text>
+          <text class="t-mono-sm" x="654" y="576" text-anchor="middle">
+            eslint
+          </text>
 
-        <rect class="box warn" x="716" y="540" width="100" height="48" rx="8" />
-        <text class="t-step" x="766" y="560" text-anchor="middle">types</text>
-        <text class="t-mono-sm" x="766" y="576" text-anchor="middle">
-          typegen + tsc
-        </text>
+          <rect
+            class="box warn"
+            x="716"
+            y="540"
+            width="100"
+            height="48"
+            rx="8"
+          />
+          <text class="t-step" x="766" y="560" text-anchor="middle">types</text>
+          <text class="t-mono-sm" x="766" y="576" text-anchor="middle">
+            typegen + tsc
+          </text>
 
-        <rect class="box" x="828" y="540" width="100" height="48" rx="8" />
-        <text class="t-step" x="878" y="560" text-anchor="middle">build</text>
-        <text class="t-mono-sm" x="878" y="576" text-anchor="middle">
-          next build
-        </text>
+          <rect class="box" x="828" y="540" width="100" height="48" rx="8" />
+          <text class="t-step" x="878" y="560" text-anchor="middle">build</text>
+          <text class="t-mono-sm" x="878" y="576" text-anchor="middle">
+            next build
+          </text>
 
-        <!-- chevrons between steps -->
-        <polygon class="chev" points="147,560 153,564 147,568" />
-        <polygon class="chev" points="259,560 265,564 259,568" />
-        <polygon class="chev" points="371,560 377,564 371,568" />
-        <polygon class="chev" points="483,560 489,564 483,568" />
-        <polygon class="chev" points="595,560 601,564 595,568" />
-        <polygon class="chev" points="707,560 713,564 707,568" />
-        <polygon class="chev" points="819,560 825,564 819,568" />
-
+          <polygon class="chev" points="147,560 153,564 147,568" />
+          <polygon class="chev" points="259,560 265,564 259,568" />
+          <polygon class="chev" points="371,560 377,564 371,568" />
+          <polygon class="chev" points="483,560 489,564 483,568" />
+          <polygon class="chev" points="595,560 601,564 595,568" />
+          <polygon class="chev" points="707,560 713,564 707,568" />
+          <polygon class="chev" points="819,560 825,564 819,568" />
+        </g>
         <text class="note-warn" x="766" y="613" text-anchor="middle">
           first run failed here; typegen added
         </text>
@@ -616,11 +917,374 @@
     </div>
     <figcaption>
       Each edit is formatted by the hook, checked on your Mac, then checked
-      again on GitHub's machines. The types step failed on the first CI run
-      because Next.js generated files that git ignores were missing on a clean
-      checkout; it now generates them first.
+      again on GitHub's machines. Numbers follow the order an edit travels.
+      Letters mark supporting parts that are not steps in that path.
     </figcaption>
   </figure>
+
+  <section class="walk" aria-label="Walkthrough">
+    <h2>The path of an edit, step by step</h2>
+    <p class="hint">
+      Each card says what the part is, how it compares to something in Unity,
+      what happens there, and what to look for if it breaks.
+    </p>
+    <div class="cards">
+      <article class="card" id="c1">
+        <div class="card-head">
+          <span class="num">1</span>
+          <h3>Claude Code</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            The AI assistant that runs inside VS Code. You describe a task in
+            plain words. It reads files, runs commands and edits code, and asks
+            you before anything risky.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            A teammate working inside your Editor who can edit scripts and run
+            menu items. The difference: it remembers nothing between sessions
+            except what it reads from files.
+          </dd>
+          <dt>What happens here</dt>
+          <dd>
+            At the start of a session it reads the repo files in box A, so it
+            knows the plan, the rules and past decisions.
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>
+            In a very long chat it can lose details. That is why facts live in
+            files, and why it checks real versions with commands instead of
+            guessing.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c2">
+        <div class="card-head">
+          <span class="num">2</span>
+          <h3>Edit a file</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            Claude changes a file with its Write or Edit tool. Each change is
+            one tool call.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>Saving a script in your Assets folder.</dd>
+          <dt>What happens here</dt>
+          <dd>
+            The change lands in your working folder only. Nothing reaches GitHub
+            until you commit and push (box 5).
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>
+            Easy to undo: git shows exactly which lines changed, and you can
+            discard them.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c3">
+        <div class="card-head">
+          <span class="num">3</span>
+          <h3>Prettier hook</h3>
+          <span class="tag pending">needs /hooks reload</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            A hook is a command that Claude Code itself runs automatically when
+            something happens. This one runs after every successful Write or
+            Edit (<code>PostToolUse</code>, matcher
+            <code>Write|Edit</code>) and formats that file with Prettier. It
+            only touches files inside this project.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            Like an <code>AssetPostprocessor</code>: code that runs
+            automatically when an asset changes. Here it reacts to Claude's
+            edits.
+          </dd>
+          <dt>What happens here</dt>
+          <dd>
+            The hook receives the edited file's path as JSON, extracts it with
+            <code>jq</code>, and calls Prettier on that one file.
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>
+            The command ends with <code>|| true</code>, so it never blocks you,
+            which also means a broken hook fails silently. We tested it by hand,
+            but it has not fired yet: the settings folder is new, so Claude Code
+            needs <code>/hooks</code> opened once.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c4">
+        <div class="card-head">
+          <span class="num">4</span>
+          <h3>Local checks</h3>
+          <span class="tag ok">passes</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            Three checks run through Turborepo: <strong>lint</strong> (ESLint
+            hunts for mistakes), <strong>types</strong> (<code
+              >next typegen</code
+            >
+            then <code>tsc</code>, TypeScript's checker) and
+            <strong>build</strong> (<code>next build</code>, a full production
+            build).
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            Checking the Console for compile errors, then making a test build
+            before you hand it over.
+          </dd>
+          <dt>What happens here</dt>
+          <dd>
+            Run from the repo root with <code>pnpm lint</code>,
+            <code>pnpm check-types</code> and <code>pnpm build</code>. Turborepo
+            works out the order and caches results. "FULL TURBO" in its output
+            means it reused an earlier result.
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>
+            A cached pass can hide a real failure. We hit this while reproducing
+            the CI bug: the check replayed an old success until we forced a real
+            run with <code>--force</code>.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c5">
+        <div class="card-head">
+          <span class="num">5</span>
+          <h3>Commit + push</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            A commit is a saved snapshot of the files with a message, stored on
+            your Mac. A push uploads your new commits to GitHub. You push with
+            GitHub Desktop.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            Checking in changes in version control, except a commit stays local
+            until you push.
+          </dd>
+          <dt>What happens here</dt>
+          <dd>
+            Commits are small, with plain messages and no co-author line, as you
+            asked.
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>
+            Local commits can still be fixed. After a push to a public repo,
+            assume everyone can read it, so secrets never go in (<code
+              >.env</code
+            >
+            files are ignored).
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c6">
+        <div class="card-head">
+          <span class="num">6</span>
+          <h3>GitHub repository</h3>
+          <span class="tag ok">in sync</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            The online copy of the project at
+            <code>github.com/Rekt-Cat/sceneroom</code>, branch
+            <code>main</code>, with the full history.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>The cloud server your version control syncs to.</dd>
+          <dt>What happens here</dt>
+          <dd>
+            Every push to <code>main</code> starts the CI workflow (7). Your
+            other PC (8) gets the code from here.
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>The repo is public: anything pushed can be read by anyone.</dd>
+        </dl>
+      </article>
+
+      <article class="card wide" id="c7">
+        <div class="card-head">
+          <span class="num">7</span>
+          <h3>GitHub Actions CI</h3>
+          <span class="tag ok">green on b33fe6b</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            A workflow file, <code>.github/workflows/ci.yml</code>. On every
+            push GitHub starts a fresh Linux machine, fetches your code and runs
+            the steps below. It repeats your local checks in a clean place.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            A build server such as Unity Cloud Build that builds from a clean
+            checkout, so "works on my machine" problems show up.
+          </dd>
+          <dt>The eight steps, in order</dt>
+          <dd>
+            <ol class="ci">
+              <li>
+                <strong>checkout</strong> downloads your repository onto the
+                fresh machine.
+              </li>
+              <li>
+                <strong>setup-node</strong> installs the Node version named in
+                <code>.node-version</code> (24).
+              </li>
+              <li>
+                <strong>corepack enable</strong> lets <code>pnpm</code> use the
+                version pinned in <code>package.json</code> (12.18.0).
+              </li>
+              <li>
+                <strong>install</strong> with a frozen lockfile installs exactly
+                what <code>pnpm-lock.yaml</code> lists and fails if it disagrees
+                with <code>package.json</code>.
+              </li>
+              <li>
+                <strong>format</strong> runs <code>prettier --check</code> and
+                fails if any file is not formatted.
+              </li>
+              <li><strong>lint</strong> runs ESLint.</li>
+              <li class="fail">
+                <strong>types</strong> runs <code>next typegen</code> then
+                <code>tsc</code>. This failed on the first run.
+              </li>
+              <li>
+                <strong>build</strong> runs <code>next build</code>, a full
+                production build.
+              </li>
+            </ol>
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>
+            A red cross on the repository's Actions tab means a step failed;
+            open the step to read its log. Our first run failed at
+            <strong>types</strong>: Next.js generates some files that git
+            ignores, so a clean checkout did not have them. The fix (commit
+            <code>e798eac</code>) generates them first.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c8">
+        <div class="card-head">
+          <span class="num">8</span>
+          <h3>Second PC</h3>
+          <span class="tag pending">not tested yet</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            Your other computer. It gets the project with a clone the first time
+            and a pull afterwards.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            Opening the same Unity project on another machine from the cloud
+            copy.
+          </dd>
+          <dt>What happens here</dt>
+          <dd>
+            The steps are in <code>docs/SETUP-SECOND-PC.md</code>: clone,
+            <code>fnm install</code>, <code>corepack enable</code>,
+            <code>pnpm install</code>. Real <code>.env</code> files and Claude's
+            private memory notes are not synced.
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>
+            Untested. The guide assumes macOS, so say so if the other PC runs
+            Windows.
+          </dd>
+        </dl>
+      </article>
+    </div>
+
+    <h2>Supporting parts</h2>
+    <div class="cards">
+      <article class="card" id="cA">
+        <div class="card-head">
+          <span class="num">A</span>
+          <h3>Repo files Claude reads</h3>
+          <span class="tag ok">in use</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            Four files that carry the project's memory:
+            <code>CLAUDE.md</code> (rules and commands),
+            <code>docs/PLAN.md</code> (where we are and what is next),
+            <code>docs/DECISIONS.md</code> (why choices were made) and
+            <code>docs/WHAT-WE-USED.md</code> (tools and libraries).
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>The README and design docs every new teammate reads first.</dd>
+          <dt>What happens here</dt>
+          <dd>
+            They sync through git, so a session on either PC starts from the
+            same facts.
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>
+            An out-of-date file misleads. Claude updates <code>PLAN.md</code> at
+            the end of each step.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="cB">
+        <div class="card-head">
+          <span class="num">B</span>
+          <h3>Skill: /update-what-we-used</h3>
+          <span class="tag pending">needs /reload-skills</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            A skill is a saved set of instructions in
+            <code>.claude/skills/&lt;name&gt;/SKILL.md</code>
+            that Claude follows on request or when it fits. This one adds new
+            tools to
+            <code>WHAT-WE-USED.md</code> using the real installed versions.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            A custom Editor menu item that runs the same steps every time.
+          </dd>
+          <dt>What happens here</dt>
+          <dd>
+            Written and committed. The skills folder is new this session, so
+            <code>/reload-skills</code> is needed once.
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>
+            A skill is only instructions for Claude, unlike a hook that Claude
+            Code runs by itself, so it can be skipped. Check the file
+            afterwards.
+          </dd>
+        </dl>
+      </article>
+    </div>
+  </section>
 
   <section class="status" aria-label="Status on 11 Nov 2026">
     <div>
@@ -650,3 +1314,38 @@
     Source file: docs/diagrams/dev-workflow.html in the repository.
   </p>
 </main>
+
+<script>
+  (function () {
+    var reduce =
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    function show(id) {
+      var card = document.getElementById(id);
+      if (!card) return;
+      var old = document.querySelectorAll(".card.active");
+      for (var i = 0; i < old.length; i++) old[i].classList.remove("active");
+      card.classList.add("active");
+      card.scrollIntoView({
+        behavior: reduce ? "auto" : "smooth",
+        block: "center",
+      });
+    }
+    var hits = document.querySelectorAll("[data-card]");
+    for (var i = 0; i < hits.length; i++) {
+      (function (el) {
+        el.addEventListener("click", function (e) {
+          e.stopPropagation();
+          show(el.getAttribute("data-card"));
+        });
+        el.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+            show(el.getAttribute("data-card"));
+          }
+        });
+      })(hits[i]);
+    }
+  })();
+</script>
