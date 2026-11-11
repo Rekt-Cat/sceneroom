@@ -1,0 +1,652 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SceneRoom Dev Flow</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@500;600;700&display=swap"
+/>
+<style>
+  /* Layout concept: one whiteboard-style figure in two horizontal lanes, a short status note beneath. */
+  :root {
+    --bg: #f2f5f6;
+    --surface: #ffffff;
+    --lane: #e9eef0;
+    --ink: #13202a;
+    --muted: #55656f;
+    --line: #c4d0d6;
+    --accent: #0a6c8a;
+    --ok: #1c7a4b;
+    --ok-bg: #e0f2e8;
+    --pending: #8a5a00;
+    --pending-bg: #fbeed2;
+    --warn: #b3342c;
+    --font-head: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
+    --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1417;
+      --surface: #172026;
+      --lane: #121a1f;
+      --ink: #e5ecef;
+      --muted: #93a4ae;
+      --line: #2c3b44;
+      --accent: #5cc4e0;
+      --ok: #5fd09a;
+      --ok-bg: #153227;
+      --pending: #e8b65c;
+      --pending-bg: #332a12;
+      --warn: #ff918a;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1417;
+    --surface: #172026;
+    --lane: #121a1f;
+    --ink: #e5ecef;
+    --muted: #93a4ae;
+    --line: #2c3b44;
+    --accent: #5cc4e0;
+    --ok: #5fd09a;
+    --ok-bg: #153227;
+    --pending: #e8b65c;
+    --pending-bg: #332a12;
+    --warn: #ff918a;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    line-height: 1.5;
+    padding-block: 28px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  main {
+    max-width: 1040px;
+    margin-inline: auto;
+    display: grid;
+    gap: 22px;
+  }
+  h1 {
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: clamp(1.7rem, 4vw, 2.3rem);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .lede {
+    margin: 6px 0 0;
+    color: var(--muted);
+    max-width: 62ch;
+    font-size: 1rem;
+  }
+  figure {
+    margin: 0;
+    display: grid;
+    gap: 10px;
+  }
+  .fig-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+  }
+  svg.diagram {
+    display: block;
+    min-width: 860px;
+    width: 100%;
+    height: auto;
+    color: var(--accent);
+  }
+  figcaption {
+    color: var(--muted);
+    font-size: 0.9rem;
+    max-width: 78ch;
+    min-width: 0;
+  }
+
+  /* diagram parts */
+  .lane {
+    fill: var(--lane);
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .lane-label {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.12em;
+    fill: var(--muted);
+  }
+  .box {
+    fill: var(--surface);
+    stroke: var(--line);
+    stroke-width: 1.5;
+  }
+  .box.ok {
+    stroke: var(--ok);
+  }
+  .box.pending {
+    stroke: var(--pending);
+    stroke-dasharray: 5 4;
+  }
+  .box.warn {
+    stroke: var(--warn);
+  }
+  .group {
+    fill: var(--surface);
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .t-title {
+    font: 600 13px var(--font-head);
+    fill: var(--ink);
+  }
+  .t-sub {
+    font: 400 11px var(--font-ui);
+    fill: var(--muted);
+  }
+  .t-mono {
+    font: 500 10.5px var(--font-mono);
+    fill: var(--ink);
+  }
+  .t-mono-sm {
+    font: 500 9.5px var(--font-mono);
+    fill: var(--muted);
+  }
+  .t-step {
+    font: 600 11px var(--font-head);
+    fill: var(--ink);
+  }
+  .arrow {
+    stroke: var(--accent);
+    stroke-width: 1.75;
+    fill: none;
+  }
+  .arrow-label {
+    font: 500 10.5px var(--font-ui);
+    fill: var(--accent);
+  }
+  .chev {
+    fill: var(--accent);
+  }
+  .pill-ok {
+    fill: var(--ok-bg);
+    stroke: var(--ok);
+    stroke-width: 1;
+  }
+  .pill-pending {
+    fill: var(--pending-bg);
+    stroke: var(--pending);
+    stroke-width: 1;
+  }
+  .pt-ok {
+    font: 600 10px var(--font-ui);
+    fill: var(--ok);
+  }
+  .pt-pending {
+    font: 600 10px var(--font-ui);
+    fill: var(--pending);
+  }
+  .note-warn {
+    font: 500 10.5px var(--font-ui);
+    fill: var(--warn);
+  }
+  .chip {
+    fill: var(--lane);
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .chip.pending {
+    fill: var(--pending-bg);
+    stroke: var(--pending);
+    stroke-dasharray: 4 3;
+  }
+
+  /* status note */
+  .status {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px 28px;
+  }
+  .status h2 {
+    font-family: var(--font-head);
+    font-size: 0.95rem;
+    margin: 0 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: none;
+  }
+  .dot.ok {
+    background: var(--ok);
+  }
+  .dot.pending {
+    background: var(--pending);
+  }
+  .status ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+  .status li + li {
+    margin-top: 3px;
+  }
+  .status code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    color: var(--ink);
+  }
+  .foot {
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin: 0;
+  }
+</style>
+
+<main>
+  <header>
+    <h1>SceneRoom Dev Flow</h1>
+    <p class="lede">
+      How one edit travels from Claude Code on your Mac to a green check on
+      GitHub, and what each part of the setup does along the way.
+    </p>
+  </header>
+
+  <figure>
+    <div class="fig-scroll">
+      <svg
+        class="diagram"
+        viewBox="0 0 980 632"
+        role="img"
+        aria-label="Edits made in Claude Code are formatted by a Prettier hook, checked locally with Turborepo, committed, pushed through GitHub Desktop, and then verified by a GitHub Actions workflow with eight steps. The hook, the skill and the second-PC setup are written but not yet confirmed."
+      >
+        <defs>
+          <marker
+            id="ah"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto"
+          >
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+          </marker>
+        </defs>
+
+        <!-- ================= Lane 1: your Mac ================= -->
+        <rect class="lane" x="10" y="10" width="960" height="300" rx="14" />
+        <text class="lane-label" x="28" y="34">ON YOUR MAC</text>
+
+        <!-- Step 1 -->
+        <rect class="box ok" x="28" y="48" width="150" height="100" rx="10" />
+        <text class="t-title" x="40" y="72">Claude Code</text>
+        <text class="t-sub" x="40" y="92">you ask, Claude works</text>
+        <text class="t-sub" x="40" y="107">in VS Code</text>
+        <rect class="pill-ok" x="40" y="118" width="64" height="18" rx="9" />
+        <text class="pt-ok" x="72" y="130.5" text-anchor="middle">working</text>
+
+        <!-- Step 2 -->
+        <rect class="box ok" x="222" y="48" width="150" height="100" rx="10" />
+        <text class="t-title" x="234" y="72">Edit a file</text>
+        <text class="t-sub" x="234" y="92">Write / Edit tool</text>
+        <text class="t-sub" x="234" y="107">inside the project</text>
+        <rect class="pill-ok" x="234" y="118" width="64" height="18" rx="9" />
+        <text class="pt-ok" x="266" y="130.5" text-anchor="middle">
+          working
+        </text>
+
+        <!-- Step 3 -->
+        <rect
+          class="box pending"
+          x="416"
+          y="48"
+          width="150"
+          height="100"
+          rx="10"
+        />
+        <text class="t-title" x="428" y="72">Prettier hook</text>
+        <text class="t-sub" x="428" y="92">PostToolUse hook</text>
+        <text class="t-sub" x="428" y="107">matcher Write|Edit</text>
+        <rect
+          class="pill-pending"
+          x="428"
+          y="118"
+          width="126"
+          height="18"
+          rx="9"
+        />
+        <text class="pt-pending" x="491" y="130.5" text-anchor="middle">
+          needs /hooks reload
+        </text>
+
+        <!-- Step 4 -->
+        <rect class="box ok" x="610" y="48" width="150" height="100" rx="10" />
+        <text class="t-title" x="622" y="72">Local checks</text>
+        <text class="t-sub" x="622" y="92">pnpm → Turborepo</text>
+        <text class="t-sub" x="622" y="107">lint · types · build</text>
+        <rect class="pill-ok" x="622" y="118" width="58" height="18" rx="9" />
+        <text class="pt-ok" x="651" y="130.5" text-anchor="middle">passes</text>
+
+        <!-- Step 5 -->
+        <rect class="box ok" x="804" y="48" width="150" height="100" rx="10" />
+        <text class="t-title" x="816" y="72">Commit + push</text>
+        <text class="t-sub" x="816" y="92">git commit locally</text>
+        <text class="t-sub" x="816" y="107">push: GitHub Desktop</text>
+        <rect class="pill-ok" x="816" y="118" width="64" height="18" rx="9" />
+        <text class="pt-ok" x="848" y="130.5" text-anchor="middle">
+          working
+        </text>
+
+        <!-- Row arrows -->
+        <line
+          class="arrow"
+          x1="180"
+          y1="98"
+          x2="220"
+          y2="98"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="200" y="90" text-anchor="middle">
+          edits
+        </text>
+        <line
+          class="arrow"
+          x1="374"
+          y1="98"
+          x2="414"
+          y2="98"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="394" y="90" text-anchor="middle">
+          after
+        </text>
+        <line
+          class="arrow"
+          x1="568"
+          y1="98"
+          x2="608"
+          y2="98"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="588" y="90" text-anchor="middle">
+          next
+        </text>
+        <line
+          class="arrow"
+          x1="762"
+          y1="98"
+          x2="802"
+          y2="98"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="782" y="90" text-anchor="middle">
+          pass
+        </text>
+
+        <!-- Repo docs group -->
+        <rect class="group" x="28" y="184" width="560" height="116" rx="10" />
+        <text class="lane-label" x="44" y="204">
+          IN THE REPO, READ AT SESSION START
+        </text>
+
+        <rect class="chip" x="44" y="216" width="92" height="26" rx="6" />
+        <text class="t-mono" x="90" y="233" text-anchor="middle">
+          CLAUDE.md
+        </text>
+        <rect class="chip" x="144" y="216" width="110" height="26" rx="6" />
+        <text class="t-mono" x="199" y="233" text-anchor="middle">
+          docs/PLAN.md
+        </text>
+        <rect class="chip" x="262" y="216" width="140" height="26" rx="6" />
+        <text class="t-mono" x="332" y="233" text-anchor="middle">
+          docs/DECISIONS.md
+        </text>
+        <rect class="chip" x="410" y="216" width="158" height="26" rx="6" />
+        <text class="t-mono" x="489" y="233" text-anchor="middle">
+          docs/WHAT-WE-USED.md
+        </text>
+
+        <rect
+          class="chip pending"
+          x="372"
+          y="264"
+          width="196"
+          height="26"
+          rx="6"
+        />
+        <text class="t-mono" x="470" y="281" text-anchor="middle">
+          skill /update-what-we-used
+        </text>
+
+        <!-- group -> step 1 -->
+        <line
+          class="arrow"
+          x1="103"
+          y1="184"
+          x2="103"
+          y2="152"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="111" y="172">reads</text>
+        <!-- skill -> WHAT-WE-USED -->
+        <line
+          class="arrow"
+          x1="489"
+          y1="264"
+          x2="489"
+          y2="246"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="499" y="258">appends rows</text>
+
+        <!-- Legend -->
+        <rect class="box ok" x="640" y="204" width="28" height="16" rx="4" />
+        <text class="t-sub" x="680" y="216">confirmed working</text>
+        <rect
+          class="box pending"
+          x="640"
+          y="236"
+          width="28"
+          height="16"
+          rx="4"
+        />
+        <text class="t-sub" x="680" y="248">written, not yet confirmed</text>
+
+        <!-- Push elbow: step 5 -> GitHub repo -->
+        <path class="arrow" d="M879,148 V330 H128 V386" marker-end="url(#ah)" />
+        <text class="arrow-label" x="504" y="324" text-anchor="middle">
+          push to GitHub (GitHub Desktop)
+        </text>
+
+        <!-- ================= Lane 2: GitHub ================= -->
+        <rect class="lane" x="10" y="350" width="960" height="270" rx="14" />
+        <text class="lane-label" x="28" y="374">
+          GITHUB, CI AND THE SECOND PC
+        </text>
+
+        <!-- GitHub repo -->
+        <rect class="box ok" x="28" y="388" width="200" height="84" rx="10" />
+        <text class="t-title" x="40" y="410">GitHub repository</text>
+        <text class="t-sub" x="40" y="426">Rekt-Cat/sceneroom · main</text>
+        <rect class="pill-ok" x="40" y="440" width="124" height="18" rx="9" />
+        <text class="pt-ok" x="102" y="452.5" text-anchor="middle">
+          in sync with local
+        </text>
+
+        <!-- Second PC -->
+        <rect
+          class="box pending"
+          x="700"
+          y="388"
+          width="252"
+          height="84"
+          rx="10"
+        />
+        <text class="t-title" x="712" y="410">Second PC</text>
+        <text class="t-sub" x="712" y="426">clone → fnm install →</text>
+        <text class="t-sub" x="712" y="440">
+          corepack enable → pnpm install
+        </text>
+        <rect
+          class="pill-pending"
+          x="712"
+          y="448"
+          width="104"
+          height="18"
+          rx="9"
+        />
+        <text class="pt-pending" x="764" y="460.5" text-anchor="middle">
+          not tested yet
+        </text>
+
+        <line
+          class="arrow"
+          x1="230"
+          y1="430"
+          x2="698"
+          y2="430"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="464" y="422" text-anchor="middle">
+          git pull / clone
+        </text>
+
+        <!-- repo -> CI -->
+        <line
+          class="arrow"
+          x1="128"
+          y1="474"
+          x2="128"
+          y2="506"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="140" y="494">
+          a push to main starts CI
+        </text>
+
+        <!-- CI group -->
+        <rect class="group" x="28" y="508" width="924" height="92" rx="10" />
+        <text class="lane-label" x="44" y="529">GITHUB ACTIONS · CI</text>
+        <rect class="pill-ok" x="806" y="514" width="130" height="20" rx="10" />
+        <text class="pt-ok" x="871" y="528" text-anchor="middle">
+          green on b33fe6b
+        </text>
+
+        <!-- 8 CI steps -->
+        <rect class="box" x="44" y="540" width="100" height="48" rx="8" />
+        <text class="t-step" x="94" y="560" text-anchor="middle">checkout</text>
+        <text class="t-mono-sm" x="94" y="576" text-anchor="middle">v7</text>
+
+        <rect class="box" x="156" y="540" width="100" height="48" rx="8" />
+        <text class="t-step" x="206" y="560" text-anchor="middle">
+          setup-node
+        </text>
+        <text class="t-mono-sm" x="206" y="576" text-anchor="middle">
+          .node-version
+        </text>
+
+        <rect class="box" x="268" y="540" width="100" height="48" rx="8" />
+        <text class="t-step" x="318" y="560" text-anchor="middle">
+          corepack
+        </text>
+        <text class="t-mono-sm" x="318" y="576" text-anchor="middle">
+          enable
+        </text>
+
+        <rect class="box" x="380" y="540" width="100" height="48" rx="8" />
+        <text class="t-step" x="430" y="560" text-anchor="middle">install</text>
+        <text class="t-mono-sm" x="430" y="576" text-anchor="middle">
+          frozen lockfile
+        </text>
+
+        <rect class="box" x="492" y="540" width="100" height="48" rx="8" />
+        <text class="t-step" x="542" y="560" text-anchor="middle">format</text>
+        <text class="t-mono-sm" x="542" y="576" text-anchor="middle">
+          prettier check
+        </text>
+
+        <rect class="box" x="604" y="540" width="100" height="48" rx="8" />
+        <text class="t-step" x="654" y="560" text-anchor="middle">lint</text>
+        <text class="t-mono-sm" x="654" y="576" text-anchor="middle">
+          eslint
+        </text>
+
+        <rect class="box warn" x="716" y="540" width="100" height="48" rx="8" />
+        <text class="t-step" x="766" y="560" text-anchor="middle">types</text>
+        <text class="t-mono-sm" x="766" y="576" text-anchor="middle">
+          typegen + tsc
+        </text>
+
+        <rect class="box" x="828" y="540" width="100" height="48" rx="8" />
+        <text class="t-step" x="878" y="560" text-anchor="middle">build</text>
+        <text class="t-mono-sm" x="878" y="576" text-anchor="middle">
+          next build
+        </text>
+
+        <!-- chevrons between steps -->
+        <polygon class="chev" points="147,560 153,564 147,568" />
+        <polygon class="chev" points="259,560 265,564 259,568" />
+        <polygon class="chev" points="371,560 377,564 371,568" />
+        <polygon class="chev" points="483,560 489,564 483,568" />
+        <polygon class="chev" points="595,560 601,564 595,568" />
+        <polygon class="chev" points="707,560 713,564 707,568" />
+        <polygon class="chev" points="819,560 825,564 819,568" />
+
+        <text class="note-warn" x="766" y="613" text-anchor="middle">
+          first run failed here; typegen added
+        </text>
+      </svg>
+    </div>
+    <figcaption>
+      Each edit is formatted by the hook, checked on your Mac, then checked
+      again on GitHub's machines. The types step failed on the first CI run
+      because Next.js generated files that git ignores were missing on a clean
+      checkout; it now generates them first.
+    </figcaption>
+  </figure>
+
+  <section class="status" aria-label="Status on 11 Nov 2026">
+    <div>
+      <h2><span class="dot ok"></span>Confirmed on 11 Nov 2026</h2>
+      <ul>
+        <li>CI is green on commit <code>b33fe6b</code></li>
+        <li>Format, lint, type-check and build pass locally and on GitHub</li>
+        <li>Push from GitHub Desktop reaches <code>main</code></li>
+      </ul>
+    </div>
+    <div>
+      <h2><span class="dot pending"></span>Written, waiting for a test</h2>
+      <ul>
+        <li>
+          Prettier hook: <code>/hooks</code> reload, then one edit to watch it
+          format
+        </li>
+        <li>Skill: <code>/reload-skills</code>, then check it appears</li>
+        <li>
+          Second-PC setup: follow <code>docs/SETUP-SECOND-PC.md</code> once
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <p class="foot">
+    Source file: docs/diagrams/dev-workflow.html in the repository.
+  </p>
+</main>

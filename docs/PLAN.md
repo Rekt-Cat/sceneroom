@@ -5,7 +5,7 @@
 - **Phase:** 0 (foundation)
 - **Done:** tools installed; GitHub repo; monorepo (pnpm + Turborepo); Next.js app in `apps/web`; `packages/shared`; `docs/WHAT-WE-USED.md`; `docs/DECISIONS.md`; `CLAUDE.md`
 - **CI:** green on `b33fe6b` (first run failed on type-check, fixed in `e798eac`).
-- **Next action:** confirm the Prettier hook fires and the skill loads after `/hooks` and `/reload-skills`; test `SETUP-SECOND-PC.md` on the second PC; first diagram; then Phase 1.
+- **Next action:** start Phase 1 (3D viewport). Still open from Phase 0: confirm the Prettier hook fires and the skill loads after `/hooks` and `/reload-skills`; test `SETUP-SECOND-PC.md` on the second PC.
 
 Update this block at the end of every sub-phase and commit it.
 
@@ -32,7 +32,7 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 - [x] Prettier, GitHub Actions workflow (format check + lint + type-check + build); green on GitHub
 - [x] First Claude Code hook (Prettier after edits) written and pipe-tested; firing still to confirm after `/hooks` reload
 - [x] Skill to update WHAT-WE-USED.md (`/update-what-we-used`); loading still to confirm after `/reload-skills`
-- [ ] First diagram (repo, CI and Claude Code setup)
+- [x] First diagram (repo, CI and Claude Code setup): `docs/diagrams/dev-workflow.html`
 
 ### Phase 1: 3D viewport
 
