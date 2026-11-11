@@ -25,7 +25,8 @@ development with this project, so correctness, clear structure and documentation
 ## How to work with the owner
 
 - **Implement first, keep replies short.** Do not explain every tool after each step. Instead, append new tools,
-  libraries and concepts to `docs/WHAT-WE-USED.md` (name, version, purpose, where used). Explain in full only when asked
+  libraries and concepts to `docs/WHAT-WE-USED.md` (name, version, purpose, where used) using the
+  `/update-what-we-used` skill whenever something new is added. Explain in full only when asked
   ("what did we use?" or "explain X"): simple words, a Unity comparison (the owner knows Unity), a tiny example,
   caveats, why chosen vs alternatives, likely interview questions.
 - **Research before choosing versions or APIs**: official docs and the real latest version from the npm registry. Say what is verified and what is uncertain. Record choices in `docs/DECISIONS.md`.
