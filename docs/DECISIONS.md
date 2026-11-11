@@ -42,6 +42,13 @@ Actions use major-version tags (`@v7`); pinning to commit SHAs is a possible lat
 
 Empty `.prettierrc.json`, so formatting follows Prettier defaults and matches what `create-next-app` generated.
 
+## 2026-11-11: `check-types` runs `next typegen` first
+
+First CI run failed at `check-types` with `Cannot find name 'LayoutProps'`. Next.js generates that type (and `next-env.d.ts`),
+and both are git-ignored, so a fresh checkout does not have them. It passed locally only because earlier builds had created them.
+Fix: `"check-types": "next typegen && tsc --noEmit"` in `apps/web`. Lesson: reproduce CI problems from a clean state
+(delete generated files, and use `turbo run ... --force` to bypass the cache).
+
 ## 2026-11-11: Public GitHub repo under a personal account
 
 GitHub CLI was installed then removed: its login requests broad permissions (including organisation access). Git + GitHub Desktop is used instead.
