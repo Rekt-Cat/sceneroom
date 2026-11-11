@@ -8,37 +8,39 @@ Status column: **verified** = checked against official docs or by running it. Ve
 
 ## Tools on the machine
 
-| Item | Version | Purpose | Used where |
-|---|---|---|---|
-| Node.js (LTS) | 24.22.2 | Runs JavaScript outside the browser (dev server, builds, tests) | `.node-version` |
-| fnm | 1.39.0 | Node version manager; switches Node per project | one line in `~/.zshrc` |
-| Homebrew | 7.0.6 | Installs developer tools on macOS | machine setup |
-| Corepack | 0.36.0 | Pins the exact pnpm version per project | root `package.json` (`packageManager`) |
-| pnpm | 12.18.0 | Package manager and workspace runner | whole repo |
-| git | 2.50.1 | Local version control | `.git/` |
-| GitHub + GitHub Desktop | - | Online copy of the repo; GUI used to publish/push | `github.com/Rekt-Cat/sceneroom` |
+| Item                    | Version | Purpose                                                         | Used where                             |
+| ----------------------- | ------- | --------------------------------------------------------------- | -------------------------------------- |
+| Node.js (LTS)           | 24.22.2 | Runs JavaScript outside the browser (dev server, builds, tests) | `.node-version`                        |
+| fnm                     | 1.39.0  | Node version manager; switches Node per project                 | one line in `~/.zshrc`                 |
+| Homebrew                | 7.0.6   | Installs developer tools on macOS                               | machine setup                          |
+| Corepack                | 0.36.0  | Pins the exact pnpm version per project                         | root `package.json` (`packageManager`) |
+| pnpm                    | 12.18.0 | Package manager and workspace runner                            | whole repo                             |
+| git                     | 2.50.1  | Local version control                                           | `.git/`                                |
+| GitHub + GitHub Desktop | -       | Online copy of the repo; GUI used to publish/push               | `github.com/Rekt-Cat/sceneroom`        |
 
 ## Repo and project structure
 
-| Item | Purpose | Used where |
-|---|---|---|
-| Monorepo | One repo holding several related packages | repo root |
-| pnpm workspaces | Links packages in the repo to each other | `pnpm-workspace.yaml` |
-| Turborepo | Task runner with dependency order and caching | `turbo.json`, root scripts |
-| `.gitignore` | Files git must never record (dependencies, build output, secrets) | root `.gitignore` |
-| `.node-version` | Pins Node 24 for everyone who clones the repo | repo root |
-| `allowBuilds` (pnpm) | Blocks dependency install scripts unless allowed | `pnpm-workspace.yaml` |
+| Item                 | Purpose                                                           | Used where                 |
+| -------------------- | ----------------------------------------------------------------- | -------------------------- |
+| Monorepo             | One repo holding several related packages                         | repo root                  |
+| pnpm workspaces      | Links packages in the repo to each other                          | `pnpm-workspace.yaml`      |
+| Turborepo            | Task runner with dependency order and caching                     | `turbo.json`, root scripts |
+| `.gitignore`         | Files git must never record (dependencies, build output, secrets) | root `.gitignore`          |
+| `.node-version`      | Pins Node 24 for everyone who clones the repo                     | repo root                  |
+| `allowBuilds` (pnpm) | Blocks dependency install scripts unless allowed                  | `pnpm-workspace.yaml`      |
 
 ## Libraries and frameworks
 
-| Item | Version | Purpose | Used where |
-|---|---|---|---|
-| Next.js (App Router, Turbopack) | 16.4.6 | React framework: routing, server rendering, build | `apps/web` |
-| React | 19.3.0 | UI components | `apps/web` |
-| TypeScript | 5.9.3 | Typed JavaScript (v7 not used, see DECISIONS.md) | all packages |
-| Tailwind CSS | 4.3.3 | Utility-class styling | `apps/web` |
-| ESLint (+ eslint-config-next) | 9.39.5 / 16.4.6 | Finds mistakes in code | `apps/web` |
-| `@sceneroom/shared` | 0.0.0 | Types and constants shared by web app and server | `packages/shared` |
+| Item                            | Version                    | Purpose                                                  | Used where                 |
+| ------------------------------- | -------------------------- | -------------------------------------------------------- | -------------------------- |
+| Next.js (App Router, Turbopack) | 16.4.6                     | React framework: routing, server rendering, build        | `apps/web`                 |
+| React                           | 19.3.0                     | UI components                                            | `apps/web`                 |
+| TypeScript                      | 5.9.3                      | Typed JavaScript (v7 not used, see DECISIONS.md)         | all packages               |
+| Tailwind CSS                    | 4.3.3                      | Utility-class styling                                    | `apps/web`                 |
+| ESLint (+ eslint-config-next)   | 9.39.5 / 16.4.6            | Finds mistakes in code                                   | `apps/web`                 |
+| `@sceneroom/shared`             | 0.0.0                      | Types and constants shared by web app and server         | `packages/shared`          |
+| Prettier                        | 3.9.10                     | Automatic code and Markdown formatting                   | root, `.prettierrc.json`   |
+| GitHub Actions (CI)             | checkout v7, setup-node v7 | Runs format check, lint, type-check, build on every push | `.github/workflows/ci.yml` |
 
 ## Settings we changed
 
@@ -47,4 +49,5 @@ Status column: **verified** = checked against official docs or by running it. Ve
 - `create-next-app` generated `AGENTS.md` (notes for coding agents; points to the docs bundled in `node_modules/next/dist/docs/`).
 
 ## Not used yet (planned): see docs/PLAN or the plan file
+
 Three.js / React Three Fiber, Zustand, Zod, Yjs, Hocuspocus, PostgreSQL, Prisma, Docker, GitHub Actions, Vitest, Playwright, Auth, Cloudflare R2.
