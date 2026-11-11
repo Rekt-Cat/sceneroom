@@ -1,0 +1,50 @@
+# What we used
+
+A running list of every tool, library and concept used in SceneRoom, so it is easy to look up later.
+Ask Claude "explain <item>" and it will give the full explanation (what it is, a Unity comparison,
+how it works, caveats, why it was chosen, interview questions).
+
+Status column: **verified** = checked against official docs or by running it. Versions are as installed on 2026-11-11.
+
+## Tools on the machine
+
+| Item | Version | Purpose | Used where |
+|---|---|---|---|
+| Node.js (LTS) | 24.22.2 | Runs JavaScript outside the browser (dev server, builds, tests) | `.node-version` |
+| fnm | 1.39.0 | Node version manager; switches Node per project | one line in `~/.zshrc` |
+| Homebrew | 7.0.6 | Installs developer tools on macOS | machine setup |
+| Corepack | 0.36.0 | Pins the exact pnpm version per project | root `package.json` (`packageManager`) |
+| pnpm | 12.18.0 | Package manager and workspace runner | whole repo |
+| git | 2.50.1 | Local version control | `.git/` |
+| GitHub + GitHub Desktop | - | Online copy of the repo; GUI used to publish/push | `github.com/Rekt-Cat/sceneroom` |
+
+## Repo and project structure
+
+| Item | Purpose | Used where |
+|---|---|---|
+| Monorepo | One repo holding several related packages | repo root |
+| pnpm workspaces | Links packages in the repo to each other | `pnpm-workspace.yaml` |
+| Turborepo | Task runner with dependency order and caching | `turbo.json`, root scripts |
+| `.gitignore` | Files git must never record (dependencies, build output, secrets) | root `.gitignore` |
+| `.node-version` | Pins Node 24 for everyone who clones the repo | repo root |
+| `allowBuilds` (pnpm) | Blocks dependency install scripts unless allowed | `pnpm-workspace.yaml` |
+
+## Libraries and frameworks
+
+| Item | Version | Purpose | Used where |
+|---|---|---|---|
+| Next.js (App Router, Turbopack) | 16.4.6 | React framework: routing, server rendering, build | `apps/web` |
+| React | 19.3.0 | UI components | `apps/web` |
+| TypeScript | 5.9.3 | Typed JavaScript (v7 not used, see DECISIONS.md) | all packages |
+| Tailwind CSS | 4.3.3 | Utility-class styling | `apps/web` |
+| ESLint (+ eslint-config-next) | 9.39.5 / 16.4.6 | Finds mistakes in code | `apps/web` |
+| `@sceneroom/shared` | 0.0.0 | Types and constants shared by web app and server | `packages/shared` |
+
+## Settings we changed
+
+- Turborepo and Next.js anonymous telemetry turned off (privacy).
+- Next.js "Cache Components" turned off (not needed for this app yet).
+- `create-next-app` generated `AGENTS.md` (notes for coding agents; points to the docs bundled in `node_modules/next/dist/docs/`).
+
+## Not used yet (planned): see docs/PLAN or the plan file
+Three.js / React Three Fiber, Zustand, Zod, Yjs, Hocuspocus, PostgreSQL, Prisma, Docker, GitHub Actions, Vitest, Playwright, Auth, Cloudflare R2.
