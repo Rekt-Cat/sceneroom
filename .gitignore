@@ -1,0 +1,36 @@
+# --- Dependencies (downloaded by pnpm; can be rebuilt from package.json) ---
+node_modules/
+
+# --- Build output (generated; never edit or commit) ---
+.next/
+out/
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# --- Secrets and local settings (NEVER commit; this repo is public) ---
+# Real values go in .env files on each PC. Only the template .env.example is committed.
+.env
+.env.*
+!.env.example
+
+# --- Test and tooling output ---
+coverage/
+playwright-report/
+test-results/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# --- Deployment tool folders ---
+.vercel/
+
+# --- Editor and OS clutter ---
+.DS_Store
+.idea/
+*.swp
+
+# --- Claude Code: personal, per-machine settings (shared config in .claude/ IS committed) ---
+.claude/settings.local.json
