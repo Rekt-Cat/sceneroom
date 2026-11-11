@@ -4,7 +4,7 @@
 
 - **Phase:** 0 (foundation)
 - **Done:** tools installed; GitHub repo; monorepo (pnpm + Turborepo); Next.js app in `apps/web`; `packages/shared`; `docs/WHAT-WE-USED.md`; `docs/DECISIONS.md`; `CLAUDE.md`
-- **Next action:** push, confirm the first CI run is green on GitHub; then the first Claude Code hook and Phase 1.
+- **Next action:** push, confirm CI is green (first run failed on type-check; fixed in `e798eac`); confirm the Prettier hook fires after `/hooks` reload; then the skill for WHAT-WE-USED.md, then Phase 1.
 
 Update this block at the end of every sub-phase and commit it.
 
@@ -29,7 +29,8 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 - [x] `docs/WHAT-WE-USED.md`, `docs/DECISIONS.md`, `CLAUDE.md`
 - [ ] `docs/SETUP-SECOND-PC.md` verified on the second PC, `.env.example`
 - [x] Prettier, GitHub Actions workflow (format check + lint + type-check + build); first run on GitHub still to confirm
-- [ ] First Claude Code hook (format/lint after edits) and a skill to update WHAT-WE-USED.md
+- [x] First Claude Code hook (Prettier after edits) written and pipe-tested; firing still to confirm after `/hooks` reload
+- [ ] Skill to update WHAT-WE-USED.md
 - [ ] First diagram (repo, CI and Claude Code setup)
 
 ### Phase 1: 3D viewport

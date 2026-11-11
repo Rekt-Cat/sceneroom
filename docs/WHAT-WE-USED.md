@@ -46,6 +46,7 @@ Status column: **verified** = checked against official docs or by running it. Ve
 
 - Turborepo and Next.js anonymous telemetry turned off (privacy).
 - Next.js "Cache Components" turned off (not needed for this app yet).
+- Claude Code **hook** (`PostToolUse`, matcher `Write|Edit`) runs Prettier on files Claude edits inside this project; uses `jq` to read the file path. Lives in `.claude/settings.json`. Needs `/hooks` opened once after the file is first created.
 - `create-next-app` generated `AGENTS.md` (notes for coding agents; points to the docs bundled in `node_modules/next/dist/docs/`).
 
 ## Not used yet (planned): see docs/PLAN or the plan file
