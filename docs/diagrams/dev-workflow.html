@@ -371,6 +371,129 @@
     font-family: var(--font-head);
   }
 
+  a {
+    color: var(--accent);
+  }
+
+  /* deep dives */
+  .deep {
+    display: grid;
+    gap: 14px;
+  }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 16px;
+    min-width: 0;
+    display: grid;
+    gap: 12px;
+    scroll-margin-top: 20px;
+  }
+  .panel h3 {
+    font-family: var(--font-head);
+    font-size: 1.1rem;
+    margin: 0;
+  }
+  .panel h4 {
+    font: 600 0.95rem var(--font-head);
+    margin: 6px 0 0;
+  }
+  .panel p {
+    margin: 0;
+    font-size: 0.92rem;
+    max-width: 78ch;
+  }
+  .panel code,
+  .gloss code,
+  td code {
+    font-family: var(--font-mono);
+    font-size: 0.84em;
+    background: var(--lane);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  pre.code {
+    margin: 0;
+    padding: 10px 12px;
+    background: var(--lane);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font: 500 12px/1.55 var(--font-mono);
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--ink);
+  }
+  .ba {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    gap: 12px;
+  }
+  .ba > div {
+    min-width: 0;
+    display: grid;
+    gap: 5px;
+    align-content: start;
+  }
+  .ba-label {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .tbl-wrap {
+    overflow-x: auto;
+  }
+  table.cmp {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 680px;
+    font-size: 0.88rem;
+  }
+  table.cmp th,
+  table.cmp td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  table.cmp th {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  ol.steps {
+    margin: 0;
+    padding-left: 1.3rem;
+    display: grid;
+    gap: 6px;
+    font-size: 0.92rem;
+  }
+  ol.steps li {
+    padding-left: 4px;
+    min-width: 0;
+  }
+  .gloss {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 12px 26px;
+  }
+  .gloss > div {
+    min-width: 0;
+  }
+  .gloss dt {
+    text-transform: none;
+    letter-spacing: 0;
+    font: 600 0.9rem var(--font-head);
+    color: var(--ink);
+  }
+  .gloss dd {
+    font-size: 0.88rem;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
   /* status note */
   .status {
     display: grid;
@@ -423,7 +546,8 @@
     <p class="lede">
       How one edit travels from Claude Code on your Mac to a green check on
       GitHub, and what each part of the setup does along the way. Click a
-      numbered box to jump to its explanation.
+      numbered box to jump to its explanation. Words you may not know are
+      explained further down, in the deep dives and the glossary.
     </p>
   </header>
 
@@ -1001,7 +1125,8 @@
             A hook is a command that Claude Code itself runs automatically when
             something happens. This one runs after every successful Write or
             Edit (<code>PostToolUse</code>, matcher
-            <code>Write|Edit</code>) and formats that file with Prettier. It
+            <code>Write|Edit</code>) and tidies that file's layout with
+            Prettier, a formatter (<a href="#dd-hook">what that means</a>). It
             only touches files inside this project.
           </dd>
           <dt>Unity comparison</dt>
@@ -1034,13 +1159,15 @@
         <dl>
           <dt>What it is</dt>
           <dd>
-            Three checks run through Turborepo: <strong>lint</strong> (ESLint
-            hunts for mistakes), <strong>types</strong> (<code
-              >next typegen</code
-            >
-            then <code>tsc</code>, TypeScript's checker) and
-            <strong>build</strong> (<code>next build</code>, a full production
-            build).
+            Three checks, started together by Turborepo (a task runner).
+            <strong>lint</strong> asks "does this look like a mistake?" (done by
+            ESLint). <strong>types</strong> asks "do all the values fit
+            together?" (done by TypeScript's checker, <code>tsc</code>, after
+            <code>next typegen</code> has written type definitions for our
+            pages). <strong>build</strong> makes the real production version of
+            the app (<code>next build</code>). More detail:
+            <a href="#dd-checkers">the three checkers</a> and
+            <a href="#dd-types">what "types" means</a>.
           </dd>
           <dt>Unity comparison</dt>
           <dd>
@@ -1283,6 +1410,551 @@
           </dd>
         </dl>
       </article>
+    </div>
+  </section>
+
+  <section class="deep" aria-label="Deep dives">
+    <h2>Deep dives</h2>
+    <p class="hint">
+      Plain-words explanations of the parts that need more than a card: the
+      three checkers, the Prettier hook, and what "types" means.
+    </p>
+
+    <div class="panel" id="dd-checkers">
+      <h3>Three checkers, three jobs</h3>
+      <p>
+        Your code is looked at by three automatic checkers. They are easy to mix
+        up because all three print warnings, but each one asks a different
+        question. A fourth step, the build, then proves the whole app really
+        compiles.
+      </p>
+      <div class="tbl-wrap">
+        <table class="cmp">
+          <thead>
+            <tr>
+              <th>Tool</th>
+              <th>The question it asks</th>
+              <th>What it catches</th>
+              <th>Unity comparison</th>
+              <th>Changes your files?</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Prettier</strong></td>
+              <td>"Is it laid out consistently?"</td>
+              <td>Spacing, line breaks, quote style, aligned tables</td>
+              <td>
+                The editor's Format Document, with the same settings for
+                everyone
+              </td>
+              <td>Yes, layout only. It never changes what the code means.</td>
+            </tr>
+            <tr>
+              <td><strong>ESLint</strong> (the "lint" step)</td>
+              <td>"Does this look like a mistake?"</td>
+              <td>
+                Typical examples: a variable that is never used, or a React Hook
+                called in the wrong place
+              </td>
+              <td>Compiler warnings and Roslyn analyzers</td>
+              <td>No. In our setup it only reports.</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>TypeScript</strong> (<code>tsc</code>, the "types" step)
+              </td>
+              <td>"Do the values fit together?"</td>
+              <td>
+                Passing two numbers where three are needed, calling something
+                that does not exist
+              </td>
+              <td>The C# compiler's type checking</td>
+              <td>No. <code>--noEmit</code> means check only.</td>
+            </tr>
+            <tr>
+              <td><strong>Build</strong> (<code>next build</code>)</td>
+              <td>"Does the whole app really build for production?"</td>
+              <td>Problems that only show up in a full build</td>
+              <td>Making a player build</td>
+              <td>
+                It writes build output into <code>.next</code>, which git
+                ignores.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="ba">
+        <div>
+          <span class="ba-label">Prettier changes the layout</span>
+          <pre class="code">
+before: const p={x:1,y:2}
+after:  const p = { x: 1, y: 2 };</pre>
+        </div>
+        <div>
+          <span class="ba-label">ESLint reports a likely mistake</span>
+          <pre class="code">
+const unused = 5;
+// typical report: defined but never used</pre>
+        </div>
+        <div>
+          <span class="ba-label">TypeScript reports a mismatch</span>
+          <pre class="code">
+type Vec3 = [number, number, number];
+const position: Vec3 = [1, 2];
+// error: needs 3 numbers, got 2</pre>
+        </div>
+      </div>
+      <p>
+        The ESLint and TypeScript lines are typical examples to show the kind of
+        thing each tool finds. Which exact ESLint rules are on depends on the
+        project's ESLint settings. All three run on your Mac and again in CI.
+        Prettier is the only one that rewrites files.
+      </p>
+    </div>
+
+    <div class="panel" id="dd-hook">
+      <h3>What the Prettier hook really does</h3>
+      <h4>What Prettier is</h4>
+      <p>
+        Prettier is a <strong>code formatter</strong>: a program that rewrites
+        the layout of a file (spaces, line breaks, quotes, semicolons, table
+        alignment) into one consistent style. It never changes what the code
+        means. It works on JavaScript, TypeScript, JSON, CSS, Markdown, HTML and
+        more.
+      </p>
+      <h4>Why we use it</h4>
+      <p>
+        Everyone's files end up looking the same, nobody argues about spacing,
+        and git diffs show real changes instead of whitespace noise. CI also
+        runs <code>prettier --check</code>, so an unformatted file turns the
+        build red. The hook makes sure Claude's edits never cause that.
+      </p>
+      <p>
+        <strong>Unity comparison:</strong> it is like Visual Studio's or Rider's
+        "Format Document", except the settings are identical for everyone and it
+        runs automatically.
+      </p>
+      <h4>A real example from this project</h4>
+      <p>
+        We tested the hook's command on a scratch Markdown file with extra blank
+        lines and an uneven table. This is what came out:
+      </p>
+      <div class="ba">
+        <div>
+          <span class="ba-label">Before</span>
+          <pre class="code">
+# Test
+
+
+
+| a | b |
+|--|--|
+| longer cell | x |</pre>
+        </div>
+        <div>
+          <span class="ba-label">After Prettier</span>
+          <pre class="code">
+# Test
+
+| a           | b   |
+| ----------- | --- |
+| longer cell | x   |</pre>
+        </div>
+      </div>
+      <h4>What happens, in order</h4>
+      <ol class="steps">
+        <li>
+          Claude uses the <strong>Edit</strong> or <strong>Write</strong> tool
+          on a file.
+        </li>
+        <li>
+          If that tool call succeeds, Claude Code announces a
+          <code>PostToolUse</code> event ("a tool just finished").
+        </li>
+        <li>
+          The settings file has a hook whose <strong>matcher</strong> is
+          <code>Write|Edit</code>, so Claude Code runs the hook's command in a
+          shell. It sends the command a short JSON message about what just
+          happened, through the command's <strong>standard input</strong>
+          (its input pipe).
+        </li>
+        <li>
+          <code>jq</code>, a small program for reading JSON, pulls the edited
+          file's path out of that message.
+        </li>
+        <li>
+          The shell checks that the path is
+          <strong>inside the project folder</strong>. If it is not (for example
+          one of Claude's memory notes), it stops. That is why the hook never
+          touches files elsewhere.
+        </li>
+        <li>
+          Prettier runs on that one file and rewrites it in place if its layout
+          needs fixing.
+        </li>
+        <li>
+          Output and errors are thrown away, and the command always reports
+          success, so a formatting hiccup can never block Claude.
+        </li>
+      </ol>
+      <h4>The command, piece by piece</h4>
+      <div class="tbl-wrap">
+        <table class="cmp">
+          <thead>
+            <tr>
+              <th>Piece</th>
+              <th>What it does</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <code
+                  >jq -r '.tool_response.filePath // .tool_input.file_path //
+                  empty'</code
+                >
+              </td>
+              <td>
+                Reads the JSON message and takes out the edited file's path.
+              </td>
+            </tr>
+            <tr>
+              <td><code>| { read -r f; ... }</code></td>
+              <td>
+                Passes that path to the next part, which stores it in a variable
+                called <code>f</code>.
+              </td>
+            </tr>
+            <tr>
+              <td><code>case "$f" in "$CLAUDE_PROJECT_DIR"/*)</code></td>
+              <td>
+                Only continues if the path starts with the project folder.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <code
+                  >node_modules/.bin/prettier --write --ignore-unknown
+                  "$f"</code
+                >
+              </td>
+              <td>
+                Runs the project's own Prettier on that file.
+                <code>--write</code> rewrites it in place.
+                <code>--ignore-unknown</code> skips file types Prettier does not
+                know. Prettier also obeys <code>.prettierrc.json</code> and
+                <code>.prettierignore</code>.
+              </td>
+            </tr>
+            <tr>
+              <td><code>&gt;/dev/null 2&gt;&amp;1 || true</code></td>
+              <td>
+                Discards all output and reports success even if Prettier failed.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <h4>What it does not do</h4>
+      <p>
+        It does not lint or type-check. It does not run when you edit a file
+        yourself, or when a file changes through a shell command. It does not
+        commit anything. Running
+        <code>pnpm format</code> by hand formats the whole project, which is a
+        separate command.
+      </p>
+      <h4>Is it working?</h4>
+      <p>
+        Not confirmed yet. We tested the command by hand and it worked, but the
+        hook has not fired in this session because the settings folder is new.
+        Once <code>/hooks</code> has been opened, an edit with bad spacing
+        should come back tidy.
+      </p>
+    </div>
+
+    <div class="panel" id="dd-types">
+      <h3>What "types" means: TypeScript, typegen and tsc</h3>
+      <h4>TypeScript and types</h4>
+      <p>
+        JavaScript lets you pass anything anywhere and only complains when the
+        code runs.
+        <strong>TypeScript</strong> is JavaScript plus labels that say what kind
+        of value each thing is, such as "three numbers". A
+        <strong>type check</strong> reads all the code and makes sure the values
+        fit their labels, before anything runs.
+      </p>
+      <p>
+        <strong>Unity comparison:</strong> C# already works this way, and the
+        compiler stops you from passing a <code>string</code> where a
+        <code>Vector3</code> is expected. TypeScript brings that safety to
+        JavaScript.
+      </p>
+      <h4>tsc</h4>
+      <p>
+        <code>tsc</code> is the TypeScript compiler. We run it as
+        <code>tsc --noEmit</code>, which means "check only, write no output
+        files". Next.js does the real compiling itself during the build.
+      </p>
+      <h4>typegen</h4>
+      <p>
+        Next.js builds your pages from the files in <code>src/app</code>: a file
+        named <code>page.tsx</code> or <code>layout.tsx</code> becomes part of
+        the site. <code>next typegen</code> writes
+        <strong>type definitions</strong> that describe those pages, for example
+        <code>LayoutProps</code>, the type of what our root layout receives.
+        They go into <code>.next/types</code>, plus a file called
+        <code>next-env.d.ts</code>.
+      </p>
+      <p>
+        <strong>Unity comparison:</strong> like Unity generating a C# class from
+        an asset, which the Input System can do from an Input Actions asset. The
+        generated file is not hand-written and is not committed.
+      </p>
+      <h4>Why the order matters, and why CI failed</h4>
+      <p>
+        Our <code>layout.tsx</code> uses <code>LayoutProps</code>. If the
+        generated file is missing, <code>tsc</code> says
+        <code>Cannot find name 'LayoutProps'</code>. On your Mac the files
+        existed from earlier builds. On GitHub's clean machine they did not, so
+        the first CI run failed. The script is now
+        <code>next typegen &amp;&amp; tsc --noEmit</code>, and
+        <code>&amp;&amp;</code> means "run the second command only if the first
+        succeeded".
+      </p>
+    </div>
+
+    <div class="panel" id="dd-glossary">
+      <h3>Words on this page</h3>
+      <dl class="gloss">
+        <div>
+          <dt>Claude Code</dt>
+          <dd>The AI assistant that works inside VS Code on your project.</dd>
+        </div>
+        <div>
+          <dt>Tool call</dt>
+          <dd>
+            One action Claude takes, such as reading a file, editing a file or
+            running a command.
+          </dd>
+        </div>
+        <div>
+          <dt>Hook</dt>
+          <dd>
+            A command that Claude Code runs automatically when a chosen event
+            happens.
+          </dd>
+        </div>
+        <div>
+          <dt>PostToolUse</dt>
+          <dd>The event "a tool call just finished successfully".</dd>
+        </div>
+        <div>
+          <dt>Matcher</dt>
+          <dd>
+            The filter that says which tools trigger a hook.
+            <code>Write|Edit</code> means the Write tool or the Edit tool.
+          </dd>
+        </div>
+        <div>
+          <dt>Standard input (stdin)</dt>
+          <dd>
+            The channel a command reads data from. Claude Code sends the hook
+            its message there.
+          </dd>
+        </div>
+        <div>
+          <dt>JSON</dt>
+          <dd>
+            A plain-text format for structured data, such as
+            <code>{"file_path": "..."}</code>.
+          </dd>
+        </div>
+        <div>
+          <dt>jq</dt>
+          <dd>A small command-line program for picking values out of JSON.</dd>
+        </div>
+        <div>
+          <dt>Prettier</dt>
+          <dd>
+            A formatter that rewrites a file's layout into one consistent style.
+          </dd>
+        </div>
+        <div>
+          <dt>ESLint</dt>
+          <dd>
+            A linter: it scans code for likely mistakes and risky patterns.
+          </dd>
+        </div>
+        <div>
+          <dt>Lint</dt>
+          <dd>
+            An automatic scan for likely mistakes. The name comes from picking
+            lint off clothes.
+          </dd>
+        </div>
+        <div>
+          <dt>TypeScript</dt>
+          <dd>
+            JavaScript with type labels, so mismatches are caught before the
+            code runs.
+          </dd>
+        </div>
+        <div>
+          <dt>Type check / tsc</dt>
+          <dd>
+            The check that values match their labels, run by the TypeScript
+            compiler (<code>tsc</code>).
+          </dd>
+        </div>
+        <div>
+          <dt>typegen</dt>
+          <dd>
+            A Next.js command that writes type definitions for your pages and
+            layouts.
+          </dd>
+        </div>
+        <div>
+          <dt>Build</dt>
+          <dd>
+            Turning the source into the real, optimized version that gets
+            deployed. Next.js writes it to <code>.next</code>.
+          </dd>
+        </div>
+        <div>
+          <dt>Production build</dt>
+          <dd>
+            The build meant for real visitors, as opposed to the dev server you
+            use while working.
+          </dd>
+        </div>
+        <div>
+          <dt>Turborepo</dt>
+          <dd>
+            A task runner for projects with several packages. It orders tasks
+            and reuses earlier results.
+          </dd>
+        </div>
+        <div>
+          <dt>Cache / FULL TURBO</dt>
+          <dd>
+            Turborepo reusing an earlier result when nothing changed. "FULL
+            TURBO" means every task was reused.
+          </dd>
+        </div>
+        <div>
+          <dt>pnpm</dt>
+          <dd>
+            The package manager: it installs libraries and runs the project's
+            scripts.
+          </dd>
+        </div>
+        <div>
+          <dt>package.json</dt>
+          <dd>
+            A package's ID card: its name, scripts and the libraries it needs.
+          </dd>
+        </div>
+        <div>
+          <dt>Lockfile</dt>
+          <dd>
+            <code>pnpm-lock.yaml</code> records the exact version of every
+            library, so everyone gets identical ones.
+          </dd>
+        </div>
+        <div>
+          <dt>Frozen lockfile</dt>
+          <dd>
+            Install exactly what the lockfile says, and fail instead of changing
+            it.
+          </dd>
+        </div>
+        <div>
+          <dt>Corepack</dt>
+          <dd>
+            A Node feature that makes <code>pnpm</code> use the version pinned
+            in <code>package.json</code>.
+          </dd>
+        </div>
+        <div>
+          <dt>Node.js</dt>
+          <dd>Runs JavaScript outside the browser. All our tools run on it.</dd>
+        </div>
+        <div>
+          <dt>.node-version</dt>
+          <dd>A one-line file naming the Node version this project uses.</dd>
+        </div>
+        <div>
+          <dt>fnm</dt>
+          <dd>
+            A tool that installs several Node versions and switches between them
+            per project.
+          </dd>
+        </div>
+        <div>
+          <dt>Commit</dt>
+          <dd>A saved snapshot of the files with a message, stored locally.</dd>
+        </div>
+        <div>
+          <dt>Push / pull / clone</dt>
+          <dd>
+            Push uploads commits to GitHub. Pull downloads new ones. Clone makes
+            the first full copy.
+          </dd>
+        </div>
+        <div>
+          <dt>Repository (repo)</dt>
+          <dd>The project folder together with its full history.</dd>
+        </div>
+        <div>
+          <dt>main</dt>
+          <dd>The name of the main line of history in the repo.</dd>
+        </div>
+        <div>
+          <dt>CI</dt>
+          <dd>
+            Continuous integration: a robot that checks every push
+            automatically.
+          </dd>
+        </div>
+        <div>
+          <dt>Workflow</dt>
+          <dd>
+            The file describing what GitHub Actions should do on a push. Ours is
+            <code>ci.yml</code>.
+          </dd>
+        </div>
+        <div>
+          <dt>Runner</dt>
+          <dd>
+            The fresh machine GitHub starts to run the workflow. It is thrown
+            away afterwards.
+          </dd>
+        </div>
+        <div>
+          <dt>GitHub Desktop</dt>
+          <dd>A visual app for pushing, pulling and browsing changes.</dd>
+        </div>
+        <div>
+          <dt>.env file</dt>
+          <dd>A local file for secrets and settings. It is never committed.</dd>
+        </div>
+        <div>
+          <dt>Skill</dt>
+          <dd>
+            A saved set of instructions Claude can follow, stored in
+            <code>.claude/skills/</code>.
+          </dd>
+        </div>
+        <div>
+          <dt>CLAUDE.md</dt>
+          <dd>
+            A file in the repo that tells Claude the project's rules and
+            commands.
+          </dd>
+        </div>
+      </dl>
     </div>
   </section>
 
