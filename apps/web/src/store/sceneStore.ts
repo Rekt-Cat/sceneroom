@@ -3,6 +3,7 @@ import {
   addNode,
   createEmptyScene,
   createNode,
+  resolveSelection,
   type PrimitiveKind,
   type Scene,
 } from "@sceneroom/shared";
@@ -13,6 +14,9 @@ import {
  */
 type SceneState = {
   scene: Scene;
+  /** Id of the selected node, or null. */
+  selectedId: string | null;
+  select: (id: string | null) => void;
   addPrimitive: (kind: PrimitiveKind) => string;
 };
 
@@ -22,6 +26,9 @@ function createInitialScene(): Scene {
 
 export const useSceneStore = create<SceneState>()((set) => ({
   scene: createInitialScene(),
+  selectedId: null,
+  select: (id) =>
+    set((state) => ({ selectedId: resolveSelection(state.scene, id) })),
   addPrimitive: (kind) => {
     const id = crypto.randomUUID();
     set((state) => ({ scene: addNode(state.scene, createNode(id, kind)) }));

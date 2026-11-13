@@ -50,13 +50,17 @@ Mouse mapping in this library: left-drag orbits, scroll or middle button zooms, 
 | Sun light strength  | `<directionalLight intensity>` | `1.6`       | How strong the main light is.                                                                         |
 | Sun light direction | `<directionalLight position>`  | `[5, 8, 4]` | The light shines from this point toward the middle. Move it to change where the highlight falls.      |
 
-### The cube
+### The scene objects (cube and others)
 
-| What     | Setting                          | Our value     | What it does                                                                      |
-| -------- | -------------------------------- | ------------- | --------------------------------------------------------------------------------- |
-| Size     | `<boxGeometry args={[w, h, d]}>` | `[1, 1, 1]`   | Width, height, depth. If you change the height, also change the cube's `y` below. |
-| Position | `<mesh position={[x, y, z]}>`    | `[0, 0.5, 0]` | `y` is half the height, so the cube rests on the grid instead of sinking into it. |
-| Colour   | `<meshStandardMaterial color>`   | `"#5cc4e0"`   | The cube's colour.                                                                |
+Objects are no longer written in `Viewport.tsx`. They come from the scene store.
+
+| What                     | Setting                                              | Our value              | What it does                                                                                                  |
+| ------------------------ | ---------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Starting object          | `createInitialScene()` in `src/store/sceneStore.ts`  | one cube               | Which objects exist when the page loads.                                                                      |
+| New object colour        | `DEFAULT_COLOR` in `packages/shared/src/sceneOps.ts` | `"#5cc4e0"`            | Colour given to every new object.                                                                             |
+| New object start spot    | `createNode` in `packages/shared/src/sceneOps.ts`    | position `[0, 0.5, 0]` | `y` is half the height, so a 1-unit object rests on the grid.                                                 |
+| Selection outline colour | `OUTLINE_COLOR` in `SceneNodes.tsx`                  | `"#ffb020"`            | Colour of the outline around the selected object.                                                             |
+| Selection outline width  | `OUTLINE_THICKNESS` in `SceneNodes.tsx`              | `3`                    | Outline width in screen pixels (the outline is drawn with `screenspace` off, so it does not scale with zoom). |
 
 ### The grid
 

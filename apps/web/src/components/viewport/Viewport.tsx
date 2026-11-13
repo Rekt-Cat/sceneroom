@@ -2,6 +2,7 @@
 
 import { Canvas } from "@react-three/fiber";
 import { Grid, OrbitControls, Stats } from "@react-three/drei";
+import { useSceneStore } from "@/store/sceneStore";
 import SceneNodes from "./SceneNodes";
 
 /**
@@ -9,8 +10,13 @@ import SceneNodes from "./SceneNodes";
  * Browser-only (WebGL), so it is loaded through ViewportLoader with SSR switched off.
  */
 export default function Viewport() {
+  const select = useSceneStore((state) => state.select);
   return (
-    <Canvas camera={{ position: [5, 4, 7], fov: 50 }}>
+    // Clicking empty space (no mesh hit) clears the selection
+    <Canvas
+      camera={{ position: [5, 4, 7], fov: 50 }}
+      onPointerMissed={() => select(null)}
+    >
       <color attach="background" args={["#14191d"]} />
 
       <ambientLight intensity={0.6} />

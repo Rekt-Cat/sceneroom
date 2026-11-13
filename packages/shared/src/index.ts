@@ -6,3 +6,4 @@ export type Vec3 = [number, number, number];
 
 export * from "./scene";
 export * from "./sceneOps";
+export * from "./selection";
