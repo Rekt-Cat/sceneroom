@@ -75,3 +75,12 @@ Re-read the Terms of Service before any commercial use.
 Setup: import the repo, **Root Directory = `apps/web`**, framework Next.js, other settings default, no environment variables yet.
 Vercel's GitHub app is limited to this one repository. These settings live in the Vercel dashboard, not in the repo, so a new Vercel
 project would need them entered again. The collab server (Phase 7) and database will not run on Vercel.
+
+## 2026-11-13: Scene data shape (Phase 2)
+
+Schema in `packages/shared/src/scene.ts` (Zod 4.6.7; types are inferred from the schema, so there is one source of truth).
+
+- **Flat map of nodes by id, with `parentId`**, not a nested tree. Updating one node is a simple key write, and a flat map
+  maps cleanly onto a Yjs map in Phase 7. The tree for the Hierarchy panel is rebuilt from `parentId`.
+- **Rotation in radians** (Euler x, y, z), matching Three.js, so no conversion in the viewport. The Inspector will show degrees.
+- **`version` field** (`SCENE_SCHEMA_VERSION`) on every scene, so saved files can be migrated when the shape changes.

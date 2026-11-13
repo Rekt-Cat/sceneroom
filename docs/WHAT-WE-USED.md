@@ -45,6 +45,7 @@ Status column: **verified** = checked against official docs or by running it. Ve
 | @react-three/fiber              | 9.8.2                      | Write three.js scenes as React components (`<Canvas>`)   | `apps/web/src/components/viewport` |
 | @react-three/drei               | 10.7.9                     | Ready-made helpers: Grid, OrbitControls, Stats           | `apps/web/src/components/viewport` |
 | @types/three                    | 0.187.0                    | TypeScript types for three                               | `apps/web`                         |
+| zod                             | 4.6.7                      | Validates scene data; TypeScript types inferred from it  | `packages/shared/src/scene.ts`     |
 | GitHub Actions (CI)             | checkout v7, setup-node v7 | Runs format check, lint, type-check, build on every push | `.github/workflows/ci.yml`         |
 
 ## Settings we changed
@@ -59,4 +60,4 @@ Status column: **verified** = checked against official docs or by running it. Ve
 
 ## Not used yet (planned): see docs/PLAN or the plan file
 
-Zustand, Zod, Yjs, Hocuspocus, PostgreSQL, Prisma, Docker, Vitest, Playwright, Auth, Cloudflare R2.
+Zustand, Yjs, Hocuspocus, PostgreSQL, Prisma, Docker, Vitest, Playwright, Auth, Cloudflare R2.
