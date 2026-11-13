@@ -17,6 +17,9 @@ type ControlsEvents = {
 
 const MODIFIER_KEYS = new Set(["Shift", "Control", "Meta"]);
 
+/** `PointerEvent.button` (0 left, 1 middle, 2 right) to the `buttons` bit mask. */
+const BUTTONS_MASK: Record<number, number> = { 0: 1, 1: 4, 2: 2 };
+
 /**
  * OrbitControls only looks at Shift (or Ctrl/Cmd) at the moment the mouse button goes down, so
  * pressing Shift in the middle of a drag changed nothing. This component fixes that: when a
@@ -34,7 +37,8 @@ export default function CameraModifierSwitch() {
     if (!controls) return;
 
     let dragging = false;
-    let pointer: { id: number; x: number; y: number } | null = null;
+    let pointer: { id: number; x: number; y: number; button: number } | null =
+      null;
 
     const onStart = () => {
       dragging = true;
@@ -48,7 +52,17 @@ export default function CameraModifierSwitch() {
         clearCameraDragRestarted();
       }
       if (event.pointerType === "mouse") {
-        pointer = { id: event.pointerId, x: event.clientX, y: event.clientY };
+        // pointermove events carry no "which button started this" info, so keep the one from pointerdown
+        const button =
+          event.type === "pointerdown" && event.isTrusted
+            ? event.button
+            : (pointer?.button ?? 0);
+        pointer = {
+          id: event.pointerId,
+          x: event.clientX,
+          y: event.clientY,
+          button,
+        };
       }
     };
 
@@ -62,8 +76,8 @@ export default function CameraModifierSwitch() {
       const init: PointerEventInit = {
         pointerId: pointer.id,
         pointerType: "mouse",
-        button: 0,
-        buttons: 1,
+        button: pointer.button,
+        buttons: BUTTONS_MASK[pointer.button] ?? 1,
         clientX: pointer.x,
         clientY: pointer.y,
         shiftKey: event.shiftKey,

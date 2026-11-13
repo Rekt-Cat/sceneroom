@@ -44,9 +44,9 @@ export default function Viewport() {
         makeDefault
         enableDamping={false}
         rotateSpeed={1.25}
-        // Left-drag pans the camera; Shift (or Ctrl/Cmd) + left-drag rotates it instead (built into
-        // OrbitControls). Middle and right buttons are left unmapped, so they do nothing.
-        mouseButtons={{ LEFT: MOUSE.PAN }}
+        // Left-drag pans the camera, right-drag rotates it. Holding Shift (or Ctrl/Cmd) swaps the two
+        // (built into OrbitControls). The middle button is left unmapped, so it does nothing.
+        mouseButtons={{ LEFT: MOUSE.PAN, RIGHT: MOUSE.ROTATE }}
       />
 
       {/* Lets Shift switch pan/rotate in the middle of a camera drag */}

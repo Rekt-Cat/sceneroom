@@ -139,3 +139,9 @@ with the new modifier state, so the mode changes without a jump.
   (`markCameraDragRestarted`, cleared on the next real press by checking `event.isTrusted`) makes `shouldIgnoreClick()` true for that click.
 - **Known edge case:** if the cursor is over a gizmo handle when Shift is pressed, the gizmo's own pointerdown listener (same element) may
   start a handle drag. Needs a browser check.
+
+## 2026-11-13: Right-drag rotates the camera
+
+Mapping is now `{ LEFT: MOUSE.PAN, RIGHT: MOUSE.ROTATE }`; the middle button stays unmapped. Shift/Ctrl/Cmd swaps pan and rotate on
+either button (three-stdlib 2.36.1 `onMouseDown`). `CameraModifierSwitch` now remembers which button started the drag (from the real
+`pointerdown`) and uses it, with the matching `buttons` bit, when it restarts the drag; before, it always assumed the left button.
