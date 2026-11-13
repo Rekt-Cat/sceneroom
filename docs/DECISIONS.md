@@ -211,3 +211,15 @@ a small card lists the mouse controls; the tree has shape icons, eye buttons and
 - **Fonts:** kept Geist (already loaded by Next.js, close to the design's Inter); no new font download. The body no longer forces Arial.
 - **Not yet built from the design:** the Inspector's Transform and Colour fields, drag-to-re-parent. Those are the next steps.
 - **Dev server note:** running `pnpm build` while `pnpm dev` is running shares the `.next` folder and left the dev server serving a stale stylesheet. Restart `pnpm dev` after a build if the page looks unstyled.
+
+## 2026-11-13: Inspector fields
+
+Position, Rotation and Scale fields plus colour, for one selected object (a multi-selection shows no fields, as requested).
+
+- **Validation is pure and tested:** `parseNumberInput` accepts "1.5", "-2", ".5", "1,5" (comma) and a trailing degree sign, and rejects "1.5.2", "1e5", "abc" and anything beyond +/-100000.
+  `editTransform` refuses a scale of 0 (it would flatten the object and break the gizmo) but allows a negative scale (mirroring). Hex colours go through `normalizeHexColor` (3 or 6 digits, with or without `#`).
+- **Behaviour:** the box shows the scene's value until you type; Enter or clicking away saves, Escape cancels, text that is not a number turns the box red and is dropped. Up and Down arrows nudge; Shift is 10 times more.
+  A scale of 0 is dropped silently on leaving the box (the live red state only checks "is it a number"); worth a visible message later.
+- **Rotation** is stored in radians (matches three.js) and shown and typed in degrees.
+- **Left out:** dragging the axis letter to scrub a value, the "keep proportions" link button, roughness and metalness (not in the scene data yet; Phase 4).
+- **Dev server:** this time the dev server was stopped by name (`pkill -f next-server`) after `pnpm build`, not by port, because `lsof` also lists browser processes connected to the port.

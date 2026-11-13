@@ -11,3 +11,5 @@ export * from "./transformTools";
 export * from "./nodeName";
 export * from "./screenRect";
 export * from "./sceneTree";
+export * from "./color";
+export * from "./inspectorValues";

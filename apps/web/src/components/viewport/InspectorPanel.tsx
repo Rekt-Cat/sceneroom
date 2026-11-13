@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { NODE_NAME_MAX_LENGTH, type SceneNode } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
+import { AppearanceSection, TransformSection } from "./InspectorFields";
 import { Icon, KIND_LABELS, KindIcon } from "./icons";
 
 const actionButton =
@@ -133,6 +134,10 @@ function SingleObject({ node }: { node: SceneNode }) {
         >
           <Icon name={node.visible ? "eye" : "eyeOff"} />
         </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <TransformSection node={node} />
+        <AppearanceSection node={node} />
       </div>
       <Actions count={1} />
     </>

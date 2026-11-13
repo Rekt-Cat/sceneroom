@@ -131,6 +131,18 @@ a steady 60 is the usual target on most screens.
 | FPS counter position   | `className` on `<Stats>` in `Viewport.tsx`                                | `top-[60px]! left-[300px]!` | Pixels from the window corner: panel width + 12 across, top bar (48) + 12 down.                                               |
 | Number keys            | `useEditorShortcuts.ts`                                                   | `1` to `5`                  | Add Cube, Sphere, Cylinder, Plane, Cone (same order as the Add menu). `/` focuses the search box.                             |
 
+## Inspector fields
+
+Files: `apps/web/src/components/viewport/InspectorFields.tsx` (rows, steps, colours) and `packages/shared/src/inspectorValues.ts` (limits).
+
+| What                 | Setting                                      | Our value                                 | What it does                                                                                                  |
+| -------------------- | -------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Arrow-key step       | `step` in `ROWS`                             | position `0.1`, rotation `5`, scale `0.1` | How much one Up or Down press changes a value. Shift makes it 10 times bigger.                                |
+| Decimals shown       | `decimals` in `ROWS`                         | position `2`, rotation `1`, scale `2`     | How many digits after the point a field shows.                                                                |
+| Largest typed number | `MAX_ABS_VALUE` in `inspectorValues.ts`      | `100000`                                  | Bigger numbers (positive or negative) are refused.                                                            |
+| Reset button         | `IDENTITY_TRANSFORM` in `inspectorValues.ts` | position 0, rotation 0, scale 1           | What the Reset button sets. Note the origin is the ground level, so a reset cube sinks halfway into the grid. |
+| Quick colours        | `QUICK_COLORS` in `InspectorFields.tsx`      | 7 colours                                 | The round colour buttons under the hex box. Add, remove or change a `{ name, hex }` line.                     |
+
 ## The page around the viewport
 
 | What                          | Where                                                 | What to change                                                                                                     |

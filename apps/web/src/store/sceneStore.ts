@@ -4,6 +4,7 @@ import {
   createEmptyScene,
   createNode,
   duplicateNodes,
+  normalizeHexColor,
   normalizeNodeName,
   removeNodes,
   resolveSelection,
@@ -53,6 +54,8 @@ type SceneState = {
   duplicateSelected: () => void;
   /** Shows or hides a node in the viewport. */
   setNodeVisible: (id: string, visible: boolean) => void;
+  /** Sets a node's colour. Returns the saved "#rrggbb" colour, or null if the text was not a valid colour. */
+  setNodeColor: (id: string, color: string) => string | null;
   /** Renames a node. Returns the saved name, or null if the name was not allowed. */
   renameNode: (id: string, name: string) => string | null;
 };
@@ -119,6 +122,12 @@ export const useSceneStore = create<SceneState>()((set) => ({
     }),
   setNodeVisible: (id, visible) =>
     set((state) => ({ scene: updateNode(state.scene, id, { visible }) })),
+  setNodeColor: (id, color) => {
+    const clean = normalizeHexColor(color);
+    if (clean === null) return null;
+    set((state) => ({ scene: updateNode(state.scene, id, { color: clean }) }));
+    return clean;
+  },
   renameNode: (id, name) => {
     const clean = normalizeNodeName(name);
     if (clean === null) return null;
