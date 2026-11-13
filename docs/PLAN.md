@@ -2,10 +2,10 @@
 
 ## Current status
 
-- **Phase:** 3 (editor panels and undo/redo): scene list, Inspector fields and undo/redo are built on open branches; re-parenting is left
+- **Phase:** 3 (editor panels and undo/redo): scene list, Inspector fields, undo/redo, resizable panels and value dragging are built and tested in the browser, on four open branches; re-parenting is left
 - **Done:** Phase 0, Phase 1 (live at https://sceneroom.vercel.app) and Phase 2 (scene model, selection, multi-select, gizmo, camera controls, add / numbered duplicate / delete / rename), all on `main`. A git pre-push hook runs type-check, lint, test and build before every push.
 - **CI:** green on the merge of pull request #2 (`0e5849e`).
-- **Next action:** test panel resizing and value dragging in the browser, then merge `feature/hierarchy`, `feature/inspector`, `feature/undo-redo` and `feature/panels-scrub` in that order (each builds on the one before). Then re-parenting (drag in the scene list, draw children inside parents), which finishes Phase 3. Still open: test `SETUP-SECOND-PC.md` on the second PC; try the pre-push hook from GitHub Desktop; optional `/code-review` of the Phase 0-1 diffs.
+- **Next action:** merge `feature/hierarchy`, `feature/inspector`, `feature/undo-redo` and `feature/panels-scrub` into `main` in that order (each builds on the one before; a pull request for the last one alone would carry all four). Then re-parenting (drag in the scene list, draw children inside parents), which finishes Phase 3. Still open: test `SETUP-SECOND-PC.md` on the second PC; try the pre-push hook from GitHub Desktop; optional `/code-review` of the Phase 0-1 diffs.
 
 Update this block at the end of every sub-phase and commit it.
 
@@ -53,11 +53,11 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 ### Phase 3: Editor panels and undo/redo
 
 - [ ] Layout: toolbar, Hierarchy, Inspector, Viewport (shadcn/ui)
-- [x] Hierarchy tree with visibility, search, Add menu, docked panels and tool dock (branch `feature/hierarchy`, needs a browser check)
-- [x] Inspector fields: position, rotation, scale, colour (branch `feature/inspector`, needs a browser check); material values later
+- [x] Hierarchy tree with visibility, search, Add menu, docked panels and tool dock (branch `feature/hierarchy`)
+- [x] Inspector fields: position, rotation, scale, colour (branch `feature/inspector`); material values later
 - [ ] Re-parenting in the Hierarchy
-- [x] Resizable side panels (drag the edge) and Unity-style dragging of X / Y / Z values (branch `feature/panels-scrub`, needs a browser check)
-- [x] Undo/redo (snapshot history, buttons and Ctrl/Cmd + Z) with Vitest tests for the store (branch `feature/undo-redo`, needs a browser check)
+- [x] Resizable side panels (drag the edge) and Unity-style dragging of X / Y / Z values (branch `feature/panels-scrub`)
+- [x] Undo/redo (snapshot history, buttons and Ctrl/Cmd + Z) with Vitest tests for the store (branch `feature/undo-redo`)
 
 ### Phase 4: Lights, materials, environment
 
