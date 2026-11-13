@@ -291,3 +291,26 @@ A locked object cannot be edited. What "edited" means is decided in one place, t
   `Gizmo.tsx` wraps `TransformControls` and does this once after it mounts. It reads the library's private `gizmo.gizmo.translate` group (and does nothing if it is missing), so re-check it when three-stdlib or drei is updated. Both the single and the group gizmo use it.
 - **Add menu placement (corrects the entry above).** Anchoring the menu to the whole panel (`left-3 right-3`) fixed the narrow case but made it open on the left of a wide panel, away from the Add button.
   Now its right edge is under the Add button (`right-3.5`, the header padding) and it is 18rem wide but never wider than the panel (`max-w-[calc(100%-1.75rem)]`), so it follows the button in a wide panel and shrinks to fit in a narrow one.
+
+## 2026-11-13: Proposed: advanced editing roadmap (deformers first)
+
+A plan only, in `docs/ADVANCED-EDITING.md`; nothing is built or verified yet. The key proposals:
+
+- **Deformers (modifiers) come first** (Bend, Twist, Taper, Noise, Mirror, Array, Subdivide): they are non-destructive and the data is a few numbers, so they fit our undo and later collaboration with no new mesh storage.
+  They also give the "bending" asked for, and "Apply" is the bridge to real mesh data.
+- **Edit mode and sculpting need a foundation first:** a real editable-mesh object, big meshes stored as separate binary assets (the scene holds only an id), undo by difference (not whole snapshots), modes (Object / Edit / Sculpt), updates that bypass React,
+  and a first collaboration rule of "one editor per mesh". Choosing the mesh format is a Phase 5 task, because saving and export must carry custom meshes.
+- **Order:** Phase 11 Deformers (can move right after Phase 5), 12 environment tools, 13 edit mode, 14 sculpting, 15 characters. Phase 10 stays "polish and extras".
+- **Not decided:** which libraries to use (BVH, boolean, half-edge, skinning). Each needs the usual research (official docs, real latest version, licence) before choosing.
+
+## 2026-11-13: Proposed: importing outside models and assets
+
+A plan only, in `docs/ASSETS-AND-IMPORT.md`; nothing is built or verified yet.
+
+- **GLB first.** One file holds shapes, materials, textures and animation, and most free model sites offer it. glTF with separate files, then OBJ, later; FBX probably never (closed format).
+- **A "model" object kind** that stores only an asset id plus the normal object data, so the gizmo, Inspector, undo, lock and parenting all work on it unchanged. Its inner parts stay inside the file at first (one object); showing and editing them comes with the mesh tools.
+- **One asset system** for imported files and for big editable meshes: the scene holds an id, the bytes live in separate storage (IndexedDB first, object storage later), content-addressed (id = hash of the contents, so a duplicate is stored once).
+  A missing asset shows a placeholder with a message instead of failing.
+- **Outside files are untrusted:** size and triangle limits, check the file's first bytes (not only the extension), never fetch addresses inside a `.gltf`, explain every failure, validate our own asset records with Zod.
+- **Licences:** each asset records its source and licence. Because the repository is public, no third-party model is added to it without checking its licence.
+- **Order:** import and the Assets panel (steps 1 and 2) need no database or accounts, so they can be built right after materials, ahead of the rest of Phase 5.

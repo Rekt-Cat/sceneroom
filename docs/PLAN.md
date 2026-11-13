@@ -12,7 +12,7 @@ Update this block at the end of every sub-phase and commit it.
 ## Goal
 
 A browser-based, real-time collaborative 3D scene editor ("Figma for 3D"). MVP is a scene/environment editor with
-multiplayer. Mesh modeling and sculpting come later. Everything runs on free hosting.
+multiplayer. Mesh modeling and sculpting come later (see `ADVANCED-EDITING.md`). Everything runs on free hosting.
 
 ## Stack
 
@@ -66,7 +66,10 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 
 ### Phase 5: Import/export and local save
 
-- [ ] GLB/glTF import and export; scene JSON with schema version; autosave (IndexedDB); asset panel; validation
+- [ ] **Import models** (premade cars, buildings, characters): GLB first, drag-and-drop and an Import button; a "model" object kind that points to an asset id; size and triangle limits with clear error messages (see `ASSETS-AND-IMPORT.md`; steps 1 and 2 there can be built right after materials, before the rest of this phase)
+- [ ] Assets panel: thumbnails, place copies, rename, delete, source and licence note
+- [ ] glTF export; scene JSON with schema version; autosave (IndexedDB); validation; glTF with separate files, compressed models, then OBJ
+- [ ] Design the editable-mesh data format and where big meshes are stored (see `ADVANCED-EDITING.md`, "The foundation"), so custom meshes can be saved and exported
 
 ### Phase 6: Docker, database, project backend
 
@@ -89,7 +92,27 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 
 ### Phase 10: Polish and extras
 
-- [ ] README with demo GIF and live link; docs completed; extras (comments, version history, mesh tools)
+- [ ] README with demo GIF and live link; docs completed; extras (comments, version history)
+
+### Phase 11: Deformers (can move earlier, right after Phase 5)
+
+- [ ] Segment counts on primitives; modifier stack in the Inspector: Bend, Twist, Taper, Stretch, Noise, Mirror, Array, Subdivide; Apply (bake into a mesh)
+
+### Phase 12: Environment-building tools
+
+- [ ] Boolean (union / subtract / intersect); scatter / instancing; terrain (heightmap); splines / tubes; align, distribute, snapping; groups and prefabs
+
+### Phase 13: Edit mode (modelling)
+
+- [ ] Editable meshes; point / edge / face selection; extrude, inset, bevel, loop cut, knife, merge, bridge; soft selection; mirror editing; basic UVs; difference-based undo
+
+### Phase 14: Sculpting
+
+- [ ] Brushes (draw, smooth, grab, inflate, pinch, flatten, crease, mask); symmetry; remesh or dynamic topology; vertex-colour painting; BVH picking and Web Workers; per-stroke undo
+
+### Phase 15: Characters and creatures
+
+- [ ] Base meshes; skeleton and weights (auto-weights, painting); posing and IK; morph targets; reference images; character export (GLB with skeleton)
 
 ## Milestones
 
