@@ -154,3 +154,9 @@ copy (`DUPLICATE_OFFSET`). Names are validated with the same Zod rule as the sch
 an invalid name in the text box is undone on blur. Found by reading my own diff: a 100-character name plus " copy" broke the limit, so the
 copy's name is cut to the limit (test added). Ctrl/Cmd + D calls `preventDefault` (the browser would bookmark the page). Delete and
 Backspace are ignored while typing in a text box. A temporary overlay panel holds rename/duplicate/delete until the Inspector (Phase 3).
+
+## 2026-11-13: Planes are drawn on both sides
+
+A three.js material draws only the front face by default (back-face culling), so a flat `planeGeometry` disappeared when viewed from behind.
+Planes now use `DoubleSide`; closed shapes keep `FrontSide` (cheaper, and their inside is never seen). Not changed: a new plane stands upright
+(three.js `PlaneGeometry` faces +z); lying it flat like a floor would be a rotation in `createNode`.
