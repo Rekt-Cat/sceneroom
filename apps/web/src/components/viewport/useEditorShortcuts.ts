@@ -17,7 +17,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
  * W / E / R switch the gizmo, X toggles snapping, Escape clears the selection,
  * Delete or Backspace deletes the selected object, Ctrl/Cmd + D duplicates it,
  * Ctrl/Cmd + Z undoes and Ctrl/Cmd + Shift + Z (or Ctrl + Y) redoes,
- * 1 to 5 add a shape, "/" focuses the search box,
+ * 1 to 5 add a shape, "/" focuses the search box, L locks or unlocks the selection,
  * and holding Shift flips snapping while it is held.
  */
 export function useEditorShortcuts(): void {
@@ -76,6 +76,15 @@ export function useEditorShortcuts(): void {
       if (event.key === "/") {
         event.preventDefault();
         document.getElementById(SEARCH_INPUT_ID)?.focus();
+        return;
+      }
+      // L locks the selection, or unlocks it if everything selected is already locked
+      if (event.key.toLowerCase() === "l") {
+        const { selectedIds, scene } = store;
+        if (selectedIds.length > 0) {
+          const allLocked = selectedIds.every((id) => scene.nodes[id]?.locked);
+          store.setNodesLocked(selectedIds, !allLocked);
+        }
         return;
       }
       const mode = modeForKey(event.key);

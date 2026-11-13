@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type PointerEvent } from "react";
-import { movableSelection } from "@sceneroom/shared";
+import { isEffectivelyLocked, movableSelection } from "@sceneroom/shared";
 import { useLayoutStore } from "@/store/layoutStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { moveToParent } from "./reparent";
@@ -41,6 +41,8 @@ export function useRowDrag() {
     nodeName: string,
   ) {
     if (event.button !== 0) return;
+    // A locked object cannot be moved, so a press on it stays a plain click
+    if (isEffectivelyLocked(useSceneStore.getState().scene, nodeId)) return;
     const startX = event.clientX;
     const startY = event.clientY;
     // Dragging a selected row drags the whole selection; dragging any other row drags only that row

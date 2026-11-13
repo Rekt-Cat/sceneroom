@@ -3,7 +3,9 @@ import { createEmptyScene } from "./scene";
 import { addNode, createNode } from "./sceneOps";
 import {
   buildSceneTree,
+  editableIds,
   flattenTree,
+  isEffectivelyLocked,
   isEffectivelyVisible,
   searchNodes,
 } from "./sceneTree";
@@ -130,5 +132,42 @@ describe("isEffectivelyVisible", () => {
 
   it("is false for an unknown node", () => {
     expect(isEffectivelyVisible(sampleScene(), "nope")).toBe(false);
+  });
+});
+
+describe("isEffectivelyLocked and editableIds", () => {
+  function lockedScene(lockedId: string) {
+    const scene = sampleScene();
+    return {
+      ...scene,
+      nodes: {
+        ...scene.nodes,
+        [lockedId]: { ...scene.nodes[lockedId]!, locked: true },
+      },
+    };
+  }
+
+  it("is false when nothing is locked", () => {
+    expect(isEffectivelyLocked(sampleScene(), "c")).toBe(false);
+  });
+
+  it("is true for a locked node and for everything inside it", () => {
+    const scene = lockedScene("b");
+    expect(isEffectivelyLocked(scene, "b")).toBe(true);
+    expect(isEffectivelyLocked(scene, "c")).toBe(true);
+    expect(isEffectivelyLocked(scene, "a")).toBe(false);
+    expect(isEffectivelyLocked(scene, "d")).toBe(false);
+  });
+
+  it("is false for an unknown node", () => {
+    expect(isEffectivelyLocked(sampleScene(), "nope")).toBe(false);
+  });
+
+  it("editableIds keeps only known, unlocked nodes, in order", () => {
+    const scene = lockedScene("b");
+    expect(editableIds(scene, ["c", "a", "nope", "d", "b"])).toEqual([
+      "a",
+      "d",
+    ]);
   });
 });

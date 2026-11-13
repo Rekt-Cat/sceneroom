@@ -263,3 +263,111 @@ describe("re-parenting", () => {
     expect(get().selectedIds).toEqual([sphere]);
   });
 });
+
+describe("locked objects", () => {
+  const lock = () => get().setNodesLocked(["initial-cube"], true);
+  const cube = () => get().scene.nodes["initial-cube"]!;
+  const at = (x: number, y: number, z: number): [number, number, number] => [
+    x,
+    y,
+    z,
+  ];
+
+  it("locking and unlocking is one undo step each", () => {
+    lock();
+    expect(cube().locked).toBe(true);
+    expect(nextUndoLabel(get().history)).toBe("Lock");
+    get().setNodesLocked(["initial-cube"], false);
+    expect(cube().locked).toBe(false);
+    expect(nextUndoLabel(get().history)).toBe("Unlock");
+    get().undo();
+    expect(cube().locked).toBe(true);
+    get().undo();
+    expect(cube().locked).toBe(false);
+  });
+
+  it("locking something already locked records nothing", () => {
+    lock();
+    const steps = get().history.past.length;
+    lock();
+    expect(get().history.past).toHaveLength(steps);
+  });
+
+  it("a locked object cannot be moved, by any of the ways of moving it", () => {
+    lock();
+    const before = cube().transform;
+    const moved = { ...before, position: at(9, 9, 9) };
+    get().setNodeTransform("initial-cube", moved);
+    get().setNodeTransforms({ "initial-cube": moved });
+    get().beginEdit("Transform");
+    get().previewNodeTransform("initial-cube", moved);
+    get().endEdit(true);
+    expect(cube().transform).toEqual(before);
+    expect(get().history.past).toHaveLength(1); // only the lock itself
+  });
+
+  it("a locked object cannot be renamed or recoloured", () => {
+    lock();
+    expect(get().renameNode("initial-cube", "New name")).toBeNull();
+    expect(get().setNodeColor("initial-cube", "#ff0000")).toBeNull();
+    expect(cube()).toMatchObject({ name: "Cube", color: "#5cc4e0" });
+  });
+
+  it("a locked object is not deleted, and stays selected", () => {
+    lock();
+    get().select("initial-cube");
+    get().deleteSelected();
+    expect(get().scene.nodes["initial-cube"]).toBeDefined();
+    expect(get().selectedIds).toEqual(["initial-cube"]);
+  });
+
+  it("deleting a mixed selection deletes only the unlocked objects", () => {
+    lock();
+    const sphere = get().addPrimitive("sphere");
+    get().setSelection(["initial-cube", sphere]);
+    get().deleteSelected();
+    expect(get().scene.nodes[sphere]).toBeUndefined();
+    expect(get().scene.nodes["initial-cube"]).toBeDefined();
+    expect(get().selectedIds).toEqual(["initial-cube"]);
+  });
+
+  it("a locked object cannot be moved under another, nor can anything be put inside it", () => {
+    lock();
+    const sphere = get().addPrimitive("sphere");
+    const moveTo = (id: string, parentId: string | null) =>
+      get().reparentNodes(
+        [{ id, parentId, transform: get().scene.nodes[id]!.transform }],
+        "Move",
+      );
+    expect(() => moveTo("initial-cube", sphere)).toThrow();
+    expect(() => moveTo(sphere, "initial-cube")).toThrow();
+  });
+
+  it("everything inside a locked parent is locked too", () => {
+    const sphere = get().addPrimitive("sphere");
+    get().reparentNodes(
+      [
+        {
+          id: sphere,
+          parentId: "initial-cube",
+          transform: get().scene.nodes[sphere]!.transform,
+        },
+      ],
+      "Move",
+    );
+    lock();
+    const before = get().scene.nodes[sphere]!.transform;
+    get().setNodeTransform(sphere, { ...before, position: at(5, 5, 5) });
+    expect(get().scene.nodes[sphere]?.transform).toEqual(before);
+    expect(get().renameNode(sphere, "Child")).toBeNull();
+  });
+
+  it("a locked object can still be hidden and duplicated", () => {
+    lock();
+    get().setNodeVisible("initial-cube", false);
+    expect(cube().visible).toBe(false);
+    get().select("initial-cube");
+    get().duplicateSelected();
+    expect(Object.keys(get().scene.nodes)).toHaveLength(2);
+  });
+});

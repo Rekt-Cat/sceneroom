@@ -29,6 +29,11 @@ export const sceneNodeSchema = z.object({
   /** null = top level of the scene. Children follow their parent's transform. */
   parentId: z.string().min(1).nullable(),
   visible: z.boolean(),
+  /**
+   * A locked object cannot be edited (moved, renamed, recoloured, deleted, re-parented). Old scenes
+   * saved before this field existed load as unlocked.
+   */
+  locked: z.boolean().default(false),
   transform: transformSchema,
   /** CSS hex colour such as "#ff8800". */
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/),

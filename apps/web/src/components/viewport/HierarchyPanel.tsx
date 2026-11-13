@@ -4,6 +4,7 @@ import { useMemo, useState, type PointerEvent } from "react";
 import {
   buildSceneTree,
   flattenTree,
+  isEffectivelyLocked,
   searchNodes,
   type TreeRow,
 } from "@sceneroom/shared";
@@ -104,6 +105,9 @@ export default function HierarchyPanel() {
               onToggleCollapsed={toggleCollapsed}
               onPressNode={startDrag}
               justDragged={justDragged}
+              lockedByParent={
+                !row.node.locked && isEffectivelyLocked(scene, row.node.id)
+              }
             />
           ))}
           {drag && <TopLevelDropZone drag={drag} />}
@@ -160,6 +164,7 @@ function HierarchyRow({
   onToggleCollapsed,
   onPressNode,
   justDragged,
+  lockedByParent,
 }: {
   row: TreeRow;
   selected: boolean;
@@ -172,10 +177,13 @@ function HierarchyRow({
   ) => void;
   /** True for a moment after a drag ends, so the click that follows it is ignored. */
   justDragged: { current: boolean };
+  /** True if this object is locked only because it sits inside a locked object. */
+  lockedByParent: boolean;
 }) {
   const select = useSceneStore((state) => state.select);
   const toggleSelect = useSceneStore((state) => state.toggleSelect);
   const setNodeVisible = useSceneStore((state) => state.setNodeVisible);
+  const setNodesLocked = useSceneStore((state) => state.setNodesLocked);
   const { node, depth, hasChildren, expanded } = row;
 
   const beingDragged = drag?.ids.includes(node.id) ?? false;
@@ -194,7 +202,7 @@ function HierarchyRow({
     <li
       data-drop-id={node.id}
       style={{ paddingLeft: depth * INDENT_PX }}
-      className={`relative flex h-8 items-center gap-1.5 rounded-lg pr-1 ${dropClass} ${
+      className={`group relative flex h-8 items-center gap-1.5 rounded-lg pr-1 ${dropClass} ${
         beingDragged ? "opacity-50" : ""
       }`}
     >
@@ -246,6 +254,32 @@ function HierarchyRow({
           {node.name}
         </span>
       </button>
+
+      {lockedByParent ? (
+        <span
+          role="img"
+          aria-label="Locked because it is inside a locked object"
+          title="Locked because it is inside a locked object"
+          className="grid size-[26px] shrink-0 place-items-center text-ed-text-3"
+        >
+          <Icon name="lock" />
+        </span>
+      ) : (
+        <button
+          type="button"
+          aria-label={`${node.locked ? "Unlock" : "Lock"} ${node.name}`}
+          aria-pressed={node.locked}
+          title={node.locked ? "Unlock" : "Lock"}
+          onClick={() => setNodesLocked([node.id], !node.locked)}
+          className={`grid size-[26px] shrink-0 place-items-center rounded-md hover:bg-ed-raised hover:text-ed-text focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-ed-accent ${
+            node.locked
+              ? "text-ed-text-2"
+              : "text-ed-text-3 opacity-0 group-hover:opacity-100"
+          }`}
+        >
+          <Icon name={node.locked ? "lock" : "unlock"} />
+        </button>
+      )}
 
       {isTarget && drag.valid && (
         <span className="pointer-events-none absolute right-9 rounded-full bg-ed-accent px-2 py-0.5 text-[11px] font-medium text-white">

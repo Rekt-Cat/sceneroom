@@ -88,3 +88,27 @@ export function isEffectivelyVisible(scene: Scene, id: string): boolean {
   }
   return true;
 }
+
+/**
+ * True if the node is locked, or sits inside a locked node (locking a parent locks everything in it).
+ * Unknown nodes count as not locked.
+ */
+export function isEffectivelyLocked(scene: Scene, id: string): boolean {
+  const visited = new Set<string>();
+  let current: string | null = id;
+  while (current !== null && !visited.has(current)) {
+    const node: SceneNode | undefined = scene.nodes[current];
+    if (!node) return false;
+    if (node.locked) return true;
+    visited.add(current);
+    current = node.parentId;
+  }
+  return false;
+}
+
+/** The ids that may be edited: known nodes that are not locked, directly or through a parent. */
+export function editableIds(scene: Scene, ids: readonly string[]): string[] {
+  return ids.filter(
+    (id) => scene.nodes[id] !== undefined && !isEffectivelyLocked(scene, id),
+  );
+}

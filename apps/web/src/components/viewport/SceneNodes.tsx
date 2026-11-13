@@ -5,6 +5,7 @@ import { Outlines } from "@react-three/drei";
 import { DoubleSide, FrontSide, Mesh, type Object3D } from "three";
 import {
   buildSceneTree,
+  isEffectivelyLocked,
   type PrimitiveKind,
   type SceneNode,
   type TreeNode,
@@ -47,6 +48,7 @@ function NodeMesh({
   soleSelected,
   onSoleSelectedMesh,
   ancestorHidden,
+  ancestorLocked,
   children,
 }: {
   node: SceneNode;
@@ -57,6 +59,8 @@ function NodeMesh({
   onSoleSelectedMesh: (object: Object3D | null) => void;
   /** True if something this object sits inside is hidden (so it is hidden too, even if it is "visible"). */
   ancestorHidden: boolean;
+  /** True if something this object sits inside is locked (so it is locked too). */
+  ancestorLocked: boolean;
   /** The objects inside this one. Drawn as children of this mesh, so they move, turn and scale with it. */
   children?: ReactNode;
 }) {
@@ -79,7 +83,10 @@ function NodeMesh({
       ref={setMesh}
       visible={node.visible}
       raycast={
-        node.visible && !ancestorHidden ? Mesh.prototype.raycast : hitNothing
+        // Hidden and locked objects let clicks pass through to whatever is behind them
+        node.visible && !ancestorHidden && !node.locked && !ancestorLocked
+          ? Mesh.prototype.raycast
+          : hitNothing
       }
       position={position}
       rotation={rotation}
@@ -114,12 +121,14 @@ function NodeTree({
   soleId,
   onSoleSelectedMesh,
   ancestorHidden = false,
+  ancestorLocked = false,
 }: {
   entry: TreeNode;
   selectedIds: string[];
   soleId: string | null;
   onSoleSelectedMesh: (object: Object3D | null) => void;
   ancestorHidden?: boolean;
+  ancestorLocked?: boolean;
 }) {
   const { node, children } = entry;
   return (
@@ -129,6 +138,7 @@ function NodeTree({
       soleSelected={node.id === soleId}
       onSoleSelectedMesh={onSoleSelectedMesh}
       ancestorHidden={ancestorHidden}
+      ancestorLocked={ancestorLocked}
     >
       {children.map((child) => (
         <NodeTree
@@ -138,6 +148,7 @@ function NodeTree({
           soleId={soleId}
           onSoleSelectedMesh={onSoleSelectedMesh}
           ancestorHidden={ancestorHidden || !node.visible}
+          ancestorLocked={ancestorLocked || node.locked}
         />
       ))}
     </NodeMesh>
@@ -167,7 +178,7 @@ export default function SceneNodes() {
           onSoleSelectedMesh={setSoleObject}
         />
       ))}
-      {soleId && soleObject && (
+      {soleId && soleObject && !isEffectivelyLocked(scene, soleId) && (
         <SelectionGizmo object={soleObject} nodeId={soleId} />
       )}
       {selectedIds.length > 1 && <MultiSelectionGizmo ids={selectedIds} />}

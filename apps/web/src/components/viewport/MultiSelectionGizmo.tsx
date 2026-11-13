@@ -3,7 +3,11 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { TransformControls } from "@react-three/drei";
 import { Matrix4, Vector3, type Group } from "three";
-import { topLevelSelection, type Transform } from "@sceneroom/shared";
+import {
+  editableIds,
+  topLevelSelection,
+  type Transform,
+} from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
 import { markGizmoUsed } from "./gizmoGuard";
 import { getMesh } from "./meshRegistry";
@@ -27,7 +31,11 @@ export default function MultiSelectionGizmo({ ids }: { ids: string[] }) {
   const setNodeTransforms = useSceneStore((state) => state.setNodeTransforms);
   const [pivot, setPivot] = useState<Group | null>(null);
 
-  const movingIds = useMemo(() => topLevelSelection(scene, ids), [scene, ids]);
+  // Locked objects are left out: they cannot be moved
+  const movingIds = useMemo(
+    () => topLevelSelection(scene, editableIds(scene, ids)),
+    [scene, ids],
+  );
 
   // Put the pivot at the average position (in the 3D view) of the objects that will move, and reset it
   // to a plain state. Runs after every change to the scene, once the objects have their new positions.
@@ -117,6 +125,9 @@ export default function MultiSelectionGizmo({ ids }: { ids: string[] }) {
     }
     if (Object.keys(updates).length > 0) setNodeTransforms(updates);
   }
+
+  // Everything selected is locked: nothing to move, so no gizmo
+  if (movingIds.length === 0) return null;
 
   return (
     <>

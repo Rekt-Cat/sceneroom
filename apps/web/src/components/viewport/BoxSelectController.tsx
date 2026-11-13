@@ -5,6 +5,7 @@ import { useThree } from "@react-three/fiber";
 import { Mesh, Vector3 } from "three";
 import {
   boundsOfPoints,
+  isEffectivelyLocked,
   isEffectivelyVisible,
   rectFromPoints,
   rectsOverlap,
@@ -108,7 +109,11 @@ export default function BoxSelectController() {
 
       const { scene, selectedIds, setSelection } = useSceneStore.getState();
       const hit = Object.values(scene.nodes)
-        .filter((node) => isEffectivelyVisible(scene, node.id))
+        .filter(
+          (node) =>
+            isEffectivelyVisible(scene, node.id) &&
+            !isEffectivelyLocked(scene, node.id),
+        )
         .filter((node) => {
           const bounds = screenBoundsOf(node.id);
           return bounds !== null && rectsOverlap(bounds, box);

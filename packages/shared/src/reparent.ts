@@ -1,5 +1,6 @@
 import type { Scene, Transform } from "./scene";
 import { topLevelSelection } from "./selection";
+import { isEffectivelyLocked } from "./sceneTree";
 
 /** One object moving to a new parent (null = top level), with the transform it should have there. */
 export type ReparentMove = {
@@ -26,8 +27,9 @@ export function isInSubtree(
 
 /**
  * Whether `id` may be moved under `parentId` (null = top level). Not allowed: an object that does
- * not exist, a parent that does not exist, an object under itself, or under something below it
- * (that would make a loop and cut the whole branch off the scene).
+ * not exist, a parent that does not exist, a locked object (or one inside a locked object), a locked
+ * parent, an object under itself, or under something below it (that would make a loop and cut the
+ * whole branch off the scene).
  */
 export function canReparent(
   scene: Scene,
@@ -35,8 +37,11 @@ export function canReparent(
   parentId: string | null,
 ): boolean {
   if (!scene.nodes[id]) return false;
+  // A locked object cannot be moved, and nothing can be put inside a locked object
+  if (isEffectivelyLocked(scene, id)) return false;
   if (parentId === null) return true;
   if (!scene.nodes[parentId]) return false;
+  if (isEffectivelyLocked(scene, parentId)) return false;
   return !isInSubtree(scene, parentId, id);
 }
 

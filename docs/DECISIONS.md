@@ -269,3 +269,16 @@ Snapshots are cheap here: scenes are immutable and share every node that did not
 
 Found from a screenshot: with the Scene panel dragged narrow, the 256px Add menu (aligned to the Add button) stuck out past the left edge of the screen and its text was cut off.
 The menu is now placed against the whole Scene panel (`left-3 right-3`, at most 18rem wide) instead of against the button, so it fits any panel width; item hints are cut with an ellipsis. The small round "N" in the bottom-left corner of dev builds is Next.js's own dev indicator, not part of the app; it does not appear in the production site.
+
+## 2026-11-13: Locking objects
+
+A locked object cannot be edited. What "edited" means is decided in one place, the store, so no panel, shortcut or drag can get around it (the interface also greys things out, but that is only for the user).
+
+- **Blocked:** move / rotate / scale (gizmo, group gizmo, Inspector fields, dragging a value), rename, recolour, delete, moving it under another object, and putting anything inside it.
+- **Still allowed:** selecting it from the scene list (so it can be looked at and unlocked), hide / show (a display choice, not an edit), duplicate (the copy is a new object, and is locked too because it copies the flag), and lock / unlock itself.
+- **Inherited:** like hiding, locking a parent locks everything inside it (`isEffectivelyLocked` walks up the parents). A child locked this way shows a padlock that cannot be clicked; unlock the parent.
+- **In the 3D view:** locked objects get no gizmo and do not catch clicks or the selection box, so you cannot grab them by accident and can pick what is behind them. They can still be selected from the list.
+- **Mixed selections:** delete and the group gizmo skip the locked objects and act on the rest; locked ones stay selected. With only locked objects selected the Delete button is off and no gizmo appears.
+- **Data:** `locked: z.boolean().default(false)` on each node. The default means scenes without the flag load as unlocked, so the schema version stays 1 (nothing is saved to files yet).
+- **Undo:** lock and unlock are undo steps ("Lock", "Unlock"); several objects at once is one step.
+- **Not done:** a lock does not stop other people in Phase 7 (collaboration); there it should be enforced on the server too.

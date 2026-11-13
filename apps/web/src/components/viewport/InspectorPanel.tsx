@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { NODE_NAME_MAX_LENGTH, type SceneNode } from "@sceneroom/shared";
+import {
+  NODE_NAME_MAX_LENGTH,
+  editableIds,
+  isEffectivelyLocked,
+  type SceneNode,
+} from "@sceneroom/shared";
 import { useLayoutStore } from "@/store/layoutStore";
 import { useSceneStore } from "@/store/sceneStore";
 import PanelResizer from "./PanelResizer";
@@ -63,13 +68,34 @@ function EmptyState() {
   );
 }
 
-function Actions({ count }: { count: number }) {
+function Actions({ ids }: { ids: string[] }) {
+  const scene = useSceneStore((state) => state.scene);
   const duplicateSelected = useSceneStore((state) => state.duplicateSelected);
   const deleteSelected = useSceneStore((state) => state.deleteSelected);
+  const setNodesLocked = useSceneStore((state) => state.setNodesLocked);
+
+  const count = ids.length;
   const suffix = count > 1 ? ` ${count}` : "";
+  const allLocked = ids.every((id) => scene.nodes[id]?.locked);
+  // Locked objects are not deleted, so with nothing deletable the button is off
+  const canDelete = editableIds(scene, ids).length > 0;
 
   return (
     <div className="mt-auto flex gap-2 border-t border-ed-line px-4 pt-3 pb-4">
+      <button
+        type="button"
+        aria-pressed={allLocked}
+        aria-label={allLocked ? `Unlock${suffix}` : `Lock${suffix}`}
+        title={allLocked ? "Unlock (L)" : "Lock (L)"}
+        onClick={() => setNodesLocked(ids, !allLocked)}
+        className={`grid size-[30px] shrink-0 place-items-center rounded-md border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ed-accent ${
+          allLocked
+            ? "border-ed-select/50 bg-ed-select/13 text-ed-select"
+            : "border-ed-line-strong bg-ed-raised text-ed-text-2 hover:text-ed-text"
+        }`}
+      >
+        <Icon name={allLocked ? "lock" : "unlock"} />
+      </button>
       <button
         type="button"
         onClick={duplicateSelected}
@@ -81,9 +107,12 @@ function Actions({ count }: { count: number }) {
       </button>
       <button
         type="button"
+        disabled={!canDelete}
         onClick={deleteSelected}
-        title="Delete (Delete key)"
-        className={`${actionButton} border border-[#5a2b31] text-ed-danger hover:bg-[#2a1215]`}
+        title={
+          canDelete ? "Delete (Delete key)" : "Locked objects cannot be deleted"
+        }
+        className={`${actionButton} border border-[#5a2b31] text-ed-danger hover:bg-[#2a1215] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent`}
       >
         <Icon name="trash" />
         Delete{suffix}
@@ -95,6 +124,10 @@ function Actions({ count }: { count: number }) {
 function SingleObject({ node }: { node: SceneNode }) {
   const renameNode = useSceneStore((state) => state.renameNode);
   const setNodeVisible = useSceneStore((state) => state.setNodeVisible);
+  const setNodesLocked = useSceneStore((state) => state.setNodesLocked);
+  const locked = useSceneStore((state) =>
+    isEffectivelyLocked(state.scene, node.id),
+  );
   const parentName = useSceneStore((state) =>
     node.parentId ? state.scene.nodes[node.parentId]?.name : undefined,
   );
@@ -117,6 +150,7 @@ function SingleObject({ node }: { node: SceneNode }) {
             value={draft}
             maxLength={NODE_NAME_MAX_LENGTH}
             aria-label="Object name"
+            disabled={locked}
             onChange={(event) => setDraft(event.target.value)}
             onBlur={commitName}
             onKeyDown={(event) => {
@@ -126,7 +160,7 @@ function SingleObject({ node }: { node: SceneNode }) {
                 event.currentTarget.blur();
               }
             }}
-            className="-ml-2 h-[30px] w-full rounded-md border border-transparent bg-transparent px-2 text-[15px] font-semibold hover:border-ed-line-strong focus-visible:border-ed-accent focus-visible:outline-none"
+            className="-ml-2 h-[30px] w-full rounded-md border border-transparent bg-transparent px-2 text-[15px] font-semibold hover:border-ed-line-strong focus-visible:border-ed-accent focus-visible:outline-none disabled:cursor-not-allowed disabled:text-ed-text-2"
           />
           <p className="text-xs text-ed-text-3">
             {KIND_LABELS[node.kind]} ·{" "}
@@ -144,12 +178,36 @@ function SingleObject({ node }: { node: SceneNode }) {
           <Icon name={node.visible ? "eye" : "eyeOff"} />
         </button>
       </div>
+      {locked && (
+        <div
+          role="status"
+          className="flex items-center gap-2.5 border-b border-ed-line bg-ed-select/8 px-4 py-2.5 text-xs text-ed-text-2"
+        >
+          <span className="text-ed-select">
+            <Icon name="lock" />
+          </span>
+          <span className="flex-1">
+            {node.locked
+              ? "Locked. It cannot be edited until you unlock it."
+              : "Locked because it is inside a locked object."}
+          </span>
+          {node.locked && (
+            <button
+              type="button"
+              onClick={() => setNodesLocked([node.id], false)}
+              className="rounded-md border border-ed-line-strong bg-ed-raised px-2.5 py-1 text-xs font-medium text-ed-text hover:brightness-110 focus-visible:outline-2 focus-visible:outline-ed-accent"
+            >
+              Unlock
+            </button>
+          )}
+        </div>
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <ParentSection node={node} />
-        <TransformSection node={node} />
-        <AppearanceSection node={node} />
+        <ParentSection node={node} disabled={locked} />
+        <TransformSection node={node} disabled={locked} />
+        <AppearanceSection node={node} disabled={locked} />
       </div>
-      <Actions count={1} />
+      <Actions ids={[node.id]} />
     </>
   );
 }
@@ -197,7 +255,7 @@ function SeveralObjects({ ids }: { ids: string[] }) {
         view to move, rotate or scale all of them together. To change one
         object&apos;s values, select just that object.
       </p>
-      <Actions count={ids.length} />
+      <Actions ids={ids} />
     </>
   );
 }

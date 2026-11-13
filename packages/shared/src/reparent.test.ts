@@ -62,6 +62,41 @@ describe("canReparent", () => {
   });
 });
 
+describe("locked objects", () => {
+  function lockedScene(lockedId: string) {
+    const scene = sampleScene();
+    return {
+      ...scene,
+      nodes: {
+        ...scene.nodes,
+        [lockedId]: { ...scene.nodes[lockedId]!, locked: true },
+      },
+    };
+  }
+
+  it("a locked object cannot be moved, nor can anything inside it", () => {
+    const scene = lockedScene("a");
+    expect(canReparent(scene, "a", null)).toBe(false);
+    expect(canReparent(scene, "c", null)).toBe(false); // c is inside locked a
+    expect(canReparent(scene, "d", null)).toBe(true);
+  });
+
+  it("nothing can be put inside a locked object or inside something in it", () => {
+    const scene = lockedScene("b");
+    expect(canReparent(scene, "d", "b")).toBe(false);
+    expect(canReparent(scene, "d", "c")).toBe(false);
+    expect(canReparent(scene, "d", "a")).toBe(true);
+  });
+
+  it("reparentNodes refuses to move a locked object", () => {
+    expect(() =>
+      reparentNodes(lockedScene("d"), [
+        { id: "d", parentId: "a", transform: moved },
+      ]),
+    ).toThrow("Cannot move");
+  });
+});
+
 describe("movableSelection", () => {
   const scene = sampleScene();
 

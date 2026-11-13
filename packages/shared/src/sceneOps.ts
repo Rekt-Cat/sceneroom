@@ -29,6 +29,7 @@ export function createNode(id: string, kind: PrimitiveKind): SceneNode {
     kind,
     parentId: null,
     visible: true,
+    locked: false,
     // y = 0.5 puts a 1-unit primitive on top of the ground grid
     transform: { position: [0, 0.5, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
     color: DEFAULT_COLOR,
@@ -133,7 +134,7 @@ export function duplicateNode(
 export function updateNode(
   scene: Scene,
   id: string,
-  changes: Partial<Pick<SceneNode, "name" | "visible" | "color">>,
+  changes: Partial<Pick<SceneNode, "name" | "visible" | "color" | "locked">>,
 ): Scene {
   const node = scene.nodes[id];
   if (!node) throw new Error(`Node "${id}" does not exist`);

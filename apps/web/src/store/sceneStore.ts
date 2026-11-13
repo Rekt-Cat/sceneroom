@@ -5,6 +5,8 @@ import {
   createHistory,
   createNode,
   duplicateNodes,
+  editableIds,
+  isEffectivelyLocked,
   normalizeHexColor,
   normalizeNodeName,
   recordChange,
@@ -69,7 +71,7 @@ type SceneState = {
   setNodeTransforms: (updates: Record<string, Transform>) => void;
   /** Adds a new object and selects it. Returns its id. */
   addPrimitive: (kind: PrimitiveKind) => string;
-  /** Deletes the selected objects and everything below them. */
+  /** Deletes the selected objects and everything below them. Locked objects are left alone. */
   deleteSelected: () => void;
   /** Copies the selected objects (and everything below them), placed beside the originals, and selects the copies. */
   duplicateSelected: () => void;
@@ -78,6 +80,8 @@ type SceneState = {
    * are skipped. Throws if a move would make a loop; check with canReparent first.
    */
   reparentNodes: (moves: ReparentMove[], label: string) => void;
+  /** Locks or unlocks nodes as one change. A locked node cannot be edited (see isEffectivelyLocked). */
+  setNodesLocked: (ids: string[], locked: boolean) => void;
   /** Shows or hides a node in the viewport. */
   setNodeVisible: (id: string, visible: boolean) => void;
   /** Sets a node's colour. Returns the saved "#rrggbb" colour, or null if the text was not a valid colour. */
@@ -135,8 +139,15 @@ export const useSceneStore = create<SceneState>()((set) => ({
   setNodeTransform: (id, transform) =>
     set((state) => {
       const node = state.scene.nodes[id];
-      // Letting go of the gizmo without moving it must not leave an empty undo step
-      if (!node || transformsEqual(node.transform, transform)) return state;
+      // Letting go of the gizmo without moving it must not leave an empty undo step.
+      // A locked object cannot be moved, whatever asked for it.
+      if (
+        !node ||
+        isEffectivelyLocked(state.scene, id) ||
+        transformsEqual(node.transform, transform)
+      ) {
+        return state;
+      }
       return {
         scene: setTransforms(state.scene, { [id]: transform }),
         history: record(state, "Transform"),
@@ -147,7 +158,11 @@ export const useSceneStore = create<SceneState>()((set) => ({
       const changed = Object.fromEntries(
         Object.entries(updates).filter(([id, transform]) => {
           const node = state.scene.nodes[id];
-          return node && !transformsEqual(node.transform, transform);
+          return (
+            node &&
+            !isEffectivelyLocked(state.scene, id) &&
+            !transformsEqual(node.transform, transform)
+          );
         }),
       );
       if (Object.keys(changed).length === 0) return state;
@@ -167,14 +182,16 @@ export const useSceneStore = create<SceneState>()((set) => ({
   },
   deleteSelected: () =>
     set((state) => {
-      if (state.selectedIds.length === 0) return state;
-      const count = state.selectedIds.length;
+      const ids = editableIds(state.scene, state.selectedIds);
+      if (ids.length === 0) return state;
+      const scene = removeNodes(state.scene, ids);
       return {
-        scene: removeNodes(state.scene, state.selectedIds),
-        selectedIds: [],
+        scene,
+        // Locked objects that were selected stay selected
+        selectedIds: resolveSelection(scene, state.selectedIds),
         history: record(
           state,
-          count > 1 ? `Delete ${count} objects` : "Delete",
+          ids.length > 1 ? `Delete ${ids.length} objects` : "Delete",
         ),
       };
     }),
@@ -209,6 +226,19 @@ export const useSceneStore = create<SceneState>()((set) => ({
         history: record(state, label),
       };
     }),
+  setNodesLocked: (ids, locked) =>
+    set((state) => {
+      const changing = ids.filter(
+        (id) =>
+          state.scene.nodes[id] && state.scene.nodes[id].locked !== locked,
+      );
+      if (changing.length === 0) return state;
+      const scene = changing.reduce(
+        (next, id) => updateNode(next, id, { locked }),
+        state.scene,
+      );
+      return { scene, history: record(state, locked ? "Lock" : "Unlock") };
+    }),
   setNodeVisible: (id, visible) =>
     set((state) => {
       const node = state.scene.nodes[id];
@@ -220,7 +250,12 @@ export const useSceneStore = create<SceneState>()((set) => ({
     }),
   setNodeColor: (id, color) => {
     const clean = normalizeHexColor(color);
-    if (clean === null) return null;
+    if (
+      clean === null ||
+      isEffectivelyLocked(useSceneStore.getState().scene, id)
+    ) {
+      return null;
+    }
     set((state) => {
       const node = state.scene.nodes[id];
       if (!node || node.color === clean) return state;
@@ -233,7 +268,12 @@ export const useSceneStore = create<SceneState>()((set) => ({
   },
   renameNode: (id, name) => {
     const clean = normalizeNodeName(name);
-    if (clean === null) return null;
+    if (
+      clean === null ||
+      isEffectivelyLocked(useSceneStore.getState().scene, id)
+    ) {
+      return null;
+    }
     set((state) => {
       const node = state.scene.nodes[id];
       if (!node || node.name === clean) return state;
@@ -253,7 +293,13 @@ export const useSceneStore = create<SceneState>()((set) => ({
     })),
   previewNodeTransform: (id, transform) =>
     set((state) => {
-      if (!state.pendingEdit || !state.scene.nodes[id]) return state;
+      if (
+        !state.pendingEdit ||
+        !state.scene.nodes[id] ||
+        isEffectivelyLocked(state.scene, id)
+      ) {
+        return state;
+      }
       return { scene: setTransforms(state.scene, { [id]: transform }) };
     }),
   endEdit: (keep) =>
