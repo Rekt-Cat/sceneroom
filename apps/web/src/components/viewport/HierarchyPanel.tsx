@@ -11,6 +11,7 @@ import {
 import { useLayoutStore } from "@/store/layoutStore";
 import { useSceneStore } from "@/store/sceneStore";
 import AddMenu from "./AddMenu";
+import ImportButton from "./ImportButton";
 import PanelResizer from "./PanelResizer";
 import { ROOT_DROP_ID, useRowDrag, type RowDrag } from "./useRowDrag";
 import { Icon, KindIcon } from "./icons";
@@ -63,6 +64,7 @@ export default function HierarchyPanel() {
           {total} {total === 1 ? "object" : "objects"}
         </span>
         <span className="flex-1" />
+        <ImportButton />
         <AddMenu />
       </div>
 

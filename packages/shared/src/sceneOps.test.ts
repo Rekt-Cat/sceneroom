@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { createEmptyScene, sceneSchema } from "./scene";
+import { createEmptyScene, sceneNodeSchema, sceneSchema } from "./scene";
 import {
   addNode,
+  addAsset,
+  createModelNode,
   createNode,
+  isModelNode,
   duplicateNode,
   duplicateNodes,
   getSubtreeIds,
@@ -234,5 +237,57 @@ describe("transformsEqual", () => {
     );
     expect(transformsEqual(base, { ...base, rotation: [0, 0, 1] })).toBe(false);
     expect(transformsEqual(base, { ...base, scale: [1, 1, 2] })).toBe(false);
+  });
+});
+
+describe("model objects", () => {
+  const info = {
+    id: "abc123",
+    name: "Car",
+    type: "model" as const,
+    bytes: 10,
+    triangles: 3,
+    boundsMin: [0, 0, 0] as [number, number, number],
+    boundsMax: [1, 1, 1] as [number, number, number],
+  };
+
+  it("createModelNode makes a model object with an even scale at the middle of the scene", () => {
+    const node = createModelNode("m", "Car", "abc123", 0.4);
+    expect(node).toMatchObject({
+      kind: "model",
+      assetId: "abc123",
+      name: "Car",
+      parentId: null,
+      locked: false,
+      visible: true,
+    });
+    expect(node.transform).toEqual({
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+      scale: [0.4, 0.4, 0.4],
+    });
+    expect(isModelNode(node)).toBe(true);
+    expect(isModelNode(createNode("c", "cube"))).toBe(false);
+    expect(sceneNodeSchema.safeParse(node).success).toBe(true);
+  });
+
+  it("addAsset remembers a file, and importing the same file again changes nothing", () => {
+    const empty = createEmptyScene();
+    const once = addAsset(empty, info);
+    expect(once.assets["abc123"]).toEqual(info);
+    expect(empty.assets).toEqual({});
+    expect(addAsset(once, info)).toBe(once);
+  });
+
+  it("duplicating a model gives a second object that uses the same file", () => {
+    let scene = addAsset(createEmptyScene(), info);
+    scene = addNode(scene, createModelNode("m", "Car", "abc123", 1));
+    const copy = duplicateNode(scene, "m", ["m2"], [1, 0, 0]);
+    expect(copy.nodes["m2"]).toMatchObject({
+      kind: "model",
+      assetId: "abc123",
+      name: "Car (1)",
+    });
+    expect(Object.keys(copy.assets)).toEqual(["abc123"]);
   });
 });

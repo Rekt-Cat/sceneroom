@@ -9,7 +9,7 @@ export const LEFT_PANEL_LIMITS: PanelLimits = {
   default: 288,
 };
 export const RIGHT_PANEL_LIMITS: PanelLimits = {
-  min: 260,
+  min: 280,
   max: 520,
   default: 304,
 };

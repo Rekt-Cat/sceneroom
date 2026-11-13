@@ -136,11 +136,29 @@ a steady 60 is the usual target on most screens.
 | What                     | Setting                                                | Our value                                     | What it does                                                                                                            |
 | ------------------------ | ------------------------------------------------------ | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Scene panel width        | `LEFT_PANEL_LIMITS` in `packages/shared/src/layout.ts` | min `220`, max `480`, start `288`             | Drag the edge of the panel to resize it. Double-click the edge to go back to the start width.                           |
-| Inspector panel width    | `RIGHT_PANEL_LIMITS` in `layout.ts`                    | min `260`, max `520`, start `304`             | Same for the right panel.                                                                                               |
+| Inspector panel width    | `RIGHT_PANEL_LIMITS` in `layout.ts`                    | min `280`, max `520`, start `304`             | Same for the right panel.                                                                                               |
 | Smallest 3D view         | `MIN_VIEWPORT_WIDTH` in `layout.ts`                    | `360`                                         | The panels cannot be dragged so wide that the 3D view gets narrower than this.                                          |
 | Resize with the keyboard | `KEY_STEP_PX` in `PanelResizer.tsx`                    | `16` (Shift: 4 times that)                    | Focus the edge (Tab) and press the left or right arrow.                                                                 |
 | Remembered widths        | `STORAGE_KEY` in `apps/web/src/store/layoutStore.ts`   | `sceneroom.layout.v1`                         | Widths are saved in this browser. Clear that key in the browser tools to forget them.                                   |
 | Drag speed of X / Y / Z  | `perPixel` in `ROWS` in `InspectorFields.tsx`          | position `0.02`, rotation `0.5`, scale `0.01` | How much the value changes per pixel when you drag an axis letter. Hold Shift for 10 times more, Alt for 10 times less. |
+
+## Linked scale
+
+| What          | Setting                                              | Our value | What it does                                                                                                                                                                                                    |
+| ------------- | ---------------------------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Starts linked | `scaleLinked` in `apps/web/src/store/layoutStore.ts` | `true`    | The link switch next to "Scale" in the Inspector. Linked: changing X, Y or Z scales all three by the same factor, keeping the proportions. Unlinked: only that value changes. Set to `false` to start unlinked. |
+
+The switch is a setting of the screen, not of the object: it stays as you left it when you select another object, and is not saved when the page is reloaded. It affects typing, the arrow keys and dragging an axis letter. The gizmo's own scale handles and the Reset button are not affected.
+
+## Importing models
+
+| What                 | Setting                                                | Our value                 | What it does                                                                                                                     |
+| -------------------- | ------------------------------------------------------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Largest file         | `MAX_MODEL_BYTES` in `packages/shared/src/assets.ts`   | `50 MB`                   | Bigger files are refused with a message that shows both sizes.                                                                   |
+| Most triangles       | `MAX_MODEL_TRIANGLES` in `assets.ts`                   | `500,000`                 | A model with more triangles is refused (the browser would get slow).                                                             |
+| Size of a new import | `TARGET_IMPORT_SIZE` in `assets.ts`                    | `4` units                 | A new model is scaled so its longest side is this long, whatever size it came in. Use Scale in the Inspector to change it later. |
+| Accepted files       | `importGlbFile` in `apps/web/src/assets/loadModel.ts`  | `.glb` only               | Other formats (glTF with separate files, OBJ) are later steps.                                                                   |
+| Where it appears     | `createModelNode` in `packages/shared/src/sceneOps.ts` | the middle, on the ground | The model's origin is the middle of its bottom face (`modelOffset`), at position 0, 0, 0.                                        |
 
 ## Reset buttons (the starting values)
 

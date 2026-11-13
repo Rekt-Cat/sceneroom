@@ -350,3 +350,32 @@ Agreed in principle (the name was chosen by the owner's request; "Appearance 2" 
   Old scenes need no migration (Zod `.default(...)` fills the new section in), so the schema version can stay at 1, but this must be tested with an old-format scene.
 - **Order of the bigger ideas:** texture maps, presets and shared materials after the asset system (Phase 5); advanced surfaces and material slots after that; viewing aids (matcap, wireframe, normals, X-ray, UV checker) with Edit mode and Sculpting. Details in `ADVANCED-EDITING.md`, section F.
 - **Not verified:** that three.js's installed material class supports every advanced surface listed, and how each maps to glTF export; checked before building.
+
+## 2026-11-13: Model import, step 1 (import a GLB)
+
+Built as planned in `ASSETS-AND-IMPORT.md`, with these choices. Not yet tried in a browser; the loader and the limits are covered by tests that use a GLB built by hand (one triangle, so no licence question).
+
+- **Loader:** three.js's own `GLTFLoader` (version 0.187.0, in `three/examples/jsm`), `parseAsync(bytes)` from memory, no extra package. drei's `useGLTF` was NOT used: by default it downloads Draco decoders from a Google address, and it takes web addresses, not bytes in memory.
+- **No network from a model.** A `.glb` can still point at outside files (by web address). The loader's loading manager is given a URL filter that only lets `data:` and `blob:` addresses through; anything else is counted and the import is refused with "needs N files from outside itself". Tested.
+- **Not supported yet, with a plain message:** Draco, Meshopt and KTX2 compression (the loader's own errors are recognised), `.gltf` with separate files, OBJ and FBX.
+- **Checks before parsing:** extension `.glb`, not empty, under 50 MB, then the first 12 bytes (`glTF`, version 2, a length that fits) so a renamed text file is refused. After parsing: at least one shape, under 500,000 triangles. A refused file is not stored.
+- **Scene data:** new object kind `"model"` with `assetId`; `scene.assets` holds `{ id, name, type, bytes, triangles, boundsMin, boundsMax }` per file (Zod-checked; both new fields have defaults, so older scenes load; schema version stays 1).
+  An object with kind `"model"` but no asset record shows a red placeholder instead of failing.
+- **Where files live:** an `AssetStorage` interface with an in-memory version for now. Files are lost on reload, as the scene is (no saving yet). IndexedDB comes with saving (Phase 5).
+- **Same file twice:** the id is the SHA-256 of the bytes, so the file and its loaded scene are stored once; each object gets its own clone (`SkeletonUtils.clone`).
+- **Placing:** a new model is scaled so its longest side is 4 units and stands with the middle of its bottom face at the origin (`fitScale`, `modelOffset`, tested), selected, as one undo step ("Import <name>").
+- **In the 3D view:** a model is a group, so (a) selection shows an amber box around it (a shape's outline trick needs one mesh), (b) hidden and locked models get no click handler (an object without one is not tested for clicks), (c) box select uses the box around everything in the group, (d) the gizmo, group gizmo, lock, hide, duplicate, delete, parenting and undo work as for any object.
+  The Inspector shows the file's details instead of Colour and Roughness / Metalness (a model has its own materials).
+- **Dropping files:** drop on the 3D view imports the first file (others are mentioned and skipped). Anywhere else on the page a dropped file is cancelled, because the browser would otherwise open it and replace the editor (and the scene is not saved).
+- **Not done / risks:** the Assets panel; model animation (shown still); very large models are parsed on the main thread and can freeze the page for a moment (a Web Worker is a later option); memory use is not measured; behaviour in Safari and Firefox is unchecked.
+
+## 2026-11-13: Linked scale switch
+
+Asked for as "a link in Transform": linked, changing one of X, Y, Z changes all three; unlinked, only that one.
+
+- **Scale only.** Linking Position or Rotation has no useful meaning (it would move an object along a diagonal, or spin it on all axes at once), so the switch is on the Scale row only. Say if other rows should have it.
+- **Proportional, not equal.** Linked means "change the other two by the same factor" (`editScaleProportionally`): a box 1 x 2 x 4 with X typed as 2 becomes 2 x 4 x 8, keeping its shape. Setting all three to the same number would flatten a stretched object. Negative (mirrored) scales keep their mirroring; a scale of 0 is still refused; a result above the 100,000 limit is refused as a whole.
+- **Default on** (a start value in `layoutStore.ts`): scaling an imported car or a cube usually means "bigger or smaller", not "stretch it". It is a screen setting, kept while you select other objects but not saved with the scene or across reloads. Making it a per-object setting would need a field in the scene data (and undo steps for toggling it), which seemed too heavy for a convenience.
+- **Where it applies:** typing, arrow keys and dragging an axis letter all go through the same function, and a drag stays ONE undo step. The gizmo's Scale handles, the Reset button and the group gizmo are unchanged.
+- **Reset-button rule:** the switch is a toggle, not a value with a default, so it has no reset.
+- **Layout:** the Scale row's label now holds three small buttons (reset, link), so the label column grew from 68 to 76px and the Inspector's smallest width from 260 to 280px (`RIGHT_PANEL_LIMITS`).

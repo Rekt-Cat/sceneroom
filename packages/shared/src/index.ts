@@ -16,3 +16,4 @@ export * from "./inspectorValues";
 export * from "./history";
 export * from "./layout";
 export * from "./reparent";
+export * from "./assets";

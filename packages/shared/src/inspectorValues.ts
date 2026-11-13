@@ -105,3 +105,31 @@ export function resetTransformGroup(
 ): Transform {
   return { ...transform, [group]: [...IDENTITY_TRANSFORM[group]] };
 }
+
+/**
+ * Like `editTransform` for a scale value, but with the three scale values linked: changing one by a
+ * factor changes the other two by the same factor, so the shape keeps its proportions (double X and
+ * Y and Z double too). The edited axis gets exactly the number typed. Returns null if the text is not
+ * a valid scale, or if the result would be too large for any of the three.
+ */
+export function editScaleProportionally(
+  transform: Transform,
+  axis: Axis,
+  text: string,
+): Transform | null {
+  const typed = parseNumberInput(text);
+  if (typed === null || typed === 0) return null;
+  const current = transform.scale[axis];
+  // A scale that is 0 has no proportions to keep: edit just this one
+  if (current === 0) return editTransform(transform, "scale", axis, text);
+
+  const factor = typed / current;
+  const scale = transform.scale.map((value) => value * factor) as [
+    number,
+    number,
+    number,
+  ];
+  scale[axis] = typed;
+  if (scale.some((value) => Math.abs(value) > MAX_ABS_VALUE)) return null;
+  return { ...transform, scale };
+}

@@ -477,3 +477,64 @@ describe("picking a colour (many previews, one undo step)", () => {
     expect(get().history.past).toHaveLength(0);
   });
 });
+
+describe("importing a model", () => {
+  const info = {
+    id: "hash-of-a-car",
+    name: "Muscle car",
+    type: "model" as const,
+    bytes: 2048,
+    triangles: 9000,
+    boundsMin: [-1, 0.2, -5] as [number, number, number],
+    boundsMax: [1, 1.8, 5] as [number, number, number],
+  };
+
+  it("adds the file's record and an object that uses it, scaled to fit, and selects it", () => {
+    const id = get().importModel(info);
+    expect(get().scene.assets[info.id]).toEqual(info);
+    const node = get().scene.nodes[id]!;
+    expect(node).toMatchObject({
+      kind: "model",
+      assetId: info.id,
+      name: "Muscle car",
+    });
+    expect(node.transform.scale[0]).toBeCloseTo(0.4); // longest side 10 -> 4 units
+    expect(get().selectedIds).toEqual([id]);
+  });
+
+  it("is one undo step that takes the object away again", () => {
+    const before = Object.keys(get().scene.nodes).length;
+    get().importModel(info);
+    expect(nextUndoLabel(get().history)).toBe("Import Muscle car");
+    get().undo();
+    expect(Object.keys(get().scene.nodes)).toHaveLength(before);
+    get().redo();
+    expect(Object.keys(get().scene.nodes)).toHaveLength(before + 1);
+  });
+
+  it("importing the same file twice makes two objects but remembers the file once", () => {
+    get().importModel(info);
+    get().importModel(info);
+    expect(Object.keys(get().scene.assets)).toEqual([info.id]);
+    const models = Object.values(get().scene.nodes).filter(
+      (n) => n.kind === "model",
+    );
+    expect(models).toHaveLength(2);
+  });
+
+  it("an imported model can be moved, locked and duplicated like any object", () => {
+    const id = get().importModel(info);
+    const node = get().scene.nodes[id]!;
+    get().setNodeTransform(id, { ...node.transform, position: [3, 0, 0] });
+    expect(get().scene.nodes[id]?.transform.position).toEqual([3, 0, 0]);
+    get().select(id);
+    get().duplicateSelected();
+    const models = Object.values(get().scene.nodes).filter(
+      (n) => n.kind === "model",
+    );
+    expect(models).toHaveLength(2);
+    get().setNodesLocked([id], true);
+    get().setNodeTransform(id, { ...node.transform, position: [9, 9, 9] });
+    expect(get().scene.nodes[id]?.transform.position).toEqual([3, 0, 0]);
+  });
+});
