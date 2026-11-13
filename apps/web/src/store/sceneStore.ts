@@ -51,6 +51,8 @@ type SceneState = {
   deleteSelected: () => void;
   /** Copies the selected objects (and everything below them), placed beside the originals, and selects the copies. */
   duplicateSelected: () => void;
+  /** Shows or hides a node in the viewport. */
+  setNodeVisible: (id: string, visible: boolean) => void;
   /** Renames a node. Returns the saved name, or null if the name was not allowed. */
   renameNode: (id: string, name: string) => string | null;
 };
@@ -115,6 +117,8 @@ export const useSceneStore = create<SceneState>()((set) => ({
       );
       return { scene: result.scene, selectedIds: result.rootIds };
     }),
+  setNodeVisible: (id, visible) =>
+    set((state) => ({ scene: updateNode(state.scene, id, { visible }) })),
   renameNode: (id, name) => {
     const clean = normalizeNodeName(name);
     if (clean === null) return null;

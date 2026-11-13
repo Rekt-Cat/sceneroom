@@ -2,10 +2,10 @@
 
 ## Current status
 
-- **Phase:** 2 (scene model and editing tools) done and tested in the browser on branch `feature/object-actions`; Phase 3 next
-- **Done:** Phase 0; Phase 1 (3D viewport, live at https://sceneroom.vercel.app); Phase 2: scene schema (Zod), pure scene operations with Vitest tests, Zustand store, click-to-select with outline, multi-select (Shift + click, Ctrl/Cmd + drag box), transform gizmo for one object or a group (move/rotate/scale, optional snapping, smooth by default), camera controls (left pans, right rotates, Shift swaps), add / numbered duplicate / delete / rename. A git pre-push hook runs type-check, lint, test and build before every push. `main` has everything up to the gizmo; the object actions and multi-select are on `feature/object-actions`, waiting for a pull request.
-- **CI:** last seen green on `b33fe6b`; not yet checked on newer commits (CI runs on pushes to `main` and on pull requests only).
-- **Next action:** open a pull request `feature/object-actions` into `main` (starts CI, last seen green on `b33fe6b`) and merge it. Then Phase 3 on new branches: Hierarchy panel, Inspector (a multi-selection shows only a count), undo/redo. Still open: test `SETUP-SECOND-PC.md` on the second PC; try the pre-push hook from GitHub Desktop; optional `/code-review` of the Phase 0-1 diffs.
+- **Phase:** 3 (editor panels and undo/redo), started: Hierarchy list built on branch `feature/hierarchy`
+- **Done:** Phase 0, Phase 1 (live at https://sceneroom.vercel.app) and Phase 2 (scene model, selection, multi-select, gizmo, camera controls, add / numbered duplicate / delete / rename), all on `main`. A git pre-push hook runs type-check, lint, test and build before every push.
+- **CI:** green on the merge of pull request #2 (`0e5849e`).
+- **Next action:** test the Hierarchy panel in the browser and merge `feature/hierarchy`. Then, as separate branches: re-parenting (drag in the Hierarchy, draw children inside parents), Inspector (a multi-selection shows only a count), undo/redo. Still open: test `SETUP-SECOND-PC.md` on the second PC; try the pre-push hook from GitHub Desktop; optional `/code-review` of the Phase 0-1 diffs.
 
 Update this block at the end of every sub-phase and commit it.
 
@@ -53,7 +53,8 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 ### Phase 3: Editor panels and undo/redo
 
 - [ ] Layout: toolbar, Hierarchy, Inspector, Viewport (shadcn/ui)
-- [ ] Hierarchy tree with re-parenting and visibility; Inspector with transform, color, material values
+- [x] Hierarchy tree with visibility (branch `feature/hierarchy`, needs a browser check)
+- [ ] Re-parenting in the Hierarchy; Inspector with transform, color, material values
 - [ ] Undo/redo (command history) and keyboard shortcuts; Vitest tests for store and commands
 
 ### Phase 4: Lights, materials, environment

@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { Outlines } from "@react-three/drei";
-import { DoubleSide, FrontSide, type Object3D } from "three";
+import { DoubleSide, FrontSide, Mesh, type Object3D } from "three";
 import type { PrimitiveKind, SceneNode } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
 import MultiSelectionGizmo from "./MultiSelectionGizmo";
@@ -25,6 +25,12 @@ function Geometry({ kind }: { kind: PrimitiveKind }) {
       return <coneGeometry args={[0.5, 1, 32]} />;
   }
 }
+
+/**
+ * three.js still hit-tests objects that are hidden (`visible={false}`), so a hidden object would
+ * swallow clicks meant for the objects behind it. Hidden meshes get this "hit nothing" version.
+ */
+const hitNothing = () => undefined;
 
 /** Selection outline: thickness is in screen pixels (screenspace is off). */
 const OUTLINE_COLOR = "#ffb020";
@@ -61,6 +67,7 @@ function NodeMesh({
     <mesh
       ref={setMesh}
       visible={node.visible}
+      raycast={node.visible ? Mesh.prototype.raycast : hitNothing}
       position={position}
       rotation={rotation}
       scale={scale}

@@ -10,3 +10,4 @@ export * from "./selection";
 export * from "./transformTools";
 export * from "./nodeName";
 export * from "./screenRect";
+export * from "./sceneTree";

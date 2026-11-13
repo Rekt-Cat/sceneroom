@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import AddToolbar from "./AddToolbar";
+import HierarchyPanel from "./HierarchyPanel";
 import BoxSelectOverlay from "./BoxSelectOverlay";
 import SelectionPanel from "./SelectionPanel";
 import Toolbar from "./Toolbar";
@@ -22,7 +22,7 @@ export default function ViewportLoader() {
     <>
       <Viewport />
       <Toolbar />
-      <AddToolbar />
+      <HierarchyPanel />
       <SelectionPanel />
       <BoxSelectOverlay />
     </>

@@ -184,3 +184,16 @@ You chose the Ctrl/Cmd + left-drag trigger because plain left-drag already pans 
 - **No per-object details** for a multi-selection, as requested: the panel shows a count. The Inspector (Phase 3) should do the same.
 - Found by lint: values from `useMemo` may not be mutated (React Compiler rule), so per-drag data lives in a `useRef`.
 - Needs a browser check: the group gizmo, the box, and Ctrl+click on a Mac (Ctrl+click is a right-click there; Cmd is the intended key).
+
+## 2026-11-13: Hierarchy panel first, re-parenting later; plain Tailwind instead of shadcn/ui for now
+
+Phase 3 starts with the Hierarchy list (tree, select, Shift/Ctrl/Cmd + click to multi-select, Hide/Show). The panels are small, so they use plain Tailwind
+like the rest of the overlays. shadcn/ui (the plan's choice) is deferred until a component really needs it (dialogs, colour picker for the Inspector);
+its setup for Tailwind 4 would be checked in the docs first.
+
+- **Why re-parenting is a separate step:** drawing children inside their parent changes the maths in `MultiSelectionGizmo` and the single gizmo
+  (they assume world space), so it gets its own branch, with tests for cycle prevention and keeping the world position.
+- **Tree logic is pure** (`buildSceneTree`, `flattenTree`); a node with a missing parent is shown at the top level so nothing disappears.
+- **Bug found by reading the library code:** neither R3F nor the three.js raycaster skips `visible={false}` objects, so a hidden object would still
+  catch clicks and block the ones behind it. Hidden meshes now use a "hit nothing" `raycast`. Box select already ignored hidden nodes.
+- The Add buttons moved from their own bar into the Hierarchy panel. The left panel is 16rem wide and can overlap the centred mode toolbar on narrow windows.
