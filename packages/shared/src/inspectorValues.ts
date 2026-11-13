@@ -94,3 +94,14 @@ export function sanitizeMaterialChange(change: MaterialChange): MaterialChange {
   }
   return clean;
 }
+
+/**
+ * The transform with one part (position, rotation or scale) put back to its starting value and the
+ * other parts left as they are. Used by the reset button of each row in the Inspector.
+ */
+export function resetTransformGroup(
+  transform: Transform,
+  group: TransformGroup,
+): Transform {
+  return { ...transform, [group]: [...IDENTITY_TRANSFORM[group]] };
+}

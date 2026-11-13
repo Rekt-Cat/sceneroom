@@ -5,7 +5,6 @@ import {
   DEFAULT_COLOR,
   DEFAULT_METALNESS,
   DEFAULT_ROUGHNESS,
-  IDENTITY_TRANSFORM,
   buildSceneTree,
   canReparent,
   flattenTree,
@@ -14,6 +13,8 @@ import {
   formatNumber,
   normalizeHexColor,
   parseUnitInput,
+  resetTransformGroup,
+  transformsEqual,
   type Axis,
   type SceneNode,
   type TransformGroup,
@@ -135,26 +136,37 @@ export function TransformSection({
 
   return (
     <section aria-label="Transform">
-      <div className="flex items-center justify-between pr-3">
-        <h3 className={sectionTitle}>Transform</h3>
-        <button
-          type="button"
-          aria-label="Reset position, rotation and scale"
-          title="Reset position, rotation and scale"
-          disabled={disabled}
-          onClick={() => setNodeTransform(node.id, IDENTITY_TRANSFORM)}
-          className="grid size-[26px] place-items-center rounded-md text-ed-text-3 hover:bg-ed-raised hover:text-ed-text focus-visible:outline-2 focus-visible:outline-ed-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-        >
-          <Icon name="reset" />
-        </button>
-      </div>
+      <h3 className={sectionTitle}>Transform</h3>
       <div className="space-y-2 px-4 pb-3">
         {ROWS.map(({ group, label, decimals, step, perPixel }) => (
           <div
             key={group}
-            className="grid grid-cols-[58px_1fr] items-center gap-2"
+            className="grid grid-cols-[68px_1fr] items-center gap-2"
           >
-            <span className="text-xs text-ed-text-2">{label}</span>
+            <span className="flex items-center gap-0.5 text-xs text-ed-text-2">
+              {label}
+              <button
+                type="button"
+                aria-label={`Reset ${label.toLowerCase()}`}
+                title={`Reset ${label.toLowerCase()}`}
+                disabled={
+                  disabled ||
+                  transformsEqual(
+                    node.transform,
+                    resetTransformGroup(node.transform, group),
+                  )
+                }
+                onClick={() =>
+                  setNodeTransform(
+                    node.id,
+                    resetTransformGroup(node.transform, group),
+                  )
+                }
+                className="grid size-[18px] place-items-center rounded text-ed-text-3 hover:bg-ed-raised hover:text-ed-text focus-visible:outline-2 focus-visible:outline-ed-accent disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+              >
+                <Icon name="reset" className="size-3" />
+              </button>
+            </span>
             <div className="grid grid-cols-3 gap-1.5">
               {AXES.map(({ axis, index }) => (
                 <NumberField

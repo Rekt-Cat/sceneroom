@@ -9,6 +9,7 @@ import {
   formatNumber,
   parseNumberInput,
   parseUnitInput,
+  resetTransformGroup,
   sanitizeMaterialChange,
 } from "./inspectorValues";
 import { sceneNodeSchema } from "./scene";
@@ -172,5 +173,30 @@ describe("sanitizeMaterialChange", () => {
       sanitizeMaterialChange({ roughness: NaN, metalness: Infinity }),
     ).toEqual({});
     expect(sanitizeMaterialChange({})).toEqual({});
+  });
+});
+
+describe("resetTransformGroup", () => {
+  const edited = {
+    position: [3, 4, 5] as [number, number, number],
+    rotation: [0.1, 0.2, 0.3] as [number, number, number],
+    scale: [2, 2, 2] as [number, number, number],
+  };
+
+  it("puts one part back to its starting value and leaves the others", () => {
+    expect(resetTransformGroup(edited, "position")).toEqual({
+      ...edited,
+      position: [0, 0, 0],
+    });
+    expect(resetTransformGroup(edited, "rotation").rotation).toEqual([0, 0, 0]);
+    expect(resetTransformGroup(edited, "scale").scale).toEqual([1, 1, 1]);
+    expect(resetTransformGroup(edited, "scale").position).toEqual([3, 4, 5]);
+  });
+
+  it("does not change the transform it was given, nor share the starting arrays", () => {
+    const result = resetTransformGroup(edited, "position");
+    expect(edited.position).toEqual([3, 4, 5]);
+    result.position[0] = 99;
+    expect(IDENTITY_TRANSFORM.position).toEqual([0, 0, 0]);
   });
 });

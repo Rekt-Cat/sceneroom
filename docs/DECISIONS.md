@@ -329,8 +329,8 @@ A plan only, in `docs/ASSETS-AND-IMPORT.md`; nothing is built or verified yet.
 ## 2026-11-13: Convention: every changeable value has a reset button
 
 Asked for as a standing rule. Any control that changes a value gets a reset button that restores its default: one undo step, greyed out when already at the default or when the object is locked, with a tooltip naming the value it resets to.
-Done so far: Colour, Roughness and Metalness each have their own; Position, Rotation and Scale share the one reset button in the Transform header (it resets all three). Per-row resets for Position, Rotation and Scale were added and then removed on request, because the header button already covered them (so do not add duplicates where a reset already exists).
-The default always comes from one named constant (`IDENTITY_TRANSFORM`, `DEFAULT_COLOR`, `DEFAULT_ROUGHNESS`, `DEFAULT_METALNESS`) so the button and the "new object" code cannot disagree; `DEFAULT_COLOR` moved to `scene.ts` for that reason.
+Done so far: Colour, Roughness and Metalness each have their own, and so does each row of the Transform (Position, Rotation, Scale), which resets only that row. The old "reset all three" button in the Transform header was removed on request, once the per-row ones existed (one reset per thing; do not keep a second button that does the same job).
+The default always comes from one named constant (`IDENTITY_TRANSFORM`, `DEFAULT_COLOR`, `DEFAULT_ROUGHNESS`, `DEFAULT_METALNESS`) so the button and the "new object" code cannot disagree; `DEFAULT_COLOR` moved to `scene.ts` for that reason. `resetTransformGroup` (pure, tested) resets one part of a transform and leaves the rest.
 Left without one: the name (no starting value), the Parent list (a choice), and the panel widths (double-click the edge). Future controls (light intensity, fog, modifier amounts, brush size) follow the same rule.
 
 ## 2026-11-13: Colour picker uses the browser's own chooser

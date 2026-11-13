@@ -146,11 +146,11 @@ a steady 60 is the usual target on most screens.
 
 Every value you can change in the Inspector has a reset button (the circular arrow) that puts it back to its starting value. It is greyed out when the value is already there, and for locked objects. Each is one undo step.
 
-| Value                     | Starting value comes from                                        | Our value                         |
-| ------------------------- | ---------------------------------------------------------------- | --------------------------------- |
-| Position, Rotation, Scale | `IDENTITY_TRANSFORM` in `packages/shared/src/inspectorValues.ts` | `0, 0, 0` / `0, 0, 0` / `1, 1, 1` |
-| Colour                    | `DEFAULT_COLOR` in `packages/shared/src/scene.ts`                | `#5cc4e0`                         |
-| Roughness, Metalness      | `DEFAULT_ROUGHNESS`, `DEFAULT_METALNESS` in `scene.ts`           | `0.6`, `0.1`                      |
+| Value                                                  | Starting value comes from                                        | Our value                         |
+| ------------------------------------------------------ | ---------------------------------------------------------------- | --------------------------------- |
+| Position, Rotation, Scale (each row has its own reset) | `IDENTITY_TRANSFORM` in `packages/shared/src/inspectorValues.ts` | `0, 0, 0` / `0, 0, 0` / `1, 1, 1` |
+| Colour                                                 | `DEFAULT_COLOR` in `packages/shared/src/scene.ts`                | `#5cc4e0`                         |
+| Roughness, Metalness                                   | `DEFAULT_ROUGHNESS`, `DEFAULT_METALNESS` in `scene.ts`           | `0.6`, `0.1`                      |
 
 Not given a reset button on purpose: the name (free text, no starting value), the Parent list (a choice, not a value), and the panel widths (double-click the panel edge to reset them).
 
@@ -192,13 +192,13 @@ Metal needs something to reflect. Until the environment step adds reflections, h
 
 Files: `apps/web/src/components/viewport/InspectorFields.tsx` (rows, steps, colours) and `packages/shared/src/inspectorValues.ts` (limits).
 
-| What                 | Setting                                      | Our value                                 | What it does                                                                                                  |
-| -------------------- | -------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Arrow-key step       | `step` in `ROWS`                             | position `0.1`, rotation `5`, scale `0.1` | How much one Up or Down press changes a value. Shift makes it 10 times bigger.                                |
-| Decimals shown       | `decimals` in `ROWS`                         | position `2`, rotation `1`, scale `2`     | How many digits after the point a field shows.                                                                |
-| Largest typed number | `MAX_ABS_VALUE` in `inspectorValues.ts`      | `100000`                                  | Bigger numbers (positive or negative) are refused.                                                            |
-| Reset button         | `IDENTITY_TRANSFORM` in `inspectorValues.ts` | position 0, rotation 0, scale 1           | What the Reset button sets. Note the origin is the ground level, so a reset cube sinks halfway into the grid. |
-| Quick colours        | `QUICK_COLORS` in `InspectorFields.tsx`      | 7 colours                                 | The round colour buttons under the hex box. Add, remove or change a `{ name, hex }` line.                     |
+| What                 | Setting                                      | Our value                                 | What it does                                                                                                                                                      |
+| -------------------- | -------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Arrow-key step       | `step` in `ROWS`                             | position `0.1`, rotation `5`, scale `0.1` | How much one Up or Down press changes a value. Shift makes it 10 times bigger.                                                                                    |
+| Decimals shown       | `decimals` in `ROWS`                         | position `2`, rotation `1`, scale `2`     | How many digits after the point a field shows.                                                                                                                    |
+| Largest typed number | `MAX_ABS_VALUE` in `inspectorValues.ts`      | `100000`                                  | Bigger numbers (positive or negative) are refused.                                                                                                                |
+| Reset buttons        | `IDENTITY_TRANSFORM` in `inspectorValues.ts` | position 0, rotation 0, scale 1           | What the reset button of each row (Position, Rotation, Scale) sets that row to. Note the origin is the ground level, so a reset cube sinks halfway into the grid. |
+| Quick colours        | `QUICK_COLORS` in `InspectorFields.tsx`      | 7 colours                                 | The round colour buttons under the hex box. Add, remove or change a `{ name, hex }` line.                                                                         |
 
 ## The page around the viewport
 
