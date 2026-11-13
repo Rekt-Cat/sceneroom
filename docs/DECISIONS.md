@@ -52,3 +52,15 @@ Fix: `"check-types": "next typegen && tsc --noEmit"` in `apps/web`. Lesson: repr
 ## 2026-11-11: Public GitHub repo under a personal account
 
 GitHub CLI was installed then removed: its login requests broad permissions (including organisation access). Git + GitHub Desktop is used instead.
+
+## 2026-11-13: 3D viewport is a client-only component
+
+WebGL needs the browser, so `Viewport.tsx` is a Client Component (`"use client"`) loaded through `ViewportLoader.tsx` with
+`next/dynamic` and `ssr: false`. The bundled Next.js docs say `ssr: false` is not allowed in a Server Component, which is why a
+separate client wrapper exists and `page.tsx` stays a Server Component.
+
+## 2026-11-13: Three.js stack versions
+
+`three` 0.187.0, `@react-three/fiber` 9.8.2 (peer range `react >=19 <19.4`, we have 19.3.0) and `@react-three/drei` 10.7.9
+(needs React 19, three >=0.159, fiber 9). `@types/three` matches `three`. drei pulls in 54 packages including large ones
+(`hls.js`, `@mediapipe/tasks-vision`); only imported parts are bundled, but check bundle size in Phase 9.

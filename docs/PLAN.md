@@ -2,10 +2,10 @@
 
 ## Current status
 
-- **Phase:** 0 (foundation)
-- **Done:** tools installed; GitHub repo; monorepo (pnpm + Turborepo); Next.js app in `apps/web`; `packages/shared`; `docs/WHAT-WE-USED.md`; `docs/DECISIONS.md`; `CLAUDE.md`
+- **Phase:** 1 (3D viewport), in progress
+- **Done:** Phase 0; Phase 1 code (Three.js + React Three Fiber + drei viewport: canvas, grid, lights, cube, orbit controls, FPS counter). Lint, type-check and build pass; dev server serves the page.
 - **CI:** green on `b33fe6b` (first run failed on type-check, fixed in `e798eac`).
-- **Next action:** start Phase 1 (3D viewport). Still open from Phase 0: confirm the Prettier hook fires and the skill loads after `/hooks` and `/reload-skills`; test `SETUP-SECOND-PC.md` on the second PC.
+- **Next action:** owner checks the viewport in a browser (`pnpm dev`, http://localhost:3000); then deploy to Vercel. Still open from Phase 0: confirm the Prettier hook fires and the skill loads after `/hooks` and `/reload-skills`; test `SETUP-SECOND-PC.md` on the second PC.
 
 Update this block at the end of every sub-phase and commit it.
 
@@ -36,7 +36,7 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 
 ### Phase 1: 3D viewport
 
-- [ ] Three.js + React Three Fiber + drei; canvas, grid, lights, cube, orbit controls, FPS overlay
+- [x] Three.js + React Three Fiber + drei; canvas, grid, lights, cube, orbit controls, FPS overlay (rendering still to confirm in a browser)
 - [ ] Deploy the early version to Vercel (live link from now on)
 
 ### Phase 2: Scene model and editing tools

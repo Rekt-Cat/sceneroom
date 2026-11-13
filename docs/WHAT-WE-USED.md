@@ -31,16 +31,20 @@ Status column: **verified** = checked against official docs or by running it. Ve
 
 ## Libraries and frameworks
 
-| Item                            | Version                    | Purpose                                                  | Used where                 |
-| ------------------------------- | -------------------------- | -------------------------------------------------------- | -------------------------- |
-| Next.js (App Router, Turbopack) | 16.4.6                     | React framework: routing, server rendering, build        | `apps/web`                 |
-| React                           | 19.3.0                     | UI components                                            | `apps/web`                 |
-| TypeScript                      | 5.9.3                      | Typed JavaScript (v7 not used, see DECISIONS.md)         | all packages               |
-| Tailwind CSS                    | 4.3.3                      | Utility-class styling                                    | `apps/web`                 |
-| ESLint (+ eslint-config-next)   | 9.39.5 / 16.4.6            | Finds mistakes in code                                   | `apps/web`                 |
-| `@sceneroom/shared`             | 0.0.0                      | Types and constants shared by web app and server         | `packages/shared`          |
-| Prettier                        | 3.9.10                     | Automatic code and Markdown formatting                   | root, `.prettierrc.json`   |
-| GitHub Actions (CI)             | checkout v7, setup-node v7 | Runs format check, lint, type-check, build on every push | `.github/workflows/ci.yml` |
+| Item                            | Version                    | Purpose                                                  | Used where                         |
+| ------------------------------- | -------------------------- | -------------------------------------------------------- | ---------------------------------- |
+| Next.js (App Router, Turbopack) | 16.4.6                     | React framework: routing, server rendering, build        | `apps/web`                         |
+| React                           | 19.3.0                     | UI components                                            | `apps/web`                         |
+| TypeScript                      | 5.9.3                      | Typed JavaScript (v7 not used, see DECISIONS.md)         | all packages                       |
+| Tailwind CSS                    | 4.3.3                      | Utility-class styling                                    | `apps/web`                         |
+| ESLint (+ eslint-config-next)   | 9.39.5 / 16.4.6            | Finds mistakes in code                                   | `apps/web`                         |
+| `@sceneroom/shared`             | 0.0.0                      | Types and constants shared by web app and server         | `packages/shared`                  |
+| Prettier                        | 3.9.10                     | Automatic code and Markdown formatting                   | root, `.prettierrc.json`           |
+| three (Three.js)                | 0.187.0                    | 3D engine for the browser (WebGL)                        | `apps/web`                         |
+| @react-three/fiber              | 9.8.2                      | Write three.js scenes as React components (`<Canvas>`)   | `apps/web/src/components/viewport` |
+| @react-three/drei               | 10.7.9                     | Ready-made helpers: Grid, OrbitControls, Stats           | `apps/web/src/components/viewport` |
+| @types/three                    | 0.187.0                    | TypeScript types for three                               | `apps/web`                         |
+| GitHub Actions (CI)             | checkout v7, setup-node v7 | Runs format check, lint, type-check, build on every push | `.github/workflows/ci.yml`         |
 
 ## Settings we changed
 
@@ -48,9 +52,10 @@ Status column: **verified** = checked against official docs or by running it. Ve
 - Next.js "Cache Components" turned off (not needed for this app yet).
 - Claude Code **hook** (`PostToolUse`, matcher `Write|Edit`) runs Prettier on files Claude edits inside this project; uses `jq` to read the file path. Lives in `.claude/settings.json`. Needs `/hooks` opened once after the file is first created.
 - Claude Code **skill** `/update-what-we-used` (`.claude/skills/update-what-we-used/SKILL.md`) updates this file when something new is added. Needs `/reload-skills` once after the folder is first created.
+- The 3D viewport is **browser-only**: `Viewport.tsx` is a Client Component (`"use client"`), loaded by `ViewportLoader.tsx` with `next/dynamic` and `ssr: false`. Next.js only allows `ssr: false` inside a Client Component, so `page.tsx` stays a Server Component.
 - Diagrams live in `docs/diagrams/` as self-contained HTML with inline SVG (open in any browser). First one: `dev-workflow.html`.
 - `create-next-app` generated `AGENTS.md` (notes for coding agents; points to the docs bundled in `node_modules/next/dist/docs/`).
 
 ## Not used yet (planned): see docs/PLAN or the plan file
 
-Three.js / React Three Fiber, Zustand, Zod, Yjs, Hocuspocus, PostgreSQL, Prisma, Docker, GitHub Actions, Vitest, Playwright, Auth, Cloudflare R2.
+Zustand, Zod, Yjs, Hocuspocus, PostgreSQL, Prisma, Docker, Vitest, Playwright, Auth, Cloudflare R2.
