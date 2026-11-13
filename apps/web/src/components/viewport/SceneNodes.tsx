@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Outlines } from "@react-three/drei";
-import type { Object3D } from "three";
+import { DoubleSide, FrontSide, type Object3D } from "three";
 import type { PrimitiveKind, SceneNode } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
 import SelectionGizmo from "./SelectionGizmo";
@@ -54,7 +54,11 @@ function NodeMesh({
       }}
     >
       <Geometry kind={node.kind} />
-      <meshStandardMaterial color={node.color} />
+      {/* A plane has no thickness; by default its back face is not drawn, so it vanishes from behind */}
+      <meshStandardMaterial
+        color={node.color}
+        side={node.kind === "plane" ? DoubleSide : FrontSide}
+      />
       {selected && (
         <Outlines color={OUTLINE_COLOR} thickness={OUTLINE_THICKNESS} />
       )}

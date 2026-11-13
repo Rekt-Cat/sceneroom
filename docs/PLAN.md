@@ -3,9 +3,9 @@
 ## Current status
 
 - **Phase:** 2 (scene model and editing tools), in progress
-- **Done:** Phase 0; Phase 1 (3D viewport, live at https://sceneroom.vercel.app); Phase 2 so far: scene schema (Zod), pure scene operations with Vitest tests, Zustand store, click-to-select with outline (confirmed on the Vercel preview of `feature/selection`). A git pre-push hook now runs type-check, lint, test and build before every push.
+- **Done:** Phase 0; Phase 1 (3D viewport, live at https://sceneroom.vercel.app); Phase 2: scene schema (Zod), pure scene operations with Vitest tests, Zustand store, click-to-select with outline, transform gizmo (move/rotate/scale, optional snapping, smooth by default) and camera controls (left pans, right rotates, Shift swaps) on `main` or in review; add/delete/duplicate/rename on branch `feature/object-actions` (written, not yet tested in a browser). A git pre-push hook runs type-check, lint, test and build before every push.
 - **CI:** last seen green on `b33fe6b`; not yet checked on newer commits (CI runs on pushes to `main` and on pull requests only).
-- **Next action:** merge `feature/selection` into `main` through a pull request (starts CI), then the transform gizmo (move/rotate/scale) with snapping on a new branch, then add/delete/duplicate/rename. Still open: test `SETUP-SECOND-PC.md` on the second PC; try the pre-push hook from GitHub Desktop; optional `/code-review` of the Phase 0-1 diffs.
+- **Next action:** test `feature/object-actions` in the browser and merge it; merge `feature/gizmo` through a pull request (starts CI) if not merged yet. Then Phase 3 (Hierarchy, Inspector, undo/redo). Still open: test `SETUP-SECOND-PC.md` on the second PC; try the pre-push hook from GitHub Desktop; optional `/code-review` of the Phase 0-1 diffs.
 
 Update this block at the end of every sub-phase and commit it.
 
@@ -47,8 +47,8 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 - [x] Scene schema in `packages/shared` (types + Zod)
 - [x] Pure scene operations (add, remove, duplicate, update, transform) with Vitest tests; Zustand store; render nodes from the store
 - [x] Click to select (raycasting) with outline
-- [ ] Transform gizmo (move/rotate/scale) and snapping
-- [ ] Add (cube, sphere, cylinder, plane, cone), delete, duplicate, rename
+- [x] Transform gizmo (move/rotate/scale) and snapping
+- [x] Add (cube, sphere, cylinder, plane, cone), delete, duplicate, rename (needs a browser check)
 
 ### Phase 3: Editor panels and undo/redo
 

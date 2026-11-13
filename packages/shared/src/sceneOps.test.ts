@@ -66,6 +66,24 @@ describe("duplicateNode", () => {
     expect(getSubtreeIds(next, "a")).toHaveLength(5);
   });
 
+  it("moves only the top copy by the offset", () => {
+    const next = duplicateNode(sceneWithTree(), "b", ["b2", "c2"], [1, 0, 2]);
+    expect(next.nodes["b2"]?.transform.position).toEqual([1, 0.5, 2]);
+    expect(next.nodes["c2"]?.transform.position).toEqual([0, 0.5, 0]);
+    // the original is untouched
+    expect(next.nodes["b"]?.transform.position).toEqual([0, 0.5, 0]);
+  });
+
+  it("keeps the copy's name within the allowed length", () => {
+    const scene = updateNode(sceneWithTree(), "a", { name: "x".repeat(100) });
+    const copy = duplicateNode(scene, "c", ["c2"]).nodes["c2"];
+    expect(
+      sceneSchema.safeParse(duplicateNode(scene, "a", ["a2", "b2", "c2"]))
+        .success,
+    ).toBe(true);
+    expect(copy?.name).toBe("Cone copy");
+  });
+
   it("requires one new id per copied node", () => {
     expect(() => duplicateNode(sceneWithTree(), "b", ["b2"])).toThrow(
       "Expected 2 new ids",

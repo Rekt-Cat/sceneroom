@@ -1,6 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import AddToolbar from "./AddToolbar";
+import SelectionPanel from "./SelectionPanel";
 import Toolbar from "./Toolbar";
 import { useEditorShortcuts } from "./useEditorShortcuts";
 
@@ -19,6 +21,8 @@ export default function ViewportLoader() {
     <>
       <Viewport />
       <Toolbar />
+      <AddToolbar />
+      <SelectionPanel />
     </>
   );
 }

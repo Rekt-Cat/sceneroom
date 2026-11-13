@@ -2,15 +2,13 @@
 
 import { TRANSFORM_MODES, type TransformMode } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
+import { overlayButton } from "./buttonStyle";
 
 const MODE_LABELS: Record<TransformMode, string> = {
   translate: "Move (W)",
   rotate: "Rotate (E)",
   scale: "Scale (R)",
 };
-
-const baseButton =
-  "rounded px-3 py-1.5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400";
 
 /** Small overlay with the gizmo mode buttons and the snap switch. */
 export default function Toolbar() {
@@ -31,7 +29,7 @@ export default function Toolbar() {
           type="button"
           aria-pressed={m === mode}
           onClick={() => setTransformMode(m)}
-          className={`${baseButton} ${
+          className={`${overlayButton} ${
             m === mode ? "bg-sky-600 text-white" : "hover:bg-zinc-700"
           }`}
         >
@@ -42,7 +40,7 @@ export default function Toolbar() {
         type="button"
         aria-pressed={snapEnabled}
         onClick={toggleSnap}
-        className={`${baseButton} ml-1 border border-zinc-600 ${
+        className={`${overlayButton} ml-1 border border-zinc-600 ${
           snapEnabled ? "bg-zinc-700" : "hover:bg-zinc-800"
         }`}
       >
