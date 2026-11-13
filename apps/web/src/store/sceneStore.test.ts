@@ -538,3 +538,28 @@ describe("importing a model", () => {
     expect(get().scene.nodes[id]?.transform.position).toEqual([3, 0, 0]);
   });
 });
+
+describe("loading a whole scene", () => {
+  it("replaces the scene and clears the selection and the undo history", () => {
+    get().addPrimitive("sphere");
+    get().select("initial-cube");
+    expect(get().history.past.length).toBeGreaterThan(0);
+
+    const saved = {
+      ...get().scene,
+      nodes: {
+        only: {
+          ...get().scene.nodes["initial-cube"]!,
+          id: "only",
+          name: "Only",
+        },
+      },
+    };
+    get().loadScene(saved);
+    expect(Object.keys(get().scene.nodes)).toEqual(["only"]);
+    expect(get().selectedIds).toEqual([]);
+    expect(get().history.past).toHaveLength(0);
+    expect(get().history.future).toHaveLength(0);
+    expect(get().pendingEdit).toBeNull();
+  });
+});

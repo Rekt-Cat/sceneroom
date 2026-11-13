@@ -105,6 +105,8 @@ type SceneState = {
   setNodeColor: (id: string, color: string) => string | null;
   /** Renames a node. Returns the saved name, or null if the name was not allowed. */
   renameNode: (id: string, name: string) => string | null;
+  /** Replaces the whole scene (for example with the one saved in the browser). Clears the selection and the undo history. */
+  loadScene: (scene: Scene) => void;
   /** Starts an edit made of many small updates. Pair with endEdit. */
   beginEdit: (label: string) => void;
   /** Changes a node's transform while an edit is in progress, without recording undo steps. */
@@ -351,6 +353,13 @@ export const useSceneStore = create<SceneState>()((set) => ({
     });
     return clean;
   },
+  loadScene: (scene) =>
+    set({
+      scene,
+      selectedIds: [],
+      history: createHistory<Snapshot>(),
+      pendingEdit: null,
+    }),
   beginEdit: (label) =>
     set((state) => ({
       pendingEdit: {

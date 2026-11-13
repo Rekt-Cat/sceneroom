@@ -7,6 +7,7 @@ import {
   checkGlbBytes,
   type AssetInfo,
 } from "@sceneroom/shared";
+import { describeStorageError } from "../persistence/idb";
 import { assetStorage } from "./assetStorage";
 import { sha256Hex } from "./hash";
 
@@ -154,7 +155,13 @@ export async function importGlbFile(
     );
   }
 
-  await assetStorage.put(id, buffer);
+  try {
+    await assetStorage.put(id, buffer);
+  } catch (error) {
+    // Usually a full or blocked browser storage: tell the user, keep the details for debugging
+    console.error("Could not store the imported file:", error);
+    throw new ImportError(describeStorageError(error));
+  }
   loadedScenes.set(id, Promise.resolve(root));
   return {
     id,

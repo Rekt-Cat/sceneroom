@@ -2,10 +2,10 @@
 
 ## Current status
 
-- **Phase:** 4 (lights, materials, environment) started: materials done (merge pending); model import step 1 written on `feature/model-import`, waiting for a browser check
+- **Phase:** 4 (lights, materials, environment) started: materials done; model import and autosave are written on stacked branches (`feature/model-import`, `feature/autosave`), waiting for browser checks and merging
 - **Done:** Phases 0 to 3, all on `main` and live at https://sceneroom.vercel.app: 3D viewport; scene model; selection, multi-select, gizmo, camera controls; add / duplicate / delete / rename; scene list with search and drag-to-re-parent; Inspector (position, rotation, scale, colour, parent); undo/redo; resizable panels and value dragging; lock. A git pre-push hook runs type-check, lint, test and build before every push.
 - **CI:** green on pull requests #2 to #4 (last merge `4461bb0`).
-- **Next action:** push and merge `feature/materials`; test model import in the browser (a toy car you can drag in is at the path in the chat) and merge `feature/model-import`. Then the Assets panel (`ASSETS-AND-IMPORT.md` step 2), **Surface and shading**, lights, environment settings. Still open: test `SETUP-SECOND-PC.md` on the second PC; try the pre-push hook from GitHub Desktop; optional `/code-review` of the Phase 0-3 diffs.
+- **Next action:** push and merge `feature/materials`, `feature/model-import` and `feature/autosave` (stacked: one pull request from `feature/autosave` carries all three); test autosave in the browser (import a model, reload the page, check it is still there). Then the Assets panel (`ASSETS-AND-IMPORT.md` step 2), **Surface and shading**, lights, environment settings. Still open: test `SETUP-SECOND-PC.md` on the second PC; try the pre-push hook from GitHub Desktop; optional `/code-review` of the Phase 0-3 diffs.
 
 Update this block at the end of every sub-phase and commit it.
 
@@ -72,7 +72,8 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 - [x] **Import a GLB** (step 1): Import button and drag-and-drop, a "model" object, limits, clear errors (branch `feature/model-import`, needs a browser check)
 - [ ] **Import models** (more): GLB first, drag-and-drop and an Import button; a "model" object kind that points to an asset id; size and triangle limits with clear error messages (see `ASSETS-AND-IMPORT.md`; steps 1 and 2 there can be built right after materials, before the rest of this phase)
 - [ ] Assets panel: thumbnails, place copies, rename, delete, source and licence note
-- [ ] glTF export; scene JSON with schema version; autosave (IndexedDB); validation; glTF with separate files, compressed models, then OBJ
+- [x] Autosave in the browser (IndexedDB): the scene and the imported files are saved after each change and restored on reload; unreadable data is backed up; a status in the top bar (branch `feature/autosave`, needs a browser check)
+- [ ] glTF export; saving the scene as a file; scene JSON versions and migrations; glTF with separate files, compressed models, then OBJ
 - [ ] Design the editable-mesh data format and where big meshes are stored (see `ADVANCED-EDITING.md`, "The foundation"), so custom meshes can be saved and exported
 
 ### Phase 6: Docker, database, project backend

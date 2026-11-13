@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type DragEvent } from "react";
 import { importFiles } from "@/assets/importFile";
+import { startPersistence } from "@/persistence/startPersistence";
 import { useLayoutStore } from "@/store/layoutStore";
 import BoxSelectOverlay from "./BoxSelectOverlay";
 import ControlsLegend from "./ControlsLegend";
@@ -24,6 +25,9 @@ function carriesFiles(event: DragEvent | globalThis.DragEvent): boolean {
  */
 export default function EditorShell() {
   useEditorShortcuts();
+
+  // Restore the scene saved last time, then save every change (see startPersistence)
+  useEffect(() => startPersistence(), []);
 
   // Read the saved panel widths once the page is in the browser (not during the server render)
   useEffect(() => useLayoutStore.getState().hydrate(), []);

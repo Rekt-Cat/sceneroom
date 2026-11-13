@@ -150,6 +150,16 @@ a steady 60 is the usual target on most screens.
 
 The switch is a setting of the screen, not of the object: it stays as you left it when you select another object, and is not saved when the page is reloaded. It affects typing, the arrow keys and dragging an axis letter. The gizmo's own scale handles and the Reset button are not affected.
 
+## Saving in the browser (autosave)
+
+| What                  | Setting                                                          | Our value                      | What it does                                                                                           |
+| --------------------- | ---------------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| Wait before saving    | `AUTOSAVE_DEBOUNCE_MS` in `apps/web/src/persistence/autosave.ts` | `500` ms                       | How long after your last change the scene is written. A drag makes many changes; they become one save. |
+| Database name         | `DB_NAME` in `persistence/idb.ts`                                | `sceneroom`                    | The browser database that holds the scene and the imported files. Change it to start with a clean one. |
+| Scene and backup keys | `SCENE_KEY`, `BACKUP_KEY` in `persistence/sceneRepository.ts`    | `current`, `unreadable-backup` | Where the scene is stored, and where unreadable saved data is copied before it could be overwritten.   |
+
+To clear everything that is saved (start from the one starting cube): in Chrome open the developer tools (Cmd+Option+I), go to **Application**, then **IndexedDB**, right-click `sceneroom` and choose **Delete database**, then reload.
+
 ## Importing models
 
 | What                 | Setting                                                | Our value                 | What it does                                                                                                                     |

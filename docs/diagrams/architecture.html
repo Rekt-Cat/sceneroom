@@ -590,21 +590,21 @@
             />
             <text class="t-title" x="42" y="554">Local save and files</text>
             <text class="t-sub" x="42" y="572">
-              scene JSON, GLB import and export
+              built: autosave in the browser, GLB import
             </text>
             <text class="t-sub" x="42" y="587">
-              autosave inside the browser
+              to come: file save and export
             </text>
             <rect
               class="pill-pending"
               x="42"
               y="592"
-              width="56"
+              width="116"
               height="16"
               rx="8"
             />
-            <text class="pt-pending" x="70" y="603.5" text-anchor="middle">
-              Phase 5
+            <text class="pt-pending" x="100" y="603.5" text-anchor="middle">
+              Phase 5, partly built
             </text>
             <circle class="badge" cx="304" cy="546" r="9" />
             <text class="badge-t" x="304" y="550" text-anchor="middle">5</text>
@@ -1062,7 +1062,7 @@
         <div class="card-head">
           <span class="num">5</span>
           <h3>Local save and files</h3>
-          <span class="tag pending">Phase 5</span>
+          <span class="tag pending">Phase 5, partly built</span>
         </div>
         <dl>
           <dt>What it is</dt>
@@ -1070,7 +1070,10 @@
             Saving the scene as a JSON file, autosaving inside the browser
             (using IndexedDB, the browser's built-in database), and importing or
             exporting <strong>GLB</strong> files, the standard 3D model format
-            for the web.
+            for the web. Today autosave and GLB import exist: the scene and the
+            imported files are saved in the browser a moment after each change
+            and restored when the page is opened again. Saving as a file and
+            exporting do not yet.
           </dd>
           <dt>Unity comparison</dt>
           <dd>
