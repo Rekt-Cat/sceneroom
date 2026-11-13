@@ -46,7 +46,7 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 
 - [x] Scene schema in `packages/shared` (types + Zod)
 - [x] Pure scene operations (add, remove, duplicate, update, transform) with Vitest tests; Zustand store; render nodes from the store
-- [x] Click to select (raycasting) with outline
+- [x] Click to select (raycasting) with outline; multi-select (Shift + click, Ctrl/Cmd + drag box) with a group gizmo (needs a browser check)
 - [x] Transform gizmo (move/rotate/scale) and snapping
 - [x] Add (cube, sphere, cylinder, plane, cone), delete, duplicate, rename (needs a browser check)
 

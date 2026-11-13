@@ -5,6 +5,7 @@ import {
   type SceneNode,
   type Transform,
 } from "./scene";
+import { topLevelSelection } from "./selection";
 
 /**
  * Pure scene operations: each takes a scene and returns a NEW scene, never mutating the input.
@@ -147,4 +148,41 @@ export function setTransform(
   const node = scene.nodes[id];
   if (!node) throw new Error(`Node "${id}" does not exist`);
   return { ...scene, nodes: { ...scene.nodes, [id]: { ...node, transform } } };
+}
+
+/** Removes several nodes (and everything below them). Ids that are already gone are ignored. */
+export function removeNodes(scene: Scene, ids: readonly string[]): Scene {
+  return ids.reduce((next, id) => removeNode(next, id), scene);
+}
+
+/**
+ * Duplicates each selected node that is not already inside another selected node, so a child is
+ * not copied twice. `generateId` is called once per new node. Returns the new scene and the ids
+ * of the new top copies (for selecting them).
+ */
+export function duplicateNodes(
+  scene: Scene,
+  ids: readonly string[],
+  generateId: () => string,
+  offset: [number, number, number] = [0, 0, 0],
+): { scene: Scene; rootIds: string[] } {
+  let next = scene;
+  const rootIds: string[] = [];
+  for (const id of topLevelSelection(scene, ids)) {
+    const newIds = getSubtreeIds(next, id).map(() => generateId());
+    next = duplicateNode(next, id, newIds, offset);
+    rootIds.push(newIds[0]!);
+  }
+  return { scene: next, rootIds };
+}
+
+/** Sets the transform of several nodes in one go. */
+export function setTransforms(
+  scene: Scene,
+  updates: Readonly<Record<string, Transform>>,
+): Scene {
+  return Object.entries(updates).reduce(
+    (next, [id, transform]) => setTransform(next, id, transform),
+    scene,
+  );
 }

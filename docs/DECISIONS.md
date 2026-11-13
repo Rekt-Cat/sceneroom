@@ -167,3 +167,20 @@ Planes now use `DoubleSide`; closed shapes keep `FrontSide` (cheaper, and their 
 "Cube (2)" and not "Cube (1) (1)". It takes the lowest number no object uses yet (delete "Cube (1)" and the next copy reuses it). The base name is
 shortened if needed so the result stays within 100 characters. Only the top copy is renamed; its descendants keep their names. This replaces the
 " copy" suffix described in the object-actions entry above.
+
+## 2026-11-13: Multi-select (Shift + click, Ctrl/Cmd + drag box, group gizmo)
+
+You chose the Ctrl/Cmd + left-drag trigger because plain left-drag already pans the camera. The selection is a list (`selectedIds`) in the store.
+
+- **Box select:** `BoxSelectController` listens in the capture phase on `window`, so it can turn `OrbitControls` off before the library sees the
+  press (otherwise Ctrl/Cmd + left would rotate, which three-stdlib does for any modifier). It projects each object's 3D bounding box to the screen and
+  selects those whose screen rectangle touches the box (`rectsOverlap`, tested). Shift at release adds to the selection. A drag under 4 px is a click.
+  `CameraModifierSwitch` now only reacts to Shift, since Ctrl/Cmd no longer touches the camera.
+- **Group gizmo:** `TransformControls` needs one object, so it is attached to an invisible pivot (a group at the average position). While dragging,
+  `pivotNow x pivotAtStart^-1` is multiplied onto each object's starting matrix and decomposed back into position/rotation/scale. One store change on mouse up.
+  Known limit: scaling a group of rotated objects can shear them, and rotating a group about its centre is fine but a "local space" mode is not offered.
+  This assumes objects are drawn in world space; when the Hierarchy renders parenting (Phase 3) the matrices must be taken relative to the parent.
+- **Delete / duplicate** work on all selected objects. `topLevelSelection` drops a selected child whose parent is also selected, so it is not copied twice.
+- **No per-object details** for a multi-selection, as requested: the panel shows a count. The Inspector (Phase 3) should do the same.
+- Found by lint: values from `useMemo` may not be mutated (React Compiler rule), so per-drag data lives in a `useRef`.
+- Needs a browser check: the group gizmo, the box, and Ctrl+click on a Mac (Ctrl+click is a right-click there; Cmd is the intended key).

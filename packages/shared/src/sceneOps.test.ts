@@ -4,9 +4,12 @@ import {
   addNode,
   createNode,
   duplicateNode,
+  duplicateNodes,
   getSubtreeIds,
   removeNode,
+  removeNodes,
   setTransform,
+  setTransforms,
   uniqueCopyName,
   updateNode,
 } from "./sceneOps";
@@ -154,5 +157,58 @@ describe("uniqueCopyName", () => {
     const result = uniqueCopyName(sceneWithNames(long), long);
     expect(result).toBe("x".repeat(96) + " (1)");
     expect(result).toHaveLength(100);
+  });
+});
+
+describe("removeNodes", () => {
+  it("removes several nodes, including ones whose parent was removed too", () => {
+    const next = removeNodes(sceneWithTree(), ["c", "a", "gone"]);
+    expect(Object.keys(next.nodes)).toEqual([]);
+  });
+});
+
+describe("duplicateNodes", () => {
+  function counter() {
+    let n = 0;
+    return () => `new${++n}`;
+  }
+
+  it("copies each selected node and returns the ids of the new top copies", () => {
+    let scene = sceneWithTree();
+    scene = addNode(scene, createNode("d", "plane"));
+    const result = duplicateNodes(scene, ["a", "d"], counter(), [1, 0, 0]);
+    // a has 3 nodes below and including it (a, b, c), d has 1
+    expect(Object.keys(result.scene.nodes)).toHaveLength(3 + 1 + 3 + 1);
+    expect(result.rootIds).toHaveLength(2);
+    expect(result.scene.nodes[result.rootIds[0]!]?.name).toBe("Cube (1)");
+    expect(result.scene.nodes[result.rootIds[1]!]?.name).toBe("Plane (1)");
+  });
+
+  it("does not copy a child twice when its parent is selected as well", () => {
+    const result = duplicateNodes(sceneWithTree(), ["a", "b"], counter());
+    expect(Object.keys(result.scene.nodes)).toHaveLength(6);
+    expect(result.rootIds).toHaveLength(1);
+  });
+
+  it("numbers several copies of the same name one after another", () => {
+    let scene = createEmptyScene();
+    scene = addNode(scene, createNode("x", "cube"));
+    scene = addNode(scene, { ...createNode("y", "cube"), name: "Cube" });
+    const names = Object.values(
+      duplicateNodes(scene, ["x", "y"], counter()).scene.nodes,
+    ).map((node) => node.name);
+    expect(names).toContain("Cube (1)");
+    expect(names).toContain("Cube (2)");
+  });
+});
+
+describe("setTransforms", () => {
+  it("sets the transform of several nodes at once", () => {
+    const next = setTransforms(sceneWithTree(), {
+      a: { position: [1, 1, 1], rotation: [0, 0, 0], scale: [1, 1, 1] },
+      b: { position: [2, 2, 2], rotation: [0, 0, 0], scale: [1, 1, 1] },
+    });
+    expect(next.nodes["a"]?.transform.position).toEqual([1, 1, 1]);
+    expect(next.nodes["b"]?.transform.position).toEqual([2, 2, 2]);
   });
 });

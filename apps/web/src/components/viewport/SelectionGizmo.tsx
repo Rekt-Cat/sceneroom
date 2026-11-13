@@ -4,15 +4,7 @@ import { TransformControls } from "@react-three/drei";
 import type { Object3D } from "three";
 import { useSceneStore } from "@/store/sceneStore";
 import { markGizmoUsed } from "./gizmoGuard";
-
-/** Snap steps while snapping is on. Rotation is given in degrees and converted below. */
-const SNAP = {
-  translate: 0.5, // world units
-  rotateDegrees: 15,
-  scale: 0.1,
-};
-
-const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+import { SNAP, toRadians } from "./snapSettings";
 
 /**
  * The move / rotate / scale handles on the selected object.

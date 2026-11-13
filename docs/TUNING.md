@@ -28,9 +28,9 @@ All of these live in one file: `apps/web/src/components/viewport/Viewport.tsx`.
 ### Camera controls (how dragging feels)
 
 Our mouse mapping (`mouseButtons` in `Viewport.tsx`): **left-drag pans** the camera and **right-drag rotates** it. Holding **Shift**
-(or Ctrl or Cmd) swaps the two, so Shift + left-drag rotates and Shift + right-drag pans. That swap comes from the library. You can
-press or release the key in the middle of a drag and the camera switches live (`CameraModifierSwitch.tsx`). Scroll zooms. The middle
-button does nothing. To go back to the library default (left rotates, right pans, middle zooms), delete the `mouseButtons` line.
+swaps the two, so Shift + left-drag rotates and Shift + right-drag pans. That swap comes from the library. You can press or release
+Shift in the middle of a drag and the camera switches live (`CameraModifierSwitch.tsx`). **Ctrl or Cmd + left-drag draws a selection box**
+(see below), not a camera move. Scroll zooms. The middle button does nothing. To go back to the library default (left rotates, right pans, middle zooms), delete the `mouseButtons` line.
 The settings below are on `<OrbitControls ... />`.
 
 | Setting         | Our value | Library default | What it does                                                                                          |
@@ -86,6 +86,18 @@ Files: `apps/web/src/components/viewport/SelectionGizmo.tsx` (snap steps), `useE
 | Duplicate offset  | `DUPLICATE_OFFSET` in `src/store/sceneStore.ts`          | `[1, 0, 0]` | How far (x, y, z) a duplicate is placed from the original, so it does not overlap.         |
 | Shortcuts         | `useEditorShortcuts.ts`                                  | see below   | Delete or Backspace deletes, Ctrl/Cmd + D duplicates (both only when not typing in a box). |
 | Name length limit | `NODE_NAME_MAX_LENGTH` in `packages/shared/src/scene.ts` | `100`       | Longest allowed object name; longer or empty names are rejected.                           |
+
+### Selecting several objects
+
+| What              | Setting                                                               | Our value | What it does                                                                                            |
+| ----------------- | --------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------- |
+| Selection box     | Ctrl (Windows) or Cmd (Mac) + left-drag, in `BoxSelectController.tsx` | -         | Selects every object whose outline touches the box. Hold Shift when you let go to add to the selection. |
+| Smallest box      | `MIN_BOX_SIZE_PX` in `BoxSelectController.tsx`                        | `4`       | A drag shorter than this many pixels counts as a click, not a box.                                      |
+| Add or remove one | Shift + click on an object (`SceneNodes.tsx`)                         | -         | Adds the object to the selection, or removes it if it was already selected.                             |
+| Box colours       | `border-sky-400 bg-sky-400/15` in `BoxSelectOverlay.tsx`              | sky blue  | Outline and fill of the box while you drag.                                                             |
+
+With several objects selected, one gizmo appears in the middle of the group and moves, rotates or scales all of them. The panel shows
+only a count and Duplicate / Delete (no per-object details).
 
 ### The grid
 

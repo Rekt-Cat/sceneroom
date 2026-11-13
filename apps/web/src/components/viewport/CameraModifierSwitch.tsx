@@ -15,15 +15,16 @@ type ControlsEvents = {
   removeEventListener(type: "start" | "end", listener: () => void): void;
 };
 
-const MODIFIER_KEYS = new Set(["Shift", "Control", "Meta"]);
+// Only Shift: Ctrl/Cmd + left-drag draws the selection box instead (BoxSelectController)
+const MODIFIER_KEYS = new Set(["Shift"]);
 
 /** `PointerEvent.button` (0 left, 1 middle, 2 right) to the `buttons` bit mask. */
 const BUTTONS_MASK: Record<number, number> = { 0: 1, 1: 4, 2: 2 };
 
 /**
- * OrbitControls only looks at Shift (or Ctrl/Cmd) at the moment the mouse button goes down, so
+ * OrbitControls only looks at Shift at the moment the mouse button goes down, so
  * pressing Shift in the middle of a drag changed nothing. This component fixes that: when a
- * modifier key is pressed or released during a camera drag, it ends the drag and immediately
+ * Shift is pressed or released during a camera drag, it ends the drag and immediately
  * starts a new one at the same spot with the new modifier state. Pan and rotate then switch live.
  *
  * Renders nothing; it only has to live inside the <Canvas>.
@@ -81,8 +82,6 @@ export default function CameraModifierSwitch() {
         clientX: pointer.x,
         clientY: pointer.y,
         shiftKey: event.shiftKey,
-        ctrlKey: event.ctrlKey,
-        metaKey: event.metaKey,
         bubbles: false,
       };
       markCameraDragRestarted();

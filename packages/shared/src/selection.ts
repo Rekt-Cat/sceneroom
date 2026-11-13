@@ -1,9 +1,38 @@
 import type { Scene } from "./scene";
 
-/** Returns the id if it exists in the scene, otherwise null (nothing selected). */
+/** Keeps only ids that exist in the scene, without repeats, in the original order. */
 export function resolveSelection(
   scene: Scene,
-  id: string | null,
-): string | null {
-  return id !== null && scene.nodes[id] ? id : null;
+  ids: readonly string[],
+): string[] {
+  return [...new Set(ids)].filter((id) => scene.nodes[id] !== undefined);
+}
+
+/** Adds the id to the selection, or removes it if it is already selected (Shift + click). */
+export function toggleInSelection(
+  ids: readonly string[],
+  id: string,
+): string[] {
+  return ids.includes(id) ? ids.filter((other) => other !== id) : [...ids, id];
+}
+
+/**
+ * Drops every selected node that has a selected ancestor. Acting on a parent already acts on its
+ * children (delete, duplicate), so keeping both would handle the children twice.
+ */
+export function topLevelSelection(
+  scene: Scene,
+  ids: readonly string[],
+): string[] {
+  const selected = new Set(ids);
+  return ids.filter((id) => {
+    const visited = new Set<string>();
+    let parentId = scene.nodes[id]?.parentId ?? null;
+    while (parentId !== null && !visited.has(parentId)) {
+      if (selected.has(parentId)) return false;
+      visited.add(parentId);
+      parentId = scene.nodes[parentId]?.parentId ?? null;
+    }
+    return true;
+  });
 }

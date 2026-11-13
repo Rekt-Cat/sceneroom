@@ -4,6 +4,7 @@ import { Canvas } from "@react-three/fiber";
 import { Grid, OrbitControls, Stats } from "@react-three/drei";
 import { MOUSE } from "three";
 import { useSceneStore } from "@/store/sceneStore";
+import BoxSelectController from "./BoxSelectController";
 import CameraModifierSwitch from "./CameraModifierSwitch";
 import SceneNodes from "./SceneNodes";
 import { shouldIgnoreClick } from "./gizmoGuard";
@@ -44,13 +45,15 @@ export default function Viewport() {
         makeDefault
         enableDamping={false}
         rotateSpeed={1.25}
-        // Left-drag pans the camera, right-drag rotates it. Holding Shift (or Ctrl/Cmd) swaps the two
+        // Left-drag pans the camera, right-drag rotates it. Holding Shift swaps the two
         // (built into OrbitControls). The middle button is left unmapped, so it does nothing.
         mouseButtons={{ LEFT: MOUSE.PAN, RIGHT: MOUSE.ROTATE }}
       />
 
       {/* Lets Shift switch pan/rotate in the middle of a camera drag */}
       <CameraModifierSwitch />
+      {/* Ctrl/Cmd + left-drag draws a selection box */}
+      <BoxSelectController />
 
       {/* FPS counter (frames per second) in the corner */}
       <Stats />
