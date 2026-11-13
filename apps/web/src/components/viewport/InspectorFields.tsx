@@ -5,6 +5,7 @@ import {
   IDENTITY_TRANSFORM,
   displayValue,
   editTransform,
+  formatNumber,
   normalizeHexColor,
   type Axis,
   type SceneNode,
@@ -20,10 +21,18 @@ const ROWS: {
   label: string;
   decimals: number;
   step: number;
+  /** How much dragging an axis letter changes the value per pixel of mouse movement. */
+  perPixel: number;
 }[] = [
-  { group: "position", label: "Position", decimals: 2, step: 0.1 },
-  { group: "rotation", label: "Rotation", decimals: 1, step: 5 },
-  { group: "scale", label: "Scale", decimals: 2, step: 0.1 },
+  {
+    group: "position",
+    label: "Position",
+    decimals: 2,
+    step: 0.1,
+    perPixel: 0.02,
+  },
+  { group: "rotation", label: "Rotation", decimals: 1, step: 5, perPixel: 0.5 },
+  { group: "scale", label: "Scale", decimals: 2, step: 0.1, perPixel: 0.01 },
 ];
 
 const AXES: { axis: "X" | "Y" | "Z"; index: Axis }[] = [
@@ -48,6 +57,11 @@ const sectionTitle =
 
 export function TransformSection({ node }: { node: SceneNode }) {
   const setNodeTransform = useSceneStore((state) => state.setNodeTransform);
+  const beginEdit = useSceneStore((state) => state.beginEdit);
+  const previewNodeTransform = useSceneStore(
+    (state) => state.previewNodeTransform,
+  );
+  const endEdit = useSceneStore((state) => state.endEdit);
 
   function commit(group: TransformGroup, axis: Axis, text: string): boolean {
     const next = editTransform(node.transform, group, axis, text);
@@ -71,7 +85,7 @@ export function TransformSection({ node }: { node: SceneNode }) {
         </button>
       </div>
       <div className="space-y-2 px-4 pb-3">
-        {ROWS.map(({ group, label, decimals, step }) => (
+        {ROWS.map(({ group, label, decimals, step, perPixel }) => (
           <div
             key={group}
             className="grid grid-cols-[58px_1fr] items-center gap-2"
@@ -86,6 +100,20 @@ export function TransformSection({ node }: { node: SceneNode }) {
                   value={displayValue(node.transform, group, index)}
                   decimals={decimals}
                   step={step}
+                  scrub={{
+                    perPixel,
+                    onStart: () => beginEdit("Transform"),
+                    onMove: (value) => {
+                      const next = editTransform(
+                        node.transform,
+                        group,
+                        index,
+                        formatNumber(value, decimals),
+                      );
+                      if (next) previewNodeTransform(node.id, next);
+                    },
+                    onEnd: (cancelled) => endEdit(!cancelled),
+                  }}
                   onCommit={(text) => commit(group, index, text)}
                 />
               ))}

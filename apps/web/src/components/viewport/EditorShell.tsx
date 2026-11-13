@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useLayoutStore } from "@/store/layoutStore";
 import BoxSelectOverlay from "./BoxSelectOverlay";
 import ControlsLegend from "./ControlsLegend";
 import HierarchyPanel from "./HierarchyPanel";
@@ -15,6 +17,18 @@ import { useEditorShortcuts } from "./useEditorShortcuts";
  */
 export default function EditorShell() {
   useEditorShortcuts();
+
+  // Read the saved panel widths once the page is in the browser (not during the server render)
+  useEffect(() => useLayoutStore.getState().hydrate(), []);
+
+  // The FPS counter is placed by the page, outside the panels; tell it where the left panel ends
+  const leftWidth = useLayoutStore((state) => state.leftWidth);
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--left-panel-width",
+      `${leftWidth}px`,
+    );
+  }, [leftWidth]);
 
   return (
     <div className="flex h-dvh flex-col bg-ed-bg text-ed-text">

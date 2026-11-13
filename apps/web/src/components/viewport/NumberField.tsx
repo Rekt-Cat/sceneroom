@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type PointerEvent } from "react";
 import { formatNumber, parseNumberInput } from "@sceneroom/shared";
 
 /** Colour of the axis letter. Written out in full so Tailwind can find the class names. */
@@ -23,6 +23,7 @@ export default function NumberField({
   value,
   decimals,
   step,
+  scrub,
   onCommit,
 }: {
   axis: keyof typeof AXIS_COLOR;
@@ -33,11 +34,27 @@ export default function NumberField({
   decimals: number;
   /** How much one arrow-key press changes the value. */
   step: number;
+  /**
+   * Dragging the axis letter left or right changes the value, like in Unity. `perPixel` is how much
+   * the value changes for each pixel the mouse moves (Shift: 10 times more, Alt: 10 times less).
+   * `onStart` and `onEnd` bracket the drag so it can become a single undo step.
+   */
+  scrub?: {
+    perPixel: number;
+    onStart: () => void;
+    onMove: (value: number) => void;
+    onEnd: (cancelled: boolean) => void;
+  };
   onCommit: (text: string) => boolean;
 }) {
   // null = not editing: show the value from the scene
   const [draft, setDraft] = useState<string | null>(null);
   const cancelled = useRef(false);
+  const scrubbing = useRef<{
+    lastX: number;
+    value: number;
+    stop: (cancelled: boolean) => void;
+  } | null>(null);
 
   const invalid = draft !== null && parseNumberInput(draft) === null;
 
@@ -45,6 +62,52 @@ export default function NumberField({
     if (!cancelled.current && draft !== null && !invalid) onCommit(draft);
     cancelled.current = false;
     setDraft(null);
+  }
+
+  function onScrubStart(event: PointerEvent<HTMLSpanElement>) {
+    if (!scrub || event.button !== 0) return;
+    event.preventDefault(); // no text selection, no focus change
+    const handle = event.currentTarget;
+    const pointerId = event.pointerId;
+    handle.setPointerCapture(pointerId);
+    document.body.style.cursor = "ew-resize";
+    scrub.onStart();
+
+    function stop(wasCancelled: boolean) {
+      if (!scrubbing.current) return;
+      scrubbing.current = null;
+      document.body.style.cursor = "";
+      window.removeEventListener("keydown", onKey, true);
+      if (handle.hasPointerCapture(pointerId)) {
+        handle.releasePointerCapture(pointerId);
+      }
+      scrub?.onEnd(wasCancelled);
+    }
+
+    // Escape cancels the drag. Handled first, so it does not also clear the selection.
+    function onKey(keyEvent: KeyboardEvent) {
+      if (keyEvent.key !== "Escape") return;
+      keyEvent.preventDefault();
+      keyEvent.stopImmediatePropagation();
+      stop(true);
+    }
+    window.addEventListener("keydown", onKey, true);
+
+    scrubbing.current = { lastX: event.clientX, value, stop };
+  }
+
+  function onScrubMove(event: PointerEvent<HTMLSpanElement>) {
+    const state = scrubbing.current;
+    if (!state || !scrub) return;
+    // Add up small steps, so pressing Shift or Alt in the middle of a drag does not make the value jump
+    const speed = event.shiftKey ? 10 : event.altKey ? 0.1 : 1;
+    state.value += (event.clientX - state.lastX) * scrub.perPixel * speed;
+    state.lastX = event.clientX;
+    scrub.onMove(Number(formatNumber(state.value, decimals)));
+  }
+
+  function onScrubEnd() {
+    scrubbing.current?.stop(false);
   }
 
   return (
@@ -57,7 +120,14 @@ export default function NumberField({
     >
       <span
         aria-hidden="true"
-        className={`w-5 shrink-0 text-center text-[11px] font-semibold ${AXIS_COLOR[axis]}`}
+        title={scrub ? "Drag left or right to change the value" : undefined}
+        onPointerDown={onScrubStart}
+        onPointerMove={onScrubMove}
+        onPointerUp={onScrubEnd}
+        onPointerCancel={onScrubEnd}
+        className={`w-5 shrink-0 touch-none self-stretch rounded-l-md pt-[6px] text-center text-[11px] leading-4 font-semibold select-none ${AXIS_COLOR[axis]} ${
+          scrub ? "cursor-ew-resize hover:bg-ed-raised" : ""
+        }`}
       >
         {axis}
       </span>

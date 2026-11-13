@@ -56,8 +56,8 @@ export default function Viewport() {
       <BoxSelectController />
 
       {/* FPS counter (frames per second). The class moves it from the page corner to the corner of the
-          3D view: 288px (Scene panel) + 12px across, 48px (top bar) + 12px down. */}
-      <Stats className="top-[60px]! left-[300px]!" />
+          3D view: the Scene panel width (a CSS variable set in EditorShell) + 12px across, 48px (top bar) + 12px down. */}
+      <Stats className="top-[60px]! left-[calc(var(--left-panel-width,288px)+12px)]!" />
     </Canvas>
   );
 }

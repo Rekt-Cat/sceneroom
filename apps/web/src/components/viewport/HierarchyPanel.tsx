@@ -7,8 +7,10 @@ import {
   searchNodes,
   type TreeRow,
 } from "@sceneroom/shared";
+import { useLayoutStore } from "@/store/layoutStore";
 import { useSceneStore } from "@/store/sceneStore";
 import AddMenu from "./AddMenu";
+import PanelResizer from "./PanelResizer";
 import { Icon, KindIcon } from "./icons";
 
 /** DOM id of the search box, so the "/" shortcut can focus it. */
@@ -22,6 +24,7 @@ export const SEARCH_INPUT_ID = "scene-search";
 export default function HierarchyPanel() {
   const scene = useSceneStore((state) => state.scene);
   const selectedIds = useSceneStore((state) => state.selectedIds);
+  const width = useLayoutStore((state) => state.leftWidth);
 
   // UI-only state, not part of the scene: folded-away parents and the search text
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
@@ -54,8 +57,10 @@ export default function HierarchyPanel() {
   return (
     <aside
       aria-label="Scene"
-      className="flex w-72 shrink-0 flex-col border-r border-ed-line bg-ed-panel"
+      style={{ width }}
+      className="relative flex shrink-0 flex-col border-r border-ed-line bg-ed-panel"
     >
+      <PanelResizer side="left" />
       <div className="flex h-13 shrink-0 items-center gap-2 px-3.5">
         <h2 className="text-[13px] font-semibold tracking-wide">Scene</h2>
         <span className="text-xs text-ed-text-3">

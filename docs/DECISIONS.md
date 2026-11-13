@@ -237,3 +237,14 @@ Snapshots are cheap here: scenes are immutable and share every node that did not
 - **Labels** ("Undo add cube") show in the button tooltip. Limit 100 steps.
 - **Vitest added to `apps/web`** (5.1.0) so the store, which holds the history, has real tests (11).
 - Known limit: pressing Undo while a gizmo drag is still in progress is not guarded; the drag's end would then record from the older state. Rare; revisit if it shows up.
+
+## 2026-11-13: Resizable panels and dragging values (Unity-style)
+
+- **Panel widths** are UI state in their own store (`layoutStore.ts`), not in the scene, so they are not part of undo and not shared with other people later. Limits and the "keep the 3D view at least 360px" rule are pure functions in `packages/shared` (tested).
+  Widths are remembered in `localStorage` under `sceneroom.layout.v1`; what is read back is validated with Zod and clamped (the window may be smaller than last time). The saved values are read after the first render (an effect), not during it,
+  so the server render and the first browser render match; the cost is a possible one-frame jump from the default width to the saved one. Storage errors are logged, not hidden.
+- **The FPS counter** is placed by the page, outside the panels, so `EditorShell` publishes the left panel width as a CSS variable (`--left-panel-width`) and the counter's class uses `calc(var(...) + 12px)`.
+- **Dragging an axis letter** changes the value live. Many small changes would flood the undo history, so the store has `beginEdit` / `previewNodeTransform` / `endEdit`: previews change the scene without recording, and `endEdit(true)` records ONE step
+  from the state at `beginEdit` (`endEdit(false)` restores it). Undo and redo are ignored while an edit is in progress, which also closes the gap noted for gizmo drags... for the Inspector only (a gizmo drag is still not guarded).
+- Value changes are accumulated per mouse movement, so pressing Shift or Alt in the middle of a drag changes the speed from then on without making the value jump. The result is rounded to the field's decimals. Scale never passes through 0 (the preview is skipped).
+- The cursor over an axis letter is the standard left-right resize cursor (`ew-resize`), kept during the drag by setting it on the page body.

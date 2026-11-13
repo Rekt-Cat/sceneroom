@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { NODE_NAME_MAX_LENGTH, type SceneNode } from "@sceneroom/shared";
+import { useLayoutStore } from "@/store/layoutStore";
 import { useSceneStore } from "@/store/sceneStore";
+import PanelResizer from "./PanelResizer";
 import { AppearanceSection, TransformSection } from "./InspectorFields";
 import { Icon, KIND_LABELS, KindIcon } from "./icons";
 
@@ -16,6 +18,7 @@ const actionButton =
 export default function InspectorPanel() {
   const selectedIds = useSceneStore((state) => state.selectedIds);
   const nodes = useSceneStore((state) => state.scene.nodes);
+  const width = useLayoutStore((state) => state.rightWidth);
 
   let content;
   if (selectedIds.length === 0) {
@@ -35,8 +38,10 @@ export default function InspectorPanel() {
   return (
     <aside
       aria-label="Inspector"
-      className="flex w-76 shrink-0 flex-col border-l border-ed-line bg-ed-panel"
+      style={{ width }}
+      className="relative flex shrink-0 flex-col border-l border-ed-line bg-ed-panel"
     >
+      <PanelResizer side="right" />
       {content}
     </aside>
   );

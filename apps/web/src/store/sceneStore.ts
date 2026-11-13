@@ -48,6 +48,11 @@ type SceneState = {
   snapKeyHeld: boolean;
   /** Earlier states for Undo, and undone states for Redo. */
   history: History<Snapshot>;
+  /**
+   * A change in progress that should become ONE undo step when it ends, such as dragging a value
+   * in the Inspector. `before` is the state to return to.
+   */
+  pendingEdit: { before: Snapshot; label: string } | null;
   /** Selects only this node, or clears the selection when given null. */
   select: (id: string | null) => void;
   /** Adds the node to the selection, or removes it if already selected (Shift + click). */
@@ -72,6 +77,12 @@ type SceneState = {
   setNodeColor: (id: string, color: string) => string | null;
   /** Renames a node. Returns the saved name, or null if the name was not allowed. */
   renameNode: (id: string, name: string) => string | null;
+  /** Starts an edit made of many small updates. Pair with endEdit. */
+  beginEdit: (label: string) => void;
+  /** Changes a node's transform while an edit is in progress, without recording undo steps. */
+  previewNodeTransform: (id: string, transform: Transform) => void;
+  /** Ends the edit: `true` keeps it as one undo step, `false` restores how things were. */
+  endEdit: (keep: boolean) => void;
   /** Takes back the last change. */
   undo: () => void;
   /** Puts back the last undone change. */
@@ -97,6 +108,7 @@ export const useSceneStore = create<SceneState>()((set) => ({
   snapEnabled: false,
   snapKeyHeld: false,
   history: createHistory<Snapshot>(),
+  pendingEdit: null,
   select: (id) =>
     set((state) => ({
       selectedIds: id === null ? [] : resolveSelection(state.scene, [id]),
@@ -209,8 +221,37 @@ export const useSceneStore = create<SceneState>()((set) => ({
     });
     return clean;
   },
+  beginEdit: (label) =>
+    set((state) => ({
+      pendingEdit: {
+        before: { scene: state.scene, selectedIds: state.selectedIds },
+        label,
+      },
+    })),
+  previewNodeTransform: (id, transform) =>
+    set((state) => {
+      if (!state.pendingEdit || !state.scene.nodes[id]) return state;
+      return { scene: setTransforms(state.scene, { [id]: transform }) };
+    }),
+  endEdit: (keep) =>
+    set((state) => {
+      const pending = state.pendingEdit;
+      if (!pending) return state;
+      if (!keep) return { scene: pending.before.scene, pendingEdit: null };
+      // Nothing previewed: no undo step
+      if (state.scene === pending.before.scene) return { pendingEdit: null };
+      return {
+        pendingEdit: null,
+        history: recordChange(state.history, {
+          state: pending.before,
+          label: pending.label,
+        }),
+      };
+    }),
   undo: () =>
     set((state) => {
+      // Not while an edit is still in progress (a drag): its end would record from the wrong state
+      if (state.pendingEdit) return state;
       const step = undoStep(state.history, {
         scene: state.scene,
         selectedIds: state.selectedIds,
@@ -224,6 +265,7 @@ export const useSceneStore = create<SceneState>()((set) => ({
     }),
   redo: () =>
     set((state) => {
+      if (state.pendingEdit) return state;
       const step = redoStep(state.history, {
         scene: state.scene,
         selectedIds: state.selectedIds,

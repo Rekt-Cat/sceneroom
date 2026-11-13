@@ -131,6 +131,17 @@ a steady 60 is the usual target on most screens.
 | FPS counter position   | `className` on `<Stats>` in `Viewport.tsx`                                | `top-[60px]! left-[300px]!` | Pixels from the window corner: panel width + 12 across, top bar (48) + 12 down.                                               |
 | Number keys            | `useEditorShortcuts.ts`                                                   | `1` to `5`                  | Add Cube, Sphere, Cylinder, Plane, Cone (same order as the Add menu). `/` focuses the search box.                             |
 
+## Resizable panels and dragging values
+
+| What                     | Setting                                                | Our value                                     | What it does                                                                                                            |
+| ------------------------ | ------------------------------------------------------ | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Scene panel width        | `LEFT_PANEL_LIMITS` in `packages/shared/src/layout.ts` | min `220`, max `480`, start `288`             | Drag the edge of the panel to resize it. Double-click the edge to go back to the start width.                           |
+| Inspector panel width    | `RIGHT_PANEL_LIMITS` in `layout.ts`                    | min `260`, max `520`, start `304`             | Same for the right panel.                                                                                               |
+| Smallest 3D view         | `MIN_VIEWPORT_WIDTH` in `layout.ts`                    | `360`                                         | The panels cannot be dragged so wide that the 3D view gets narrower than this.                                          |
+| Resize with the keyboard | `KEY_STEP_PX` in `PanelResizer.tsx`                    | `16` (Shift: 4 times that)                    | Focus the edge (Tab) and press the left or right arrow.                                                                 |
+| Remembered widths        | `STORAGE_KEY` in `apps/web/src/store/layoutStore.ts`   | `sceneroom.layout.v1`                         | Widths are saved in this browser. Clear that key in the browser tools to forget them.                                   |
+| Drag speed of X / Y / Z  | `perPixel` in `ROWS` in `InspectorFields.tsx`          | position `0.02`, rotation `0.5`, scale `0.01` | How much the value changes per pixel when you drag an axis letter. Hold Shift for 10 times more, Alt for 10 times less. |
+
 ## Undo and redo
 
 | What             | Setting                                             | Our value                                    | What it does                                                                         |

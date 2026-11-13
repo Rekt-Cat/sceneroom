@@ -135,3 +135,62 @@ describe("group transform", () => {
     expect(get().scene.nodes[b.id]?.transform.position).toEqual([0, 0.5, 0]);
   });
 });
+
+describe("an edit made of many small updates (dragging a value)", () => {
+  const node = () => get().scene.nodes["initial-cube"]!;
+  const moveTo = (x: number) =>
+    get().previewNodeTransform("initial-cube", {
+      ...node().transform,
+      position: [x, 0.5, 0],
+    });
+
+  it("becomes exactly one undo step", () => {
+    get().beginEdit("Transform");
+    moveTo(1);
+    moveTo(2);
+    moveTo(3);
+    expect(get().history.past).toHaveLength(0); // nothing recorded while dragging
+    get().endEdit(true);
+
+    expect(node().transform.position).toEqual([3, 0.5, 0]);
+    expect(get().history.past).toHaveLength(1);
+    expect(nextUndoLabel(get().history)).toBe("Transform");
+
+    get().undo();
+    expect(node().transform.position).toEqual([0, 0.5, 0]);
+    get().redo();
+    expect(node().transform.position).toEqual([3, 0.5, 0]);
+  });
+
+  it("cancelling restores the old value and records nothing", () => {
+    get().beginEdit("Transform");
+    moveTo(5);
+    get().endEdit(false);
+    expect(node().transform.position).toEqual([0, 0.5, 0]);
+    expect(get().history.past).toHaveLength(0);
+    expect(get().pendingEdit).toBeNull();
+  });
+
+  it("an edit that previewed nothing records nothing", () => {
+    get().beginEdit("Transform");
+    get().endEdit(true);
+    expect(get().history.past).toHaveLength(0);
+  });
+
+  it("previews are ignored when no edit is in progress", () => {
+    moveTo(9);
+    expect(node().transform.position).toEqual([0, 0.5, 0]);
+  });
+
+  it("undo and redo do nothing while an edit is in progress", () => {
+    get().addPrimitive("cube");
+    get().beginEdit("Transform");
+    moveTo(1);
+    const nodes = nodeCount();
+    get().undo();
+    expect(nodeCount()).toBe(nodes);
+    get().endEdit(true);
+    get().undo(); // now it works: takes back the drag
+    expect(node().transform.position).toEqual([0, 0.5, 0]);
+  });
+});
