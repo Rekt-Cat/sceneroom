@@ -5,7 +5,7 @@
 - **Phase:** 3 (editor panels and undo/redo), started: Hierarchy list built on branch `feature/hierarchy`
 - **Done:** Phase 0, Phase 1 (live at https://sceneroom.vercel.app) and Phase 2 (scene model, selection, multi-select, gizmo, camera controls, add / numbered duplicate / delete / rename), all on `main`. A git pre-push hook runs type-check, lint, test and build before every push.
 - **CI:** green on the merge of pull request #2 (`0e5849e`).
-- **Next action:** test the new editor look in the browser and merge `feature/hierarchy`. Then, as separate branches: Inspector fields (position, rotation, scale, colour), re-parenting (drag in the scene list, draw children inside parents), undo/redo. Still open: test `SETUP-SECOND-PC.md` on the second PC; try the pre-push hook from GitHub Desktop; optional `/code-review` of the Phase 0-1 diffs.
+- **Next action:** test the Inspector fields in the browser, then merge `feature/hierarchy` and `feature/inspector` (the second builds on the first). Then, as separate branches: re-parenting (drag in the scene list, draw children inside parents) and undo/redo. Still open: test `SETUP-SECOND-PC.md` on the second PC; try the pre-push hook from GitHub Desktop; optional `/code-review` of the Phase 0-1 diffs.
 
 Update this block at the end of every sub-phase and commit it.
 
@@ -54,7 +54,8 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 
 - [ ] Layout: toolbar, Hierarchy, Inspector, Viewport (shadcn/ui)
 - [x] Hierarchy tree with visibility, search, Add menu, docked panels and tool dock (branch `feature/hierarchy`, needs a browser check)
-- [ ] Inspector fields (transform, colour; material values later), then re-parenting in the Hierarchy
+- [x] Inspector fields: position, rotation, scale, colour (branch `feature/inspector`, needs a browser check); material values later
+- [ ] Re-parenting in the Hierarchy
 - [ ] Undo/redo (command history) and keyboard shortcuts; Vitest tests for store and commands
 
 ### Phase 4: Lights, materials, environment
