@@ -186,3 +186,14 @@ export function setTransforms(
     scene,
   );
 }
+
+/** True if both transforms have exactly the same numbers. */
+export function transformsEqual(a: Transform, b: Transform): boolean {
+  const same = (x: readonly number[], y: readonly number[]) =>
+    x.every((value, i) => value === y[i]);
+  return (
+    same(a.position, b.position) &&
+    same(a.rotation, b.rotation) &&
+    same(a.scale, b.scale)
+  );
+}

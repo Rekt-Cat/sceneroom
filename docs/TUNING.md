@@ -131,6 +131,13 @@ a steady 60 is the usual target on most screens.
 | FPS counter position   | `className` on `<Stats>` in `Viewport.tsx`                                | `top-[60px]! left-[300px]!` | Pixels from the window corner: panel width + 12 across, top bar (48) + 12 down.                                               |
 | Number keys            | `useEditorShortcuts.ts`                                                   | `1` to `5`                  | Add Cube, Sphere, Cylinder, Plane, Cone (same order as the Add menu). `/` focuses the search box.                             |
 
+## Undo and redo
+
+| What             | Setting                                             | Our value                                    | What it does                                                                         |
+| ---------------- | --------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Steps remembered | `HISTORY_LIMIT` in `packages/shared/src/history.ts` | `100`                                        | How many changes Undo can go back. Older ones are forgotten.                         |
+| Shortcuts        | `useEditorShortcuts.ts`                             | Ctrl/Cmd + Z, Ctrl/Cmd + Shift + Z, Ctrl + Y | Undo and redo. Not active while typing in a box, where the browser's own undo works. |
+
 ## Inspector fields
 
 Files: `apps/web/src/components/viewport/InspectorFields.tsx` (rows, steps, colours) and `packages/shared/src/inspectorValues.ts` (limits).

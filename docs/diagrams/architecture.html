@@ -520,7 +520,9 @@
             <text class="t-sub" x="42" y="340">
               built: scene list, tool dock, Inspector
             </text>
-            <text class="t-sub" x="42" y="355">to come: undo and redo</text>
+            <text class="t-sub" x="42" y="355">
+              history: Undo and Redo work
+            </text>
             <rect
               class="pill-pending"
               x="42"
@@ -979,8 +981,8 @@
             The data that describes the scene: a list of objects, each with a
             position, rotation, scale and colour, plus what is selected and
             which gizmo is active. Today (Zustand) the store holds it and calls
-            pure functions from the shared package (4) to change it; materials
-            and undo come later.
+            pure functions from the shared package (4) to change it. It also
+            keeps the undo and redo history; materials come later.
             <strong>Zustand</strong> is a small library that holds this kind of
             shared data. In Phase 7 it becomes a <strong>Yjs document</strong>,
             which many people can edit at once.
@@ -1013,8 +1015,8 @@
             with keyboard shortcuts. Today the scene list (search, hide/show),
             the Add menu, the tool dock, a right panel with name, duplicate and
             delete, the Inspector's value fields (position, rotation, scale,
-            colour, for one object) and the shortcuts exist. Undo/redo does not
-            yet.
+            colour, for one object), Undo and Redo (buttons and Ctrl/Cmd+Z) and
+            the shortcuts exist.
           </dd>
           <dt>Unity comparison</dt>
           <dd>The Hierarchy and Inspector windows.</dd>

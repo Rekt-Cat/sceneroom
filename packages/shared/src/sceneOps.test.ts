@@ -10,6 +10,7 @@ import {
   removeNodes,
   setTransform,
   setTransforms,
+  transformsEqual,
   uniqueCopyName,
   updateNode,
 } from "./sceneOps";
@@ -210,5 +211,28 @@ describe("setTransforms", () => {
     });
     expect(next.nodes["a"]?.transform.position).toEqual([1, 1, 1]);
     expect(next.nodes["b"]?.transform.position).toEqual([2, 2, 2]);
+  });
+});
+
+describe("transformsEqual", () => {
+  const base = createNode("a", "cube").transform;
+
+  it("is true for the same numbers, even in different objects", () => {
+    expect(transformsEqual(base, { ...base })).toBe(true);
+    expect(
+      transformsEqual(base, {
+        position: [...base.position],
+        rotation: [...base.rotation],
+        scale: [...base.scale],
+      }),
+    ).toBe(true);
+  });
+
+  it("is false when any single number differs", () => {
+    expect(transformsEqual(base, { ...base, position: [0, 0.5, 0.001] })).toBe(
+      false,
+    );
+    expect(transformsEqual(base, { ...base, rotation: [0, 0, 1] })).toBe(false);
+    expect(transformsEqual(base, { ...base, scale: [1, 1, 2] })).toBe(false);
   });
 });

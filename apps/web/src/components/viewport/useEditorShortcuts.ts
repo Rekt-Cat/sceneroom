@@ -16,6 +16,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
 /**
  * W / E / R switch the gizmo, X toggles snapping, Escape clears the selection,
  * Delete or Backspace deletes the selected object, Ctrl/Cmd + D duplicates it,
+ * Ctrl/Cmd + Z undoes and Ctrl/Cmd + Shift + Z (or Ctrl + Y) redoes,
  * 1 to 5 add a shape, "/" focuses the search box,
  * and holding Shift flips snapping while it is held.
  */
@@ -29,6 +30,22 @@ export function useEditorShortcuts(): void {
       if (isTypingTarget(event.target)) return;
 
       const store = useSceneStore.getState();
+
+      // Ctrl/Cmd + Z undoes, Ctrl/Cmd + Shift + Z or Ctrl + Y redoes
+      const key = event.key.toLowerCase();
+      if ((event.ctrlKey || event.metaKey) && !event.altKey) {
+        if (key === "z") {
+          event.preventDefault();
+          if (event.shiftKey) store.redo();
+          else store.undo();
+          return;
+        }
+        if (key === "y" && event.ctrlKey) {
+          event.preventDefault();
+          store.redo();
+          return;
+        }
+      }
 
       // Ctrl/Cmd + D: the browser would otherwise bookmark the page
       if (

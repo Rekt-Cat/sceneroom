@@ -223,3 +223,17 @@ Position, Rotation and Scale fields plus colour, for one selected object (a mult
 - **Rotation** is stored in radians (matches three.js) and shown and typed in degrees.
 - **Left out:** dragging the axis letter to scrub a value, the "keep proportions" link button, roughness and metalness (not in the scene data yet; Phase 4).
 - **Dev server:** this time the dev server was stopped by name (`pkill -f next-server`) after `pnpm build`, not by port, because `lsof` also lists browser processes connected to the port.
+
+## 2026-11-13: Undo / redo as snapshots with labels
+
+History is two stacks of earlier states (`packages/shared/src/history.ts`, pure and tested). One step restores `{ scene, selectedIds }`.
+Snapshots are cheap here: scenes are immutable and share every node that did not change, so 100 steps cost little memory.
+
+- **Why snapshots, not command objects:** every change already goes through the store with a pure function, so the old scene IS the undo. Commands would need an inverse for each action (more code, more bugs).
+  The cost: steps cannot be merged or replayed on another machine. Real-time collaboration (Phase 7) needs per-user undo on top of a shared Yjs document; this history will be replaced there, but its interface (labels, undo/redo, one step per user action) is what the UI uses.
+- **One step per user action:** a gizmo drag is recorded once, on mouse up (group drags too). Each Inspector commit, Add, Delete, Duplicate, Rename, Hide/Show and colour change is one step.
+- **Not undoable:** selection, gizmo mode, snapping, panel state (as in most editors). Undo restores the selection that existed before the change.
+- **No empty steps:** a change that changes nothing (gizmo released without moving, same colour, same name) records nothing; checked with `transformsEqual` and plain comparisons, tested in the store.
+- **Labels** ("Undo add cube") show in the button tooltip. Limit 100 steps.
+- **Vitest added to `apps/web`** (5.1.0) so the store, which holds the history, has real tests (11).
+- Known limit: pressing Undo while a gizmo drag is still in progress is not guarded; the drag's end would then record from the older state. Rare; revisit if it shows up.

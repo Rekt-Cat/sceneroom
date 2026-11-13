@@ -58,6 +58,18 @@ const PATHS = {
       <path d="M3 10.5V4a1.5 1.5 0 0 1 1.5-1.5H11" />
     </>
   ),
+  undo: (
+    <>
+      <path d="M5 3.5 2.5 6 5 8.5" />
+      <path d="M3 6h6a4 4 0 0 1 0 8H6" />
+    </>
+  ),
+  redo: (
+    <>
+      <path d="m11 3.5 2.5 2.5L11 8.5" />
+      <path d="M13 6H7a4 4 0 0 0 0 8h3" />
+    </>
+  ),
   reset: <path d="M3 8a5 5 0 1 0 1.7-3.7M3 2.5v3h3" />,
   trash: <path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" />,
 } as const;

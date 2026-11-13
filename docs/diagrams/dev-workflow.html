@@ -1198,9 +1198,9 @@
             together?" (done by TypeScript's checker, <code>tsc</code>, after
             <code>next typegen</code> has written type definitions for our
             pages). <strong>test</strong> runs our Vitest tests on the scene
-            logic. <strong>build</strong> makes the real production version of
-            the app (<code>next build</code>). More detail:
-            <a href="#dd-checkers">the three checkers</a> and
+            logic and the store. <strong>build</strong> makes the real
+            production version of the app (<code>next build</code>). More
+            detail: <a href="#dd-checkers">the three checkers</a> and
             <a href="#dd-types">what "types" means</a>.
           </dd>
           <dt>Unity comparison</dt>
@@ -1340,7 +1340,8 @@
               </li>
               <li>
                 <strong>test</strong> runs <code>vitest</code> on the scene
-                logic in <code>packages/shared</code>.
+                logic in <code>packages/shared</code> and on the store (undo and
+                redo) in <code>apps/web</code>.
               </li>
               <li>
                 <strong>build</strong> runs <code>next build</code>, a full

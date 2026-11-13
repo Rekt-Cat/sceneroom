@@ -13,3 +13,4 @@ export * from "./screenRect";
 export * from "./sceneTree";
 export * from "./color";
 export * from "./inspectorValues";
+export * from "./history";
