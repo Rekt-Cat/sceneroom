@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { createEmptyScene } from "./scene";
 import { addNode, createNode } from "./sceneOps";
-import { buildSceneTree, flattenTree, searchNodes } from "./sceneTree";
+import {
+  buildSceneTree,
+  flattenTree,
+  isEffectivelyVisible,
+  searchNodes,
+} from "./sceneTree";
 
 function sampleScene() {
   // a
@@ -95,5 +100,35 @@ describe("searchNodes", () => {
 
   it("returns an empty list when nothing matches", () => {
     expect(searchNodes(namedScene(), "zzz")).toEqual([]);
+  });
+});
+
+describe("isEffectivelyVisible", () => {
+  it("is true when the node and all its parents are visible", () => {
+    expect(isEffectivelyVisible(sampleScene(), "c")).toBe(true);
+  });
+
+  it("is false when the node itself is hidden", () => {
+    const scene = sampleScene();
+    const hidden = {
+      ...scene,
+      nodes: { ...scene.nodes, c: { ...scene.nodes["c"]!, visible: false } },
+    };
+    expect(isEffectivelyVisible(hidden, "c")).toBe(false);
+    expect(isEffectivelyVisible(hidden, "b")).toBe(true);
+  });
+
+  it("is false when any parent above it is hidden", () => {
+    const scene = sampleScene();
+    const hidden = {
+      ...scene,
+      nodes: { ...scene.nodes, a: { ...scene.nodes["a"]!, visible: false } },
+    };
+    expect(isEffectivelyVisible(hidden, "c")).toBe(false);
+    expect(isEffectivelyVisible(hidden, "e")).toBe(true);
+  });
+
+  it("is false for an unknown node", () => {
+    expect(isEffectivelyVisible(sampleScene(), "nope")).toBe(false);
   });
 });

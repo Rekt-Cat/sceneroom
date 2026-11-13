@@ -10,6 +10,7 @@ import {
   recordChange,
   redoStep,
   removeNodes,
+  reparentNodes,
   resolveSelection,
   setTransforms,
   toggleInSelection,
@@ -18,6 +19,7 @@ import {
   updateNode,
   type History,
   type PrimitiveKind,
+  type ReparentMove,
   type Scene,
   type Transform,
   type TransformMode,
@@ -71,6 +73,11 @@ type SceneState = {
   deleteSelected: () => void;
   /** Copies the selected objects (and everything below them), placed beside the originals, and selects the copies. */
   duplicateSelected: () => void;
+  /**
+   * Moves objects under new parents (null = top level) as one undo step. Moves that change nothing
+   * are skipped. Throws if a move would make a loop; check with canReparent first.
+   */
+  reparentNodes: (moves: ReparentMove[], label: string) => void;
   /** Shows or hides a node in the viewport. */
   setNodeVisible: (id: string, visible: boolean) => void;
   /** Sets a node's colour. Returns the saved "#rrggbb" colour, or null if the text was not a valid colour. */
@@ -184,6 +191,22 @@ export const useSceneStore = create<SceneState>()((set) => ({
         scene: result.scene,
         selectedIds: result.rootIds,
         history: record(state, "Duplicate"),
+      };
+    }),
+  reparentNodes: (moves, label) =>
+    set((state) => {
+      const changing = moves.filter((move) => {
+        const node = state.scene.nodes[move.id];
+        return (
+          node &&
+          (node.parentId !== move.parentId ||
+            !transformsEqual(node.transform, move.transform))
+        );
+      });
+      if (changing.length === 0) return state;
+      return {
+        scene: reparentNodes(state.scene, changing),
+        history: record(state, label),
       };
     }),
   setNodeVisible: (id, visible) =>

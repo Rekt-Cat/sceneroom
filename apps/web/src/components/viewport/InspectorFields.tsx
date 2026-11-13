@@ -3,6 +3,9 @@
 import { useState } from "react";
 import {
   IDENTITY_TRANSFORM,
+  buildSceneTree,
+  canReparent,
+  flattenTree,
   displayValue,
   editTransform,
   formatNumber,
@@ -11,8 +14,10 @@ import {
   type SceneNode,
   type TransformGroup,
 } from "@sceneroom/shared";
+import { useLayoutStore } from "@/store/layoutStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { Icon } from "./icons";
+import { moveToParent } from "./reparent";
 import NumberField from "./NumberField";
 
 /** The three rows of the Transform section. `step` is one arrow-key press, in the unit shown. */
@@ -54,6 +59,47 @@ const QUICK_COLORS: { name: string; hex: string }[] = [
 
 const sectionTitle =
   "px-4 pt-3.5 pb-2 text-[11px] font-semibold tracking-widest text-ed-text-3 uppercase";
+
+/**
+ * Chooses which object this one sits inside. The object keeps its place in the 3D view when moved.
+ * Options that would make a loop (the object itself and everything inside it) are shown greyed out.
+ */
+export function ParentSection({ node }: { node: SceneNode }) {
+  const scene = useSceneStore((state) => state.scene);
+  const expandNode = useLayoutStore((state) => state.expandNode);
+
+  const options = flattenTree(buildSceneTree(scene), new Set());
+
+  return (
+    <section aria-label="Parent" className="border-b border-ed-line px-4 py-3">
+      <label className="grid grid-cols-[58px_1fr] items-center gap-2">
+        <span className="text-xs text-ed-text-2">Parent</span>
+        <select
+          value={node.parentId ?? ""}
+          onChange={(event) => {
+            const parentId = event.target.value || null;
+            if (moveToParent([node.id], parentId) && parentId) {
+              expandNode(parentId);
+            }
+          }}
+          className="h-[30px] min-w-0 rounded-md border border-ed-line bg-ed-field px-2 text-sm hover:border-ed-line-strong focus-visible:border-ed-accent focus-visible:outline-none"
+        >
+          <option value="">None (top level)</option>
+          {options.map(({ node: option, depth }) => (
+            <option
+              key={option.id}
+              value={option.id}
+              disabled={!canReparent(scene, node.id, option.id)}
+            >
+              {"\u00A0\u00A0".repeat(depth)}
+              {option.name}
+            </option>
+          ))}
+        </select>
+      </label>
+    </section>
+  );
+}
 
 export function TransformSection({ node }: { node: SceneNode }) {
   const setNodeTransform = useSceneStore((state) => state.setNodeTransform);

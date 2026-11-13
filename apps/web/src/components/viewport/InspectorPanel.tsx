@@ -5,7 +5,11 @@ import { NODE_NAME_MAX_LENGTH, type SceneNode } from "@sceneroom/shared";
 import { useLayoutStore } from "@/store/layoutStore";
 import { useSceneStore } from "@/store/sceneStore";
 import PanelResizer from "./PanelResizer";
-import { AppearanceSection, TransformSection } from "./InspectorFields";
+import {
+  AppearanceSection,
+  ParentSection,
+  TransformSection,
+} from "./InspectorFields";
 import { Icon, KIND_LABELS, KindIcon } from "./icons";
 
 const actionButton =
@@ -141,6 +145,7 @@ function SingleObject({ node }: { node: SceneNode }) {
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
+        <ParentSection node={node} />
         <TransformSection node={node} />
         <AppearanceSection node={node} />
       </div>

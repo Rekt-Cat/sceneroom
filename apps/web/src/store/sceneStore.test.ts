@@ -194,3 +194,72 @@ describe("an edit made of many small updates (dragging a value)", () => {
     expect(node().transform.position).toEqual([0, 0.5, 0]);
   });
 });
+
+describe("re-parenting", () => {
+  const moveTo = (x: number) => ({
+    position: [x, 0.5, 0] as [number, number, number],
+    rotation: [0, 0, 0] as [number, number, number],
+    scale: [1, 1, 1] as [number, number, number],
+  });
+
+  it("is one undo step that restores the parent and the transform", () => {
+    const sphere = get().addPrimitive("sphere");
+    const before = get().scene.nodes[sphere]!;
+    get().reparentNodes(
+      [{ id: sphere, parentId: "initial-cube", transform: moveTo(2) }],
+      "Move into Cube",
+    );
+    expect(get().scene.nodes[sphere]).toMatchObject({
+      parentId: "initial-cube",
+      transform: moveTo(2),
+    });
+    expect(nextUndoLabel(get().history)).toBe("Move into Cube");
+
+    get().undo();
+    expect(get().scene.nodes[sphere]?.parentId).toBeNull();
+    expect(get().scene.nodes[sphere]?.transform).toEqual(before.transform);
+    get().redo();
+    expect(get().scene.nodes[sphere]?.parentId).toBe("initial-cube");
+  });
+
+  it("leaves no undo step when nothing changes", () => {
+    const node = get().scene.nodes["initial-cube"]!;
+    get().reparentNodes(
+      [
+        {
+          id: "initial-cube",
+          parentId: null,
+          transform: { ...node.transform },
+        },
+      ],
+      "Move to top level",
+    );
+    expect(get().history.past).toHaveLength(0);
+  });
+
+  it("refuses a loop and changes nothing", () => {
+    const sphere = get().addPrimitive("sphere");
+    get().reparentNodes(
+      [{ id: sphere, parentId: "initial-cube", transform: moveTo(1) }],
+      "Move",
+    );
+    const steps = get().history.past.length;
+    expect(() =>
+      get().reparentNodes(
+        [{ id: "initial-cube", parentId: sphere, transform: moveTo(0) }],
+        "Move",
+      ),
+    ).toThrow();
+    expect(get().scene.nodes["initial-cube"]?.parentId).toBeNull();
+    expect(get().history.past).toHaveLength(steps);
+  });
+
+  it("keeps the selection", () => {
+    const sphere = get().addPrimitive("sphere");
+    get().reparentNodes(
+      [{ id: sphere, parentId: "initial-cube", transform: moveTo(1) }],
+      "Move",
+    );
+    expect(get().selectedIds).toEqual([sphere]);
+  });
+});

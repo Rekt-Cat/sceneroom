@@ -72,3 +72,19 @@ export function searchNodes(scene: Scene, query: string): SceneNode[] | null {
     node.name.toLowerCase().includes(needle),
   );
 }
+
+/**
+ * False if the node is hidden, or sits inside a hidden node (hiding a parent hides everything in it).
+ * Unknown nodes count as not visible.
+ */
+export function isEffectivelyVisible(scene: Scene, id: string): boolean {
+  const visited = new Set<string>();
+  let current: string | null = id;
+  while (current !== null && !visited.has(current)) {
+    const node: SceneNode | undefined = scene.nodes[current];
+    if (!node || !node.visible) return false;
+    visited.add(current);
+    current = node.parentId;
+  }
+  return true;
+}

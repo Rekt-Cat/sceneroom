@@ -2,9 +2,10 @@
 
 import { useEffect } from "react";
 import { useThree } from "@react-three/fiber";
-import { Box3, Vector3 } from "three";
+import { Mesh, Vector3 } from "three";
 import {
   boundsOfPoints,
+  isEffectivelyVisible,
   rectFromPoints,
   rectsOverlap,
   type Rect,
@@ -40,7 +41,14 @@ export default function BoxSelectController() {
     function screenBoundsOf(id: string): Rect | null {
       const object = getMesh(id);
       if (!object) return null;
-      const box = new Box3().setFromObject(object);
+      // Only this mesh's own shape: setFromObject would also include the objects inside it
+      if (!(object instanceof Mesh)) return null;
+      object.updateWorldMatrix(true, false);
+      object.geometry.computeBoundingBox();
+      if (!object.geometry.boundingBox) return null;
+      const box = object.geometry.boundingBox
+        .clone()
+        .applyMatrix4(object.matrixWorld);
       if (box.isEmpty()) return null;
       const bounds = canvas.getBoundingClientRect();
       const corners: { x: number; y: number }[] = [];
@@ -100,7 +108,7 @@ export default function BoxSelectController() {
 
       const { scene, selectedIds, setSelection } = useSceneStore.getState();
       const hit = Object.values(scene.nodes)
-        .filter((node) => node.visible)
+        .filter((node) => isEffectivelyVisible(scene, node.id))
         .filter((node) => {
           const bounds = screenBoundsOf(node.id);
           return bounds !== null && rectsOverlap(bounds, box);

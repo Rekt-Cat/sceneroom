@@ -1,9 +1,14 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { Outlines } from "@react-three/drei";
 import { DoubleSide, FrontSide, Mesh, type Object3D } from "three";
-import type { PrimitiveKind, SceneNode } from "@sceneroom/shared";
+import {
+  buildSceneTree,
+  type PrimitiveKind,
+  type SceneNode,
+  type TreeNode,
+} from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
 import MultiSelectionGizmo from "./MultiSelectionGizmo";
 import SelectionGizmo from "./SelectionGizmo";
@@ -41,6 +46,8 @@ function NodeMesh({
   selected,
   soleSelected,
   onSoleSelectedMesh,
+  ancestorHidden,
+  children,
 }: {
   node: SceneNode;
   selected: boolean;
@@ -48,6 +55,10 @@ function NodeMesh({
   soleSelected: boolean;
   /** Called with the three.js object while it is the only selected one, and with null afterwards. */
   onSoleSelectedMesh: (object: Object3D | null) => void;
+  /** True if something this object sits inside is hidden (so it is hidden too, even if it is "visible"). */
+  ancestorHidden: boolean;
+  /** The objects inside this one. Drawn as children of this mesh, so they move, turn and scale with it. */
+  children?: ReactNode;
 }) {
   const select = useSceneStore((state) => state.select);
   const toggleSelect = useSceneStore((state) => state.toggleSelect);
@@ -67,7 +78,9 @@ function NodeMesh({
     <mesh
       ref={setMesh}
       visible={node.visible}
-      raycast={node.visible ? Mesh.prototype.raycast : hitNothing}
+      raycast={
+        node.visible && !ancestorHidden ? Mesh.prototype.raycast : hitNothing
+      }
       position={position}
       rotation={rotation}
       scale={scale}
@@ -89,26 +102,68 @@ function NodeMesh({
       {selected && (
         <Outlines color={OUTLINE_COLOR} thickness={OUTLINE_THICKNESS} />
       )}
+      {children}
     </mesh>
   );
 }
 
-/** Draws every node in the scene store, plus the gizmo on the selection. */
+/** One node and, inside it, its children, all the way down. */
+function NodeTree({
+  entry,
+  selectedIds,
+  soleId,
+  onSoleSelectedMesh,
+  ancestorHidden = false,
+}: {
+  entry: TreeNode;
+  selectedIds: string[];
+  soleId: string | null;
+  onSoleSelectedMesh: (object: Object3D | null) => void;
+  ancestorHidden?: boolean;
+}) {
+  const { node, children } = entry;
+  return (
+    <NodeMesh
+      node={node}
+      selected={selectedIds.includes(node.id)}
+      soleSelected={node.id === soleId}
+      onSoleSelectedMesh={onSoleSelectedMesh}
+      ancestorHidden={ancestorHidden}
+    >
+      {children.map((child) => (
+        <NodeTree
+          key={child.node.id}
+          entry={child}
+          selectedIds={selectedIds}
+          soleId={soleId}
+          onSoleSelectedMesh={onSoleSelectedMesh}
+          ancestorHidden={ancestorHidden || !node.visible}
+        />
+      ))}
+    </NodeMesh>
+  );
+}
+
+/**
+ * Draws the scene from the store: each object inside its parent, so a parent's position, rotation and
+ * scale carry over to everything in it. Plus the gizmo on the selection.
+ */
 export default function SceneNodes() {
-  const nodes = useSceneStore((state) => state.scene.nodes);
+  const scene = useSceneStore((state) => state.scene);
   const selectedIds = useSceneStore((state) => state.selectedIds);
   const [soleObject, setSoleObject] = useState<Object3D | null>(null);
 
+  const tree = useMemo(() => buildSceneTree(scene), [scene]);
   const soleId = selectedIds.length === 1 ? (selectedIds[0] ?? null) : null;
 
   return (
     <>
-      {Object.values(nodes).map((node) => (
-        <NodeMesh
-          key={node.id}
-          node={node}
-          selected={selectedIds.includes(node.id)}
-          soleSelected={node.id === soleId}
+      {tree.map((entry) => (
+        <NodeTree
+          key={entry.node.id}
+          entry={entry}
+          selectedIds={selectedIds}
+          soleId={soleId}
           onSoleSelectedMesh={setSoleObject}
         />
       ))}
