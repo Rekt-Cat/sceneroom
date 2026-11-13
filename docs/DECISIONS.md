@@ -264,3 +264,8 @@ Snapshots are cheap here: scenes are immutable and share every node that did not
   Box select now measures only an object's own shape (not the objects inside it), and ignores objects hidden through a hidden parent (`isEffectivelyVisible`).
 - **Hidden parents.** Hiding an object hides everything inside it; hidden objects, and those inside them, no longer catch clicks.
 - **Not done:** per-parent "folded" memory survives undo only as UI state (it is not part of the scene); dropping onto a collapsed parent unfolds it.
+
+## 2026-11-13: Add menu fits the panel width
+
+Found from a screenshot: with the Scene panel dragged narrow, the 256px Add menu (aligned to the Add button) stuck out past the left edge of the screen and its text was cut off.
+The menu is now placed against the whole Scene panel (`left-3 right-3`, at most 18rem wide) instead of against the button, so it fits any panel width; item hints are cut with an ellipsis. The small round "N" in the bottom-left corner of dev builds is Next.js's own dev indicator, not part of the app; it does not appear in the production site.
