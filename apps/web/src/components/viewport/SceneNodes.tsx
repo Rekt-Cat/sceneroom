@@ -6,6 +6,7 @@ import type { Object3D } from "three";
 import type { PrimitiveKind, SceneNode } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
 import SelectionGizmo from "./SelectionGizmo";
+import { shouldIgnoreClick } from "./gizmoGuard";
 
 /** One geometry per primitive kind; all are about 1 unit in size. */
 function Geometry({ kind }: { kind: PrimitiveKind }) {
@@ -49,7 +50,7 @@ function NodeMesh({
       onClick={(event) => {
         // Only the nearest mesh under the pointer gets the click
         event.stopPropagation();
-        select(node.id);
+        if (!shouldIgnoreClick()) select(node.id);
       }}
     >
       <Geometry kind={node.kind} />

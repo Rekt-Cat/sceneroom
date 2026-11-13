@@ -2,9 +2,15 @@
 
 import { useEffect } from "react";
 import { useThree } from "@react-three/fiber";
+import {
+  clearCameraDragRestarted,
+  markCameraDragRestarted,
+} from "./gizmoGuard";
 
 /** The part of OrbitControls we use: it announces when a camera drag starts and ends. */
 type ControlsEvents = {
+  /** The element OrbitControls listens on (R3F's root element, not the canvas). */
+  domElement: HTMLElement | null;
   addEventListener(type: "start" | "end", listener: () => void): void;
   removeEventListener(type: "start" | "end", listener: () => void): void;
 };
@@ -23,7 +29,6 @@ export default function CameraModifierSwitch() {
   const controls = useThree(
     (state) => state.controls,
   ) as unknown as ControlsEvents | null;
-  const canvas = useThree((state) => state.gl.domElement);
 
   useEffect(() => {
     if (!controls) return;
@@ -38,6 +43,10 @@ export default function CameraModifierSwitch() {
       dragging = false;
     };
     const rememberPointer = (event: PointerEvent) => {
+      // isTrusted is false for the synthetic events we send ourselves
+      if (event.isTrusted && event.type === "pointerdown") {
+        clearCameraDragRestarted();
+      }
       if (event.pointerType === "mouse") {
         pointer = { id: event.pointerId, x: event.clientX, y: event.clientY };
       }
@@ -45,10 +54,11 @@ export default function CameraModifierSwitch() {
 
     function restartDrag(event: KeyboardEvent) {
       if (!MODIFIER_KEYS.has(event.key) || event.repeat) return;
-      if (!dragging || !pointer) return;
+      const target = controls?.domElement;
+      if (!dragging || !pointer || !target) return;
 
-      // bubbles: false keeps these synthetic events away from other listeners (such as R3F's click
-      // handling); OrbitControls listens on the canvas and the document themselves, so it still gets them
+      // bubbles: false keeps the events from travelling further up the page. OrbitControls listens
+      // on `target` (pointerdown) and on the document (pointerup), so it still receives them.
       const init: PointerEventInit = {
         pointerId: pointer.id,
         pointerType: "mouse",
@@ -61,8 +71,9 @@ export default function CameraModifierSwitch() {
         metaKey: event.metaKey,
         bubbles: false,
       };
-      canvas.ownerDocument.dispatchEvent(new PointerEvent("pointerup", init));
-      canvas.dispatchEvent(new PointerEvent("pointerdown", init));
+      markCameraDragRestarted();
+      target.ownerDocument.dispatchEvent(new PointerEvent("pointerup", init));
+      target.dispatchEvent(new PointerEvent("pointerdown", init));
     }
 
     controls.addEventListener("start", onStart);
@@ -79,7 +90,7 @@ export default function CameraModifierSwitch() {
       window.removeEventListener("keydown", restartDrag);
       window.removeEventListener("keyup", restartDrag);
     };
-  }, [controls, canvas]);
+  }, [controls]);
 
   return null;
 }

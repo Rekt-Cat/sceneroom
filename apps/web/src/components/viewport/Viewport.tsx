@@ -6,7 +6,7 @@ import { MOUSE } from "three";
 import { useSceneStore } from "@/store/sceneStore";
 import CameraModifierSwitch from "./CameraModifierSwitch";
 import SceneNodes from "./SceneNodes";
-import { gizmoUsedRecently } from "./gizmoGuard";
+import { shouldIgnoreClick } from "./gizmoGuard";
 
 /**
  * The 3D viewport: a camera you can orbit around the scene nodes on an infinite grid.
@@ -19,7 +19,7 @@ export default function Viewport() {
     <Canvas
       camera={{ position: [5, 4, 7], fov: 50 }}
       onPointerMissed={() => {
-        if (!gizmoUsedRecently()) select(null);
+        if (!shouldIgnoreClick()) select(null);
       }}
     >
       <color attach="background" args={["#14191d"]} />
