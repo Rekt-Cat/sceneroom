@@ -2,10 +2,10 @@
 
 ## Current status
 
-- **Phase:** 1 (3D viewport), essentially done; Phase 2 next
-- **Done:** Phase 0; Phase 1 (Three.js + React Three Fiber + drei viewport: canvas, grid, lights, cube, orbit controls, FPS counter), tuned and **live at https://sceneroom.vercel.app** (Vercel Hobby, Root Directory `apps/web`).
-- **CI:** green on `b33fe6b` (first run failed on type-check, fixed in `e798eac`).
-- **Next action:** optional `/code-review`, then Phase 2 (scene model and editing tools). Still open from Phase 0: the Prettier hook and the skill did not load after `/reload-skills`. Likely cause: the Claude Code session was started in `MyProg`, not `MyProg/sceneroom`, so `sceneroom/.claude/` is not the project config (to confirm). Test `SETUP-SECOND-PC.md` on the second PC.
+- **Phase:** 2 (scene model and editing tools), in progress
+- **Done:** Phase 0; Phase 1 (3D viewport, live at https://sceneroom.vercel.app); Phase 2 so far: scene schema (Zod), pure scene operations with Vitest tests, Zustand store, click-to-select with outline (confirmed on the Vercel preview of `feature/selection`). A git pre-push hook now runs type-check, lint, test and build before every push.
+- **CI:** last seen green on `b33fe6b`; not yet checked on newer commits (CI runs on pushes to `main` and on pull requests only).
+- **Next action:** merge `feature/selection` into `main` through a pull request (starts CI), then the transform gizmo (move/rotate/scale) with snapping on a new branch, then add/delete/duplicate/rename. Still open: test `SETUP-SECOND-PC.md` on the second PC; try the pre-push hook from GitHub Desktop; optional `/code-review` of the Phase 0-1 diffs.
 
 Update this block at the end of every sub-phase and commit it.
 
@@ -44,9 +44,10 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 
 ### Phase 2: Scene model and editing tools
 
-- [ ] Scene schema in `packages/shared` (types + Zod)
-- [ ] Zustand store; render nodes from the store
-- [ ] Click to select (raycasting) with outline; transform gizmo (move/rotate/scale) and snapping
+- [x] Scene schema in `packages/shared` (types + Zod)
+- [x] Pure scene operations (add, remove, duplicate, update, transform) with Vitest tests; Zustand store; render nodes from the store
+- [x] Click to select (raycasting) with outline
+- [ ] Transform gizmo (move/rotate/scale) and snapping
 - [ ] Add (cube, sphere, cylinder, plane, cone), delete, duplicate, rename
 
 ### Phase 3: Editor panels and undo/redo
