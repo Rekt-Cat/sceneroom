@@ -7,6 +7,7 @@ import {
   getSubtreeIds,
   removeNode,
   setTransform,
+  uniqueCopyName,
   updateNode,
 } from "./sceneOps";
 
@@ -59,7 +60,7 @@ describe("duplicateNode", () => {
   it("copies the subtree with new ids and keeps the copied hierarchy", () => {
     const next = duplicateNode(sceneWithTree(), "b", ["b2", "c2"]);
     expect(next.nodes["b2"]).toMatchObject({
-      name: "Sphere copy",
+      name: "Sphere (1)",
       parentId: "a",
     });
     expect(next.nodes["c2"]).toMatchObject({ parentId: "b2" });
@@ -81,7 +82,7 @@ describe("duplicateNode", () => {
       sceneSchema.safeParse(duplicateNode(scene, "a", ["a2", "b2", "c2"]))
         .success,
     ).toBe(true);
-    expect(copy?.name).toBe("Cone copy");
+    expect(copy?.name).toBe("Cone (1)");
   });
 
   it("requires one new id per copied node", () => {
@@ -111,5 +112,47 @@ describe("updateNode and setTransform", () => {
     expect(() => updateNode(sceneWithTree(), "nope", { name: "x" })).toThrow(
       "does not exist",
     );
+  });
+});
+
+describe("uniqueCopyName", () => {
+  function sceneWithNames(...names: string[]) {
+    let scene = createEmptyScene();
+    names.forEach((name, i) => {
+      scene = addNode(scene, { ...createNode(`n${i}`, "cube"), name });
+    });
+    return scene;
+  }
+
+  it("adds (1) to a name that has no copies yet", () => {
+    expect(uniqueCopyName(sceneWithNames("Cube"), "Cube")).toBe("Cube (1)");
+  });
+
+  it("counts up: (2), (3), ...", () => {
+    const scene = sceneWithNames("Cube", "Cube (1)");
+    expect(uniqueCopyName(scene, "Cube")).toBe("Cube (2)");
+    const more = sceneWithNames("Cube", "Cube (1)", "Cube (2)");
+    expect(uniqueCopyName(more, "Cube")).toBe("Cube (3)");
+  });
+
+  it("duplicating a numbered copy continues the numbering instead of stacking", () => {
+    const scene = sceneWithNames("Cube", "Cube (1)");
+    expect(uniqueCopyName(scene, "Cube (1)")).toBe("Cube (2)");
+  });
+
+  it("fills the lowest free number", () => {
+    const scene = sceneWithNames("Cube", "Cube (2)");
+    expect(uniqueCopyName(scene, "Cube")).toBe("Cube (1)");
+  });
+
+  it("does not treat a name like (1) with no base as a suffix", () => {
+    expect(uniqueCopyName(sceneWithNames("(1)"), "(1)")).toBe("(1) (1)");
+  });
+
+  it("shortens a very long base name to stay within the limit", () => {
+    const long = "x".repeat(100);
+    const result = uniqueCopyName(sceneWithNames(long), long);
+    expect(result).toBe("x".repeat(96) + " (1)");
+    expect(result).toHaveLength(100);
   });
 });

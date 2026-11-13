@@ -63,6 +63,25 @@ export function removeNode(scene: Scene, id: string): Scene {
   return { ...scene, nodes };
 }
 
+/** Matches a trailing " (3)" so duplicating "Cube (3)" continues the numbering instead of nesting. */
+const COPY_SUFFIX = /\s\(\d+\)$/;
+
+/**
+ * Name for a copy: "Cube" becomes "Cube (1)", then "Cube (2)", and so on. Duplicating "Cube (1)"
+ * also gives the next free number of "Cube". Takes the lowest number no object is using yet,
+ * and shortens the base name if needed so the result stays within the name length limit.
+ */
+export function uniqueCopyName(scene: Scene, name: string): string {
+  const base = name.replace(COPY_SUFFIX, "");
+  const taken = new Set(Object.values(scene.nodes).map((node) => node.name));
+  for (let n = 1; ; n++) {
+    const suffix = ` (${n})`;
+    const candidate =
+      base.slice(0, NODE_NAME_MAX_LENGTH - suffix.length) + suffix;
+    if (!taken.has(candidate)) return candidate;
+  }
+}
+
 /**
  * Copies a node and its descendants. `newIds` supplies one fresh id per copied node
  * in the order given by getSubtreeIds (the root first).
@@ -88,10 +107,7 @@ export function duplicateNode(
     nodes[copyId] = {
       ...original,
       id: copyId,
-      name:
-        oldId === id
-          ? `${original.name} copy`.slice(0, NODE_NAME_MAX_LENGTH)
-          : original.name,
+      name: oldId === id ? uniqueCopyName(scene, original.name) : original.name,
       transform:
         oldId === id
           ? {

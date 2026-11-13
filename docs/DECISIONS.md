@@ -160,3 +160,10 @@ Backspace are ignored while typing in a text box. A temporary overlay panel hold
 A three.js material draws only the front face by default (back-face culling), so a flat `planeGeometry` disappeared when viewed from behind.
 Planes now use `DoubleSide`; closed shapes keep `FrontSide` (cheaper, and their inside is never seen). Not changed: a new plane stands upright
 (three.js `PlaneGeometry` faces +z); lying it flat like a floor would be a rotation in `createNode`.
+
+## 2026-11-13: Duplicates are numbered, not "copy"
+
+`uniqueCopyName` in `sceneOps.ts`: "Cube" becomes "Cube (1)", then "Cube (2)". Duplicating "Cube (1)" strips the old number first, so you get
+"Cube (2)" and not "Cube (1) (1)". It takes the lowest number no object uses yet (delete "Cube (1)" and the next copy reuses it). The base name is
+shortened if needed so the result stays within 100 characters. Only the top copy is renamed; its descendants keep their names. This replaces the
+" copy" suffix described in the object-actions entry above.
