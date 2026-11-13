@@ -52,8 +52,9 @@ export default function AddMenu() {
     setOpen(false);
   }
 
-  // The wrapper below is not "relative" on purpose: the menu is placed against the Scene panel (which
-  // is), so it always fits that panel's width, however narrow or wide the panel has been dragged.
+  // The wrapper below is not "relative" on purpose: the menu is placed against the whole Scene panel
+  // (which is), with its right edge under the Add button (the header has 14px of padding, `right-3.5`).
+  // It is 18rem wide, but never wider than the panel, so it fits however the panel has been resized.
   return (
     <div ref={rootRef}>
       <button
@@ -74,7 +75,7 @@ export default function AddMenu() {
           role="menu"
           aria-label="Add an object"
           onKeyDown={onMenuKeyDown}
-          className="absolute top-12 right-3 left-3 z-30 max-w-72 rounded-xl border border-ed-line-strong bg-ed-raised p-1.5 shadow-2xl shadow-black/50"
+          className="absolute top-12 right-3.5 z-30 w-72 max-w-[calc(100%-1.75rem)] rounded-xl border border-ed-line-strong bg-ed-raised p-1.5 shadow-2xl shadow-black/50"
         >
           {PRIMITIVE_KINDS.map((kind, index) => (
             <button

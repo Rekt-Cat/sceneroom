@@ -1,7 +1,6 @@
 "use client";
 
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
-import { TransformControls } from "@react-three/drei";
 import { Matrix4, Vector3, type Group } from "three";
 import {
   editableIds,
@@ -9,6 +8,7 @@ import {
   type Transform,
 } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
+import Gizmo from "./Gizmo";
 import { markGizmoUsed } from "./gizmoGuard";
 import { getMesh } from "./meshRegistry";
 import { SNAP, toRadians } from "./snapSettings";
@@ -133,7 +133,7 @@ export default function MultiSelectionGizmo({ ids }: { ids: string[] }) {
     <>
       <group ref={setPivot} />
       {pivot && (
-        <TransformControls
+        <Gizmo
           object={pivot}
           mode={mode}
           translationSnap={snapping ? SNAP.translate : null}

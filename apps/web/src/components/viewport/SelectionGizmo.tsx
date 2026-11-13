@@ -1,8 +1,8 @@
 "use client";
 
-import { TransformControls } from "@react-three/drei";
 import type { Object3D } from "three";
 import { useSceneStore } from "@/store/sceneStore";
+import Gizmo from "./Gizmo";
 import { markGizmoUsed } from "./gizmoGuard";
 import { SNAP, toRadians } from "./snapSettings";
 
@@ -27,7 +27,7 @@ export default function SelectionGizmo({
   const setNodeTransform = useSceneStore((state) => state.setNodeTransform);
 
   return (
-    <TransformControls
+    <Gizmo
       object={object}
       mode={mode}
       translationSnap={snapping ? SNAP.translate : null}

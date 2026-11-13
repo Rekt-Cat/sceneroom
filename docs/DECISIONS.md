@@ -282,3 +282,12 @@ A locked object cannot be edited. What "edited" means is decided in one place, t
 - **Data:** `locked: z.boolean().default(false)` on each node. The default means scenes without the flag load as unlocked, so the schema version stays 1 (nothing is saved to files yet).
 - **Undo:** lock and unlock are undo steps ("Lock", "Unlock"); several objects at once is one step.
 - **Not done:** a lock does not stop other people in Phase 7 (collaboration); there it should be enforced on the server too.
+
+## 2026-11-13: Move-gizmo arrow direction fixed; Add menu sits under the Add button
+
+- **Arrow pointing at the object.** drei's `TransformControls` (three-stdlib 2.36.1) flips an axis to face the camera. When the camera is on the far side of an axis, it hides the normal arrowhead ("fwd") and shows a second one ("bwd"),
+  mirrored to the other side. That second arrowhead is built pointing toward the object, so after the mirror it sits on the outside and points back at the object (seen as the red X arrow; Y and Z have the same bug).
+  Checked by building the real controls in a script: before the fix `bwd` is inward for X, Y and Z; after giving each `bwd` arrow the shape of its `fwd` arrow it is outward.
+  `Gizmo.tsx` wraps `TransformControls` and does this once after it mounts. It reads the library's private `gizmo.gizmo.translate` group (and does nothing if it is missing), so re-check it when three-stdlib or drei is updated. Both the single and the group gizmo use it.
+- **Add menu placement (corrects the entry above).** Anchoring the menu to the whole panel (`left-3 right-3`) fixed the narrow case but made it open on the left of a wide panel, away from the Add button.
+  Now its right edge is under the Add button (`right-3.5`, the header padding) and it is 18rem wide but never wider than the panel (`max-w-[calc(100%-1.75rem)]`), so it follows the button in a wide panel and shrinks to fit in a narrow one.
