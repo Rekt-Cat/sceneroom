@@ -14,12 +14,14 @@ import {
   removeNodes,
   reparentNodes,
   resolveSelection,
+  sanitizeMaterialChange,
   setTransforms,
   toggleInSelection,
   transformsEqual,
   undoStep,
   updateNode,
   type History,
+  type MaterialChange,
   type PrimitiveKind,
   type ReparentMove,
   type Scene,
@@ -84,6 +86,12 @@ type SceneState = {
   setNodesLocked: (ids: string[], locked: boolean) => void;
   /** Shows or hides a node in the viewport. */
   setNodeVisible: (id: string, visible: boolean) => void;
+  /** Sets how shiny / metal an object looks (0 to 1 each), as one undo step. Ignored for locked objects. */
+  setNodeMaterial: (id: string, change: MaterialChange) => void;
+  /** Like setNodeMaterial but without recording an undo step; only while an edit is in progress (dragging a slider). */
+  previewNodeMaterial: (id: string, change: MaterialChange) => void;
+  /** Like setNodeColor but without recording an undo step; only while an edit is in progress (dragging inside the colour picker). */
+  previewNodeColor: (id: string, color: string) => void;
   /** Sets a node's colour. Returns the saved "#rrggbb" colour, or null if the text was not a valid colour. */
   setNodeColor: (id: string, color: string) => string | null;
   /** Renames a node. Returns the saved name, or null if the name was not allowed. */
@@ -247,6 +255,44 @@ export const useSceneStore = create<SceneState>()((set) => ({
         scene: updateNode(state.scene, id, { visible }),
         history: record(state, visible ? "Show" : "Hide"),
       };
+    }),
+  setNodeMaterial: (id, change) =>
+    set((state) => {
+      const node = state.scene.nodes[id];
+      if (!node || isEffectivelyLocked(state.scene, id)) return state;
+      const clean = sanitizeMaterialChange(change);
+      const differs = (["roughness", "metalness"] as const).some(
+        (key) => clean[key] !== undefined && clean[key] !== node[key],
+      );
+      if (!differs) return state;
+      return {
+        scene: updateNode(state.scene, id, clean),
+        history: record(state, "Material"),
+      };
+    }),
+  previewNodeMaterial: (id, change) =>
+    set((state) => {
+      const node = state.scene.nodes[id];
+      if (!state.pendingEdit || !node || isEffectivelyLocked(state.scene, id)) {
+        return state;
+      }
+      const clean = sanitizeMaterialChange(change);
+      if (Object.keys(clean).length === 0) return state;
+      return { scene: updateNode(state.scene, id, clean) };
+    }),
+  previewNodeColor: (id, color) =>
+    set((state) => {
+      const node = state.scene.nodes[id];
+      const clean = normalizeHexColor(color);
+      if (
+        !state.pendingEdit ||
+        !node ||
+        clean === null ||
+        isEffectivelyLocked(state.scene, id)
+      ) {
+        return state;
+      }
+      return { scene: updateNode(state.scene, id, { color: clean }) };
     }),
   setNodeColor: (id, color) => {
     const clean = normalizeHexColor(color);

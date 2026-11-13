@@ -8,6 +8,9 @@ import {
   editTransform,
   formatNumber,
   parseNumberInput,
+  parseUnitInput,
+  resetTransformGroup,
+  sanitizeMaterialChange,
 } from "./inspectorValues";
 import { sceneNodeSchema } from "./scene";
 import { createNode } from "./sceneOps";
@@ -137,5 +140,63 @@ describe("normalizeHexColor", () => {
     ]) {
       expect(normalizeHexColor(bad), bad).toBeNull();
     }
+  });
+});
+
+describe("parseUnitInput", () => {
+  it("accepts numbers from 0 to 1", () => {
+    expect(parseUnitInput("0")).toBe(0);
+    expect(parseUnitInput("0.6")).toBe(0.6);
+    expect(parseUnitInput(".25")).toBe(0.25);
+    expect(parseUnitInput("1")).toBe(1);
+    expect(parseUnitInput("0,5")).toBe(0.5);
+  });
+
+  it("rejects numbers outside 0 to 1 and text that is not a number", () => {
+    for (const bad of ["-0.1", "1.01", "2", "abc", "", "0.5.5"]) {
+      expect(parseUnitInput(bad), bad).toBeNull();
+    }
+  });
+});
+
+describe("sanitizeMaterialChange", () => {
+  it("keeps valid values and clamps the ones outside 0 to 1", () => {
+    expect(sanitizeMaterialChange({ roughness: 0.3, metalness: 7 })).toEqual({
+      roughness: 0.3,
+      metalness: 1,
+    });
+    expect(sanitizeMaterialChange({ roughness: -2 })).toEqual({ roughness: 0 });
+  });
+
+  it("drops anything that is not a finite number", () => {
+    expect(
+      sanitizeMaterialChange({ roughness: NaN, metalness: Infinity }),
+    ).toEqual({});
+    expect(sanitizeMaterialChange({})).toEqual({});
+  });
+});
+
+describe("resetTransformGroup", () => {
+  const edited = {
+    position: [3, 4, 5] as [number, number, number],
+    rotation: [0.1, 0.2, 0.3] as [number, number, number],
+    scale: [2, 2, 2] as [number, number, number],
+  };
+
+  it("puts one part back to its starting value and leaves the others", () => {
+    expect(resetTransformGroup(edited, "position")).toEqual({
+      ...edited,
+      position: [0, 0, 0],
+    });
+    expect(resetTransformGroup(edited, "rotation").rotation).toEqual([0, 0, 0]);
+    expect(resetTransformGroup(edited, "scale").scale).toEqual([1, 1, 1]);
+    expect(resetTransformGroup(edited, "scale").position).toEqual([3, 4, 5]);
+  });
+
+  it("does not change the transform it was given, nor share the starting arrays", () => {
+    const result = resetTransformGroup(edited, "position");
+    expect(edited.position).toEqual([3, 4, 5]);
+    result.position[0] = 99;
+    expect(IDENTITY_TRANSFORM.position).toEqual([0, 0, 0]);
   });
 });

@@ -5,6 +5,13 @@ export const SCENE_SCHEMA_VERSION = 1;
 
 export const NODE_NAME_MAX_LENGTH = 100;
 
+/** The colour of a new object (a light blue). */
+export const DEFAULT_COLOR = "#5cc4e0";
+
+/** How shiny and how metal a new object looks. 0 to 1: roughness 0 is a mirror, 1 is chalk; metalness 1 is bare metal. */
+export const DEFAULT_ROUGHNESS = 0.6;
+export const DEFAULT_METALNESS = 0.1;
+
 export const PRIMITIVE_KINDS = [
   "cube",
   "sphere",
@@ -37,6 +44,10 @@ export const sceneNodeSchema = z.object({
   transform: transformSchema,
   /** CSS hex colour such as "#ff8800". */
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  /** Surface finish, 0 (smooth, shiny) to 1 (rough, matte). Old scenes without it load with the default. */
+  roughness: z.number().min(0).max(1).default(DEFAULT_ROUGHNESS),
+  /** 0 (plastic, wood, stone) to 1 (metal). Old scenes without it load with the default. */
+  metalness: z.number().min(0).max(1).default(DEFAULT_METALNESS),
 });
 
 /**

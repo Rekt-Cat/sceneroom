@@ -142,6 +142,30 @@ a steady 60 is the usual target on most screens.
 | Remembered widths        | `STORAGE_KEY` in `apps/web/src/store/layoutStore.ts`   | `sceneroom.layout.v1`                         | Widths are saved in this browser. Clear that key in the browser tools to forget them.                                   |
 | Drag speed of X / Y / Z  | `perPixel` in `ROWS` in `InspectorFields.tsx`          | position `0.02`, rotation `0.5`, scale `0.01` | How much the value changes per pixel when you drag an axis letter. Hold Shift for 10 times more, Alt for 10 times less. |
 
+## Reset buttons (the starting values)
+
+Every value you can change in the Inspector has a reset button (the circular arrow) that puts it back to its starting value. It is greyed out when the value is already there, and for locked objects. Each is one undo step.
+
+| Value                                                  | Starting value comes from                                        | Our value                         |
+| ------------------------------------------------------ | ---------------------------------------------------------------- | --------------------------------- |
+| Position, Rotation, Scale (each row has its own reset) | `IDENTITY_TRANSFORM` in `packages/shared/src/inspectorValues.ts` | `0, 0, 0` / `0, 0, 0` / `1, 1, 1` |
+| Colour                                                 | `DEFAULT_COLOR` in `packages/shared/src/scene.ts`                | `#5cc4e0`                         |
+| Roughness, Metalness                                   | `DEFAULT_ROUGHNESS`, `DEFAULT_METALNESS` in `scene.ts`           | `0.6`, `0.1`                      |
+
+Not given a reset button on purpose: the name (free text, no starting value), the Parent list (a choice, not a value), and the panel widths (double-click the panel edge to reset them).
+
+## Materials (roughness and metalness)
+
+| What               | Setting                                                               | Our value | What it does                                                                                                       |
+| ------------------ | --------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------ |
+| Starting roughness | `DEFAULT_ROUGHNESS` in `packages/shared/src/scene.ts`                 | `0.6`     | How rough new objects are (0 = smooth and shiny, 1 = matte like chalk). Scenes saved without the value use it too. |
+| Starting metalness | `DEFAULT_METALNESS` in `scene.ts`                                     | `0.1`     | How metal new objects look (0 = plastic or wood, 1 = bare metal).                                                  |
+| Slider step        | `step` on the range input in `MaterialSlider` (`InspectorFields.tsx`) | `0.01`    | How fine the slider is; also the step of the arrow keys on it.                                                     |
+
+Each slider has a small reset button that puts it back to the starting value above (greyed out when it is already there).
+
+Metal needs something to reflect. Until the environment step adds reflections, high metalness looks dark rather than shiny.
+
 ## Locking objects
 
 | What               | Setting                                                                                              | Our value | What it does                                                                                                                                          |
@@ -168,13 +192,13 @@ a steady 60 is the usual target on most screens.
 
 Files: `apps/web/src/components/viewport/InspectorFields.tsx` (rows, steps, colours) and `packages/shared/src/inspectorValues.ts` (limits).
 
-| What                 | Setting                                      | Our value                                 | What it does                                                                                                  |
-| -------------------- | -------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Arrow-key step       | `step` in `ROWS`                             | position `0.1`, rotation `5`, scale `0.1` | How much one Up or Down press changes a value. Shift makes it 10 times bigger.                                |
-| Decimals shown       | `decimals` in `ROWS`                         | position `2`, rotation `1`, scale `2`     | How many digits after the point a field shows.                                                                |
-| Largest typed number | `MAX_ABS_VALUE` in `inspectorValues.ts`      | `100000`                                  | Bigger numbers (positive or negative) are refused.                                                            |
-| Reset button         | `IDENTITY_TRANSFORM` in `inspectorValues.ts` | position 0, rotation 0, scale 1           | What the Reset button sets. Note the origin is the ground level, so a reset cube sinks halfway into the grid. |
-| Quick colours        | `QUICK_COLORS` in `InspectorFields.tsx`      | 7 colours                                 | The round colour buttons under the hex box. Add, remove or change a `{ name, hex }` line.                     |
+| What                 | Setting                                      | Our value                                 | What it does                                                                                                                                                      |
+| -------------------- | -------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Arrow-key step       | `step` in `ROWS`                             | position `0.1`, rotation `5`, scale `0.1` | How much one Up or Down press changes a value. Shift makes it 10 times bigger.                                                                                    |
+| Decimals shown       | `decimals` in `ROWS`                         | position `2`, rotation `1`, scale `2`     | How many digits after the point a field shows.                                                                                                                    |
+| Largest typed number | `MAX_ABS_VALUE` in `inspectorValues.ts`      | `100000`                                  | Bigger numbers (positive or negative) are refused.                                                                                                                |
+| Reset buttons        | `IDENTITY_TRANSFORM` in `inspectorValues.ts` | position 0, rotation 0, scale 1           | What the reset button of each row (Position, Rotation, Scale) sets that row to. Note the origin is the ground level, so a reset cube sinks halfway into the grid. |
+| Quick colours        | `QUICK_COLORS` in `InspectorFields.tsx`      | 7 colours                                 | The round colour buttons under the hex box. Add, remove or change a `{ name, hex }` line.                                                                         |
 
 ## The page around the viewport
 
@@ -199,3 +223,11 @@ Files: `apps/web/src/components/viewport/InspectorFields.tsx` (rows, steps, colo
 
 When a new setting you might want to adjust is added to the project, it goes into this file, with where it lives, our
 value and what it does.
+
+## Colour choices
+
+| What            | Setting                                                                       | Our value | What it does                                                                                                           |
+| --------------- | ----------------------------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Colour picker   | the swatch left of the hex box (`AppearanceSection` in `InspectorFields.tsx`) | -         | Click it to choose any colour. It uses the browser's own chooser, so it looks different in Chrome, Safari and Firefox. |
+| Quick colours   | `QUICK_COLORS` in `InspectorFields.tsx`                                       | 7 colours | The round buttons below the hex box. Add, remove or change a `{ name, hex }` line.                                     |
+| Starting colour | `DEFAULT_COLOR` in `packages/shared/src/scene.ts`                             | `#5cc4e0` | What a new object gets, and what the colour reset button goes back to.                                                 |

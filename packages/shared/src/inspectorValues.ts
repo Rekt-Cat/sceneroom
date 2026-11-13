@@ -70,3 +70,38 @@ export function editTransform(
   next[axis] = stored;
   return { ...transform, [group]: next };
 }
+
+/** Reads a number between 0 and 1 typed by the user (for roughness and metalness). Null if it is not one. */
+export function parseUnitInput(text: string): number | null {
+  const value = parseNumberInput(text);
+  return value !== null && value >= 0 && value <= 1 ? value : null;
+}
+
+/** How the surface of an object looks, besides its colour. Both values are 0 to 1. */
+export type MaterialChange = { roughness?: number; metalness?: number };
+
+/**
+ * Cleans up a material change: values that are not finite numbers are dropped, the rest are kept
+ * between 0 and 1. Returns an empty object if nothing usable is left.
+ */
+export function sanitizeMaterialChange(change: MaterialChange): MaterialChange {
+  const clean: MaterialChange = {};
+  for (const key of ["roughness", "metalness"] as const) {
+    const value = change[key];
+    if (typeof value === "number" && Number.isFinite(value)) {
+      clean[key] = Math.min(1, Math.max(0, value));
+    }
+  }
+  return clean;
+}
+
+/**
+ * The transform with one part (position, rotation or scale) put back to its starting value and the
+ * other parts left as they are. Used by the reset button of each row in the Inspector.
+ */
+export function resetTransformGroup(
+  transform: Transform,
+  group: TransformGroup,
+): Transform {
+  return { ...transform, [group]: [...IDENTITY_TRANSFORM[group]] };
+}

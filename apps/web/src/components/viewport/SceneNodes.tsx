@@ -104,6 +104,8 @@ function NodeMesh({
       {/* A plane has no thickness; by default its back face is not drawn, so it vanishes from behind */}
       <meshStandardMaterial
         color={node.color}
+        roughness={node.roughness}
+        metalness={node.metalness}
         side={node.kind === "plane" ? DoubleSide : FrontSide}
       />
       {selected && (
