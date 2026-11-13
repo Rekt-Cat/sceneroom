@@ -62,6 +62,7 @@ Status column: **verified** = checked against official docs or by running it. Ve
 - `create-next-app` generated `AGENTS.md` (notes for coding agents; points to the docs bundled in `node_modules/next/dist/docs/`).
 
 - Git **pre-push hook** (`.husky/pre-push`, via Husky): runs `pnpm check-types && pnpm lint && pnpm test && pnpm build` before every `git push`, including from GitHub Desktop, and blocks the push if one fails. Skip once from a terminal with `git push --no-verify`. `pnpm install` switches it on (root `prepare` script). It adds Homebrew and fnm to `PATH` itself because GitHub Desktop does not load your shell profile.
+- **Transform gizmo**: drei `TransformControls` (no new library) on the selected object. It moves the three.js object while you drag and writes the transform to the store once on mouse up (one drag = one change, ready for undo). `OrbitControls` has `makeDefault`, so drei pauses orbiting during a drag. Shortcuts: W / E / R mode, X snap, Esc deselect.
 - Scene logic is **pure functions** in `packages/shared/src/sceneOps.ts` (return a new scene, never mutate); the Zustand store only calls them. `pnpm test` runs Vitest through Turborepo and in CI.
 
 ## Not used yet (planned): see docs/PLAN or the plan file

@@ -102,3 +102,11 @@ ran after the code was already pushed, and a Vercel deploy is not blocked by CI.
 - **PATH handling:** GitHub Desktop does not load `~/.zshrc`, so the hook adds `/opt/homebrew/bin` and runs `fnm env` itself. Tested with a stripped environment (`env -i`): a deliberate type error exits 2, clean code exits 0. Not yet tested from GitHub Desktop itself.
 - `pnpm format:check` is not in the hook (the Prettier edit hook already formats); CI still runs it.
 - Escape hatch: `git push --no-verify` from a terminal.
+
+## 2026-11-13: Gizmo writes to the store on mouse up, not every frame
+
+drei `TransformControls` changes the three.js object directly during a drag. We read its position, rotation and scale once on `mouseUp`
+and call `setTransform`, so one drag is one store change (one undo step in Phase 3) and React does no work per frame. A click on a
+handle without moving looks like a click on empty space to R3F (`onPointerMissed` fires when the pointer moved 2 pixels or less, read in
+the R3F 9.8.2 source), so `gizmoGuard.ts` ignores "empty click" for 300 ms after the gizmo is used. Snap steps and shortcuts are in `TUNING.md`.
+Found by a test: a plain-object lookup for shortcut keys also answered to `"constructor"`, so `modeForKey` uses a `Map`.

@@ -1,6 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Toolbar from "./Toolbar";
+import { useEditorShortcuts } from "./useEditorShortcuts";
 
 // `ssr: false` is only allowed inside a Client Component (Next.js docs: Lazy Loading),
 // so this thin wrapper exists to load the WebGL viewport in the browser only.
@@ -12,5 +14,11 @@ const Viewport = dynamic(() => import("./Viewport"), {
 });
 
 export default function ViewportLoader() {
-  return <Viewport />;
+  useEditorShortcuts();
+  return (
+    <>
+      <Viewport />
+      <Toolbar />
+    </>
+  );
 }

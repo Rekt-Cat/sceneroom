@@ -447,7 +447,7 @@
               three.js + React Three Fiber
             </text>
             <text class="t-sub" x="42" y="113">
-              orbit camera, grid, light, cube
+              orbit, grid, select, move/rotate/scale
             </text>
             <rect
               class="pill-ok"
@@ -472,7 +472,7 @@
             aria-label="2, Scene state: show explanation"
           >
             <rect
-              class="box pending"
+              class="box ok"
               x="30"
               y="176"
               width="290"
@@ -480,20 +480,22 @@
               rx="10"
             />
             <text class="t-title" x="42" y="200">Scene state</text>
-            <text class="t-sub" x="42" y="218">objects, selection, undo</text>
+            <text class="t-sub" x="42" y="218">
+              objects, selection, gizmo mode
+            </text>
             <text class="t-sub" x="42" y="233">
-              Zustand first, a shared Yjs document later
+              Zustand now, a shared Yjs document in Phase 7
             </text>
             <rect
-              class="pill-pending"
+              class="pill-ok"
               x="42"
               y="238"
-              width="72"
+              width="86"
               height="16"
               rx="8"
             />
-            <text class="pt-pending" x="78" y="249.5" text-anchor="middle">
-              Phase 2 and 7
+            <text class="pt-ok" x="85" y="249.5" text-anchor="middle">
+              Zustand built
             </text>
             <circle class="badge" cx="304" cy="192" r="9" />
             <text class="badge-t" x="304" y="196" text-anchor="middle">2</text>
@@ -552,7 +554,7 @@
             <text class="t-title" x="42" y="444">Shared types</text>
             <text class="t-sub" x="42" y="462">@sceneroom/shared package</text>
             <text class="t-sub" x="42" y="477">
-              scene schema and Zod checks come in Phase 2
+              scene schema (Zod), scene operations
             </text>
             <rect
               class="pill-ok"
@@ -608,7 +610,7 @@
 
           <!-- Inside the browser -->
           <line
-            class="arrow plan"
+            class="arrow"
             x1="110"
             y1="176"
             x2="110"
@@ -929,9 +931,10 @@
         </svg>
       </div>
       <figcaption>
-        Today only the viewport (1), the shared package (4) and the static files
-        on Vercel (6) exist. Everything dashed is the plan for Phases 2 to 8.
-        The arrow labels say what travels along each connection.
+        Today the viewport (1), scene state (2, the Zustand part), the shared
+        package (4) and the static files on Vercel (6) exist. Everything dashed
+        is the plan for Phases 3 to 8. The arrow labels say what travels along
+        each connection.
       </figcaption>
     </figure>
 
@@ -947,16 +950,17 @@
           <dd>
             The 3D window. <strong>three.js</strong> draws 3D graphics in the
             browser using WebGL, and <strong>React Three Fiber</strong> lets us
-            describe the scene as React components. Today it shows a cube on a
-            grid with an orbit camera.
+            describe the scene as React components. Today it draws the objects
+            from the scene state (2) on a grid, with an orbit camera, click to
+            select, and move, rotate and scale handles.
           </dd>
           <dt>Unity comparison</dt>
           <dd>The Scene or Game view window.</dd>
           <dt>Why it is its own part</dt>
           <dd>
             It is the only part that needs the graphics card, so it is loaded in
-            the browser only. Later it will draw whatever is in the scene state
-            (2) instead of a fixed cube.
+            the browser only. It draws whatever is in the scene state (2) and
+            writes the result of each drag back to it.
           </dd>
         </dl>
       </article>
@@ -965,13 +969,16 @@
         <div class="card-head">
           <span class="num">2</span>
           <h3>Scene state</h3>
-          <span class="tag pending">Phase 2 and 7</span>
+          <span class="tag ok">Zustand built, Yjs in Phase 7</span>
         </div>
         <dl>
           <dt>What it is</dt>
           <dd>
             The data that describes the scene: a list of objects, each with a
-            position, rotation, scale and material, plus what is selected.
+            position, rotation, scale and colour, plus what is selected and
+            which gizmo is active. Today (Zustand) the store holds it and calls
+            pure functions from the shared package (4) to change it; materials
+            and undo come later.
             <strong>Zustand</strong> is a small library that holds this kind of
             shared data. In Phase 7 it becomes a <strong>Yjs document</strong>,
             which many people can edit at once.
@@ -1508,7 +1515,7 @@
             types and constants used by both sides
           </text>
           <text class="t-sub" x="42" y="269">
-            scene schema and Zod checks arrive in Phase 2
+            scene schema (Zod), pure scene operations, tests
           </text>
           <rect class="pill-ok" x="42" y="282" width="44" height="16" rx="8" />
           <text class="pt-ok" x="64" y="293.5" text-anchor="middle">built</text>
@@ -1800,9 +1807,17 @@
     <div>
       <h3><span class="dot ok"></span>Built on 13 Nov 2026</h3>
       <ul>
-        <li>Viewport with orbit camera, grid, light and cube (1)</li>
         <li>
-          The <code>packages/shared</code> package, still nearly empty (4)
+          Viewport with orbit camera, grid, light, click to select and the
+          move/rotate/scale gizmo (1)
+        </li>
+        <li>
+          Scene state in a Zustand store (2); the gizmo is only confirmed
+          working once tested in a browser
+        </li>
+        <li>
+          The <code>packages/shared</code> package: scene schema (Zod), pure
+          scene operations and Vitest tests (4)
         </li>
         <li>Static app live on Vercel (6)</li>
         <li>CI, formatting and the monorepo setup</li>

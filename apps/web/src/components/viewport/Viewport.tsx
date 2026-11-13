@@ -4,6 +4,7 @@ import { Canvas } from "@react-three/fiber";
 import { Grid, OrbitControls, Stats } from "@react-three/drei";
 import { useSceneStore } from "@/store/sceneStore";
 import SceneNodes from "./SceneNodes";
+import { gizmoUsedRecently } from "./gizmoGuard";
 
 /**
  * The 3D viewport: a camera you can orbit around the scene nodes on an infinite grid.
@@ -15,7 +16,9 @@ export default function Viewport() {
     // Clicking empty space (no mesh hit) clears the selection
     <Canvas
       camera={{ position: [5, 4, 7], fov: 50 }}
-      onPointerMissed={() => select(null)}
+      onPointerMissed={() => {
+        if (!gizmoUsedRecently()) select(null);
+      }}
     >
       <color attach="background" args={["#14191d"]} />
 

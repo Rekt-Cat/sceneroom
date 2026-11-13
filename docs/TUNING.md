@@ -62,6 +62,20 @@ Objects are no longer written in `Viewport.tsx`. They come from the scene store.
 | Selection outline colour | `OUTLINE_COLOR` in `SceneNodes.tsx`                  | `"#ffb020"`            | Colour of the outline around the selected object.                                                             |
 | Selection outline width  | `OUTLINE_THICKNESS` in `SceneNodes.tsx`              | `3`                    | Outline width in screen pixels (the outline is drawn with `screenspace` off, so it does not scale with zoom). |
 
+### Gizmo, snapping and shortcuts
+
+Files: `apps/web/src/components/viewport/SelectionGizmo.tsx` (snap steps), `useEditorShortcuts.ts` (keys), `gizmoGuard.ts`.
+
+| What                | Setting                                                | Our value     | What it does                                                                                          |
+| ------------------- | ------------------------------------------------------ | ------------- | ----------------------------------------------------------------------------------------------------- |
+| Move snap step      | `SNAP.translate`                                       | `0.5`         | Distance in world units that Move jumps by while Snap is on.                                          |
+| Rotate snap step    | `SNAP.rotateDegrees`                                   | `15`          | Degrees that Rotate jumps by while Snap is on.                                                        |
+| Scale snap step     | `SNAP.scale`                                           | `0.1`         | Amount that Scale jumps by while Snap is on.                                                          |
+| Snap on at start    | `snapEnabled` in `sceneStore.ts`                       | `true`        | Whether snapping is on when the page loads. Toggle with the toolbar button or the X key.              |
+| Starting gizmo      | `transformMode` in `sceneStore.ts`                     | `"translate"` | Which handles show first.                                                                             |
+| Shortcut keys       | `MODE_KEYS` in `packages/shared/src/transformTools.ts` | W / E / R     | Move / Rotate / Scale. X toggles snap and Escape clears the selection (in `useEditorShortcuts.ts`).   |
+| Ignore-click window | `IGNORE_EMPTY_CLICK_MS` in `gizmoGuard.ts`             | `300`         | After using a handle, a click on empty space does not clear the selection for this many milliseconds. |
+
 ### The grid
 
 | Setting            | Our value   | Library default | What it does                                                      |

@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { Outlines } from "@react-three/drei";
+import type { Object3D } from "three";
 import type { PrimitiveKind, SceneNode } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
+import SelectionGizmo from "./SelectionGizmo";
 
 /** One geometry per primitive kind; all are about 1 unit in size. */
 function Geometry({ kind }: { kind: PrimitiveKind }) {
@@ -24,11 +27,21 @@ function Geometry({ kind }: { kind: PrimitiveKind }) {
 const OUTLINE_COLOR = "#ffb020";
 const OUTLINE_THICKNESS = 3;
 
-function NodeMesh({ node, selected }: { node: SceneNode; selected: boolean }) {
+function NodeMesh({
+  node,
+  selected,
+  onSelectedMesh,
+}: {
+  node: SceneNode;
+  selected: boolean;
+  /** Called with the three.js object while selected, and with null when it stops being selected. */
+  onSelectedMesh: (object: Object3D | null) => void;
+}) {
   const select = useSceneStore((state) => state.select);
   const { position, rotation, scale } = node.transform;
   return (
     <mesh
+      ref={selected ? onSelectedMesh : undefined}
       visible={node.visible}
       position={position}
       rotation={rotation}
@@ -48,11 +61,25 @@ function NodeMesh({ node, selected }: { node: SceneNode; selected: boolean }) {
   );
 }
 
-/** Draws every node in the scene store. Parenting is not rendered yet (Phase 3 hierarchy). */
+/** Draws every node in the scene store, plus the gizmo on the selected one. */
 export default function SceneNodes() {
   const nodes = useSceneStore((state) => state.scene.nodes);
   const selectedId = useSceneStore((state) => state.selectedId);
-  return Object.values(nodes).map((node) => (
-    <NodeMesh key={node.id} node={node} selected={node.id === selectedId} />
-  ));
+  const [selectedObject, setSelectedObject] = useState<Object3D | null>(null);
+
+  return (
+    <>
+      {Object.values(nodes).map((node) => (
+        <NodeMesh
+          key={node.id}
+          node={node}
+          selected={node.id === selectedId}
+          onSelectedMesh={setSelectedObject}
+        />
+      ))}
+      {selectedId && selectedObject && (
+        <SelectionGizmo object={selectedObject} nodeId={selectedId} />
+      )}
+    </>
+  );
 }
