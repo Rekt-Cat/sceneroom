@@ -12,10 +12,17 @@ function isTypingTarget(target: EventTarget | null): boolean {
   );
 }
 
-/** W / E / R switch the gizmo, X toggles snapping, Escape clears the selection. */
+/**
+ * W / E / R switch the gizmo, X toggles snapping, Escape clears the selection,
+ * and holding Shift flips snapping while it is held.
+ */
 export function useEditorShortcuts(): void {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Shift") {
+        useSceneStore.getState().setSnapKeyHeld(true);
+        return;
+      }
       if (isTypingTarget(event.target)) return;
       if (event.ctrlKey || event.metaKey || event.altKey) return;
 
@@ -25,7 +32,23 @@ export function useEditorShortcuts(): void {
       else if (event.key.toLowerCase() === "x") toggleSnap();
       else if (event.key === "Escape") select(null);
     }
+
+    function onKeyUp(event: KeyboardEvent) {
+      if (event.key === "Shift") useSceneStore.getState().setSnapKeyHeld(false);
+    }
+
+    // If the window loses focus while Shift is down, keyUp never arrives
+    function onBlur() {
+      useSceneStore.getState().setSnapKeyHeld(false);
+    }
+
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
+    };
   }, []);
 }

@@ -21,11 +21,14 @@ type SceneState = {
   selectedId: string | null;
   /** Which gizmo is shown on the selected node. */
   transformMode: TransformMode;
-  /** Snap gizmo movement to steps (see SNAP in SelectionGizmo.tsx). */
+  /** Snap gizmo movement to steps (see SNAP in SelectionGizmo.tsx). Off = smooth. */
   snapEnabled: boolean;
+  /** True while Shift is held: inverts snapEnabled for as long as it is held. */
+  snapKeyHeld: boolean;
   select: (id: string | null) => void;
   setTransformMode: (mode: TransformMode) => void;
   toggleSnap: () => void;
+  setSnapKeyHeld: (held: boolean) => void;
   setNodeTransform: (id: string, transform: Transform) => void;
   addPrimitive: (kind: PrimitiveKind) => string;
 };
@@ -38,11 +41,13 @@ export const useSceneStore = create<SceneState>()((set) => ({
   scene: createInitialScene(),
   selectedId: null,
   transformMode: "translate",
-  snapEnabled: true,
+  snapEnabled: false,
+  snapKeyHeld: false,
   select: (id) =>
     set((state) => ({ selectedId: resolveSelection(state.scene, id) })),
   setTransformMode: (mode) => set({ transformMode: mode }),
   toggleSnap: () => set((state) => ({ snapEnabled: !state.snapEnabled })),
+  setSnapKeyHeld: (held) => set({ snapKeyHeld: held }),
   setNodeTransform: (id, transform) =>
     set((state) => ({ scene: setTransform(state.scene, id, transform) })),
   addPrimitive: (kind) => {

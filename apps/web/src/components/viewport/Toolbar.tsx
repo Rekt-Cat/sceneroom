@@ -46,7 +46,7 @@ export default function Toolbar() {
           snapEnabled ? "bg-zinc-700" : "hover:bg-zinc-800"
         }`}
       >
-        Snap {snapEnabled ? "on" : "off"} (X)
+        Snap {snapEnabled ? "on" : "off"} (X · hold Shift)
       </button>
     </div>
   );

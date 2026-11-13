@@ -28,16 +28,19 @@ export default function SelectionGizmo({
   nodeId: string;
 }) {
   const mode = useSceneStore((state) => state.transformMode);
-  const snapEnabled = useSceneStore((state) => state.snapEnabled);
+  // Snap is the toggle, flipped while Shift is held (so Shift gives a temporary snap, or a temporary smooth)
+  const snapping = useSceneStore(
+    (state) => state.snapEnabled !== state.snapKeyHeld,
+  );
   const setNodeTransform = useSceneStore((state) => state.setNodeTransform);
 
   return (
     <TransformControls
       object={object}
       mode={mode}
-      translationSnap={snapEnabled ? SNAP.translate : null}
-      rotationSnap={snapEnabled ? toRadians(SNAP.rotateDegrees) : null}
-      scaleSnap={snapEnabled ? SNAP.scale : null}
+      translationSnap={snapping ? SNAP.translate : null}
+      rotationSnap={snapping ? toRadians(SNAP.rotateDegrees) : null}
+      scaleSnap={snapping ? SNAP.scale : null}
       onMouseDown={markGizmoUsed}
       onMouseUp={() => {
         markGizmoUsed();
