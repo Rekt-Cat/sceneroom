@@ -2,6 +2,7 @@
 
 import { Canvas } from "@react-three/fiber";
 import { Grid, OrbitControls, Stats } from "@react-three/drei";
+import { MOUSE } from "three";
 import { useSceneStore } from "@/store/sceneStore";
 import SceneNodes from "./SceneNodes";
 import { gizmoUsedRecently } from "./gizmoGuard";
@@ -38,7 +39,14 @@ export default function Viewport() {
       />
 
       {/* No damping: the camera follows the mouse immediately (damping adds a gliding delay) */}
-      <OrbitControls makeDefault enableDamping={false} rotateSpeed={1.25} />
+      <OrbitControls
+        makeDefault
+        enableDamping={false}
+        rotateSpeed={1.25}
+        // Left-drag pans the camera; Shift (or Ctrl/Cmd) + left-drag rotates it instead (built into
+        // OrbitControls). Middle and right buttons are left unmapped, so they do nothing.
+        mouseButtons={{ LEFT: MOUSE.PAN }}
+      />
 
       {/* FPS counter (frames per second) in the corner */}
       <Stats />

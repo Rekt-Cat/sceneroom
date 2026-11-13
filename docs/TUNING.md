@@ -27,14 +27,15 @@ All of these live in one file: `apps/web/src/components/viewport/Viewport.tsx`.
 
 ### Camera controls (how dragging feels)
 
-Mouse mapping in this library: left-drag orbits, scroll or middle button zooms, right-drag pans. The settings below are on
-`<OrbitControls ... />`.
+Our mouse mapping (`mouseButtons={{ LEFT: MOUSE.PAN }}` in `Viewport.tsx`): **left-drag pans** the camera, **Shift + left-drag rotates** it
+(Ctrl or Cmd + left-drag also rotates; that comes from the library), scroll zooms. Middle and right buttons do nothing. To go back to the
+library default (left rotates, right pans, middle zooms), delete the `mouseButtons` line. The settings below are on `<OrbitControls ... />`.
 
 | Setting         | Our value | Library default | What it does                                                                                          |
 | --------------- | --------- | --------------- | ----------------------------------------------------------------------------------------------------- |
 | `rotateSpeed`   | `1.25`    | `1`             | How far the view turns per mouse movement. Higher is faster.                                          |
 | `zoomSpeed`     | not set   | `1`             | Scroll-wheel zoom speed.                                                                              |
-| `panSpeed`      | not set   | `1`             | Right-drag pan speed.                                                                                 |
+| `panSpeed`      | not set   | `1`             | Left-drag pan speed.                                                                                  |
 | `enableDamping` | `false`   | `false`         | Smoothing. On means the camera keeps gliding after you stop. We first turned it on and it felt laggy. |
 | `dampingFactor` | not set   | `0.05`          | Only matters when damping is on. Higher (try `0.2`) means less glide.                                 |
 | `minDistance`   | not set   | `0`             | Closest the camera may get to the middle. Try `2` to stop zooming inside objects.                     |

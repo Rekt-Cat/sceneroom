@@ -116,3 +116,10 @@ Found by a test: a plain-object lookup for shortcut keys also answered to `"cons
 The first gizmo version had snapping on, so every drag jumped in fixed steps (0.5 / 15° / 0.1) and fine placement was impossible.
 Now the gizmo is smooth by default. `snapEnabled` (toolbar button or X) is the standing choice, and holding Shift inverts it while held
 (`snapKeyHeld`), so you can snap briefly while smooth, or place something precisely while snap is on. The blur event clears Shift so it cannot stick.
+
+## 2026-11-13: Camera mouse mapping: left pans, Shift + left rotates
+
+Requested: only the left button moves the camera. `mouseButtons={{ LEFT: MOUSE.PAN }}` on `OrbitControls`. Read in three-stdlib 2.36.1:
+with LEFT mapped to PAN, holding Shift, Ctrl or Cmd turns the drag into a rotate, so no custom code is needed. MIDDLE and RIGHT are
+left undefined, which the library treats as "no action". Scroll still zooms. Shift is also the temporary-snap key for the gizmo; the
+two do not clash because the gizmo pauses orbit controls while its handle is dragged (drei `dragging-changed`), but this needs a browser check.
