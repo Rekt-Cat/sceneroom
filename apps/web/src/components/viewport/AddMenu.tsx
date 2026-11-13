@@ -52,8 +52,10 @@ export default function AddMenu() {
     setOpen(false);
   }
 
+  // The wrapper below is not "relative" on purpose: the menu is placed against the Scene panel (which
+  // is), so it always fits that panel's width, however narrow or wide the panel has been dragged.
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef}>
       <button
         ref={triggerRef}
         type="button"
@@ -72,7 +74,7 @@ export default function AddMenu() {
           role="menu"
           aria-label="Add an object"
           onKeyDown={onMenuKeyDown}
-          className="absolute top-9 right-0 z-30 w-64 rounded-xl border border-ed-line-strong bg-ed-raised p-1.5 shadow-2xl shadow-black/50"
+          className="absolute top-12 right-3 left-3 z-30 max-w-72 rounded-xl border border-ed-line-strong bg-ed-raised p-1.5 shadow-2xl shadow-black/50"
         >
           {PRIMITIVE_KINDS.map((kind, index) => (
             <button

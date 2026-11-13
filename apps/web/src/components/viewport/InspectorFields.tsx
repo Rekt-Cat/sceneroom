@@ -3,6 +3,9 @@
 import { useState } from "react";
 import {
   IDENTITY_TRANSFORM,
+  buildSceneTree,
+  canReparent,
+  flattenTree,
   displayValue,
   editTransform,
   formatNumber,
@@ -11,8 +14,10 @@ import {
   type SceneNode,
   type TransformGroup,
 } from "@sceneroom/shared";
+import { useLayoutStore } from "@/store/layoutStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { Icon } from "./icons";
+import { moveToParent } from "./reparent";
 import NumberField from "./NumberField";
 
 /** The three rows of the Transform section. `step` is one arrow-key press, in the unit shown. */
@@ -55,7 +60,61 @@ const QUICK_COLORS: { name: string; hex: string }[] = [
 const sectionTitle =
   "px-4 pt-3.5 pb-2 text-[11px] font-semibold tracking-widest text-ed-text-3 uppercase";
 
-export function TransformSection({ node }: { node: SceneNode }) {
+/**
+ * Chooses which object this one sits inside. The object keeps its place in the 3D view when moved.
+ * Options that would make a loop (the object itself and everything inside it) are shown greyed out.
+ */
+export function ParentSection({
+  node,
+  disabled = false,
+}: {
+  node: SceneNode;
+  disabled?: boolean;
+}) {
+  const scene = useSceneStore((state) => state.scene);
+  const expandNode = useLayoutStore((state) => state.expandNode);
+
+  const options = flattenTree(buildSceneTree(scene), new Set());
+
+  return (
+    <section aria-label="Parent" className="border-b border-ed-line px-4 py-3">
+      <label className="grid grid-cols-[58px_1fr] items-center gap-2">
+        <span className="text-xs text-ed-text-2">Parent</span>
+        <select
+          value={node.parentId ?? ""}
+          disabled={disabled}
+          onChange={(event) => {
+            const parentId = event.target.value || null;
+            if (moveToParent([node.id], parentId) && parentId) {
+              expandNode(parentId);
+            }
+          }}
+          className="h-[30px] min-w-0 rounded-md border border-ed-line bg-ed-field px-2 text-sm hover:border-ed-line-strong focus-visible:border-ed-accent focus-visible:outline-none disabled:cursor-not-allowed disabled:text-ed-text-3"
+        >
+          <option value="">None (top level)</option>
+          {options.map(({ node: option, depth }) => (
+            <option
+              key={option.id}
+              value={option.id}
+              disabled={!canReparent(scene, node.id, option.id)}
+            >
+              {"\u00A0\u00A0".repeat(depth)}
+              {option.name}
+            </option>
+          ))}
+        </select>
+      </label>
+    </section>
+  );
+}
+
+export function TransformSection({
+  node,
+  disabled = false,
+}: {
+  node: SceneNode;
+  disabled?: boolean;
+}) {
   const setNodeTransform = useSceneStore((state) => state.setNodeTransform);
   const beginEdit = useSceneStore((state) => state.beginEdit);
   const previewNodeTransform = useSceneStore(
@@ -78,8 +137,9 @@ export function TransformSection({ node }: { node: SceneNode }) {
           type="button"
           aria-label="Reset position, rotation and scale"
           title="Reset position, rotation and scale"
+          disabled={disabled}
           onClick={() => setNodeTransform(node.id, IDENTITY_TRANSFORM)}
-          className="grid size-[26px] place-items-center rounded-md text-ed-text-3 hover:bg-ed-raised hover:text-ed-text focus-visible:outline-2 focus-visible:outline-ed-accent"
+          className="grid size-[26px] place-items-center rounded-md text-ed-text-3 hover:bg-ed-raised hover:text-ed-text focus-visible:outline-2 focus-visible:outline-ed-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
         >
           <Icon name="reset" />
         </button>
@@ -100,6 +160,7 @@ export function TransformSection({ node }: { node: SceneNode }) {
                   value={displayValue(node.transform, group, index)}
                   decimals={decimals}
                   step={step}
+                  disabled={disabled}
                   scrub={{
                     perPixel,
                     onStart: () => beginEdit("Transform"),
@@ -129,7 +190,13 @@ export function TransformSection({ node }: { node: SceneNode }) {
   );
 }
 
-export function AppearanceSection({ node }: { node: SceneNode }) {
+export function AppearanceSection({
+  node,
+  disabled = false,
+}: {
+  node: SceneNode;
+  disabled?: boolean;
+}) {
   const setNodeColor = useSceneStore((state) => state.setNodeColor);
   const [draft, setDraft] = useState<string | null>(null);
 
@@ -154,6 +221,7 @@ export function AppearanceSection({ node }: { node: SceneNode }) {
             value={draft ?? node.color.toUpperCase()}
             aria-label="Colour, as a hex code"
             aria-invalid={invalid}
+            disabled={disabled}
             spellCheck={false}
             maxLength={9}
             onFocus={(event) => {
@@ -172,7 +240,7 @@ export function AppearanceSection({ node }: { node: SceneNode }) {
             className={`h-[30px] min-w-0 flex-1 rounded-md border bg-ed-field px-2.5 font-mono text-xs font-medium outline-none ${
               invalid
                 ? "border-[#e5545f] shadow-[0_0_0_3px_rgba(229,84,95,0.2)]"
-                : "border-ed-line hover:border-ed-line-strong focus:border-ed-accent focus:shadow-[0_0_0_3px_rgba(86,103,232,0.28)]"
+                : "border-ed-line hover:border-ed-line-strong focus:border-ed-accent focus:shadow-[0_0_0_3px_rgba(86,103,232,0.28)] disabled:cursor-not-allowed disabled:text-ed-text-3"
             }`}
           />
         </div>
@@ -192,10 +260,11 @@ export function AppearanceSection({ node }: { node: SceneNode }) {
               type="button"
               aria-label={name}
               aria-pressed={node.color === hex}
+              disabled={disabled}
               title={name}
               onClick={() => setNodeColor(node.id, hex)}
               style={{ backgroundColor: hex }}
-              className={`size-6 rounded-full border-2 border-ed-panel focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ed-accent ${
+              className={`size-6 rounded-full border-2 border-ed-panel disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ed-accent ${
                 node.color === hex
                   ? "shadow-[0_0_0_2px_var(--color-ed-text)]"
                   : "shadow-[0_0_0_1px_var(--color-ed-line-strong)]"

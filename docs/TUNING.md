@@ -142,6 +142,21 @@ a steady 60 is the usual target on most screens.
 | Remembered widths        | `STORAGE_KEY` in `apps/web/src/store/layoutStore.ts`   | `sceneroom.layout.v1`                         | Widths are saved in this browser. Clear that key in the browser tools to forget them.                                   |
 | Drag speed of X / Y / Z  | `perPixel` in `ROWS` in `InspectorFields.tsx`          | position `0.02`, rotation `0.5`, scale `0.01` | How much the value changes per pixel when you drag an axis letter. Hold Shift for 10 times more, Alt for 10 times less. |
 
+## Locking objects
+
+| What               | Setting                                                                                              | Our value | What it does                                                                                                                                          |
+| ------------------ | ---------------------------------------------------------------------------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lock shortcut      | `useEditorShortcuts.ts`                                                                              | `L`       | Locks the selected objects, or unlocks them if all of them are already locked.                                                                        |
+| Lock buttons       | `HierarchyPanel.tsx`, `InspectorPanel.tsx`                                                           | -         | The padlock on a row of the scene list (shown on hover, always shown when locked) and the padlock in the Inspector.                                   |
+| What a lock blocks | `isEffectivelyLocked` / `editableIds` in `packages/shared/src/sceneTree.ts`, used by `sceneStore.ts` | -         | Move, rotate, scale, rename, recolour, delete, re-parent, and putting things inside it. Hide, Show, Duplicate and selecting from the list still work. |
+
+## Parents and children
+
+| What                | Setting                                     | Our value | What it does                                                                              |
+| ------------------- | ------------------------------------------- | --------- | ----------------------------------------------------------------------------------------- |
+| Drag start distance | `DRAG_START_DISTANCE_PX` in `useRowDrag.ts` | `5`       | How far (pixels) the mouse must move on a row before it counts as a drag and not a click. |
+| Row indent          | `INDENT_PX` in `HierarchyPanel.tsx`         | `14`      | Space per level of nesting in the scene list.                                             |
+
 ## Undo and redo
 
 | What             | Setting                                             | Our value                                    | What it does                                                                         |

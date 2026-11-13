@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type PointerEvent } from "react";
 import {
   buildSceneTree,
   flattenTree,
+  isEffectivelyLocked,
   searchNodes,
   type TreeRow,
 } from "@sceneroom/shared";
@@ -11,6 +12,7 @@ import { useLayoutStore } from "@/store/layoutStore";
 import { useSceneStore } from "@/store/sceneStore";
 import AddMenu from "./AddMenu";
 import PanelResizer from "./PanelResizer";
+import { ROOT_DROP_ID, useRowDrag, type RowDrag } from "./useRowDrag";
 import { Icon, KindIcon } from "./icons";
 
 /** DOM id of the search box, so the "/" shortcut can focus it. */
@@ -27,8 +29,10 @@ export default function HierarchyPanel() {
   const width = useLayoutStore((state) => state.leftWidth);
 
   // UI-only state, not part of the scene: folded-away parents and the search text
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  const collapsed = useLayoutStore((state) => state.collapsedIds);
+  const toggleCollapsed = useLayoutStore((state) => state.toggleCollapsed);
   const [query, setQuery] = useState("");
+  const { drag, startDrag, justDragged } = useRowDrag();
 
   const total = Object.keys(scene.nodes).length;
 
@@ -45,14 +49,6 @@ export default function HierarchyPanel() {
     }
     return flattenTree(buildSceneTree(scene), collapsed);
   }, [scene, collapsed, query]);
-
-  function toggleCollapsed(id: string) {
-    setCollapsed((current) => {
-      const next = new Set(current);
-      if (!next.delete(id)) next.add(id);
-      return next;
-    });
-  }
 
   return (
     <aside
@@ -99,22 +95,31 @@ export default function HierarchyPanel() {
             : "No objects match your search."}
         </p>
       ) : (
-        <ul className="min-h-0 flex-1 overflow-y-auto px-2 py-0.5">
+        <ul className="min-h-0 flex-1 overflow-y-auto px-2 py-0.5 select-none">
           {rows.map((row) => (
             <HierarchyRow
               key={row.node.id}
               row={row}
               selected={selectedIds.includes(row.node.id)}
+              drag={drag}
               onToggleCollapsed={toggleCollapsed}
+              onPressNode={startDrag}
+              justDragged={justDragged}
+              lockedByParent={
+                !row.node.locked && isEffectivelyLocked(scene, row.node.id)
+              }
             />
           ))}
+          {drag && <TopLevelDropZone drag={drag} />}
         </ul>
       )}
 
       <p className="m-3 rounded-lg bg-ed-field px-3 py-2.5 text-xs leading-relaxed text-ed-text-2">
         Click to select. <b className="font-medium text-ed-text">Shift-click</b>{" "}
-        to add more.
+        to add more. Drag a row onto another to make it a child.
       </p>
+
+      {drag && <DragGhost drag={drag} />}
     </aside>
   );
 }
@@ -122,27 +127,83 @@ export default function HierarchyPanel() {
 /** Space taken by each level of nesting. */
 const INDENT_PX = 14;
 
+/** The "top level" target at the end of the list, shown only while a row is being dragged. */
+function TopLevelDropZone({ drag }: { drag: RowDrag }) {
+  const over = drag.targetId === ROOT_DROP_ID;
+  return (
+    <li
+      data-drop-id={ROOT_DROP_ID}
+      className={`mt-1 grid h-10 place-items-center rounded-lg border border-dashed text-xs ${
+        over && drag.valid
+          ? "border-ed-accent bg-ed-accent/16 text-ed-text"
+          : "border-ed-line-strong text-ed-text-3"
+      }`}
+    >
+      Drop here for the top level
+    </li>
+  );
+}
+
+/** A small label that follows the pointer while dragging. */
+function DragGhost({ drag }: { drag: RowDrag }) {
+  return (
+    <div
+      aria-hidden="true"
+      style={{ left: drag.x + 14, top: drag.y + 14 }}
+      className="pointer-events-none fixed z-50 rounded-md border border-ed-line-strong bg-ed-raised px-2.5 py-1 text-xs shadow-lg shadow-black/40"
+    >
+      {drag.label}
+    </div>
+  );
+}
+
 function HierarchyRow({
   row,
   selected,
+  drag,
   onToggleCollapsed,
+  onPressNode,
+  justDragged,
+  lockedByParent,
 }: {
   row: TreeRow;
   selected: boolean;
+  drag: RowDrag | null;
   onToggleCollapsed: (id: string) => void;
+  onPressNode: (
+    event: PointerEvent<HTMLElement>,
+    nodeId: string,
+    nodeName: string,
+  ) => void;
+  /** True for a moment after a drag ends, so the click that follows it is ignored. */
+  justDragged: { current: boolean };
+  /** True if this object is locked only because it sits inside a locked object. */
+  lockedByParent: boolean;
 }) {
   const select = useSceneStore((state) => state.select);
   const toggleSelect = useSceneStore((state) => state.toggleSelect);
   const setNodeVisible = useSceneStore((state) => state.setNodeVisible);
+  const setNodesLocked = useSceneStore((state) => state.setNodesLocked);
   const { node, depth, hasChildren, expanded } = row;
+
+  const beingDragged = drag?.ids.includes(node.id) ?? false;
+  const isTarget = drag?.targetId === node.id;
+  const dropClass = isTarget
+    ? drag.valid
+      ? "bg-ed-accent/20 outline-2 -outline-offset-2 outline-ed-accent"
+      : "outline-2 -outline-offset-2 outline-ed-danger/60 cursor-not-allowed"
+    : selected
+      ? "bg-ed-select/13 shadow-[inset_2px_0_0_var(--color-ed-select)]"
+      : drag
+        ? ""
+        : "hover:bg-ed-field";
 
   return (
     <li
+      data-drop-id={node.id}
       style={{ paddingLeft: depth * INDENT_PX }}
-      className={`flex h-8 items-center gap-1.5 rounded-lg pr-1 ${
-        selected
-          ? "bg-ed-select/13 shadow-[inset_2px_0_0_var(--color-ed-select)]"
-          : "hover:bg-ed-field"
+      className={`group relative flex h-8 items-center gap-1.5 rounded-lg pr-1 ${dropClass} ${
+        beingDragged ? "opacity-50" : ""
       }`}
     >
       {hasChildren ? (
@@ -165,7 +226,9 @@ function HierarchyRow({
       <button
         type="button"
         aria-pressed={selected}
+        onPointerDown={(event) => onPressNode(event, node.id, node.name)}
         onClick={(event) => {
+          if (justDragged.current) return;
           if (event.shiftKey || event.ctrlKey || event.metaKey)
             toggleSelect(node.id);
           else select(node.id);
@@ -191,6 +254,38 @@ function HierarchyRow({
           {node.name}
         </span>
       </button>
+
+      {lockedByParent ? (
+        <span
+          role="img"
+          aria-label="Locked because it is inside a locked object"
+          title="Locked because it is inside a locked object"
+          className="grid size-[26px] shrink-0 place-items-center text-ed-text-3"
+        >
+          <Icon name="lock" />
+        </span>
+      ) : (
+        <button
+          type="button"
+          aria-label={`${node.locked ? "Unlock" : "Lock"} ${node.name}`}
+          aria-pressed={node.locked}
+          title={node.locked ? "Unlock" : "Lock"}
+          onClick={() => setNodesLocked([node.id], !node.locked)}
+          className={`grid size-[26px] shrink-0 place-items-center rounded-md hover:bg-ed-raised hover:text-ed-text focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-ed-accent ${
+            node.locked
+              ? "text-ed-text-2"
+              : "text-ed-text-3 opacity-0 group-hover:opacity-100"
+          }`}
+        >
+          <Icon name={node.locked ? "lock" : "unlock"} />
+        </button>
+      )}
+
+      {isTarget && drag.valid && (
+        <span className="pointer-events-none absolute right-9 rounded-full bg-ed-accent px-2 py-0.5 text-[11px] font-medium text-white">
+          Make a child
+        </span>
+      )}
 
       <button
         type="button"

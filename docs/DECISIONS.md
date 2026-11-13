@@ -248,3 +248,37 @@ Snapshots are cheap here: scenes are immutable and share every node that did not
   from the state at `beginEdit` (`endEdit(false)` restores it). Undo and redo are ignored while an edit is in progress, which also closes the gap noted for gizmo drags... for the Inspector only (a gizmo drag is still not guarded).
 - Value changes are accumulated per mouse movement, so pressing Shift or Alt in the middle of a drag changes the speed from then on without making the value jump. The result is rounded to the field's decimals. Scale never passes through 0 (the preview is skipped).
 - The cursor over an axis letter is the standard left-right resize cursor (`ew-resize`), kept during the drag by setting it on the page body.
+
+## 2026-11-13: Re-parenting (drag in the scene list, Parent list in the Inspector)
+
+- **Rendering nested.** Each object is drawn as a three.js mesh INSIDE its parent's mesh, so transforms combine by themselves (a parent's scale also scales its children, as in Unity). The scene data stays a flat map with `parentId`; the tree is rebuilt for drawing.
+  Moving under a new parent remounts the mesh in the React tree; refs and the mesh registry update on their own.
+- **Keep the place in the 3D view.** `localTransformUnder` takes the object's world matrix, multiplies by the inverse of the new parent's world matrix and decomposes it (tested: the world position is the same before and after).
+  Known limit: under a parent with uneven scale, an object turned at an angle cannot always be written as plain position / rotation / scale (it would need a shear); the nearest transform is stored.
+  The maths uses the real three.js objects, so it is in the web app, not in `packages/shared`; the rules (can this move happen, loops, one undo step) are pure and tested in `shared` and in the store tests.
+- **Rules.** `canReparent` refuses an object under itself or under anything inside it. Several selected objects move together, but only the top ones (children follow). If any one cannot go to the target, none move. Dropping on the same parent changes nothing and records nothing.
+- **Dragging rows** uses pointer events (like the other drags), not the browser's built-in drag and drop, which does not work reliably on buttons in Firefox. A press that moves under 5px stays a click; Escape cancels; the click that follows a drag is ignored.
+  There is no reordering of siblings: the order is the order they were created in (changing it would need an order field in the scene data).
+- **The Parent list in the Inspector** is the keyboard and screen-reader way to do the same thing. Choices that would make a loop are greyed out.
+- **Group gizmo with parents.** It moves only the top objects of the selection and works out each new local transform relative to that object's own parent; the pivot is placed from world positions after each change.
+  Box select now measures only an object's own shape (not the objects inside it), and ignores objects hidden through a hidden parent (`isEffectivelyVisible`).
+- **Hidden parents.** Hiding an object hides everything inside it; hidden objects, and those inside them, no longer catch clicks.
+- **Not done:** per-parent "folded" memory survives undo only as UI state (it is not part of the scene); dropping onto a collapsed parent unfolds it.
+
+## 2026-11-13: Add menu fits the panel width
+
+Found from a screenshot: with the Scene panel dragged narrow, the 256px Add menu (aligned to the Add button) stuck out past the left edge of the screen and its text was cut off.
+The menu is now placed against the whole Scene panel (`left-3 right-3`, at most 18rem wide) instead of against the button, so it fits any panel width; item hints are cut with an ellipsis. The small round "N" in the bottom-left corner of dev builds is Next.js's own dev indicator, not part of the app; it does not appear in the production site.
+
+## 2026-11-13: Locking objects
+
+A locked object cannot be edited. What "edited" means is decided in one place, the store, so no panel, shortcut or drag can get around it (the interface also greys things out, but that is only for the user).
+
+- **Blocked:** move / rotate / scale (gizmo, group gizmo, Inspector fields, dragging a value), rename, recolour, delete, moving it under another object, and putting anything inside it.
+- **Still allowed:** selecting it from the scene list (so it can be looked at and unlocked), hide / show (a display choice, not an edit), duplicate (the copy is a new object, and is locked too because it copies the flag), and lock / unlock itself.
+- **Inherited:** like hiding, locking a parent locks everything inside it (`isEffectivelyLocked` walks up the parents). A child locked this way shows a padlock that cannot be clicked; unlock the parent.
+- **In the 3D view:** locked objects get no gizmo and do not catch clicks or the selection box, so you cannot grab them by accident and can pick what is behind them. They can still be selected from the list.
+- **Mixed selections:** delete and the group gizmo skip the locked objects and act on the rest; locked ones stay selected. With only locked objects selected the Delete button is off and no gizmo appears.
+- **Data:** `locked: z.boolean().default(false)` on each node. The default means scenes without the flag load as unlocked, so the schema version stays 1 (nothing is saved to files yet).
+- **Undo:** lock and unlock are undo steps ("Lock", "Unlock"); several objects at once is one step.
+- **Not done:** a lock does not stop other people in Phase 7 (collaboration); there it should be enforced on the server too.

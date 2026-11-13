@@ -24,6 +24,7 @@ export default function NumberField({
   decimals,
   step,
   scrub,
+  disabled = false,
   onCommit,
 }: {
   axis: keyof typeof AXIS_COLOR;
@@ -45,6 +46,8 @@ export default function NumberField({
     onMove: (value: number) => void;
     onEnd: (cancelled: boolean) => void;
   };
+  /** Locked objects: the box shows the value but cannot be changed. */
+  disabled?: boolean;
   onCommit: (text: string) => boolean;
 }) {
   // null = not editing: show the value from the scene
@@ -65,7 +68,7 @@ export default function NumberField({
   }
 
   function onScrubStart(event: PointerEvent<HTMLSpanElement>) {
-    if (!scrub || event.button !== 0) return;
+    if (!scrub || disabled || event.button !== 0) return;
     event.preventDefault(); // no text selection, no focus change
     const handle = event.currentTarget;
     const pointerId = event.pointerId;
@@ -120,13 +123,17 @@ export default function NumberField({
     >
       <span
         aria-hidden="true"
-        title={scrub ? "Drag left or right to change the value" : undefined}
+        title={
+          scrub && !disabled
+            ? "Drag left or right to change the value"
+            : undefined
+        }
         onPointerDown={onScrubStart}
         onPointerMove={onScrubMove}
         onPointerUp={onScrubEnd}
         onPointerCancel={onScrubEnd}
         className={`w-5 shrink-0 touch-none self-stretch rounded-l-md pt-[6px] text-center text-[11px] leading-4 font-semibold select-none ${AXIS_COLOR[axis]} ${
-          scrub ? "cursor-ew-resize hover:bg-ed-raised" : ""
+          scrub && !disabled ? "cursor-ew-resize hover:bg-ed-raised" : ""
         }`}
       >
         {axis}
@@ -135,6 +142,7 @@ export default function NumberField({
         value={draft ?? formatNumber(value, decimals)}
         aria-label={label}
         aria-invalid={invalid}
+        disabled={disabled}
         inputMode="decimal"
         spellCheck={false}
         onFocus={(event) => {
@@ -157,7 +165,7 @@ export default function NumberField({
             if (onCommit(next)) setDraft(next);
           }
         }}
-        className="h-full min-w-0 flex-1 bg-transparent pr-2 text-right font-mono text-xs font-medium outline-none"
+        className="h-full min-w-0 flex-1 bg-transparent pr-2 text-right font-mono text-xs font-medium outline-none disabled:cursor-not-allowed disabled:text-ed-text-3"
       />
     </div>
   );

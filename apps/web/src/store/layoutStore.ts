@@ -16,6 +16,11 @@ const FALLBACK_WINDOW_WIDTH = 1440;
 type LayoutState = {
   leftWidth: number;
   rightWidth: number;
+  /** Parents whose children are folded away in the scene list. Not saved: it starts empty. */
+  collapsedIds: ReadonlySet<string>;
+  toggleCollapsed: (id: string) => void;
+  /** Unfolds a parent, so a child just moved into it can be seen. */
+  expandNode: (id: string) => void;
   setLeftWidth: (width: number) => void;
   setRightWidth: (width: number) => void;
   /** Goes back to the starting width of a panel. */
@@ -49,6 +54,20 @@ export const useLayoutStore = create<LayoutState>()((set, get) => {
   return {
     leftWidth: LEFT_PANEL_LIMITS.default,
     rightWidth: RIGHT_PANEL_LIMITS.default,
+    collapsedIds: new Set<string>(),
+    toggleCollapsed: (id) =>
+      set((state) => {
+        const next = new Set(state.collapsedIds);
+        if (!next.delete(id)) next.add(id);
+        return { collapsedIds: next };
+      }),
+    expandNode: (id) =>
+      set((state) => {
+        if (!state.collapsedIds.has(id)) return state;
+        const next = new Set(state.collapsedIds);
+        next.delete(id);
+        return { collapsedIds: next };
+      }),
     setLeftWidth: (width) => {
       const { rightWidth } = get();
       const max = maxPanelWidth(LEFT_PANEL_LIMITS, rightWidth, windowWidth());
