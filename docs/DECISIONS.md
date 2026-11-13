@@ -84,3 +84,9 @@ Schema in `packages/shared/src/scene.ts` (Zod 4.6.7; types are inferred from the
   maps cleanly onto a Yjs map in Phase 7. The tree for the Hierarchy panel is rebuilt from `parentId`.
 - **Rotation in radians** (Euler x, y, z), matching Three.js, so no conversion in the viewport. The Inspector will show degrees.
 - **`version` field** (`SCENE_SCHEMA_VERSION`) on every scene, so saved files can be migrated when the shape changes.
+
+## 2026-11-13: Scene logic as pure functions, store as a thin wrapper
+
+`sceneOps.ts` (add, remove with descendants, duplicate subtree, update, set transform) returns new scenes and takes ids as arguments,
+so it is easy to unit-test (Vitest 5.1.0) and can later be reused by the collab server and undo/redo. The Zustand 5.1.0 store in
+`apps/web` holds the scene and calls these functions. `pnpm test` is a Turborepo task and a CI step.

@@ -46,6 +46,8 @@ Status column: **verified** = checked against official docs or by running it. Ve
 | @react-three/drei               | 10.7.9                     | Ready-made helpers: Grid, OrbitControls, Stats           | `apps/web/src/components/viewport` |
 | @types/three                    | 0.187.0                    | TypeScript types for three                               | `apps/web`                         |
 | zod                             | 4.6.7                      | Validates scene data; TypeScript types inferred from it  | `packages/shared/src/scene.ts`     |
+| zustand                         | 5.1.0                      | Small state store; holds the scene (single source)       | `apps/web/src/store/sceneStore.ts` |
+| vitest                          | 5.1.0                      | Test runner for logic (`pnpm test`)                      | `packages/shared`                  |
 | GitHub Actions (CI)             | checkout v7, setup-node v7 | Runs format check, lint, type-check, build on every push | `.github/workflows/ci.yml`         |
 
 ## Settings we changed
@@ -58,6 +60,8 @@ Status column: **verified** = checked against official docs or by running it. Ve
 - Diagrams live in `docs/diagrams/` as self-contained HTML with inline SVG (open in any browser). `dev-workflow.html` (how an edit reaches GitHub) and `architecture.html` (the system, one edit between two users, code layout).
 - `create-next-app` generated `AGENTS.md` (notes for coding agents; points to the docs bundled in `node_modules/next/dist/docs/`).
 
+- Scene logic is **pure functions** in `packages/shared/src/sceneOps.ts` (return a new scene, never mutate); the Zustand store only calls them. `pnpm test` runs Vitest through Turborepo and in CI.
+
 ## Not used yet (planned): see docs/PLAN or the plan file
 
-Zustand, Yjs, Hocuspocus, PostgreSQL, Prisma, Docker, Vitest, Playwright, Auth, Cloudflare R2.
+Yjs, Hocuspocus, PostgreSQL, Prisma, Docker, Playwright, Auth, Cloudflare R2.

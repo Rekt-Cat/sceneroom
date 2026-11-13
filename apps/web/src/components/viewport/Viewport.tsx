@@ -2,9 +2,10 @@
 
 import { Canvas } from "@react-three/fiber";
 import { Grid, OrbitControls, Stats } from "@react-three/drei";
+import SceneNodes from "./SceneNodes";
 
 /**
- * The 3D viewport: a camera you can orbit around a lit cube on an infinite grid.
+ * The 3D viewport: a camera you can orbit around the scene nodes on an infinite grid.
  * Browser-only (WebGL), so it is loaded through ViewportLoader with SSR switched off.
  */
 export default function Viewport() {
@@ -15,11 +16,7 @@ export default function Viewport() {
       <ambientLight intensity={0.6} />
       <directionalLight position={[5, 8, 4]} intensity={1.6} />
 
-      {/* Sits on the grid: a 1 x 1 x 1 box centred 0.5 above the ground plane */}
-      <mesh position={[0, 0.5, 0]}>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color="#5cc4e0" />
-      </mesh>
+      <SceneNodes />
 
       <Grid
         infiniteGrid
