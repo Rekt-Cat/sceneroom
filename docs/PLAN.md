@@ -36,8 +36,11 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 
 ### Phase 1: 3D viewport
 
-- [x] Three.js + React Three Fiber + drei; canvas, grid, lights, cube, orbit controls, FPS overlay (rendering still to confirm in a browser)
+- [x] Three.js + React Three Fiber + drei; canvas, grid, lights, cube, orbit controls, FPS overlay (confirmed in a browser; drag feel tuned)
+- [x] `docs/TUNING.md`: settings the owner can adjust
 - [ ] Deploy the early version to Vercel (live link from now on)
+- [ ] Architecture diagram (built parts solid, planned parts dashed), after the Vercel deploy; not urgent
+- [ ] Optional: `/code-review` pass on the Phase 0-1 diffs
 
 ### Phase 2: Scene model and editing tools
 
