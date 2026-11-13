@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_METALNESS,
+  DEFAULT_ROUGHNESS,
   SCENE_SCHEMA_VERSION,
   createEmptyScene,
   sceneNodeSchema,
@@ -41,5 +43,32 @@ describe("sceneNodeSchema locked flag", () => {
     const result = sceneSchema.safeParse(scene);
     expect(result.success).toBe(true);
     expect(scene.version).toBe(SCENE_SCHEMA_VERSION);
+  });
+});
+
+describe("sceneNodeSchema material values", () => {
+  it("new nodes get the default roughness and metalness", () => {
+    const node = createNode("a", "cube");
+    expect(node.roughness).toBe(DEFAULT_ROUGHNESS);
+    expect(node.metalness).toBe(DEFAULT_METALNESS);
+  });
+
+  it("a node saved before these fields existed loads with the defaults", () => {
+    const { roughness, metalness, ...oldNode } = createNode("a", "cube");
+    void roughness;
+    void metalness;
+    const parsed = sceneNodeSchema.parse(oldNode);
+    expect(parsed.roughness).toBe(DEFAULT_ROUGHNESS);
+    expect(parsed.metalness).toBe(DEFAULT_METALNESS);
+  });
+
+  it("rejects values outside 0 to 1", () => {
+    const node = createNode("a", "cube");
+    expect(sceneNodeSchema.safeParse({ ...node, roughness: 1.5 }).success).toBe(
+      false,
+    );
+    expect(
+      sceneNodeSchema.safeParse({ ...node, metalness: -0.1 }).success,
+    ).toBe(false);
   });
 });

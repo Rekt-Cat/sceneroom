@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
+  DEFAULT_COLOR,
+  DEFAULT_METALNESS,
+  DEFAULT_ROUGHNESS,
   IDENTITY_TRANSFORM,
   buildSceneTree,
   canReparent,
@@ -10,6 +13,7 @@ import {
   editTransform,
   formatNumber,
   normalizeHexColor,
+  parseUnitInput,
   type Axis,
   type SceneNode,
   type TransformGroup,
@@ -202,6 +206,38 @@ export function AppearanceSection({
 
   const invalid = draft !== null && normalizeHexColor(draft) === null;
 
+  // The colour picker sends a stream of changes while you drag inside it. They change the object
+  // live but must be ONE undo step: start an edit on the first change, end it when the picker closes.
+  const pickerRef = useRef<HTMLInputElement>(null);
+  const picking = useRef(false);
+  const beginEdit = useSceneStore((state) => state.beginEdit);
+  const previewNodeColor = useSceneStore((state) => state.previewNodeColor);
+
+  function onPick(color: string) {
+    if (!picking.current) {
+      picking.current = true;
+      beginEdit("Change colour");
+    }
+    previewNodeColor(node.id, color);
+  }
+
+  useEffect(() => {
+    const picker = pickerRef.current;
+    function finishPicking() {
+      if (!picking.current) return;
+      picking.current = false;
+      useSceneStore.getState().endEdit(true);
+    }
+    // The browser's own "change" event fires when the picker is closed or the choice is confirmed
+    picker?.addEventListener("change", finishPicking);
+    picker?.addEventListener("blur", finishPicking);
+    return () => {
+      picker?.removeEventListener("change", finishPicking);
+      picker?.removeEventListener("blur", finishPicking);
+      finishPicking(); // the panel went away (another object selected) in the middle of picking
+    };
+  }, []);
+
   function finish() {
     if (draft !== null && !invalid) setNodeColor(node.id, draft);
     setDraft(null);
@@ -212,10 +248,15 @@ export function AppearanceSection({
       <h3 className={sectionTitle}>Appearance</h3>
       <div className="px-4 pb-4">
         <div className="mb-2.5 flex items-center gap-2.5">
-          <span
-            aria-hidden="true"
-            className="size-[30px] shrink-0 rounded-lg border-2 border-ed-line-strong"
-            style={{ backgroundColor: node.color }}
+          <input
+            ref={pickerRef}
+            type="color"
+            value={node.color}
+            disabled={disabled}
+            aria-label="Pick a colour"
+            title="Pick a colour"
+            onChange={(event) => onPick(event.target.value)}
+            className="size-[30px] shrink-0 cursor-pointer appearance-none rounded-lg border-2 border-ed-line-strong bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ed-accent disabled:cursor-not-allowed disabled:opacity-50 [&::-moz-color-swatch]:rounded-md [&::-moz-color-swatch]:border-0 [&::-webkit-color-swatch]:rounded-md [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0"
           />
           <input
             value={draft ?? node.color.toUpperCase()}
@@ -243,6 +284,16 @@ export function AppearanceSection({
                 : "border-ed-line hover:border-ed-line-strong focus:border-ed-accent focus:shadow-[0_0_0_3px_rgba(86,103,232,0.28)] disabled:cursor-not-allowed disabled:text-ed-text-3"
             }`}
           />
+          <button
+            type="button"
+            aria-label={`Reset colour to ${DEFAULT_COLOR.toUpperCase()}`}
+            title={`Reset to ${DEFAULT_COLOR.toUpperCase()}`}
+            disabled={disabled || node.color === DEFAULT_COLOR}
+            onClick={() => setNodeColor(node.id, DEFAULT_COLOR)}
+            className="grid size-[26px] shrink-0 place-items-center rounded-md text-ed-text-3 hover:bg-ed-raised hover:text-ed-text focus-visible:outline-2 focus-visible:outline-ed-accent disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <Icon name="reset" />
+          </button>
         </div>
         {invalid && (
           <p className="mb-2 text-[11px] text-ed-danger">
@@ -272,7 +323,134 @@ export function AppearanceSection({
             />
           ))}
         </div>
+        <div className="mt-3.5 space-y-2.5">
+          <MaterialSlider
+            node={node}
+            property="roughness"
+            label="Roughness"
+            disabled={disabled}
+          />
+          <MaterialSlider
+            node={node}
+            property="metalness"
+            label="Metalness"
+            disabled={disabled}
+          />
+        </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * A 0 to 1 slider with a number box, for how the surface looks. Dragging the slider changes the
+ * object live but is ONE undo step; typing a number or using the arrow keys is one step per change.
+ */
+function MaterialSlider({
+  node,
+  property,
+  label,
+  disabled,
+}: {
+  node: SceneNode;
+  property: "roughness" | "metalness";
+  label: string;
+  disabled: boolean;
+}) {
+  const setNodeMaterial = useSceneStore((state) => state.setNodeMaterial);
+  const previewNodeMaterial = useSceneStore(
+    (state) => state.previewNodeMaterial,
+  );
+  const beginEdit = useSceneStore((state) => state.beginEdit);
+  const endEdit = useSceneStore((state) => state.endEdit);
+  const id = useId();
+  const dragging = useRef(false);
+  const [draft, setDraft] = useState<string | null>(null);
+
+  const value = node[property];
+  const invalid = draft !== null && parseUnitInput(draft) === null;
+  const defaultValue =
+    property === "roughness" ? DEFAULT_ROUGHNESS : DEFAULT_METALNESS;
+
+  function onPointerDown() {
+    if (disabled) return;
+    dragging.current = true;
+    beginEdit("Material");
+    // The release can happen anywhere on the page, so listen on the window
+    const stop = () => {
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+      dragging.current = false;
+      endEdit(true);
+    };
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+  }
+
+  function onSliderChange(next: number) {
+    if (dragging.current) previewNodeMaterial(node.id, { [property]: next });
+    else setNodeMaterial(node.id, { [property]: next });
+  }
+
+  function finishTyping() {
+    const typed = draft === null ? null : parseUnitInput(draft);
+    if (typed !== null) setNodeMaterial(node.id, { [property]: typed });
+    setDraft(null);
+  }
+
+  return (
+    <div className="grid grid-cols-[58px_1fr_48px_26px] items-center gap-2">
+      <label htmlFor={id} className="text-xs text-ed-text-2">
+        {label}
+      </label>
+      <input
+        id={id}
+        type="range"
+        min={0}
+        max={1}
+        step={0.01}
+        value={value}
+        disabled={disabled}
+        onPointerDown={onPointerDown}
+        onChange={(event) => onSliderChange(Number(event.target.value))}
+        className="h-4 min-w-0 cursor-pointer accent-ed-accent disabled:cursor-not-allowed disabled:opacity-50"
+      />
+      <input
+        aria-label={`${label}, number from 0 to 1`}
+        aria-invalid={invalid}
+        value={draft ?? value.toFixed(2)}
+        disabled={disabled}
+        spellCheck={false}
+        inputMode="decimal"
+        onFocus={(event) => {
+          setDraft(value.toFixed(2));
+          event.currentTarget.select();
+        }}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={finishTyping}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") event.currentTarget.blur();
+          if (event.key === "Escape") {
+            setDraft(null);
+            event.currentTarget.blur();
+          }
+        }}
+        className={`h-[26px] min-w-0 rounded-md border bg-ed-field px-1.5 text-right font-mono text-xs font-medium outline-none disabled:cursor-not-allowed disabled:text-ed-text-3 ${
+          invalid
+            ? "border-[#e5545f]"
+            : "border-ed-line hover:border-ed-line-strong focus:border-ed-accent"
+        }`}
+      />
+      <button
+        type="button"
+        aria-label={`Reset ${label.toLowerCase()} to ${defaultValue.toFixed(2)}`}
+        title={`Reset to ${defaultValue.toFixed(2)}`}
+        disabled={disabled || value === defaultValue}
+        onClick={() => setNodeMaterial(node.id, { [property]: defaultValue })}
+        className="grid size-[26px] place-items-center rounded-md text-ed-text-3 hover:bg-ed-raised hover:text-ed-text focus-visible:outline-2 focus-visible:outline-ed-accent disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+      >
+        <Icon name="reset" />
+      </button>
+    </div>
   );
 }

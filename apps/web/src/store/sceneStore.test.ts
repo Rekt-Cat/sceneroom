@@ -371,3 +371,109 @@ describe("locked objects", () => {
     expect(Object.keys(get().scene.nodes)).toHaveLength(2);
   });
 });
+
+describe("material (roughness and metalness)", () => {
+  const cube = () => get().scene.nodes["initial-cube"]!;
+
+  it("changes the values and is one undo step", () => {
+    get().setNodeMaterial("initial-cube", { roughness: 0.2, metalness: 0.9 });
+    expect(cube()).toMatchObject({ roughness: 0.2, metalness: 0.9 });
+    expect(nextUndoLabel(get().history)).toBe("Material");
+    get().undo();
+    expect(cube()).toMatchObject({ roughness: 0.6, metalness: 0.1 });
+  });
+
+  it("keeps values between 0 and 1 and ignores nonsense", () => {
+    get().setNodeMaterial("initial-cube", { roughness: 5, metalness: -3 });
+    expect(cube()).toMatchObject({ roughness: 1, metalness: 0 });
+    const steps = get().history.past.length;
+    get().setNodeMaterial("initial-cube", { roughness: NaN });
+    expect(get().history.past).toHaveLength(steps);
+    expect(cube().roughness).toBe(1);
+  });
+
+  it("records nothing when the value does not change", () => {
+    get().setNodeMaterial("initial-cube", { roughness: 0.6 });
+    expect(get().history.past).toHaveLength(0);
+  });
+
+  it("dragging a slider is many previews and one undo step", () => {
+    get().beginEdit("Material");
+    get().previewNodeMaterial("initial-cube", { roughness: 0.5 });
+    get().previewNodeMaterial("initial-cube", { roughness: 0.4 });
+    get().previewNodeMaterial("initial-cube", { roughness: 0.3 });
+    expect(get().history.past).toHaveLength(0);
+    get().endEdit(true);
+    expect(cube().roughness).toBe(0.3);
+    expect(get().history.past).toHaveLength(1);
+    get().undo();
+    expect(cube().roughness).toBe(0.6);
+  });
+
+  it("previews are ignored when no edit is in progress", () => {
+    get().previewNodeMaterial("initial-cube", { roughness: 0.1 });
+    expect(cube().roughness).toBe(0.6);
+  });
+
+  it("a locked object's material cannot be changed", () => {
+    get().setNodesLocked(["initial-cube"], true);
+    get().setNodeMaterial("initial-cube", { roughness: 0.1 });
+    get().beginEdit("Material");
+    get().previewNodeMaterial("initial-cube", { roughness: 0.1 });
+    get().endEdit(true);
+    expect(cube().roughness).toBe(0.6);
+  });
+
+  it("a duplicate has the same material", () => {
+    get().setNodeMaterial("initial-cube", { metalness: 0.8 });
+    get().select("initial-cube");
+    get().duplicateSelected();
+    const copies = Object.values(get().scene.nodes).filter(
+      (node) => node.id !== "initial-cube",
+    );
+    expect(copies).toHaveLength(1);
+    expect(copies[0]?.metalness).toBe(0.8);
+  });
+});
+
+describe("picking a colour (many previews, one undo step)", () => {
+  const cube = () => get().scene.nodes["initial-cube"]!;
+
+  it("is one undo step however many colours were passed through", () => {
+    get().beginEdit("Change colour");
+    get().previewNodeColor("initial-cube", "#112233");
+    get().previewNodeColor("initial-cube", "#445566");
+    get().previewNodeColor("initial-cube", "#AABBCC");
+    expect(get().history.past).toHaveLength(0);
+    get().endEdit(true);
+    expect(cube().color).toBe("#aabbcc");
+    expect(get().history.past).toHaveLength(1);
+    expect(nextUndoLabel(get().history)).toBe("Change colour");
+    get().undo();
+    expect(cube().color).toBe("#5cc4e0");
+  });
+
+  it("ignores previews with no edit in progress, bad colours, and locked objects", () => {
+    get().previewNodeColor("initial-cube", "#ff0000");
+    expect(cube().color).toBe("#5cc4e0");
+
+    get().beginEdit("Change colour");
+    get().previewNodeColor("initial-cube", "not a colour");
+    expect(cube().color).toBe("#5cc4e0");
+    get().endEdit(true);
+
+    get().setNodesLocked(["initial-cube"], true);
+    get().beginEdit("Change colour");
+    get().previewNodeColor("initial-cube", "#ff0000");
+    get().endEdit(true);
+    expect(cube().color).toBe("#5cc4e0");
+  });
+
+  it("cancelling restores the old colour", () => {
+    get().beginEdit("Change colour");
+    get().previewNodeColor("initial-cube", "#ff0000");
+    get().endEdit(false);
+    expect(cube().color).toBe("#5cc4e0");
+    expect(get().history.past).toHaveLength(0);
+  });
+});

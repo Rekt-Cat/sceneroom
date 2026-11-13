@@ -314,3 +314,29 @@ A plan only, in `docs/ASSETS-AND-IMPORT.md`; nothing is built or verified yet.
 - **Outside files are untrusted:** size and triangle limits, check the file's first bytes (not only the extension), never fetch addresses inside a `.gltf`, explain every failure, validate our own asset records with Zod.
 - **Licences:** each asset records its source and licence. Because the repository is public, no third-party model is added to it without checking its licence.
 - **Order:** import and the Assets panel (steps 1 and 2) need no database or accounts, so they can be built right after materials, ahead of the rest of Phase 5.
+
+## 2026-11-13: Materials start with roughness and metalness
+
+- **Two numbers per object**, 0 to 1, in the scene data (`roughness`, `metalness`) next to `color`. They map straight onto three.js's standard material, which is also what glTF uses, so import and export (Phase 5) will line up.
+  Texture maps, emissive colour and transparency are later steps.
+- **Defaults 0.6 and 0.1** (from the design), not three.js's own 1 and 0, so new objects look slightly satin instead of fully matte. Objects made before this change load with the same defaults, so they look a little different than before.
+  Old scenes need no migration (`.default(...)` fills the values in), so the schema version stays 1.
+- **Dragging a slider is one undo step**, using the begin / preview / end mechanism from value dragging; arrow keys and typed numbers are one step each. The preview is ignored for locked objects and when no edit is in progress.
+- **Known limit:** metal needs an environment to reflect. With only the two lights we have now, high metalness looks dark. A reflection environment (generated in code, no download) belongs to the environment step.
+- **Reset buttons** next to each slider put the value back to the default in one undo step; they are greyed out when the value is already the default, and for locked objects.
+- **Not built:** a colour picker for non-hex input, per-material presets (plastic, gold, glass), and materials shared between objects.
+
+## 2026-11-13: Convention: every changeable value has a reset button
+
+Asked for as a standing rule. Any control that changes a value gets a reset button that restores its default: one undo step, greyed out when already at the default or when the object is locked, with a tooltip naming the value it resets to.
+Done so far: Colour, Roughness and Metalness each have their own; Position, Rotation and Scale share the one reset button in the Transform header (it resets all three). Per-row resets for Position, Rotation and Scale were added and then removed on request, because the header button already covered them (so do not add duplicates where a reset already exists).
+The default always comes from one named constant (`IDENTITY_TRANSFORM`, `DEFAULT_COLOR`, `DEFAULT_ROUGHNESS`, `DEFAULT_METALNESS`) so the button and the "new object" code cannot disagree; `DEFAULT_COLOR` moved to `scene.ts` for that reason.
+Left without one: the name (no starting value), the Parent list (a choice), and the panel widths (double-click the edge). Future controls (light intensity, fog, modifier amounts, brush size) follow the same rule.
+
+## 2026-11-13: Colour picker uses the browser's own chooser
+
+The Appearance swatch became a native `<input type="color">`: free choice of any colour with no new library, accessible by default, and it works with the hex box, the quick colours and the reset button.
+
+- **One undo step per pick.** The picker sends a stream of `input` events while you drag inside it. The first one starts an edit (`beginEdit`), each one previews (`previewNodeColor`, which ignores bad colours, locked objects and calls with no edit in progress), and the browser's `change` or `blur` ends it (`endEdit(true)`). If the panel goes away in the middle (another object is selected) the cleanup ends the edit, so Undo is never left blocked.
+- **Trade-off:** the chooser looks different in each browser and operating system, and on some it only reports the final colour when closed. A custom picker (saturation square, hue bar, alpha) would look the same everywhere and could sit inside the panel; it is a possible later upgrade.
+- **Not verified:** how each browser fires `change` and `blur` around the picker. Needs a check in Chrome, Safari and Firefox; the worst case is two undo steps for one pick, not lost changes.

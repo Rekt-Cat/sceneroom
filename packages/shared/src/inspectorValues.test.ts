@@ -8,6 +8,8 @@ import {
   editTransform,
   formatNumber,
   parseNumberInput,
+  parseUnitInput,
+  sanitizeMaterialChange,
 } from "./inspectorValues";
 import { sceneNodeSchema } from "./scene";
 import { createNode } from "./sceneOps";
@@ -137,5 +139,38 @@ describe("normalizeHexColor", () => {
     ]) {
       expect(normalizeHexColor(bad), bad).toBeNull();
     }
+  });
+});
+
+describe("parseUnitInput", () => {
+  it("accepts numbers from 0 to 1", () => {
+    expect(parseUnitInput("0")).toBe(0);
+    expect(parseUnitInput("0.6")).toBe(0.6);
+    expect(parseUnitInput(".25")).toBe(0.25);
+    expect(parseUnitInput("1")).toBe(1);
+    expect(parseUnitInput("0,5")).toBe(0.5);
+  });
+
+  it("rejects numbers outside 0 to 1 and text that is not a number", () => {
+    for (const bad of ["-0.1", "1.01", "2", "abc", "", "0.5.5"]) {
+      expect(parseUnitInput(bad), bad).toBeNull();
+    }
+  });
+});
+
+describe("sanitizeMaterialChange", () => {
+  it("keeps valid values and clamps the ones outside 0 to 1", () => {
+    expect(sanitizeMaterialChange({ roughness: 0.3, metalness: 7 })).toEqual({
+      roughness: 0.3,
+      metalness: 1,
+    });
+    expect(sanitizeMaterialChange({ roughness: -2 })).toEqual({ roughness: 0 });
+  });
+
+  it("drops anything that is not a finite number", () => {
+    expect(
+      sanitizeMaterialChange({ roughness: NaN, metalness: Infinity }),
+    ).toEqual({});
+    expect(sanitizeMaterialChange({})).toEqual({});
   });
 });

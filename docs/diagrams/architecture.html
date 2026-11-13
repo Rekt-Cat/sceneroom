@@ -979,11 +979,12 @@
           <dt>What it is</dt>
           <dd>
             The data that describes the scene: a list of objects, each with a
-            position, rotation, scale and colour, whether it is hidden or
-            locked, and its parent, plus what is selected and which gizmo is
-            active. Today (Zustand) the store holds it and calls pure functions
-            from the shared package (4) to change it. It also keeps the undo and
-            redo history; materials come later.
+            position, rotation, scale, colour and surface finish (roughness and
+            metalness), whether it is hidden or locked, and its parent, plus
+            what is selected and which gizmo is active. Today (Zustand) the
+            store holds it and calls pure functions from the shared package (4)
+            to change it. It also keeps the undo and redo history; materials
+            come later.
             <strong>Zustand</strong> is a small library that holds this kind of
             shared data. In Phase 7 it becomes a <strong>Yjs document</strong>,
             which many people can edit at once.

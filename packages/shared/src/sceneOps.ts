@@ -1,4 +1,7 @@
 import {
+  DEFAULT_COLOR,
+  DEFAULT_METALNESS,
+  DEFAULT_ROUGHNESS,
   NODE_NAME_MAX_LENGTH,
   type PrimitiveKind,
   type Scene,
@@ -11,8 +14,6 @@ import { topLevelSelection } from "./selection";
  * Pure scene operations: each takes a scene and returns a NEW scene, never mutating the input.
  * Ids are passed in (not generated here) so the functions stay predictable and easy to test.
  */
-
-const DEFAULT_COLOR = "#5cc4e0";
 
 const KIND_LABELS: Record<PrimitiveKind, string> = {
   cube: "Cube",
@@ -33,6 +34,8 @@ export function createNode(id: string, kind: PrimitiveKind): SceneNode {
     // y = 0.5 puts a 1-unit primitive on top of the ground grid
     transform: { position: [0, 0.5, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
     color: DEFAULT_COLOR,
+    roughness: DEFAULT_ROUGHNESS,
+    metalness: DEFAULT_METALNESS,
   };
 }
 
@@ -134,7 +137,12 @@ export function duplicateNode(
 export function updateNode(
   scene: Scene,
   id: string,
-  changes: Partial<Pick<SceneNode, "name" | "visible" | "color" | "locked">>,
+  changes: Partial<
+    Pick<
+      SceneNode,
+      "name" | "visible" | "color" | "locked" | "roughness" | "metalness"
+    >
+  >,
 ): Scene {
   const node = scene.nodes[id];
   if (!node) throw new Error(`Node "${id}" does not exist`);

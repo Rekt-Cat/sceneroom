@@ -2,10 +2,10 @@
 
 ## Current status
 
-- **Phase:** 3 (editor panels and undo/redo) is built; re-parenting (the last piece) is on branch `feature/reparenting`, waiting for a browser check
-- **Done:** Phase 0, Phase 1 (live at https://sceneroom.vercel.app) and Phase 2 (scene model, selection, multi-select, gizmo, camera controls, add / numbered duplicate / delete / rename), all on `main`. A git pre-push hook runs type-check, lint, test and build before every push.
-- **CI:** green on the merge of pull request #2 (`0e5849e`).
-- **Next action:** test re-parenting and locking in the browser and merge `feature/reparenting` and `feature/lock` (the second builds on the first). Then Phase 4 (lights, materials, environment). Still open: test `SETUP-SECOND-PC.md` on the second PC; try the pre-push hook from GitHub Desktop; optional `/code-review` of the Phase 0-3 diffs.
+- **Phase:** 4 (lights, materials, environment), started: materials (roughness and metalness) are written on branch `feature/materials`, waiting for a browser check
+- **Done:** Phases 0 to 3, all on `main` and live at https://sceneroom.vercel.app: 3D viewport; scene model; selection, multi-select, gizmo, camera controls; add / duplicate / delete / rename; scene list with search and drag-to-re-parent; Inspector (position, rotation, scale, colour, parent); undo/redo; resizable panels and value dragging; lock. A git pre-push hook runs type-check, lint, test and build before every push.
+- **CI:** green on pull requests #2 to #4 (last merge `4461bb0`).
+- **Next action:** test materials in the browser, then model import (`ASSETS-AND-IMPORT.md` steps 1 and 2: import a GLB, Assets panel), then lights, then environment settings. Plans for later are in `ADVANCED-EDITING.md` and `ASSETS-AND-IMPORT.md`. Still open: test `SETUP-SECOND-PC.md` on the second PC; try the pre-push hook from GitHub Desktop; optional `/code-review` of the Phase 0-3 diffs.
 
 Update this block at the end of every sub-phase and commit it.
 
@@ -62,7 +62,8 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 
 ### Phase 4: Lights, materials, environment
 
-- [ ] Point/spot/directional lights; materials and textures; HDRI sky; shadows, fog; camera nodes
+- [x] Materials: roughness and metalness per object, sliders in the Inspector (branch `feature/materials`, needs a browser check)
+- [ ] Point/spot/directional lights; texture maps; HDRI sky and an environment for reflections; shadows, fog; camera nodes
 
 ### Phase 5: Import/export and local save
 
