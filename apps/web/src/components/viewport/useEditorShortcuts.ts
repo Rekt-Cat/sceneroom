@@ -14,6 +14,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
 
 /**
  * W / E / R switch the gizmo, X toggles snapping, Escape clears the selection,
+ * Delete or Backspace deletes the selected object, Ctrl/Cmd + D duplicates it,
  * and holding Shift flips snapping while it is held.
  */
 export function useEditorShortcuts(): void {
@@ -24,13 +25,30 @@ export function useEditorShortcuts(): void {
         return;
       }
       if (isTypingTarget(event.target)) return;
+
+      const store = useSceneStore.getState();
+
+      // Ctrl/Cmd + D: the browser would otherwise bookmark the page
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        !event.altKey &&
+        event.key.toLowerCase() === "d"
+      ) {
+        event.preventDefault();
+        store.duplicateSelected();
+        return;
+      }
       if (event.ctrlKey || event.metaKey || event.altKey) return;
 
-      const { setTransformMode, toggleSnap, select } = useSceneStore.getState();
+      if (event.key === "Delete" || event.key === "Backspace") {
+        event.preventDefault();
+        store.deleteSelected();
+        return;
+      }
       const mode = modeForKey(event.key);
-      if (mode) setTransformMode(mode);
-      else if (event.key.toLowerCase() === "x") toggleSnap();
-      else if (event.key === "Escape") select(null);
+      if (mode) store.setTransformMode(mode);
+      else if (event.key.toLowerCase() === "x") store.toggleSnap();
+      else if (event.key === "Escape") store.select(null);
     }
 
     function onKeyUp(event: KeyboardEvent) {

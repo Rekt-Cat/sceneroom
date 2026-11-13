@@ -1,4 +1,10 @@
-import type { PrimitiveKind, Scene, SceneNode, Transform } from "./scene";
+import {
+  NODE_NAME_MAX_LENGTH,
+  type PrimitiveKind,
+  type Scene,
+  type SceneNode,
+  type Transform,
+} from "./scene";
 
 /**
  * Pure scene operations: each takes a scene and returns a NEW scene, never mutating the input.
@@ -65,6 +71,8 @@ export function duplicateNode(
   scene: Scene,
   id: string,
   newIds: string[],
+  /** Moves the top copy by this much, so it does not sit exactly on the original. */
+  offset: [number, number, number] = [0, 0, 0],
 ): Scene {
   const source = scene.nodes[id];
   if (!source) throw new Error(`Node "${id}" does not exist`);
@@ -80,7 +88,21 @@ export function duplicateNode(
     nodes[copyId] = {
       ...original,
       id: copyId,
-      name: oldId === id ? `${original.name} copy` : original.name,
+      name:
+        oldId === id
+          ? `${original.name} copy`.slice(0, NODE_NAME_MAX_LENGTH)
+          : original.name,
+      transform:
+        oldId === id
+          ? {
+              ...original.transform,
+              position: [
+                original.transform.position[0] + offset[0],
+                original.transform.position[1] + offset[1],
+                original.transform.position[2] + offset[2],
+              ],
+            }
+          : original.transform,
       // The root copy stays beside the original; descendants follow their copied parent
       parentId:
         oldId === id

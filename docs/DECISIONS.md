@@ -145,3 +145,12 @@ with the new modifier state, so the mode changes without a jump.
 Mapping is now `{ LEFT: MOUSE.PAN, RIGHT: MOUSE.ROTATE }`; the middle button stays unmapped. Shift/Ctrl/Cmd swaps pan and rotate on
 either button (three-stdlib 2.36.1 `onMouseDown`). `CameraModifierSwitch` now remembers which button started the drag (from the real
 `pointerdown`) and uses it, with the matching `buttons` bit, when it restarts the drag; before, it always assumed the left button.
+
+## 2026-11-13: Object actions (add, duplicate, delete, rename)
+
+All four go through the store and the pure functions in `packages/shared`, so they can become undoable commands in Phase 3.
+Adding or duplicating selects the new object; deleting clears the selection. Duplicate copies the whole subtree and offsets only the top
+copy (`DUPLICATE_OFFSET`). Names are validated with the same Zod rule as the schema (`normalizeNodeName`: trimmed, 1 to 100 characters);
+an invalid name in the text box is undone on blur. Found by reading my own diff: a 100-character name plus " copy" broke the limit, so the
+copy's name is cut to the limit (test added). Ctrl/Cmd + D calls `preventDefault` (the browser would bookmark the page). Delete and
+Backspace are ignored while typing in a text box. A temporary overlay panel holds rename/duplicate/delete until the Inspector (Phase 3).

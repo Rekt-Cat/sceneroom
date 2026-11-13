@@ -3,6 +3,8 @@ import { z } from "zod";
 /** Bump when the saved scene shape changes, so old files can be migrated. */
 export const SCENE_SCHEMA_VERSION = 1;
 
+export const NODE_NAME_MAX_LENGTH = 100;
+
 export const PRIMITIVE_KINDS = [
   "cube",
   "sphere",
@@ -22,7 +24,7 @@ export const transformSchema = z.object({
 
 export const sceneNodeSchema = z.object({
   id: z.string().min(1),
-  name: z.string().min(1).max(100),
+  name: z.string().min(1).max(NODE_NAME_MAX_LENGTH),
   kind: z.enum(PRIMITIVE_KINDS),
   /** null = top level of the scene. Children follow their parent's transform. */
   parentId: z.string().min(1).nullable(),

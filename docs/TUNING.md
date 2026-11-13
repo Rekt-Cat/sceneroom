@@ -79,6 +79,14 @@ Files: `apps/web/src/components/viewport/SelectionGizmo.tsx` (snap steps), `useE
 | Shortcut keys       | `MODE_KEYS` in `packages/shared/src/transformTools.ts` | W / E / R     | Move / Rotate / Scale. X toggles snap and Escape clears the selection (in `useEditorShortcuts.ts`).                               |
 | Ignore-click window | `IGNORE_EMPTY_CLICK_MS` in `gizmoGuard.ts`             | `300`         | After using a handle, a click on empty space does not clear the selection for this many milliseconds.                             |
 
+### Adding, duplicating and deleting objects
+
+| What              | Setting                                                  | Our value   | What it does                                                                               |
+| ----------------- | -------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------ |
+| Duplicate offset  | `DUPLICATE_OFFSET` in `src/store/sceneStore.ts`          | `[1, 0, 0]` | How far (x, y, z) a duplicate is placed from the original, so it does not overlap.         |
+| Shortcuts         | `useEditorShortcuts.ts`                                  | see below   | Delete or Backspace deletes, Ctrl/Cmd + D duplicates (both only when not typing in a box). |
+| Name length limit | `NODE_NAME_MAX_LENGTH` in `packages/shared/src/scene.ts` | `100`       | Longest allowed object name; longer or empty names are rejected.                           |
+
 ### The grid
 
 | Setting            | Our value   | Library default | What it does                                                      |

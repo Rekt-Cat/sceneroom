@@ -8,3 +8,4 @@ export * from "./scene";
 export * from "./sceneOps";
 export * from "./selection";
 export * from "./transformTools";
+export * from "./nodeName";
