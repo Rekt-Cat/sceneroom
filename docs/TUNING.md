@@ -19,11 +19,11 @@ All of these live in one file: `apps/web/src/components/viewport/Viewport.tsx`.
 
 ### Camera and background
 
-| What              | Setting                                      | Our value   | What it does                                                                                                                                          |
-| ----------------- | -------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Starting position | `<Canvas camera={{ position: [x, y, z] }}>`  | `[5, 4, 7]` | Where the camera starts. Bigger numbers start further away.                                                                                           |
-| Field of view     | `<Canvas camera={{ fov }}>`                  | `50`        | How wide the camera sees, in degrees. Smaller zooms in and flattens the view, larger looks wide-angle.                                                |
-| Background colour | `<color attach="background" args={["..."]}>` | `"#14191d"` | The colour behind the scene. Keep it equal to the `bg-[#14191d]` in `apps/web/src/app/page.tsx`, so there is no colour flash while the 3D view loads. |
+| What              | Setting                                      | Our value   | What it does                                                                                                                                                                 |
+| ----------------- | -------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Starting position | `<Canvas camera={{ position: [x, y, z] }}>`  | `[5, 4, 7]` | Where the camera starts. Bigger numbers start further away.                                                                                                                  |
+| Field of view     | `<Canvas camera={{ fov }}>`                  | `50`        | How wide the camera sees, in degrees. Smaller zooms in and flattens the view, larger looks wide-angle.                                                                       |
+| Background colour | `<color attach="background" args={["..."]}>` | `"#14191d"` | The colour behind the scene. Keep it equal to the `bg-[#14191d]` in `apps/web/src/components/viewport/EditorShell.tsx`, so there is no colour flash while the 3D view loads. |
 
 ### Camera controls (how dragging feels)
 
@@ -118,13 +118,26 @@ only a count and Duplicate / Delete (no per-object details).
 `<Stats />` in `Viewport.tsx` shows frames per second in the corner. Delete that line to hide it. Higher FPS is smoother;
 a steady 60 is the usual target on most screens.
 
+## Editor look (panels, colours, sizes)
+
+| What                   | Where                                                                     | Our value                   | What it does                                                                                                                  |
+| ---------------------- | ------------------------------------------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Panel and text colours | the `@theme` block in `apps/web/src/app/globals.css`                      | `--color-ed-*`              | Every editor colour. Use as `bg-ed-panel`, `text-ed-text-2`, `border-ed-line`. Change a value here and it changes everywhere. |
+| Selected colour        | `--color-ed-select` in `globals.css`, `OUTLINE_COLOR` in `SceneNodes.tsx` | amber `#ffb020`             | The highlight in the list. Keep it equal to the outline in 3D so the two read as the same thing.                              |
+| Action colour          | `--color-ed-accent` in `globals.css`                                      | indigo `#5667e8`            | Primary buttons, active tool, focus ring.                                                                                     |
+| Axis colours           | `--color-ed-x`, `-y`, `-z` in `globals.css`                               | red, green, blue            | Reserved for the X, Y, Z axes (used by the Inspector fields when they arrive).                                                |
+| Left panel width       | `w-72` in `HierarchyPanel.tsx`                                            | `18rem` (288px)             | Width of the Scene list. If you change it, also change `left-[300px]` in `Viewport.tsx` (the FPS counter).                    |
+| Right panel width      | `w-76` in `InspectorPanel.tsx`                                            | `19rem` (304px)             | Width of the Inspector.                                                                                                       |
+| FPS counter position   | `className` on `<Stats>` in `Viewport.tsx`                                | `top-[60px]! left-[300px]!` | Pixels from the window corner: panel width + 12 across, top bar (48) + 12 down.                                               |
+| Number keys            | `useEditorShortcuts.ts`                                                   | `1` to `5`                  | Add Cube, Sphere, Cylinder, Plane, Cone (same order as the Add menu). `/` focuses the search box.                             |
+
 ## The page around the viewport
 
-| What                      | Where                                                 | What to change                                                                                                                |
-| ------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| The "SceneRoom" label     | `apps/web/src/app/page.tsx`                           | Its text comes from `APP_NAME` in `packages/shared/src/index.ts`. Position and colour are the Tailwind classes on the `<h1>`. |
-| The loading message       | `apps/web/src/components/viewport/ViewportLoader.tsx` | The text inside `loading: () => ...`.                                                                                         |
-| Tab title and description | `apps/web/src/app/layout.tsx`                         | The `metadata` object.                                                                                                        |
+| What                          | Where                                                 | What to change                                                                                                     |
+| ----------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| The "SceneRoom" name and logo | `apps/web/src/components/viewport/TopBar.tsx`         | The name comes from `APP_NAME` in `packages/shared/src/index.ts`. The "Untitled scene" text is plain text for now. |
+| The loading message           | `apps/web/src/components/viewport/ViewportLoader.tsx` | The text inside `loading: () => ...`.                                                                              |
+| Tab title and description     | `apps/web/src/app/layout.tsx`                         | The `metadata` object.                                                                                             |
 
 ## Project settings
 

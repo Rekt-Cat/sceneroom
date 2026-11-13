@@ -55,8 +55,9 @@ export default function Viewport() {
       {/* Ctrl/Cmd + left-drag draws a selection box */}
       <BoxSelectController />
 
-      {/* FPS counter (frames per second) in the corner */}
-      <Stats />
+      {/* FPS counter (frames per second). The class moves it from the page corner to the corner of the
+          3D view: 288px (Scene panel) + 12px across, 48px (top bar) + 12px down. */}
+      <Stats className="top-[60px]! left-[300px]!" />
     </Canvas>
   );
 }

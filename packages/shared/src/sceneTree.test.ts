@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createEmptyScene } from "./scene";
 import { addNode, createNode } from "./sceneOps";
-import { buildSceneTree, flattenTree } from "./sceneTree";
+import { buildSceneTree, flattenTree, searchNodes } from "./sceneTree";
 
 function sampleScene() {
   // a
@@ -70,5 +70,30 @@ describe("flattenTree", () => {
       hasChildren: false,
       expanded: false,
     });
+  });
+});
+
+describe("searchNodes", () => {
+  function namedScene() {
+    let scene = createEmptyScene();
+    scene = addNode(scene, { ...createNode("a", "cube"), name: "Crate" });
+    scene = addNode(scene, { ...createNode("b", "cube"), name: "Crate (1)" });
+    scene = addNode(scene, { ...createNode("c", "cone"), name: "Lamp" });
+    return scene;
+  }
+
+  it("returns null for an empty or blank search, meaning no filter", () => {
+    expect(searchNodes(namedScene(), "")).toBeNull();
+    expect(searchNodes(namedScene(), "   ")).toBeNull();
+  });
+
+  it("matches part of a name, ignoring case and surrounding spaces", () => {
+    const ids = (q: string) => searchNodes(namedScene(), q)?.map((n) => n.id);
+    expect(ids("crate")).toEqual(["a", "b"]);
+    expect(ids("  LAM ")).toEqual(["c"]);
+  });
+
+  it("returns an empty list when nothing matches", () => {
+    expect(searchNodes(namedScene(), "zzz")).toEqual([]);
   });
 });

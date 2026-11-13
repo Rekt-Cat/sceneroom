@@ -60,3 +60,15 @@ export function flattenTree(
   visit(tree, 0);
   return rows;
 }
+
+/**
+ * Nodes whose name contains the text (ignoring upper/lower case and spaces around it), in scene
+ * order. An empty search returns null, meaning "no filter, show the whole tree".
+ */
+export function searchNodes(scene: Scene, query: string): SceneNode[] | null {
+  const needle = query.trim().toLowerCase();
+  if (needle === "") return null;
+  return Object.values(scene.nodes).filter((node) =>
+    node.name.toLowerCase().includes(needle),
+  );
+}

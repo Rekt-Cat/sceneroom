@@ -12,6 +12,26 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Editor colours. Use them as bg-ed-panel, text-ed-text-2, border-ed-line and so on.
+   One colour, one meaning: select = what is selected, accent = what you can act on, x/y/z = the axes. */
+@theme {
+  --color-ed-bg: #0d1013;
+  --color-ed-panel: #14181d;
+  --color-ed-field: #1a1f25;
+  --color-ed-raised: #232a32;
+  --color-ed-line: #262d35;
+  --color-ed-line-strong: #343d48;
+  --color-ed-text: #e8ecf0;
+  --color-ed-text-2: #a3aeb9;
+  --color-ed-text-3: #7c8791;
+  --color-ed-accent: #5667e8;
+  --color-ed-select: #ffb020;
+  --color-ed-x: #f26d78;
+  --color-ed-y: #62d394;
+  --color-ed-z: #62a3f5;
+  --color-ed-danger: #ff9aa2;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -22,5 +42,5 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
 }

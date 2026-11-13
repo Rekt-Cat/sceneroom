@@ -197,3 +197,17 @@ its setup for Tailwind 4 would be checked in the docs first.
 - **Bug found by reading the library code:** neither R3F nor the three.js raycaster skips `visible={false}` objects, so a hidden object would still
   catch clicks and block the ones behind it. Hidden meshes now use a "hit nothing" `raycast`. Box select already ignored hidden nodes.
 - The Add buttons moved from their own bar into the Hierarchy panel. The left panel is 16rem wide and can overlap the centred mode toolbar on narrow windows.
+
+## 2026-11-13: New editor look: docked panels, Add menu, tool dock
+
+The first overlay UI looked rough, so the look was designed on a canvas first and then built. Changes: panels are docked beside the 3D view (nothing covers it);
+one Add button opens a menu with a picture and a line per shape (keys 1 to 5 add a shape); the mode bar became a bottom-centre dock with icons and key hints;
+a small card lists the mouse controls; the tree has shape icons, eye buttons and amber selection (the same amber as the outline in 3D); a search box filters by name
+(`searchNodes`, tested; `/` focuses it); the right panel shows the name and actions for one object, a count and removable name chips for several, and a hint for none.
+
+- **Colours as theme variables** (`--color-ed-*` in `globals.css`): one colour, one meaning (amber = selected, indigo = you can act, red/green/blue = axes).
+- **Left out on purpose** (they would be fake today): undo/redo buttons, Share, collaborator avatars, project name editing, Perspective chip, Roughness/Metalness sliders.
+  The top bar shows the logo and a plain "Untitled scene".
+- **Fonts:** kept Geist (already loaded by Next.js, close to the design's Inter); no new font download. The body no longer forces Arial.
+- **Not yet built from the design:** the Inspector's Transform and Colour fields, drag-to-re-parent. Those are the next steps.
+- **Dev server note:** running `pnpm build` while `pnpm dev` is running shares the `.next` folder and left the dev server serving a stale stylesheet. Restart `pnpm dev` after a build if the page looks unstyled.

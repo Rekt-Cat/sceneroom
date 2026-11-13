@@ -2,40 +2,46 @@
 
 import { useMemo, useState } from "react";
 import {
-  PRIMITIVE_KINDS,
   buildSceneTree,
   flattenTree,
-  type PrimitiveKind,
+  searchNodes,
   type TreeRow,
 } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
-import { overlayButton } from "./buttonStyle";
+import AddMenu from "./AddMenu";
+import { Icon, KindIcon } from "./icons";
 
-const KIND_LABELS: Record<PrimitiveKind, string> = {
-  cube: "Cube",
-  sphere: "Sphere",
-  cylinder: "Cylinder",
-  plane: "Plane",
-  cone: "Cone",
-};
+/** DOM id of the search box, so the "/" shortcut can focus it. */
+export const SEARCH_INPUT_ID = "scene-search";
 
 /**
- * Left panel: buttons to add objects, and the list of everything in the scene as a tree.
+ * Left panel: the scene as a tree, with a search box and the Add menu.
  * Click a row to select it (Shift, Ctrl or Cmd + click to add or remove it from the selection).
  * The eye button hides or shows an object in the viewport.
  */
 export default function HierarchyPanel() {
   const scene = useSceneStore((state) => state.scene);
   const selectedIds = useSceneStore((state) => state.selectedIds);
-  const addPrimitive = useSceneStore((state) => state.addPrimitive);
 
-  // Folded-away parents live here (UI state only, not part of the scene)
+  // UI-only state, not part of the scene: folded-away parents and the search text
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  const [query, setQuery] = useState("");
 
-  const rows = useMemo(
-    () => flattenTree(buildSceneTree(scene), collapsed),
-    [scene, collapsed],
-  );
+  const total = Object.keys(scene.nodes).length;
+
+  const rows = useMemo<TreeRow[]>(() => {
+    const matches = searchNodes(scene, query);
+    // While searching: a flat list of matches, without folding or indenting
+    if (matches) {
+      return matches.map((node) => ({
+        node,
+        depth: 0,
+        hasChildren: false,
+        expanded: false,
+      }));
+    }
+    return flattenTree(buildSceneTree(scene), collapsed);
+  }, [scene, collapsed, query]);
 
   function toggleCollapsed(id: string) {
     setCollapsed((current) => {
@@ -47,38 +53,48 @@ export default function HierarchyPanel() {
 
   return (
     <aside
-      aria-label="Hierarchy"
-      className="absolute top-3 bottom-3 left-3 flex w-64 flex-col gap-2 rounded-lg bg-zinc-900/90 p-2 text-zinc-200 shadow-lg"
+      aria-label="Scene"
+      className="flex w-72 shrink-0 flex-col border-r border-ed-line bg-ed-panel"
     >
-      <h2 className="px-1 pt-1 text-xs tracking-wide text-zinc-400 uppercase">
-        Add
-      </h2>
-      <div
-        role="toolbar"
-        aria-label="Add object"
-        className="flex flex-wrap gap-1"
-      >
-        {PRIMITIVE_KINDS.map((kind) => (
-          <button
-            key={kind}
-            type="button"
-            onClick={() => addPrimitive(kind)}
-            className={`${overlayButton} border border-zinc-600 px-2 py-1 hover:bg-zinc-700`}
-          >
-            {KIND_LABELS[kind]}
-          </button>
-        ))}
+      <div className="flex h-13 shrink-0 items-center gap-2 px-3.5">
+        <h2 className="text-[13px] font-semibold tracking-wide">Scene</h2>
+        <span className="text-xs text-ed-text-3">
+          {total} {total === 1 ? "object" : "objects"}
+        </span>
+        <span className="flex-1" />
+        <AddMenu />
       </div>
 
-      <h2 className="px-1 pt-2 text-xs tracking-wide text-zinc-400 uppercase">
-        Hierarchy
-      </h2>
+      <label className="mx-3 mb-2 flex h-8 items-center gap-2 rounded-lg border border-ed-line bg-ed-field px-2.5 text-ed-text-3 focus-within:border-ed-accent">
+        <Icon name="search" />
+        <input
+          id={SEARCH_INPUT_ID}
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              setQuery("");
+              event.currentTarget.blur();
+            }
+          }}
+          placeholder="Search objects"
+          aria-label="Search objects"
+          className="min-w-0 flex-1 bg-transparent text-sm text-ed-text outline-none placeholder:text-ed-text-3"
+        />
+        <kbd className="rounded border border-ed-line-strong px-1.5 font-mono text-[11px] leading-[17px]">
+          /
+        </kbd>
+      </label>
+
       {rows.length === 0 ? (
-        <p className="px-1 text-sm text-zinc-500">
-          The scene is empty. Add an object above.
+        <p className="px-4 py-3 text-sm text-ed-text-3">
+          {total === 0
+            ? "The scene is empty. Use Add to place your first object."
+            : "No objects match your search."}
         </p>
       ) : (
-        <ul className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">
+        <ul className="min-h-0 flex-1 overflow-y-auto px-2 py-0.5">
           {rows.map((row) => (
             <HierarchyRow
               key={row.node.id}
@@ -89,11 +105,16 @@ export default function HierarchyPanel() {
           ))}
         </ul>
       )}
+
+      <p className="m-3 rounded-lg bg-ed-field px-3 py-2.5 text-xs leading-relaxed text-ed-text-2">
+        Click to select. <b className="font-medium text-ed-text">Shift-click</b>{" "}
+        to add more.
+      </p>
     </aside>
   );
 }
 
-/** Space taken by each level of nesting, and by the fold arrow. */
+/** Space taken by each level of nesting. */
 const INDENT_PX = 14;
 
 function HierarchyRow({
@@ -112,10 +133,12 @@ function HierarchyRow({
 
   return (
     <li
-      className={`flex items-center gap-1 rounded ${
-        selected ? "bg-sky-700/60" : "hover:bg-zinc-800"
-      }`}
       style={{ paddingLeft: depth * INDENT_PX }}
+      className={`flex h-8 items-center gap-1.5 rounded-lg pr-1 ${
+        selected
+          ? "bg-ed-select/13 shadow-[inset_2px_0_0_var(--color-ed-select)]"
+          : "hover:bg-ed-field"
+      }`}
     >
       {hasChildren ? (
         <button
@@ -123,13 +146,17 @@ function HierarchyRow({
           aria-label={`${expanded ? "Fold" : "Unfold"} ${node.name}`}
           aria-expanded={expanded}
           onClick={() => onToggleCollapsed(node.id)}
-          className="w-5 shrink-0 text-xs text-zinc-400 hover:text-zinc-100"
+          className="grid size-[18px] shrink-0 place-items-center rounded text-ed-text-3 hover:text-ed-text focus-visible:outline-2 focus-visible:outline-ed-accent"
         >
-          {expanded ? "▾" : "▸"}
+          <Icon
+            name={expanded ? "chevronDown" : "chevronRight"}
+            className="size-3"
+          />
         </button>
       ) : (
-        <span className="w-5 shrink-0" aria-hidden="true" />
+        <span className="size-[18px] shrink-0" aria-hidden="true" />
       )}
+
       <button
         type="button"
         aria-pressed={selected}
@@ -138,20 +165,37 @@ function HierarchyRow({
             toggleSelect(node.id);
           else select(node.id);
         }}
-        className={`min-w-0 flex-1 truncate py-1 text-left text-sm focus-visible:outline-2 focus-visible:outline-sky-400 ${
-          node.visible ? "" : "text-zinc-500 italic"
-        }`}
+        className="flex min-w-0 flex-1 items-center gap-2 self-stretch rounded text-left text-sm focus-visible:outline-2 focus-visible:outline-ed-accent"
       >
-        {node.name}
+        <span
+          className={
+            selected
+              ? "text-ed-select"
+              : node.visible
+                ? "text-ed-text-2"
+                : "text-ed-text-3"
+          }
+        >
+          <KindIcon kind={node.kind} />
+        </span>
+        <span
+          className={`min-w-0 flex-1 truncate ${
+            node.visible ? "" : "text-ed-text-3 italic"
+          }`}
+        >
+          {node.name}
+        </span>
       </button>
+
       <button
         type="button"
         aria-label={`${node.visible ? "Hide" : "Show"} ${node.name}`}
         aria-pressed={!node.visible}
+        title={node.visible ? "Hide" : "Show"}
         onClick={() => setNodeVisible(node.id, !node.visible)}
-        className="shrink-0 px-2 py-1 text-xs text-zinc-400 hover:text-zinc-100"
+        className="grid size-[26px] shrink-0 place-items-center rounded-md text-ed-text-3 hover:bg-ed-raised hover:text-ed-text focus-visible:outline-2 focus-visible:outline-ed-accent"
       >
-        {node.visible ? "Hide" : "Show"}
+        <Icon name={node.visible ? "eye" : "eyeOff"} />
       </button>
     </li>
   );
