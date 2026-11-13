@@ -31,7 +31,8 @@ export default function Viewport() {
         fadeStrength={1.5}
       />
 
-      <OrbitControls makeDefault enableDamping />
+      {/* No damping: the camera follows the mouse immediately (damping adds a gliding delay) */}
+      <OrbitControls makeDefault enableDamping={false} rotateSpeed={1.25} />
 
       {/* FPS counter (frames per second) in the corner */}
       <Stats />
