@@ -2,10 +2,10 @@
 
 ## Current status
 
-- **Phase:** 2 (scene model and editing tools), in progress
-- **Done:** Phase 0; Phase 1 (3D viewport, live at https://sceneroom.vercel.app); Phase 2: scene schema (Zod), pure scene operations with Vitest tests, Zustand store, click-to-select with outline, transform gizmo (move/rotate/scale, optional snapping, smooth by default) and camera controls (left pans, right rotates, Shift swaps) on `main` or in review; add/delete/duplicate/rename on branch `feature/object-actions` (written, not yet tested in a browser). A git pre-push hook runs type-check, lint, test and build before every push.
+- **Phase:** 2 (scene model and editing tools) done and tested in the browser on branch `feature/object-actions`; Phase 3 next
+- **Done:** Phase 0; Phase 1 (3D viewport, live at https://sceneroom.vercel.app); Phase 2: scene schema (Zod), pure scene operations with Vitest tests, Zustand store, click-to-select with outline, multi-select (Shift + click, Ctrl/Cmd + drag box), transform gizmo for one object or a group (move/rotate/scale, optional snapping, smooth by default), camera controls (left pans, right rotates, Shift swaps), add / numbered duplicate / delete / rename. A git pre-push hook runs type-check, lint, test and build before every push. `main` has everything up to the gizmo; the object actions and multi-select are on `feature/object-actions`, waiting for a pull request.
 - **CI:** last seen green on `b33fe6b`; not yet checked on newer commits (CI runs on pushes to `main` and on pull requests only).
-- **Next action:** test `feature/object-actions` in the browser and merge it; merge `feature/gizmo` through a pull request (starts CI) if not merged yet. Then Phase 3 (Hierarchy, Inspector, undo/redo). Still open: test `SETUP-SECOND-PC.md` on the second PC; try the pre-push hook from GitHub Desktop; optional `/code-review` of the Phase 0-1 diffs.
+- **Next action:** open a pull request `feature/object-actions` into `main` (starts CI, last seen green on `b33fe6b`) and merge it. Then Phase 3 on new branches: Hierarchy panel, Inspector (a multi-selection shows only a count), undo/redo. Still open: test `SETUP-SECOND-PC.md` on the second PC; try the pre-push hook from GitHub Desktop; optional `/code-review` of the Phase 0-1 diffs.
 
 Update this block at the end of every sub-phase and commit it.
 
@@ -46,9 +46,9 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 
 - [x] Scene schema in `packages/shared` (types + Zod)
 - [x] Pure scene operations (add, remove, duplicate, update, transform) with Vitest tests; Zustand store; render nodes from the store
-- [x] Click to select (raycasting) with outline
+- [x] Click to select (raycasting) with outline; multi-select (Shift + click, Ctrl/Cmd + drag box) with a group gizmo
 - [x] Transform gizmo (move/rotate/scale) and snapping
-- [x] Add (cube, sphere, cylinder, plane, cone), delete, duplicate, rename (needs a browser check)
+- [x] Add (cube, sphere, cylinder, plane, cone), delete, duplicate, rename
 
 ### Phase 3: Editor panels and undo/redo
 

@@ -3,12 +3,12 @@ import {
   addNode,
   createEmptyScene,
   createNode,
-  duplicateNode,
-  getSubtreeIds,
+  duplicateNodes,
   normalizeNodeName,
-  removeNode,
+  removeNodes,
   resolveSelection,
-  setTransform,
+  setTransforms,
+  toggleInSelection,
   updateNode,
   type PrimitiveKind,
   type Scene,
@@ -25,24 +25,31 @@ const DUPLICATE_OFFSET: [number, number, number] = [1, 0, 0];
  */
 type SceneState = {
   scene: Scene;
-  /** Id of the selected node, or null. */
-  selectedId: string | null;
-  /** Which gizmo is shown on the selected node. */
+  /** Ids of the selected nodes (empty = nothing selected). */
+  selectedIds: string[];
+  /** Which gizmo is shown on the selected node(s). */
   transformMode: TransformMode;
   /** Snap gizmo movement to steps (see SNAP in SelectionGizmo.tsx). Off = smooth. */
   snapEnabled: boolean;
   /** True while Shift is held: inverts snapEnabled for as long as it is held. */
   snapKeyHeld: boolean;
+  /** Selects only this node, or clears the selection when given null. */
   select: (id: string | null) => void;
+  /** Adds the node to the selection, or removes it if already selected (Shift + click). */
+  toggleSelect: (id: string) => void;
+  /** Replaces the selection (used by the drag-a-box selection). */
+  setSelection: (ids: string[]) => void;
   setTransformMode: (mode: TransformMode) => void;
   toggleSnap: () => void;
   setSnapKeyHeld: (held: boolean) => void;
   setNodeTransform: (id: string, transform: Transform) => void;
+  /** Sets the transforms of several nodes as one change (one drag of the group gizmo). */
+  setNodeTransforms: (updates: Record<string, Transform>) => void;
   /** Adds a new object and selects it. Returns its id. */
   addPrimitive: (kind: PrimitiveKind) => string;
-  /** Deletes the selected object and everything below it. */
+  /** Deletes the selected objects and everything below them. */
   deleteSelected: () => void;
-  /** Copies the selected object (and everything below it), placed beside it, and selects the copy. */
+  /** Copies the selected objects (and everything below them), placed beside the originals, and selects the copies. */
   duplicateSelected: () => void;
   /** Renames a node. Returns the saved name, or null if the name was not allowed. */
   renameNode: (id: string, name: string) => string | null;
@@ -54,46 +61,59 @@ function createInitialScene(): Scene {
 
 export const useSceneStore = create<SceneState>()((set) => ({
   scene: createInitialScene(),
-  selectedId: null,
+  selectedIds: [],
   transformMode: "translate",
   snapEnabled: false,
   snapKeyHeld: false,
   select: (id) =>
-    set((state) => ({ selectedId: resolveSelection(state.scene, id) })),
+    set((state) => ({
+      selectedIds: id === null ? [] : resolveSelection(state.scene, [id]),
+    })),
+  toggleSelect: (id) =>
+    set((state) => ({
+      selectedIds: resolveSelection(
+        state.scene,
+        toggleInSelection(state.selectedIds, id),
+      ),
+    })),
+  setSelection: (ids) =>
+    set((state) => ({ selectedIds: resolveSelection(state.scene, ids) })),
   setTransformMode: (mode) => set({ transformMode: mode }),
   toggleSnap: () => set((state) => ({ snapEnabled: !state.snapEnabled })),
   setSnapKeyHeld: (held) => set({ snapKeyHeld: held }),
   setNodeTransform: (id, transform) =>
-    set((state) => ({ scene: setTransform(state.scene, id, transform) })),
+    set((state) => ({
+      scene: setTransforms(state.scene, { [id]: transform }),
+    })),
+  setNodeTransforms: (updates) =>
+    set((state) => ({ scene: setTransforms(state.scene, updates) })),
   addPrimitive: (kind) => {
     const id = crypto.randomUUID();
     set((state) => ({
       scene: addNode(state.scene, createNode(id, kind)),
-      selectedId: id,
+      selectedIds: [id],
     }));
     return id;
   },
   deleteSelected: () =>
     set((state) =>
-      state.selectedId
-        ? { scene: removeNode(state.scene, state.selectedId), selectedId: null }
-        : state,
+      state.selectedIds.length === 0
+        ? state
+        : {
+            scene: removeNodes(state.scene, state.selectedIds),
+            selectedIds: [],
+          },
     ),
   duplicateSelected: () =>
     set((state) => {
-      if (!state.selectedId) return state;
-      const newIds = getSubtreeIds(state.scene, state.selectedId).map(() =>
-        crypto.randomUUID(),
+      if (state.selectedIds.length === 0) return state;
+      const result = duplicateNodes(
+        state.scene,
+        state.selectedIds,
+        () => crypto.randomUUID(),
+        DUPLICATE_OFFSET,
       );
-      return {
-        scene: duplicateNode(
-          state.scene,
-          state.selectedId,
-          newIds,
-          DUPLICATE_OFFSET,
-        ),
-        selectedId: newIds[0] ?? null,
-      };
+      return { scene: result.scene, selectedIds: result.rootIds };
     }),
   renameNode: (id, name) => {
     const clean = normalizeNodeName(name);

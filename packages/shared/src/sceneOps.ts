@@ -5,6 +5,7 @@ import {
   type SceneNode,
   type Transform,
 } from "./scene";
+import { topLevelSelection } from "./selection";
 
 /**
  * Pure scene operations: each takes a scene and returns a NEW scene, never mutating the input.
@@ -63,6 +64,25 @@ export function removeNode(scene: Scene, id: string): Scene {
   return { ...scene, nodes };
 }
 
+/** Matches a trailing " (3)" so duplicating "Cube (3)" continues the numbering instead of nesting. */
+const COPY_SUFFIX = /\s\(\d+\)$/;
+
+/**
+ * Name for a copy: "Cube" becomes "Cube (1)", then "Cube (2)", and so on. Duplicating "Cube (1)"
+ * also gives the next free number of "Cube". Takes the lowest number no object is using yet,
+ * and shortens the base name if needed so the result stays within the name length limit.
+ */
+export function uniqueCopyName(scene: Scene, name: string): string {
+  const base = name.replace(COPY_SUFFIX, "");
+  const taken = new Set(Object.values(scene.nodes).map((node) => node.name));
+  for (let n = 1; ; n++) {
+    const suffix = ` (${n})`;
+    const candidate =
+      base.slice(0, NODE_NAME_MAX_LENGTH - suffix.length) + suffix;
+    if (!taken.has(candidate)) return candidate;
+  }
+}
+
 /**
  * Copies a node and its descendants. `newIds` supplies one fresh id per copied node
  * in the order given by getSubtreeIds (the root first).
@@ -88,10 +108,7 @@ export function duplicateNode(
     nodes[copyId] = {
       ...original,
       id: copyId,
-      name:
-        oldId === id
-          ? `${original.name} copy`.slice(0, NODE_NAME_MAX_LENGTH)
-          : original.name,
+      name: oldId === id ? uniqueCopyName(scene, original.name) : original.name,
       transform:
         oldId === id
           ? {
@@ -131,4 +148,41 @@ export function setTransform(
   const node = scene.nodes[id];
   if (!node) throw new Error(`Node "${id}" does not exist`);
   return { ...scene, nodes: { ...scene.nodes, [id]: { ...node, transform } } };
+}
+
+/** Removes several nodes (and everything below them). Ids that are already gone are ignored. */
+export function removeNodes(scene: Scene, ids: readonly string[]): Scene {
+  return ids.reduce((next, id) => removeNode(next, id), scene);
+}
+
+/**
+ * Duplicates each selected node that is not already inside another selected node, so a child is
+ * not copied twice. `generateId` is called once per new node. Returns the new scene and the ids
+ * of the new top copies (for selecting them).
+ */
+export function duplicateNodes(
+  scene: Scene,
+  ids: readonly string[],
+  generateId: () => string,
+  offset: [number, number, number] = [0, 0, 0],
+): { scene: Scene; rootIds: string[] } {
+  let next = scene;
+  const rootIds: string[] = [];
+  for (const id of topLevelSelection(scene, ids)) {
+    const newIds = getSubtreeIds(next, id).map(() => generateId());
+    next = duplicateNode(next, id, newIds, offset);
+    rootIds.push(newIds[0]!);
+  }
+  return { scene: next, rootIds };
+}
+
+/** Sets the transform of several nodes in one go. */
+export function setTransforms(
+  scene: Scene,
+  updates: Readonly<Record<string, Transform>>,
+): Scene {
+  return Object.entries(updates).reduce(
+    (next, [id, transform]) => setTransform(next, id, transform),
+    scene,
+  );
 }

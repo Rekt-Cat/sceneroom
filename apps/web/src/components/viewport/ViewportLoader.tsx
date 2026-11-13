@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import AddToolbar from "./AddToolbar";
+import BoxSelectOverlay from "./BoxSelectOverlay";
 import SelectionPanel from "./SelectionPanel";
 import Toolbar from "./Toolbar";
 import { useEditorShortcuts } from "./useEditorShortcuts";
@@ -23,6 +24,7 @@ export default function ViewportLoader() {
       <Toolbar />
       <AddToolbar />
       <SelectionPanel />
+      <BoxSelectOverlay />
     </>
   );
 }
