@@ -66,15 +66,15 @@ Objects are no longer written in `Viewport.tsx`. They come from the scene store.
 
 Files: `apps/web/src/components/viewport/SelectionGizmo.tsx` (snap steps), `useEditorShortcuts.ts` (keys), `gizmoGuard.ts`.
 
-| What                | Setting                                                | Our value     | What it does                                                                                          |
-| ------------------- | ------------------------------------------------------ | ------------- | ----------------------------------------------------------------------------------------------------- |
-| Move snap step      | `SNAP.translate`                                       | `0.5`         | Distance in world units that Move jumps by while Snap is on.                                          |
-| Rotate snap step    | `SNAP.rotateDegrees`                                   | `15`          | Degrees that Rotate jumps by while Snap is on.                                                        |
-| Scale snap step     | `SNAP.scale`                                           | `0.1`         | Amount that Scale jumps by while Snap is on.                                                          |
-| Snap on at start    | `snapEnabled` in `sceneStore.ts`                       | `true`        | Whether snapping is on when the page loads. Toggle with the toolbar button or the X key.              |
-| Starting gizmo      | `transformMode` in `sceneStore.ts`                     | `"translate"` | Which handles show first.                                                                             |
-| Shortcut keys       | `MODE_KEYS` in `packages/shared/src/transformTools.ts` | W / E / R     | Move / Rotate / Scale. X toggles snap and Escape clears the selection (in `useEditorShortcuts.ts`).   |
-| Ignore-click window | `IGNORE_EMPTY_CLICK_MS` in `gizmoGuard.ts`             | `300`         | After using a handle, a click on empty space does not clear the selection for this many milliseconds. |
+| What                | Setting                                                | Our value     | What it does                                                                                                                      |
+| ------------------- | ------------------------------------------------------ | ------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Move snap step      | `SNAP.translate`                                       | `0.5`         | Distance in world units that Move jumps by while Snap is on.                                                                      |
+| Rotate snap step    | `SNAP.rotateDegrees`                                   | `15`          | Degrees that Rotate jumps by while Snap is on.                                                                                    |
+| Scale snap step     | `SNAP.scale`                                           | `0.1`         | Amount that Scale jumps by while Snap is on.                                                                                      |
+| Snap on at start    | `snapEnabled` in `sceneStore.ts`                       | `false`       | Whether snapping is on when the page loads. Off = smooth. Toggle with the toolbar button or X; holding Shift flips it while held. |
+| Starting gizmo      | `transformMode` in `sceneStore.ts`                     | `"translate"` | Which handles show first.                                                                                                         |
+| Shortcut keys       | `MODE_KEYS` in `packages/shared/src/transformTools.ts` | W / E / R     | Move / Rotate / Scale. X toggles snap and Escape clears the selection (in `useEditorShortcuts.ts`).                               |
+| Ignore-click window | `IGNORE_EMPTY_CLICK_MS` in `gizmoGuard.ts`             | `300`         | After using a handle, a click on empty space does not clear the selection for this many milliseconds.                             |
 
 ### The grid
 
