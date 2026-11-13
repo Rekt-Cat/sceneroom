@@ -64,3 +64,14 @@ separate client wrapper exists and `page.tsx` stays a Server Component.
 `three` 0.187.0, `@react-three/fiber` 9.8.2 (peer range `react >=19 <19.4`, we have 19.3.0) and `@react-three/drei` 10.7.9
 (needs React 19, three >=0.159, fiber 9). `@types/three` matches `three`. drei pulls in 54 packages including large ones
 (`hls.js`, `@mediapipe/tasks-vision`); only imported parts are bundled, but check bundle size in Phase 9.
+
+## 2026-11-13: Hosting the web app on Vercel (Hobby plan)
+
+Deployed to https://sceneroom.vercel.app from the GitHub repo. Vercel's docs (updated 2026-09-14) list Hobby as free with a monthly
+usage allowance and no billing cycle; going over a limit means waiting 30 days for that feature, not a charge. Not verified: the
+"personal, non-commercial use" wording (Vercel's fair-use page loaded without its examples) and whether signup asks for a card.
+Re-read the Terms of Service before any commercial use.
+
+Setup: import the repo, **Root Directory = `apps/web`**, framework Next.js, other settings default, no environment variables yet.
+Vercel's GitHub app is limited to this one repository. These settings live in the Vercel dashboard, not in the repo, so a new Vercel
+project would need them entered again. The collab server (Phase 7) and database will not run on Vercel.

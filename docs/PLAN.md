@@ -2,10 +2,10 @@
 
 ## Current status
 
-- **Phase:** 1 (3D viewport), in progress
-- **Done:** Phase 0; Phase 1 code (Three.js + React Three Fiber + drei viewport: canvas, grid, lights, cube, orbit controls, FPS counter). Lint, type-check and build pass; dev server serves the page.
+- **Phase:** 1 (3D viewport), essentially done; Phase 2 next
+- **Done:** Phase 0; Phase 1 (Three.js + React Three Fiber + drei viewport: canvas, grid, lights, cube, orbit controls, FPS counter), tuned and **live at https://sceneroom.vercel.app** (Vercel Hobby, Root Directory `apps/web`).
 - **CI:** green on `b33fe6b` (first run failed on type-check, fixed in `e798eac`).
-- **Next action:** owner checks the viewport in a browser (`pnpm dev`, http://localhost:3000); then deploy to Vercel. Still open from Phase 0: confirm the Prettier hook fires and the skill loads after `/hooks` and `/reload-skills`; test `SETUP-SECOND-PC.md` on the second PC.
+- **Next action:** architecture diagram (not urgent) and optional `/code-review`, then Phase 2 (scene model and editing tools). Still open from Phase 0: confirm the Prettier hook fires and the skill loads after `/hooks` and `/reload-skills`; test `SETUP-SECOND-PC.md` on the second PC.
 
 Update this block at the end of every sub-phase and commit it.
 
@@ -38,7 +38,7 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 
 - [x] Three.js + React Three Fiber + drei; canvas, grid, lights, cube, orbit controls, FPS overlay (confirmed in a browser; drag feel tuned)
 - [x] `docs/TUNING.md`: settings the owner can adjust
-- [ ] Deploy the early version to Vercel (live link from now on)
+- [x] Deploy the early version to Vercel: https://sceneroom.vercel.app (HTTP 200, served by Vercel)
 - [ ] Architecture diagram (built parts solid, planned parts dashed), after the Vercel deploy; not urgent
 - [ ] Optional: `/code-review` pass on the Phase 0-1 diffs
 

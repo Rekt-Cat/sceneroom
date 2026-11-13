@@ -8,15 +8,16 @@ Status column: **verified** = checked against official docs or by running it. Ve
 
 ## Tools on the machine
 
-| Item                    | Version | Purpose                                                         | Used where                             |
-| ----------------------- | ------- | --------------------------------------------------------------- | -------------------------------------- |
-| Node.js (LTS)           | 24.22.2 | Runs JavaScript outside the browser (dev server, builds, tests) | `.node-version`                        |
-| fnm                     | 1.39.0  | Node version manager; switches Node per project                 | one line in `~/.zshrc`                 |
-| Homebrew                | 7.0.6   | Installs developer tools on macOS                               | machine setup                          |
-| Corepack                | 0.36.0  | Pins the exact pnpm version per project                         | root `package.json` (`packageManager`) |
-| pnpm                    | 12.18.0 | Package manager and workspace runner                            | whole repo                             |
-| git                     | 2.50.1  | Local version control                                           | `.git/`                                |
-| GitHub + GitHub Desktop | -       | Online copy of the repo; GUI used to publish/push               | `github.com/Rekt-Cat/sceneroom`        |
+| Item                    | Version | Purpose                                                         | Used where                                                                                             |
+| ----------------------- | ------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Node.js (LTS)           | 24.22.2 | Runs JavaScript outside the browser (dev server, builds, tests) | `.node-version`                                                                                        |
+| fnm                     | 1.39.0  | Node version manager; switches Node per project                 | one line in `~/.zshrc`                                                                                 |
+| Homebrew                | 7.0.6   | Installs developer tools on macOS                               | machine setup                                                                                          |
+| Corepack                | 0.36.0  | Pins the exact pnpm version per project                         | root `package.json` (`packageManager`)                                                                 |
+| pnpm                    | 12.18.0 | Package manager and workspace runner                            | whole repo                                                                                             |
+| git                     | 2.50.1  | Local version control                                           | `.git/`                                                                                                |
+| GitHub + GitHub Desktop | -       | Online copy of the repo; GUI used to publish/push               | `github.com/Rekt-Cat/sceneroom`                                                                        |
+| Vercel (Hobby plan)     | free    | Hosts the web app; builds and publishes on every push to `main` | https://sceneroom.vercel.app, Root Directory `apps/web` (set in the Vercel dashboard, not in the repo) |
 
 ## Repo and project structure
 
