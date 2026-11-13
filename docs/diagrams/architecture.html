@@ -1,0 +1,1867 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SceneRoom Architecture</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@500;600;700&display=swap"
+/>
+<style>
+  /* Layout concept: three whiteboard figures (system, one edit between two people, code layout),
+     each followed by plain-words notes. Built = solid outline, planned = dashed outline. */
+  :root {
+    --bg: #f2f5f6;
+    --surface: #ffffff;
+    --lane: #e9eef0;
+    --ink: #13202a;
+    --muted: #55656f;
+    --line: #c4d0d6;
+    --accent: #0a6c8a;
+    --on-accent: #ffffff;
+    --ok: #1c7a4b;
+    --ok-bg: #e0f2e8;
+    --pending: #8a5a00;
+    --pending-bg: #fbeed2;
+    --warn: #b3342c;
+    --font-head: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
+    --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1417;
+      --surface: #172026;
+      --lane: #121a1f;
+      --ink: #e5ecef;
+      --muted: #93a4ae;
+      --line: #2c3b44;
+      --accent: #5cc4e0;
+      --on-accent: #0e1417;
+      --ok: #5fd09a;
+      --ok-bg: #153227;
+      --pending: #e8b65c;
+      --pending-bg: #332a12;
+      --warn: #ff918a;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1417;
+    --surface: #172026;
+    --lane: #121a1f;
+    --ink: #e5ecef;
+    --muted: #93a4ae;
+    --line: #2c3b44;
+    --accent: #5cc4e0;
+    --on-accent: #0e1417;
+    --ok: #5fd09a;
+    --ok-bg: #153227;
+    --pending: #e8b65c;
+    --pending-bg: #332a12;
+    --warn: #ff918a;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    line-height: 1.5;
+    padding-block: 28px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  main {
+    max-width: 1040px;
+    margin-inline: auto;
+    display: grid;
+    gap: 28px;
+  }
+  h1 {
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: clamp(1.7rem, 4vw, 2.3rem);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h2 {
+    font-family: var(--font-head);
+    font-size: 1.25rem;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  a {
+    color: var(--accent);
+  }
+  .lede {
+    margin: 6px 0 0;
+    color: var(--muted);
+    max-width: 66ch;
+    font-size: 1rem;
+  }
+  section {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+  }
+  figure {
+    margin: 0;
+    display: grid;
+    gap: 10px;
+  }
+  .fig-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+  }
+  svg.diagram {
+    display: block;
+    min-width: 860px;
+    width: 100%;
+    height: auto;
+    color: var(--accent);
+  }
+  figcaption,
+  .hint {
+    color: var(--muted);
+    font-size: 0.9rem;
+    max-width: 80ch;
+    min-width: 0;
+    margin: 0;
+  }
+
+  /* diagram parts */
+  .lane {
+    fill: var(--lane);
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .lane-label {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.12em;
+    fill: var(--muted);
+  }
+  .box {
+    fill: var(--surface);
+    stroke: var(--line);
+    stroke-width: 1.5;
+  }
+  .box.ok {
+    stroke: var(--ok);
+  }
+  .box.pending {
+    stroke: var(--pending);
+    stroke-dasharray: 5 4;
+  }
+  .t-title {
+    font: 600 13px var(--font-head);
+    fill: var(--ink);
+  }
+  .t-sub {
+    font: 400 11px var(--font-ui);
+    fill: var(--muted);
+  }
+  .t-mono {
+    font: 500 10.5px var(--font-mono);
+    fill: var(--ink);
+  }
+  .arrow {
+    stroke: var(--accent);
+    stroke-width: 1.75;
+    fill: none;
+  }
+  .arrow.plan {
+    stroke-dasharray: 6 4;
+  }
+  .arrow-label {
+    font: 500 10.5px var(--font-ui);
+    fill: var(--accent);
+  }
+  .pill-ok {
+    fill: var(--ok-bg);
+    stroke: var(--ok);
+    stroke-width: 1;
+  }
+  .pill-pending {
+    fill: var(--pending-bg);
+    stroke: var(--pending);
+    stroke-width: 1;
+  }
+  .pt-ok {
+    font: 600 10px var(--font-ui);
+    fill: var(--ok);
+  }
+  .pt-pending {
+    font: 600 10px var(--font-ui);
+    fill: var(--pending);
+  }
+  .badge {
+    fill: var(--accent);
+  }
+  .badge-t {
+    font: 700 10.5px var(--font-head);
+    fill: var(--on-accent);
+  }
+  .hit {
+    cursor: pointer;
+  }
+  .hit:hover > .box {
+    stroke-width: 2.5;
+  }
+  .hit:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  /* cards and panels */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 14px;
+  }
+  .card,
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 16px 14px;
+    min-width: 0;
+    scroll-margin-top: 20px;
+  }
+  .card.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  .card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .num {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--on-accent);
+    font: 700 13px var(--font-head);
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+  .card h3,
+  .panel h3 {
+    font-family: var(--font-head);
+    font-size: 1.05rem;
+    margin: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .tag {
+    font: 600 11px var(--font-ui);
+    padding: 2px 9px;
+    border-radius: 999px;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+  .tag.ok {
+    color: var(--ok);
+    background: var(--ok-bg);
+    border-color: var(--ok);
+  }
+  .tag.pending {
+    color: var(--pending);
+    background: var(--pending-bg);
+    border-color: var(--pending);
+  }
+  dl {
+    margin: 0;
+    display: grid;
+    gap: 8px;
+  }
+  dt {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  dd {
+    margin: 0;
+    font-size: 0.92rem;
+    min-width: 0;
+  }
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.84em;
+    background: var(--lane);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  .panel {
+    display: grid;
+    gap: 10px;
+  }
+  .panel p {
+    margin: 0;
+    font-size: 0.92rem;
+    max-width: 80ch;
+  }
+  .panel ul {
+    margin: 0;
+    padding-left: 1.2rem;
+    display: grid;
+    gap: 6px;
+    font-size: 0.92rem;
+  }
+  .gloss {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 12px 26px;
+  }
+  .gloss > div {
+    min-width: 0;
+  }
+  .gloss dt {
+    text-transform: none;
+    letter-spacing: 0;
+    font: 600 0.9rem var(--font-head);
+    color: var(--ink);
+  }
+  .gloss dd {
+    font-size: 0.88rem;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+  .status {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px 28px;
+  }
+  .status h3 {
+    font-family: var(--font-head);
+    font-size: 0.95rem;
+    margin: 0 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: none;
+  }
+  .dot.ok {
+    background: var(--ok);
+  }
+  .dot.pending {
+    background: var(--pending);
+  }
+  .status ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+  .status li + li {
+    margin-top: 3px;
+  }
+  .foot {
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin: 0;
+  }
+</style>
+
+<main>
+  <header>
+    <h1>SceneRoom Architecture</h1>
+    <p class="lede">
+      What SceneRoom is made of, where each part runs, and how the parts talk to
+      each other. Solid outlines are built and working today. Dashed outlines
+      are planned, with the phase that builds them. Click a numbered box to jump
+      to its explanation.
+    </p>
+  </header>
+
+  <!-- ===================== Figure A: the system ===================== -->
+  <section aria-label="System architecture">
+    <h2>The whole system</h2>
+    <figure>
+      <div class="fig-scroll">
+        <svg
+          class="diagram"
+          viewBox="0 0 980 640"
+          role="group"
+          aria-label="System diagram. In the visitor's browser: a 3D viewport (1, built), scene state (2), editor panels (3), shared types (4) and local save and files (5). Vercel serves the static app files (6, built) and will run API routes (7). A collaboration server (8) relays live edits over a WebSocket. PostgreSQL (9) stores projects and scenes, object storage (10) stores model files, and a login provider (11) proves who the user is."
+        >
+          <defs>
+            <marker
+              id="ah"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto-start-reverse"
+            >
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+            </marker>
+          </defs>
+
+          <!-- Zones -->
+          <rect class="lane" x="10" y="10" width="330" height="620" rx="14" />
+          <text class="lane-label" x="28" y="34">VISITOR'S BROWSER</text>
+          <rect class="lane" x="420" y="10" width="280" height="270" rx="14" />
+          <text class="lane-label" x="438" y="34">VERCEL</text>
+          <rect class="lane" x="420" y="310" width="280" height="180" rx="14" />
+          <text class="lane-label" x="438" y="334">ALWAYS-ON SERVER HOST</text>
+          <rect class="lane" x="730" y="10" width="240" height="620" rx="14" />
+          <text class="lane-label" x="748" y="34">DATA AND ACCOUNTS</text>
+
+          <!-- 1 Viewport -->
+          <g
+            class="hit"
+            data-card="c1"
+            tabindex="0"
+            role="button"
+            aria-label="1, Viewport: show explanation"
+          >
+            <rect
+              class="box ok"
+              x="30"
+              y="56"
+              width="290"
+              height="82"
+              rx="10"
+            />
+            <text class="t-title" x="42" y="80">Viewport</text>
+            <text class="t-sub" x="42" y="98">
+              three.js + React Three Fiber
+            </text>
+            <text class="t-sub" x="42" y="113">
+              orbit camera, grid, light, cube
+            </text>
+            <rect
+              class="pill-ok"
+              x="42"
+              y="118"
+              width="44"
+              height="16"
+              rx="8"
+            />
+            <text class="pt-ok" x="64" y="129.5" text-anchor="middle">
+              built
+            </text>
+            <circle class="badge" cx="304" cy="72" r="9" />
+            <text class="badge-t" x="304" y="76" text-anchor="middle">1</text>
+          </g>
+          <!-- 2 Scene state -->
+          <g
+            class="hit"
+            data-card="c2"
+            tabindex="0"
+            role="button"
+            aria-label="2, Scene state: show explanation"
+          >
+            <rect
+              class="box pending"
+              x="30"
+              y="176"
+              width="290"
+              height="82"
+              rx="10"
+            />
+            <text class="t-title" x="42" y="200">Scene state</text>
+            <text class="t-sub" x="42" y="218">objects, selection, undo</text>
+            <text class="t-sub" x="42" y="233">
+              Zustand first, a shared Yjs document later
+            </text>
+            <rect
+              class="pill-pending"
+              x="42"
+              y="238"
+              width="72"
+              height="16"
+              rx="8"
+            />
+            <text class="pt-pending" x="78" y="249.5" text-anchor="middle">
+              Phase 2 and 7
+            </text>
+            <circle class="badge" cx="304" cy="192" r="9" />
+            <text class="badge-t" x="304" y="196" text-anchor="middle">2</text>
+          </g>
+          <!-- 3 Editor panels -->
+          <g
+            class="hit"
+            data-card="c3"
+            tabindex="0"
+            role="button"
+            aria-label="3, Editor panels: show explanation"
+          >
+            <rect
+              class="box pending"
+              x="30"
+              y="298"
+              width="290"
+              height="82"
+              rx="10"
+            />
+            <text class="t-title" x="42" y="322">Editor panels</text>
+            <text class="t-sub" x="42" y="340">
+              Hierarchy, Inspector, toolbar
+            </text>
+            <text class="t-sub" x="42" y="355">undo and redo, shortcuts</text>
+            <rect
+              class="pill-pending"
+              x="42"
+              y="360"
+              width="56"
+              height="16"
+              rx="8"
+            />
+            <text class="pt-pending" x="70" y="371.5" text-anchor="middle">
+              Phase 3
+            </text>
+            <circle class="badge" cx="304" cy="314" r="9" />
+            <text class="badge-t" x="304" y="318" text-anchor="middle">3</text>
+          </g>
+          <!-- 4 Shared types -->
+          <g
+            class="hit"
+            data-card="c4"
+            tabindex="0"
+            role="button"
+            aria-label="4, Shared types: show explanation"
+          >
+            <rect
+              class="box ok"
+              x="30"
+              y="420"
+              width="290"
+              height="82"
+              rx="10"
+            />
+            <text class="t-title" x="42" y="444">Shared types</text>
+            <text class="t-sub" x="42" y="462">@sceneroom/shared package</text>
+            <text class="t-sub" x="42" y="477">
+              scene schema and Zod checks come in Phase 2
+            </text>
+            <rect
+              class="pill-ok"
+              x="42"
+              y="482"
+              width="86"
+              height="16"
+              rx="8"
+            />
+            <text class="pt-ok" x="85" y="493.5" text-anchor="middle">
+              package ready
+            </text>
+            <circle class="badge" cx="304" cy="436" r="9" />
+            <text class="badge-t" x="304" y="440" text-anchor="middle">4</text>
+          </g>
+          <!-- 5 Local save -->
+          <g
+            class="hit"
+            data-card="c5"
+            tabindex="0"
+            role="button"
+            aria-label="5, Local save and files: show explanation"
+          >
+            <rect
+              class="box pending"
+              x="30"
+              y="530"
+              width="290"
+              height="82"
+              rx="10"
+            />
+            <text class="t-title" x="42" y="554">Local save and files</text>
+            <text class="t-sub" x="42" y="572">
+              scene JSON, GLB import and export
+            </text>
+            <text class="t-sub" x="42" y="587">
+              autosave inside the browser
+            </text>
+            <rect
+              class="pill-pending"
+              x="42"
+              y="592"
+              width="56"
+              height="16"
+              rx="8"
+            />
+            <text class="pt-pending" x="70" y="603.5" text-anchor="middle">
+              Phase 5
+            </text>
+            <circle class="badge" cx="304" cy="546" r="9" />
+            <text class="badge-t" x="304" y="550" text-anchor="middle">5</text>
+          </g>
+
+          <!-- Inside the browser -->
+          <line
+            class="arrow plan"
+            x1="110"
+            y1="176"
+            x2="110"
+            y2="140"
+            marker-end="url(#ah)"
+          />
+          <text class="arrow-label" x="118" y="162">draws</text>
+          <line
+            class="arrow plan"
+            x1="110"
+            y1="298"
+            x2="110"
+            y2="260"
+            marker-end="url(#ah)"
+          />
+          <text class="arrow-label" x="118" y="284">changes</text>
+
+          <!-- 6 Static app -->
+          <g
+            class="hit"
+            data-card="c6"
+            tabindex="0"
+            role="button"
+            aria-label="6, Static app on Vercel: show explanation"
+          >
+            <rect
+              class="box ok"
+              x="440"
+              y="56"
+              width="240"
+              height="82"
+              rx="10"
+            />
+            <text class="t-title" x="452" y="80">Static app files</text>
+            <text class="t-sub" x="452" y="98">
+              HTML, JavaScript, CSS from a CDN
+            </text>
+            <text class="t-sub" x="452" y="113">sceneroom.vercel.app</text>
+            <rect
+              class="pill-ok"
+              x="452"
+              y="118"
+              width="44"
+              height="16"
+              rx="8"
+            />
+            <text class="pt-ok" x="474" y="129.5" text-anchor="middle">
+              built
+            </text>
+            <circle class="badge" cx="664" cy="72" r="9" />
+            <text class="badge-t" x="664" y="76" text-anchor="middle">6</text>
+          </g>
+          <!-- 7 API routes -->
+          <g
+            class="hit"
+            data-card="c7"
+            tabindex="0"
+            role="button"
+            aria-label="7, API routes: show explanation"
+          >
+            <rect
+              class="box pending"
+              x="440"
+              y="176"
+              width="240"
+              height="90"
+              rx="10"
+            />
+            <text class="t-title" x="452" y="200">API routes</text>
+            <text class="t-sub" x="452" y="218">
+              projects, login, upload links
+            </text>
+            <text class="t-sub" x="452" y="233">
+              small functions that run when called
+            </text>
+            <rect
+              class="pill-pending"
+              x="452"
+              y="244"
+              width="72"
+              height="16"
+              rx="8"
+            />
+            <text class="pt-pending" x="488" y="255.5" text-anchor="middle">
+              Phase 6 and 8
+            </text>
+            <circle class="badge" cx="664" cy="192" r="9" />
+            <text class="badge-t" x="664" y="196" text-anchor="middle">7</text>
+          </g>
+          <!-- 8 Collab server -->
+          <g
+            class="hit"
+            data-card="c8"
+            tabindex="0"
+            role="button"
+            aria-label="8, Collaboration server: show explanation"
+          >
+            <rect
+              class="box pending"
+              x="440"
+              y="350"
+              width="240"
+              height="110"
+              rx="10"
+            />
+            <text class="t-title" x="452" y="374">Collab server</text>
+            <text class="t-sub" x="452" y="392">
+              Node + Hocuspocus, in Docker
+            </text>
+            <text class="t-sub" x="452" y="407">
+              relays live edits, saves scenes
+            </text>
+            <text class="t-sub" x="452" y="422">host not chosen yet</text>
+            <rect
+              class="pill-pending"
+              x="452"
+              y="432"
+              width="56"
+              height="16"
+              rx="8"
+            />
+            <text class="pt-pending" x="480" y="443.5" text-anchor="middle">
+              Phase 7
+            </text>
+            <circle class="badge" cx="664" cy="366" r="9" />
+            <text class="badge-t" x="664" y="370" text-anchor="middle">8</text>
+          </g>
+          <!-- 11 Login provider -->
+          <g
+            class="hit"
+            data-card="c11"
+            tabindex="0"
+            role="button"
+            aria-label="11, Login provider: show explanation"
+          >
+            <rect
+              class="box pending"
+              x="750"
+              y="56"
+              width="200"
+              height="84"
+              rx="10"
+            />
+            <text class="t-title" x="762" y="80">Login provider</text>
+            <text class="t-sub" x="762" y="98">GitHub or Google OAuth</text>
+            <text class="t-sub" x="762" y="113">proves who the user is</text>
+            <rect
+              class="pill-pending"
+              x="762"
+              y="118"
+              width="56"
+              height="16"
+              rx="8"
+            />
+            <text class="pt-pending" x="790" y="129.5" text-anchor="middle">
+              Phase 8
+            </text>
+            <circle class="badge" cx="934" cy="72" r="9" />
+            <text class="badge-t" x="934" y="76" text-anchor="middle">11</text>
+          </g>
+          <!-- 9 PostgreSQL -->
+          <g
+            class="hit"
+            data-card="c9"
+            tabindex="0"
+            role="button"
+            aria-label="9, PostgreSQL database: show explanation"
+          >
+            <rect
+              class="box pending"
+              x="750"
+              y="176"
+              width="200"
+              height="96"
+              rx="10"
+            />
+            <text class="t-title" x="762" y="200">PostgreSQL</text>
+            <text class="t-sub" x="762" y="218">users, projects, members,</text>
+            <text class="t-sub" x="762" y="233">saved scene documents</text>
+            <rect
+              class="pill-pending"
+              x="762"
+              y="250"
+              width="56"
+              height="16"
+              rx="8"
+            />
+            <text class="pt-pending" x="790" y="261.5" text-anchor="middle">
+              Phase 6
+            </text>
+            <circle class="badge" cx="934" cy="192" r="9" />
+            <text class="badge-t" x="934" y="196" text-anchor="middle">9</text>
+          </g>
+          <!-- 10 Object storage -->
+          <g
+            class="hit"
+            data-card="c10"
+            tabindex="0"
+            role="button"
+            aria-label="10, Object storage: show explanation"
+          >
+            <rect
+              class="box pending"
+              x="750"
+              y="520"
+              width="200"
+              height="92"
+              rx="10"
+            />
+            <text class="t-title" x="762" y="544">Object storage</text>
+            <text class="t-sub" x="762" y="562">Cloudflare R2 (S3 API)</text>
+            <text class="t-sub" x="762" y="577">
+              models, textures, thumbnails
+            </text>
+            <rect
+              class="pill-pending"
+              x="762"
+              y="588"
+              width="56"
+              height="16"
+              rx="8"
+            />
+            <text class="pt-pending" x="790" y="599.5" text-anchor="middle">
+              Phase 8
+            </text>
+            <circle class="badge" cx="934" cy="536" r="9" />
+            <text class="badge-t" x="934" y="540" text-anchor="middle">10</text>
+          </g>
+
+          <!-- Arrows between zones -->
+          <line
+            class="arrow"
+            x1="438"
+            y1="98"
+            x2="342"
+            y2="98"
+            marker-end="url(#ah)"
+          />
+          <text class="arrow-label" x="390" y="90" text-anchor="middle">
+            loads the app
+          </text>
+
+          <line
+            class="arrow plan"
+            x1="342"
+            y1="221"
+            x2="438"
+            y2="221"
+            marker-start="url(#ah)"
+            marker-end="url(#ah)"
+          />
+          <text class="arrow-label" x="390" y="213" text-anchor="middle">
+            save, log in
+          </text>
+
+          <line
+            class="arrow plan"
+            x1="342"
+            y1="405"
+            x2="438"
+            y2="405"
+            marker-start="url(#ah)"
+            marker-end="url(#ah)"
+          />
+          <text class="arrow-label" x="390" y="397" text-anchor="middle">
+            WebSocket
+          </text>
+
+          <line
+            class="arrow plan"
+            x1="682"
+            y1="221"
+            x2="748"
+            y2="221"
+            marker-end="url(#ah)"
+          />
+          <text class="arrow-label" x="715" y="213" text-anchor="middle">
+            SQL
+          </text>
+
+          <path
+            class="arrow plan"
+            d="M682,192 H715 V98 H748"
+            marker-end="url(#ah)"
+          />
+          <text class="arrow-label" x="732" y="90" text-anchor="middle">
+            OAuth
+          </text>
+
+          <path
+            class="arrow plan"
+            d="M682,380 H850 V274"
+            marker-end="url(#ah)"
+          />
+          <text class="arrow-label" x="766" y="372" text-anchor="middle">
+            saves scenes
+          </text>
+
+          <path class="arrow plan" d="M342,570 H748" marker-end="url(#ah)" />
+          <text class="arrow-label" x="545" y="562" text-anchor="middle">
+            files, through a signed link
+          </text>
+
+          <!-- Legend -->
+          <rect class="box ok" x="440" y="500" width="28" height="16" rx="4" />
+          <text class="t-sub" x="478" y="512">
+            built and working (solid line)
+          </text>
+          <rect
+            class="box pending"
+            x="440"
+            y="522"
+            width="28"
+            height="16"
+            rx="4"
+          />
+          <text class="t-sub" x="478" y="534">planned (dashed line)</text>
+        </svg>
+      </div>
+      <figcaption>
+        Today only the viewport (1), the shared package (4) and the static files
+        on Vercel (6) exist. Everything dashed is the plan for Phases 2 to 8.
+        The arrow labels say what travels along each connection.
+      </figcaption>
+    </figure>
+
+    <div class="cards">
+      <article class="card" id="c1">
+        <div class="card-head">
+          <span class="num">1</span>
+          <h3>Viewport</h3>
+          <span class="tag ok">built</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            The 3D window. <strong>three.js</strong> draws 3D graphics in the
+            browser using WebGL, and <strong>React Three Fiber</strong> lets us
+            describe the scene as React components. Today it shows a cube on a
+            grid with an orbit camera.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>The Scene or Game view window.</dd>
+          <dt>Why it is its own part</dt>
+          <dd>
+            It is the only part that needs the graphics card, so it is loaded in
+            the browser only. Later it will draw whatever is in the scene state
+            (2) instead of a fixed cube.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c2">
+        <div class="card-head">
+          <span class="num">2</span>
+          <h3>Scene state</h3>
+          <span class="tag pending">Phase 2 and 7</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            The data that describes the scene: a list of objects, each with a
+            position, rotation, scale and material, plus what is selected.
+            <strong>Zustand</strong> is a small library that holds this kind of
+            shared data. In Phase 7 it becomes a <strong>Yjs document</strong>,
+            which many people can edit at once.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            The scene file's contents held in memory, which is what the
+            Hierarchy lists.
+          </dd>
+          <dt>Why it is its own part</dt>
+          <dd>
+            One <strong>single source of truth</strong>: the viewport and the
+            panels both read from it, and every change goes through it. That is
+            what lets undo and live sharing work.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c3">
+        <div class="card-head">
+          <span class="num">3</span>
+          <h3>Editor panels</h3>
+          <span class="tag pending">Phase 3</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            The interface around the 3D view: a Hierarchy tree of objects, an
+            Inspector for editing one object's values, a toolbar, and undo/redo
+            with keyboard shortcuts.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>The Hierarchy and Inspector windows.</dd>
+          <dt>Why it is its own part</dt>
+          <dd>
+            Panels only show the scene state and ask it to change. They contain
+            no scene rules themselves, so the rules stay testable.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c4">
+        <div class="card-head">
+          <span class="num">4</span>
+          <h3>Shared types</h3>
+          <span class="tag ok">package ready</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            The package <code>@sceneroom/shared</code>. It will hold the
+            definition of what a scene looks like, as TypeScript types plus
+            <strong>Zod</strong> checks that reject bad data. Right now it holds
+            only a name constant and one example type.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            A shared assembly with the data classes that both the editor and the
+            runtime use.
+          </dd>
+          <dt>Why it is its own part</dt>
+          <dd>
+            The web app and the collab server both import the same definition,
+            so they cannot disagree about the shape of a scene.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c5">
+        <div class="card-head">
+          <span class="num">5</span>
+          <h3>Local save and files</h3>
+          <span class="tag pending">Phase 5</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            Saving the scene as a JSON file, autosaving inside the browser
+            (using IndexedDB, the browser's built-in database), and importing or
+            exporting <strong>GLB</strong> files, the standard 3D model format
+            for the web.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            Saving the scene and importing models, like dragging an FBX into the
+            project.
+          </dd>
+          <dt>Why it is its own part</dt>
+          <dd>
+            It works without any server, so you can use the editor on your own
+            before collaboration exists.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c6">
+        <div class="card-head">
+          <span class="num">6</span>
+          <h3>Static app on Vercel</h3>
+          <span class="tag ok">built</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            The files our build produces (HTML, JavaScript, CSS), kept on Vercel
+            and served through a <strong>CDN</strong>, a network of servers
+            around the world that hold copies of them. It is live at
+            sceneroom.vercel.app.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            The place a WebGL build is hosted. It only hands out files, and the
+            game runs on the player's machine.
+          </dd>
+          <dt>How it updates</dt>
+          <dd>
+            Every push to <code>main</code> makes Vercel rebuild and republish.
+            If a build fails, the previous version stays live.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c7">
+        <div class="card-head">
+          <span class="num">7</span>
+          <h3>API routes</h3>
+          <span class="tag pending">Phase 6 and 8</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            Small pieces of server code inside the Next.js app that answer
+            requests like "create a project", "list my projects" or "make an
+            upload link". Vercel runs them only when called, which is called
+            <strong>serverless</strong>.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            A small backend endpoint your game calls for things like cloud
+            saves.
+          </dd>
+          <dt>Why it is its own part</dt>
+          <dd>
+            The server decides who may do what. The browser can be tampered
+            with, so it is never trusted to enforce permissions.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c8">
+        <div class="card-head">
+          <span class="num">8</span>
+          <h3>Collab server</h3>
+          <span class="tag pending">Phase 7</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            A Node.js program running in a Docker container. It uses
+            <strong>Hocuspocus</strong>, a server built for Yjs documents. It
+            keeps a <strong>WebSocket</strong> connection open to everyone
+            editing a scene, passes each person's changes to the others, and
+            saves the scene.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>A relay server for multiplayer, like Photon or Netcode.</dd>
+          <dt>Why it is separate</dt>
+          <dd>
+            It needs long-lived connections, which suit an always-on server
+            better than short-lived functions. I have not yet checked that
+            against Vercel's docs. The host is undecided: Render, Koyeb or an
+            Oracle VM, and the free-tier details must be re-checked first.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c9">
+        <div class="card-head">
+          <span class="num">9</span>
+          <h3>PostgreSQL</h3>
+          <span class="tag pending">Phase 6</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            A database that stores users, projects, who belongs to which
+            project, and the saved scene documents. We plan the hosted free tier
+            from Neon and a library called Prisma to talk to it.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>The cloud save database behind a game.</dd>
+          <dt>Why it is its own part</dt>
+          <dd>
+            It outlives any browser tab or server restart. Both the API routes
+            (7) and the collab server (8) use it, through one shared package.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c10">
+        <div class="card-head">
+          <span class="num">10</span>
+          <h3>Object storage</h3>
+          <span class="tag pending">Phase 8</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            File storage for big files: models, textures and thumbnails. We plan
+            Cloudflare R2, which speaks the same language as Amazon's S3. The
+            browser uploads straight to it using a <strong>signed link</strong>:
+            a temporary address that our API creates after checking permissions.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>The server that hosts your downloadable asset bundles.</dd>
+          <dt>Why it is its own part</dt>
+          <dd>
+            Large files never pass through our own servers, which keeps them
+            small and cheap.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c11">
+        <div class="card-head">
+          <span class="num">11</span>
+          <h3>Login provider</h3>
+          <span class="tag pending">Phase 8</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            GitHub or Google, through a standard called <strong>OAuth</strong>.
+            The user signs in on their site, and our app only receives proof of
+            who they are, never a password. Which library handles this on our
+            side is still to be decided.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>"Sign in with Steam" or "Sign in with Google Play".</dd>
+          <dt>Why it is its own part</dt>
+          <dd>
+            Storing passwords safely is hard, so we leave it to providers who do
+            it for a living.
+          </dd>
+        </dl>
+      </article>
+    </div>
+  </section>
+
+  <!-- ===================== Figure B: one edit between two people ===================== -->
+  <section aria-label="One edit between two people">
+    <h2>One edit, travelling between two people</h2>
+    <p class="hint">
+      This is the Phase 7 flow, so every box is dashed. Alice and Bob have the
+      same scene open, and Alice moves the cube.
+    </p>
+    <figure>
+      <div class="fig-scroll">
+        <svg
+          class="diagram"
+          viewBox="0 0 980 400"
+          role="group"
+          aria-label="Alice drags the cube (1). Her copy of the scene changes at once (2). A small update goes over a WebSocket to the collab server (3), which also saves the scene (4) and relays the update to Bob. Bob's copy merges it (5) and his viewport redraws (6)."
+        >
+          <defs>
+            <marker
+              id="ah2"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto-start-reverse"
+            >
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+            </marker>
+          </defs>
+
+          <rect class="lane" x="10" y="10" width="290" height="380" rx="14" />
+          <text class="lane-label" x="28" y="34">ALICE'S BROWSER</text>
+          <rect class="lane" x="345" y="10" width="290" height="380" rx="14" />
+          <text class="lane-label" x="363" y="34">COLLAB SERVER</text>
+          <rect class="lane" x="680" y="10" width="290" height="380" rx="14" />
+          <text class="lane-label" x="698" y="34">BOB'S BROWSER</text>
+
+          <!-- 1 -->
+          <rect
+            class="box pending"
+            x="30"
+            y="60"
+            width="250"
+            height="76"
+            rx="10"
+          />
+          <text class="t-title" x="42" y="84">Alice drags the cube</text>
+          <text class="t-sub" x="42" y="102">
+            the move gizmo shifts it in her viewport
+          </text>
+          <text class="t-sub" x="42" y="117">
+            the change is written as a small command
+          </text>
+          <circle class="badge" cx="264" cy="76" r="9" />
+          <text class="badge-t" x="264" y="80" text-anchor="middle">1</text>
+          <!-- 2 -->
+          <rect
+            class="box pending"
+            x="30"
+            y="176"
+            width="250"
+            height="76"
+            rx="10"
+          />
+          <text class="t-title" x="42" y="200">Her copy changes at once</text>
+          <text class="t-sub" x="42" y="218">
+            the Yjs document updates on her machine
+          </text>
+          <text class="t-sub" x="42" y="233">
+            the viewport redraws without waiting
+          </text>
+          <circle class="badge" cx="264" cy="192" r="9" />
+          <text class="badge-t" x="264" y="196" text-anchor="middle">2</text>
+          <!-- 3 -->
+          <rect
+            class="box pending"
+            x="365"
+            y="176"
+            width="250"
+            height="76"
+            rx="10"
+          />
+          <text class="t-title" x="377" y="200">
+            Server receives the update
+          </text>
+          <text class="t-sub" x="377" y="218">
+            a few bytes, not the whole scene
+          </text>
+          <text class="t-sub" x="377" y="233">
+            checks that Alice may edit this scene
+          </text>
+          <circle class="badge" cx="599" cy="192" r="9" />
+          <text class="badge-t" x="599" y="196" text-anchor="middle">3</text>
+          <!-- 4 -->
+          <rect
+            class="box pending"
+            x="365"
+            y="292"
+            width="250"
+            height="76"
+            rx="10"
+          />
+          <text class="t-title" x="377" y="316">Scene is saved</text>
+          <text class="t-sub" x="377" y="334">written to PostgreSQL</text>
+          <text class="t-sub" x="377" y="349">
+            in batches, not on every tiny move
+          </text>
+          <circle class="badge" cx="599" cy="308" r="9" />
+          <text class="badge-t" x="599" y="312" text-anchor="middle">4</text>
+          <!-- 5 -->
+          <rect
+            class="box pending"
+            x="700"
+            y="176"
+            width="250"
+            height="76"
+            rx="10"
+          />
+          <text class="t-title" x="712" y="200">Bob's copy merges it</text>
+          <text class="t-sub" x="712" y="218">
+            Yjs combines the update with his data
+          </text>
+          <text class="t-sub" x="712" y="233">
+            nobody's other edits are overwritten
+          </text>
+          <circle class="badge" cx="934" cy="192" r="9" />
+          <text class="badge-t" x="934" y="196" text-anchor="middle">5</text>
+          <!-- 6 -->
+          <rect
+            class="box pending"
+            x="700"
+            y="292"
+            width="250"
+            height="76"
+            rx="10"
+          />
+          <text class="t-title" x="712" y="316">Bob's viewport redraws</text>
+          <text class="t-sub" x="712" y="334">
+            the cube moves on his screen
+          </text>
+          <text class="t-sub" x="712" y="349">no page refresh needed</text>
+          <circle class="badge" cx="934" cy="308" r="9" />
+          <text class="badge-t" x="934" y="312" text-anchor="middle">6</text>
+
+          <line
+            class="arrow plan"
+            x1="155"
+            y1="138"
+            x2="155"
+            y2="174"
+            marker-end="url(#ah2)"
+          />
+          <text class="arrow-label" x="165" y="160">applied locally</text>
+          <line
+            class="arrow plan"
+            x1="282"
+            y1="214"
+            x2="363"
+            y2="214"
+            marker-end="url(#ah2)"
+          />
+          <text class="arrow-label" x="322" y="206" text-anchor="middle">
+            update
+          </text>
+          <line
+            class="arrow plan"
+            x1="490"
+            y1="254"
+            x2="490"
+            y2="290"
+            marker-end="url(#ah2)"
+          />
+          <text class="arrow-label" x="500" y="276">saves</text>
+          <line
+            class="arrow plan"
+            x1="617"
+            y1="214"
+            x2="698"
+            y2="214"
+            marker-end="url(#ah2)"
+          />
+          <text class="arrow-label" x="657" y="206" text-anchor="middle">
+            relays
+          </text>
+          <line
+            class="arrow plan"
+            x1="825"
+            y1="254"
+            x2="825"
+            y2="290"
+            marker-end="url(#ah2)"
+          />
+          <text class="arrow-label" x="835" y="276">redraws</text>
+        </svg>
+      </div>
+      <figcaption>
+        Alice sees her own move instantly (step 2) because her copy changes
+        first. The server then passes a tiny update to everyone else.
+      </figcaption>
+    </figure>
+    <div class="panel">
+      <h3>What if Alice and Bob edit at the same moment?</h3>
+      <p>
+        Yjs is built so that all copies end up identical without anyone waiting
+        for a turn. Edits to different things, such as Alice moving the cube
+        while Bob recolours the floor, both survive. If two people change the
+        very same value at the very same moment, one of the two values wins and
+        every screen shows the same winner. That is the rule Yjs documents for
+        shared maps, and we will check it against the docs and test it in Phase
+        7.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===================== Figure C: code layout ===================== -->
+  <section aria-label="Code layout">
+    <h2>How the code is organised</h2>
+    <figure>
+      <div class="fig-scroll">
+        <svg
+          class="diagram"
+          viewBox="0 0 980 340"
+          role="group"
+          aria-label="Code layout. The apps folder holds apps/web (built) and apps/collab-server (planned). The packages folder holds packages/shared (built) and packages/db (planned). apps/web uses packages/shared today. Later apps/web and apps/collab-server will both use packages/db and packages/shared."
+        >
+          <defs>
+            <marker
+              id="ah3"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto-start-reverse"
+            >
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+            </marker>
+          </defs>
+
+          <rect class="lane" x="10" y="10" width="710" height="320" rx="14" />
+          <text class="lane-label" x="28" y="34">APPS: THINGS THAT RUN</text>
+          <text class="lane-label" x="28" y="196">
+            PACKAGES: CODE THAT OTHERS IMPORT
+          </text>
+
+          <rect class="box ok" x="30" y="46" width="320" height="118" rx="10" />
+          <text class="t-title" x="42" y="70">apps/web</text>
+          <text class="t-sub" x="42" y="88">
+            the Next.js app, live on Vercel
+          </text>
+          <text class="t-sub" x="42" y="103">
+            src/app: page and layout (server side)
+          </text>
+          <text class="t-sub" x="42" y="118">
+            src/components/viewport (browser only)
+          </text>
+          <rect class="pill-ok" x="42" y="132" width="44" height="16" rx="8" />
+          <text class="pt-ok" x="64" y="143.5" text-anchor="middle">built</text>
+
+          <rect
+            class="box pending"
+            x="400"
+            y="46"
+            width="300"
+            height="118"
+            rx="10"
+          />
+          <text class="t-title" x="412" y="70">apps/collab-server</text>
+          <text class="t-sub" x="412" y="88">Node + Hocuspocus</text>
+          <text class="t-sub" x="412" y="103">has its own Dockerfile</text>
+          <rect
+            class="pill-pending"
+            x="412"
+            y="132"
+            width="56"
+            height="16"
+            rx="8"
+          />
+          <text class="pt-pending" x="440" y="143.5" text-anchor="middle">
+            Phase 7
+          </text>
+
+          <rect class="box ok" x="30" y="212" width="320" height="96" rx="10" />
+          <text class="t-title" x="42" y="236">packages/shared</text>
+          <text class="t-sub" x="42" y="254">
+            types and constants used by both sides
+          </text>
+          <text class="t-sub" x="42" y="269">
+            scene schema and Zod checks arrive in Phase 2
+          </text>
+          <rect class="pill-ok" x="42" y="282" width="44" height="16" rx="8" />
+          <text class="pt-ok" x="64" y="293.5" text-anchor="middle">built</text>
+
+          <rect
+            class="box pending"
+            x="400"
+            y="212"
+            width="300"
+            height="96"
+            rx="10"
+          />
+          <text class="t-title" x="412" y="236">packages/db</text>
+          <text class="t-sub" x="412" y="254">Prisma schema and client</text>
+          <text class="t-sub" x="412" y="269">
+            shared by web and collab server
+          </text>
+          <rect
+            class="pill-pending"
+            x="412"
+            y="282"
+            width="56"
+            height="16"
+            rx="8"
+          />
+          <text class="pt-pending" x="440" y="293.5" text-anchor="middle">
+            Phase 6
+          </text>
+
+          <rect
+            class="box ok"
+            x="750"
+            y="46"
+            width="220"
+            height="262"
+            rx="10"
+          />
+          <text class="t-title" x="762" y="70">Repo root</text>
+          <text class="t-sub" x="762" y="92">package.json (scripts)</text>
+          <text class="t-sub" x="762" y="110">pnpm-workspace.yaml</text>
+          <text class="t-sub" x="762" y="128">turbo.json</text>
+          <text class="t-sub" x="762" y="146">.github/workflows/ci.yml</text>
+          <text class="t-sub" x="762" y="164">.prettierrc.json</text>
+          <text class="t-sub" x="762" y="182">CLAUDE.md</text>
+          <text class="t-sub" x="762" y="200">
+            docs/ (plan, decisions, diagrams)
+          </text>
+          <text class="t-sub" x="762" y="226">
+            Settings that apply to every
+          </text>
+          <text class="t-sub" x="762" y="241">
+            package: tasks, CI, formatting.
+          </text>
+
+          <line
+            class="arrow"
+            x1="190"
+            y1="166"
+            x2="190"
+            y2="210"
+            marker-end="url(#ah3)"
+          />
+          <text class="arrow-label" x="200" y="192">uses</text>
+          <line
+            class="arrow plan"
+            x1="550"
+            y1="166"
+            x2="550"
+            y2="210"
+            marker-end="url(#ah3)"
+          />
+          <text class="arrow-label" x="560" y="192">uses</text>
+          <line
+            class="arrow plan"
+            x1="330"
+            y1="166"
+            x2="420"
+            y2="210"
+            marker-end="url(#ah3)"
+          />
+          <line
+            class="arrow plan"
+            x1="420"
+            y1="166"
+            x2="330"
+            y2="210"
+            marker-end="url(#ah3)"
+          />
+        </svg>
+      </div>
+      <figcaption>
+        Arrows point from the code that uses something to the code it uses. The
+        solid arrow exists today: <code>apps/web</code> depends on
+        <code>packages/shared</code>. The dashed ones are planned. A rule we
+        keep: nothing in <code>packages/</code> imports from <code>apps/</code>.
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ===================== Principles ===================== -->
+  <section aria-label="Design principles">
+    <h2>Why it is split this way</h2>
+    <div class="panel">
+      <ul>
+        <li>
+          <strong
+            >The browser does the drawing and gives instant feedback.</strong
+          >
+          Edits apply on your own machine first, so dragging never waits for a
+          network round trip.
+        </li>
+        <li>
+          <strong>One source of truth for the scene.</strong> The viewport, the
+          panels and the sharing all read from the same scene data, so they
+          cannot drift apart.
+        </li>
+        <li>
+          <strong>The server never trusts the browser.</strong> Permissions are
+          checked on the server, because anything in the browser can be changed
+          by a visitor.
+        </li>
+        <li>
+          <strong>Shared code lives in one place.</strong> The scene definition
+          is written once in <code>packages/shared</code> and imported by both
+          the web app and the server.
+        </li>
+        <li>
+          <strong>Big files skip our servers.</strong> Uploads go straight to
+          object storage through a signed link.
+        </li>
+        <li>
+          <strong>Scene rules stay separate from the screen.</strong> Rules live
+          in plain TypeScript functions, and React components only show the
+          result. That keeps them easy to test and to reuse in the collab flow.
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===================== Glossary ===================== -->
+  <section aria-label="Glossary">
+    <h2>Words on this page</h2>
+    <div class="panel">
+      <dl class="gloss">
+        <div>
+          <dt>WebGL</dt>
+          <dd>
+            The browser feature that lets a page use the graphics card to draw
+            3D.
+          </dd>
+        </div>
+        <div>
+          <dt>three.js</dt>
+          <dd>
+            A JavaScript library for 3D graphics in the browser, built on WebGL.
+          </dd>
+        </div>
+        <div>
+          <dt>React Three Fiber</dt>
+          <dd>Lets you write a three.js scene as React components.</dd>
+        </div>
+        <div>
+          <dt>Zustand</dt>
+          <dd>
+            A small library for holding shared data (state) that several
+            components read.
+          </dd>
+        </div>
+        <div>
+          <dt>Zod</dt>
+          <dd>
+            A library that describes what valid data looks like and rejects
+            anything else.
+          </dd>
+        </div>
+        <div>
+          <dt>Yjs</dt>
+          <dd>
+            A library for data that many people edit at once. It merges
+            everyone's changes into the same result.
+          </dd>
+        </div>
+        <div>
+          <dt>CRDT</dt>
+          <dd>
+            The technique Yjs uses: data structures designed so that all copies
+            converge to the same state.
+          </dd>
+        </div>
+        <div>
+          <dt>Hocuspocus</dt>
+          <dd>A ready-made server for Yjs documents.</dd>
+        </div>
+        <div>
+          <dt>WebSocket</dt>
+          <dd>
+            A connection that stays open so the server and the browser can send
+            each other messages at any time.
+          </dd>
+        </div>
+        <div>
+          <dt>CDN</dt>
+          <dd>
+            A network of servers around the world holding copies of your files,
+            so visitors get them from a nearby one.
+          </dd>
+        </div>
+        <div>
+          <dt>Serverless function</dt>
+          <dd>
+            A small piece of server code that runs only when it is called, with
+            no server for you to manage.
+          </dd>
+        </div>
+        <div>
+          <dt>API route</dt>
+          <dd>
+            A web address in our app that runs code and returns data, such as
+            "list my projects".
+          </dd>
+        </div>
+        <div>
+          <dt>Docker</dt>
+          <dd>
+            Packages a program with everything it needs into a container that
+            runs the same on any machine.
+          </dd>
+        </div>
+        <div>
+          <dt>PostgreSQL</dt>
+          <dd>
+            A database that stores structured records, such as users and
+            projects.
+          </dd>
+        </div>
+        <div>
+          <dt>Prisma</dt>
+          <dd>A library for talking to a database from TypeScript (an ORM).</dd>
+        </div>
+        <div>
+          <dt>ORM</dt>
+          <dd>
+            Object-relational mapper: code that turns database rows into objects
+            you can use in your program.
+          </dd>
+        </div>
+        <div>
+          <dt>Object storage / S3</dt>
+          <dd>
+            A service for storing files. S3 is Amazon's version, and many others
+            copy its interface.
+          </dd>
+        </div>
+        <div>
+          <dt>Signed link</dt>
+          <dd>
+            A temporary web address that lets one specific upload or download
+            happen without a login.
+          </dd>
+        </div>
+        <div>
+          <dt>OAuth</dt>
+          <dd>
+            The standard behind "Sign in with Google or GitHub". Our app learns
+            who you are without seeing a password.
+          </dd>
+        </div>
+        <div>
+          <dt>GLB</dt>
+          <dd>A single-file 3D model format widely used on the web.</dd>
+        </div>
+        <div>
+          <dt>IndexedDB</dt>
+          <dd>A database built into every browser, used here for autosave.</dd>
+        </div>
+        <div>
+          <dt>Monorepo</dt>
+          <dd>
+            One repository that holds several related projects, such as the web
+            app and the server.
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ===================== Status ===================== -->
+  <section class="status" aria-label="Status on 13 Nov 2026">
+    <div>
+      <h3><span class="dot ok"></span>Built on 13 Nov 2026</h3>
+      <ul>
+        <li>Viewport with orbit camera, grid, light and cube (1)</li>
+        <li>
+          The <code>packages/shared</code> package, still nearly empty (4)
+        </li>
+        <li>Static app live on Vercel (6)</li>
+        <li>CI, formatting and the monorepo setup</li>
+      </ul>
+    </div>
+    <div>
+      <h3>
+        <span class="dot pending"></span>Planned, with decisions still open
+      </h3>
+      <ul>
+        <li>
+          Collab server host: Render, Koyeb or an Oracle VM, free-tier details
+          to re-check
+        </li>
+        <li>Login library: to be chosen after reading the current docs</li>
+        <li>
+          Whether the collab server really cannot run on Vercel: to verify in
+          the docs
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <p class="foot">
+    Source file: docs/diagrams/architecture.html in the repository.
+  </p>
+</main>
+
+<script>
+  (function () {
+    var reduce =
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    function show(id) {
+      var card = document.getElementById(id);
+      if (!card) return;
+      var old = document.querySelectorAll(".card.active");
+      for (var i = 0; i < old.length; i++) old[i].classList.remove("active");
+      card.classList.add("active");
+      card.scrollIntoView({
+        behavior: reduce ? "auto" : "smooth",
+        block: "center",
+      });
+    }
+    var hits = document.querySelectorAll("[data-card]");
+    for (var i = 0; i < hits.length; i++) {
+      (function (el) {
+        el.addEventListener("click", function (e) {
+          e.stopPropagation();
+          show(el.getAttribute("data-card"));
+        });
+        el.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+            show(el.getAttribute("data-card"));
+          }
+        });
+      })(hits[i]);
+    }
+  })();
+</script>

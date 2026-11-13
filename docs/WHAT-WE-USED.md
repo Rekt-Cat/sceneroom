@@ -54,7 +54,7 @@ Status column: **verified** = checked against official docs or by running it. Ve
 - Claude Code **hook** (`PostToolUse`, matcher `Write|Edit`) runs Prettier on files Claude edits inside this project; uses `jq` to read the file path. Lives in `.claude/settings.json`. Needs `/hooks` opened once after the file is first created.
 - Claude Code **skill** `/update-what-we-used` (`.claude/skills/update-what-we-used/SKILL.md`) updates this file when something new is added. Needs `/reload-skills` once after the folder is first created.
 - The 3D viewport is **browser-only**: `Viewport.tsx` is a Client Component (`"use client"`), loaded by `ViewportLoader.tsx` with `next/dynamic` and `ssr: false`. Next.js only allows `ssr: false` inside a Client Component, so `page.tsx` stays a Server Component.
-- Diagrams live in `docs/diagrams/` as self-contained HTML with inline SVG (open in any browser). First one: `dev-workflow.html`.
+- Diagrams live in `docs/diagrams/` as self-contained HTML with inline SVG (open in any browser). `dev-workflow.html` (how an edit reaches GitHub) and `architecture.html` (the system, one edit between two users, code layout).
 - `create-next-app` generated `AGENTS.md` (notes for coding agents; points to the docs bundled in `node_modules/next/dist/docs/`).
 
 ## Not used yet (planned): see docs/PLAN or the plan file
