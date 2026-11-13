@@ -1,7 +1,7 @@
 # Importing assets and models: plan
 
 How people bring in things made elsewhere, such as a premade car, a tree pack or a texture, and how SceneRoom keeps them.
-This is a **plan**, not built code. Nothing here is verified yet (see "Still to research"). Decisions go in `DECISIONS.md` too.
+**Status (13 Nov 2026):** step 1 of "Suggested order" is built on branch `feature/model-import` (import a GLB by button or drag-and-drop; a "model" object; size and triangle limits; clear errors; outside files blocked). It has tests but is **not yet tried in a browser**. Update: files are now kept in the browser's IndexedDB and the scene is autosaved (branch `feature/autosave`), so both survive a reload. Differences from the plan below: the hash is SHA-256, there is **no Assets panel yet** (step 2), and unused files are never deleted from storage yet. Everything else here is still a plan. Decisions go in `DECISIONS.md` too.
 
 ## What the user should be able to do
 

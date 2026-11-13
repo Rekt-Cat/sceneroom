@@ -16,6 +16,12 @@ const FALLBACK_WINDOW_WIDTH = 1440;
 type LayoutState = {
   leftWidth: number;
   rightWidth: number;
+  /**
+   * Whether the three Scale values are linked: changing one changes the other two by the same
+   * factor, so the shape keeps its proportions. A switch in the Transform section; not saved.
+   */
+  scaleLinked: boolean;
+  toggleScaleLinked: () => void;
   /** Parents whose children are folded away in the scene list. Not saved: it starts empty. */
   collapsedIds: ReadonlySet<string>;
   toggleCollapsed: (id: string) => void;
@@ -54,6 +60,9 @@ export const useLayoutStore = create<LayoutState>()((set, get) => {
   return {
     leftWidth: LEFT_PANEL_LIMITS.default,
     rightWidth: RIGHT_PANEL_LIMITS.default,
+    scaleLinked: true,
+    toggleScaleLinked: () =>
+      set((state) => ({ scaleLinked: !state.scaleLinked })),
     collapsedIds: new Set<string>(),
     toggleCollapsed: (id) =>
       set((state) => {

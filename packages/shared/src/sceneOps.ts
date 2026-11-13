@@ -3,6 +3,7 @@ import {
   DEFAULT_METALNESS,
   DEFAULT_ROUGHNESS,
   NODE_NAME_MAX_LENGTH,
+  type AssetInfo,
   type PrimitiveKind,
   type Scene,
   type SceneNode,
@@ -36,7 +37,42 @@ export function createNode(id: string, kind: PrimitiveKind): SceneNode {
     color: DEFAULT_COLOR,
     roughness: DEFAULT_ROUGHNESS,
     metalness: DEFAULT_METALNESS,
+    assetId: null,
   };
+}
+
+/**
+ * An object for an imported model. It is scaled by `scale` (see fitScale) and stands at the middle of
+ * the scene. Colour, roughness and metalness are unused: the model brings its own materials.
+ */
+export function createModelNode(
+  id: string,
+  name: string,
+  assetId: string,
+  scale: number,
+): SceneNode {
+  return {
+    ...createNode(id, "cube"),
+    name,
+    kind: "model",
+    assetId,
+    transform: {
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+      scale: [scale, scale, scale],
+    },
+  };
+}
+
+/** True for objects that show an imported file (and so have an `assetId`). */
+export function isModelNode(node: SceneNode): boolean {
+  return node.kind === "model";
+}
+
+/** Remembers an imported file in the scene. Importing the same file again (same id) changes nothing. */
+export function addAsset(scene: Scene, info: AssetInfo): Scene {
+  if (scene.assets[info.id]) return scene;
+  return { ...scene, assets: { ...scene.assets, [info.id]: info } };
 }
 
 export function addNode(scene: Scene, node: SceneNode): Scene {

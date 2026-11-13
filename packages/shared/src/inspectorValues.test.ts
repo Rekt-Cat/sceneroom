@@ -5,6 +5,7 @@ import {
   MAX_ABS_VALUE,
   degreesToRadians,
   displayValue,
+  editScaleProportionally,
   editTransform,
   formatNumber,
   parseNumberInput,
@@ -198,5 +199,58 @@ describe("resetTransformGroup", () => {
     expect(edited.position).toEqual([3, 4, 5]);
     result.position[0] = 99;
     expect(IDENTITY_TRANSFORM.position).toEqual([0, 0, 0]);
+  });
+});
+
+describe("editScaleProportionally (linked scale)", () => {
+  const box = {
+    position: [1, 2, 3] as [number, number, number],
+    rotation: [0, 0, 0] as [number, number, number],
+    scale: [1, 2, 4] as [number, number, number],
+  };
+
+  it("changes the other two by the same factor, keeping the proportions", () => {
+    const next = editScaleProportionally(box, 0, "2");
+    expect(next?.scale).toEqual([2, 4, 8]);
+    const fromY = editScaleProportionally(box, 1, "1");
+    expect(fromY?.scale).toEqual([0.5, 1, 2]);
+  });
+
+  it("gives the edited value exactly what was typed", () => {
+    const next = editScaleProportionally(
+      { ...box, scale: [3, 3, 3] },
+      2,
+      "1.1",
+    );
+    expect(next?.scale[2]).toBe(1.1);
+    expect(next?.scale[0]).toBeCloseTo(1.1);
+  });
+
+  it("leaves position and rotation alone, and does not change the transform it was given", () => {
+    const next = editScaleProportionally(box, 0, "3");
+    expect(next?.position).toEqual([1, 2, 3]);
+    expect(next?.rotation).toEqual([0, 0, 0]);
+    expect(box.scale).toEqual([1, 2, 4]);
+  });
+
+  it("keeps a mirrored (negative) scale mirrored", () => {
+    const mirrored = { ...box, scale: [-1, 2, 2] as [number, number, number] };
+    expect(editScaleProportionally(mirrored, 1, "4")?.scale).toEqual([
+      -2, 4, 4,
+    ]);
+    // typing a negative number flips the others too, so the shape keeps its look
+    expect(editScaleProportionally(box, 0, "-1")?.scale).toEqual([-1, -2, -4]);
+  });
+
+  it("refuses text that is not a number, a scale of 0, and results that are too large", () => {
+    expect(editScaleProportionally(box, 0, "abc")).toBeNull();
+    expect(editScaleProportionally(box, 0, "0")).toBeNull();
+    // 4 * 100000 / 1 would be 400000 for Z, over the limit
+    expect(editScaleProportionally(box, 0, String(MAX_ABS_VALUE))).toBeNull();
+  });
+
+  it("with a zero scale on the edited axis, edits only that axis", () => {
+    const flat = { ...box, scale: [0, 2, 2] as [number, number, number] };
+    expect(editScaleProportionally(flat, 0, "3")?.scale).toEqual([3, 2, 2]);
   });
 });

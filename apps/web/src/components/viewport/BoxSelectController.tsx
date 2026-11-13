@@ -2,18 +2,16 @@
 
 import { useEffect } from "react";
 import { useThree } from "@react-three/fiber";
-import { Mesh, Vector3 } from "three";
 import {
-  boundsOfPoints,
   isEffectivelyLocked,
   isEffectivelyVisible,
   rectFromPoints,
   rectsOverlap,
-  type Rect,
 } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
 import { useBoxSelectStore } from "./boxSelectStore";
 import { getMesh } from "./meshRegistry";
+import { screenBoundsOf } from "./screenBounds";
 
 /** A drag shorter than this (in pixels) is a click, not a box. */
 const MIN_BOX_SIZE_PX = 4;
@@ -37,36 +35,6 @@ export default function BoxSelectController() {
 
   useEffect(() => {
     let start: { x: number; y: number } | null = null;
-
-    /** Where an object's bounding box lands on the screen, as a rectangle (null if behind the camera). */
-    function screenBoundsOf(id: string): Rect | null {
-      const object = getMesh(id);
-      if (!object) return null;
-      // Only this mesh's own shape: setFromObject would also include the objects inside it
-      if (!(object instanceof Mesh)) return null;
-      object.updateWorldMatrix(true, false);
-      object.geometry.computeBoundingBox();
-      if (!object.geometry.boundingBox) return null;
-      const box = object.geometry.boundingBox
-        .clone()
-        .applyMatrix4(object.matrixWorld);
-      if (box.isEmpty()) return null;
-      const bounds = canvas.getBoundingClientRect();
-      const corners: { x: number; y: number }[] = [];
-      for (const x of [box.min.x, box.max.x]) {
-        for (const y of [box.min.y, box.max.y]) {
-          for (const z of [box.min.z, box.max.z]) {
-            const point = new Vector3(x, y, z).project(camera);
-            if (point.z > 1) continue; // behind the camera
-            corners.push({
-              x: bounds.left + (point.x * 0.5 + 0.5) * bounds.width,
-              y: bounds.top + (-point.y * 0.5 + 0.5) * bounds.height,
-            });
-          }
-        }
-      }
-      return boundsOfPoints(corners);
-    }
 
     function finish() {
       start = null;
@@ -115,7 +83,13 @@ export default function BoxSelectController() {
             !isEffectivelyLocked(scene, node.id),
         )
         .filter((node) => {
-          const bounds = screenBoundsOf(node.id);
+          const object = getMesh(node.id);
+          if (!object) return false;
+          const bounds = screenBoundsOf(
+            object,
+            camera,
+            canvas.getBoundingClientRect(),
+          );
           return bounds !== null && rectsOverlap(bounds, box);
         })
         .map((node) => node.id);

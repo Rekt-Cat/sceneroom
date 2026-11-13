@@ -8,7 +8,9 @@ import {
   buildSceneTree,
   canReparent,
   flattenTree,
+  modelSize,
   displayValue,
+  editScaleProportionally,
   editTransform,
   formatNumber,
   normalizeHexColor,
@@ -127,8 +129,18 @@ export function TransformSection({
   );
   const endEdit = useSceneStore((state) => state.endEdit);
 
+  const scaleLinked = useLayoutStore((state) => state.scaleLinked);
+  const toggleScaleLinked = useLayoutStore((state) => state.toggleScaleLinked);
+
+  /** The transform after typing `text` in one box. With linked scale, the other two scale values follow. */
+  function edited(group: TransformGroup, axis: Axis, text: string) {
+    return group === "scale" && scaleLinked
+      ? editScaleProportionally(node.transform, axis, text)
+      : editTransform(node.transform, group, axis, text);
+  }
+
   function commit(group: TransformGroup, axis: Axis, text: string): boolean {
-    const next = editTransform(node.transform, group, axis, text);
+    const next = edited(group, axis, text);
     if (!next) return false;
     setNodeTransform(node.id, next);
     return true;
@@ -141,7 +153,7 @@ export function TransformSection({
         {ROWS.map(({ group, label, decimals, step, perPixel }) => (
           <div
             key={group}
-            className="grid grid-cols-[68px_1fr] items-center gap-2"
+            className="grid grid-cols-[76px_1fr] items-center gap-2"
           >
             <span className="flex items-center gap-0.5 text-xs text-ed-text-2">
               {label}
@@ -166,6 +178,33 @@ export function TransformSection({
               >
                 <Icon name="reset" className="size-3" />
               </button>
+              {group === "scale" && (
+                <button
+                  type="button"
+                  aria-pressed={scaleLinked}
+                  aria-label={
+                    scaleLinked
+                      ? "Scale linked: changing one value scales all three. Click to unlink."
+                      : "Scale unlinked: each value changes on its own. Click to link."
+                  }
+                  title={
+                    scaleLinked
+                      ? "Linked: X, Y and Z scale together. Click to change one at a time."
+                      : "Unlinked: only the value you change moves. Click to link them."
+                  }
+                  onClick={toggleScaleLinked}
+                  className={`grid size-[18px] place-items-center rounded hover:bg-ed-raised focus-visible:outline-2 focus-visible:outline-ed-accent ${
+                    scaleLinked
+                      ? "text-ed-accent hover:text-ed-text"
+                      : "text-ed-text-3 hover:text-ed-text"
+                  }`}
+                >
+                  <Icon
+                    name={scaleLinked ? "link" : "unlink"}
+                    className="size-3"
+                  />
+                </button>
+              )}
             </span>
             <div className="grid grid-cols-3 gap-1.5">
               {AXES.map(({ axis, index }) => (
@@ -181,8 +220,7 @@ export function TransformSection({
                     perPixel,
                     onStart: () => beginEdit("Transform"),
                     onMove: (value) => {
-                      const next = editTransform(
-                        node.transform,
+                      const next = edited(
                         group,
                         index,
                         formatNumber(value, decimals),
@@ -464,5 +502,48 @@ function MaterialSlider({
         <Icon name="reset" />
       </button>
     </div>
+  );
+}
+
+/** Details of the imported file behind a "model" object. Models bring their own materials, so no colour or material controls. */
+export function ModelSection({ node }: { node: SceneNode }) {
+  const info = useSceneStore((state) =>
+    node.assetId ? state.scene.assets[node.assetId] : undefined,
+  );
+  const [x, y, z] = info ? modelSize(info) : [0, 0, 0];
+
+  return (
+    <section aria-label="Imported model" className="border-t border-ed-line">
+      <h3 className={sectionTitle}>Imported model</h3>
+      {info ? (
+        <dl className="grid grid-cols-[88px_1fr] gap-x-2 gap-y-1.5 px-4 pb-4 text-xs">
+          <dt className="text-ed-text-3">File</dt>
+          <dd className="truncate text-ed-text-2" title={info.name}>
+            {info.name}
+          </dd>
+          <dt className="text-ed-text-3">Size on disk</dt>
+          <dd className="text-ed-text-2">
+            {(info.bytes / (1024 * 1024)).toFixed(2)} MB
+          </dd>
+          <dt className="text-ed-text-3">Triangles</dt>
+          <dd className="text-ed-text-2">
+            {info.triangles.toLocaleString("en-US")}
+          </dd>
+          <dt className="text-ed-text-3">Original size</dt>
+          <dd className="font-mono text-ed-text-2">
+            {x.toFixed(2)} × {y.toFixed(2)} × {z.toFixed(2)}
+          </dd>
+          <dd className="col-span-2 pt-1 text-ed-text-3">
+            It was scaled to fit when imported. It keeps its own colours and
+            materials. Use Scale above to change its size.
+          </dd>
+        </dl>
+      ) : (
+        <p className="px-4 pb-4 text-xs text-ed-danger">
+          The details of the file behind this model are missing, so it cannot be
+          shown.
+        </p>
+      )}
+    </section>
   );
 }

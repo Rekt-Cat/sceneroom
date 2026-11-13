@@ -1,0 +1,7 @@
+/** A fingerprint of some bytes as 64 hex characters (SHA-256). The same bytes always give the same fingerprint. */
+export async function sha256Hex(data: ArrayBuffer): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+}

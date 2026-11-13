@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { type ThreeEvent } from "@react-three/fiber";
 import { Outlines } from "@react-three/drei";
 import { DoubleSide, FrontSide, Mesh, type Object3D } from "three";
 import {
@@ -11,10 +12,12 @@ import {
   type TreeNode,
 } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
+import ModelObject from "./ModelObject";
 import MultiSelectionGizmo from "./MultiSelectionGizmo";
 import SelectionGizmo from "./SelectionGizmo";
 import { shouldIgnoreClick } from "./gizmoGuard";
 import { registerMesh } from "./meshRegistry";
+import { OUTLINE_COLOR, OUTLINE_THICKNESS } from "./selectionStyle";
 
 /** One geometry per primitive kind; all are about 1 unit in size. */
 function Geometry({ kind }: { kind: PrimitiveKind }) {
@@ -37,10 +40,6 @@ function Geometry({ kind }: { kind: PrimitiveKind }) {
  * swallow clicks meant for the objects behind it. Hidden meshes get this "hit nothing" version.
  */
 const hitNothing = () => undefined;
-
-/** Selection outline: thickness is in screen pixels (screenspace is off). */
-const OUTLINE_COLOR = "#ffb020";
-const OUTLINE_THICKNESS = 3;
 
 function NodeMesh({
   node,
@@ -78,6 +77,37 @@ function NodeMesh({
     [nodeId, soleSelected, onSoleSelectedMesh],
   );
 
+  const interactive =
+    node.visible && !ancestorHidden && !node.locked && !ancestorLocked;
+
+  function handleClick(event: ThreeEvent<MouseEvent>) {
+    // Only the nearest object under the pointer gets the click
+    event.stopPropagation();
+    if (shouldIgnoreClick()) return;
+    // Shift + click adds or removes this object; a plain click selects only it
+    if (event.nativeEvent.shiftKey) toggleSelect(node.id);
+    else select(node.id);
+  }
+
+  // An imported model: a group holding the loaded file. A group has no `raycast` of its own that
+  // covers the model inside it, so hidden and locked models simply get no click handler (an object
+  // without a handler is not tested for clicks at all).
+  if (node.kind === "model") {
+    return (
+      <group
+        ref={setMesh}
+        visible={node.visible}
+        position={position}
+        rotation={rotation}
+        scale={scale}
+        onClick={interactive ? handleClick : undefined}
+      >
+        <ModelObject assetId={node.assetId} selected={selected} />
+        {children}
+      </group>
+    );
+  }
+
   return (
     <mesh
       ref={setMesh}
@@ -91,14 +121,7 @@ function NodeMesh({
       position={position}
       rotation={rotation}
       scale={scale}
-      onClick={(event) => {
-        // Only the nearest mesh under the pointer gets the click
-        event.stopPropagation();
-        if (shouldIgnoreClick()) return;
-        // Shift + click adds or removes this object; a plain click selects only it
-        if (event.nativeEvent.shiftKey) toggleSelect(node.id);
-        else select(node.id);
-      }}
+      onClick={handleClick}
     >
       <Geometry kind={node.kind} />
       {/* A plane has no thickness; by default its back face is not drawn, so it vanishes from behind */}

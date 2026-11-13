@@ -1,11 +1,14 @@
 import { create } from "zustand";
 import {
+  addAsset,
   addNode,
   createEmptyScene,
   createHistory,
+  createModelNode,
   createNode,
   duplicateNodes,
   editableIds,
+  fitScale,
   isEffectivelyLocked,
   normalizeHexColor,
   normalizeNodeName,
@@ -20,6 +23,7 @@ import {
   transformsEqual,
   undoStep,
   updateNode,
+  type AssetInfo,
   type History,
   type MaterialChange,
   type PrimitiveKind,
@@ -73,6 +77,11 @@ type SceneState = {
   setNodeTransforms: (updates: Record<string, Transform>) => void;
   /** Adds a new object and selects it. Returns its id. */
   addPrimitive: (kind: PrimitiveKind) => string;
+  /**
+   * Puts an imported model in the scene (and remembers the file's details), scaled to a sensible size,
+   * and selects it. One undo step. Returns the new object's id.
+   */
+  importModel: (info: AssetInfo) => string;
   /** Deletes the selected objects and everything below them. Locked objects are left alone. */
   deleteSelected: () => void;
   /** Copies the selected objects (and everything below them), placed beside the originals, and selects the copies. */
@@ -96,6 +105,8 @@ type SceneState = {
   setNodeColor: (id: string, color: string) => string | null;
   /** Renames a node. Returns the saved name, or null if the name was not allowed. */
   renameNode: (id: string, name: string) => string | null;
+  /** Replaces the whole scene (for example with the one saved in the browser). Clears the selection and the undo history. */
+  loadScene: (scene: Scene) => void;
   /** Starts an edit made of many small updates. Pair with endEdit. */
   beginEdit: (label: string) => void;
   /** Changes a node's transform while an edit is in progress, without recording undo steps. */
@@ -185,6 +196,18 @@ export const useSceneStore = create<SceneState>()((set) => ({
       scene: addNode(state.scene, createNode(id, kind)),
       selectedIds: [id],
       history: record(state, `Add ${kind}`),
+    }));
+    return id;
+  },
+  importModel: (info) => {
+    const id = crypto.randomUUID();
+    set((state) => ({
+      scene: addNode(
+        addAsset(state.scene, info),
+        createModelNode(id, info.name, info.id, fitScale(info)),
+      ),
+      selectedIds: [id],
+      history: record(state, `Import ${info.name}`),
     }));
     return id;
   },
@@ -330,6 +353,13 @@ export const useSceneStore = create<SceneState>()((set) => ({
     });
     return clean;
   },
+  loadScene: (scene) =>
+    set({
+      scene,
+      selectedIds: [],
+      history: createHistory<Snapshot>(),
+      pendingEdit: null,
+    }),
   beginEdit: (label) =>
     set((state) => ({
       pendingEdit: {
