@@ -29,6 +29,9 @@ development with this project, so correctness, clear structure and documentation
   `/update-what-we-used` skill whenever something new is added. Explain in full only when asked
   ("what did we use?" or "explain X"): simple words, a Unity comparison (the owner knows Unity), a tiny example,
   caveats, why chosen vs alternatives, likely interview questions.
+- **Tunable settings** the owner can adjust themselves (speeds, colours, sizes, ports, config values) are listed in
+  `docs/TUNING.md` with the file, our value and what it does. Add a row whenever you introduce one, and only state a
+  library default after reading it in the library source or docs.
 - **Research before choosing versions or APIs**: official docs and the real latest version from the npm registry. Say what is verified and what is uncertain. Record choices in `docs/DECISIONS.md`.
 - **Ask before** risky or machine-level actions (installing software, editing files outside the repo, force-pushing, deleting).
 - **Commits**: small, clear messages, **no `Co-Authored-By` or "Generated with" lines**. Never commit secrets (`.env*` is ignored; `.env.example` is the template). Pushing is done by the owner with GitHub Desktop.
