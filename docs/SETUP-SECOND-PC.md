@@ -30,6 +30,8 @@ pnpm install
 pnpm dev           # web app at http://localhost:3000
 ```
 
+`pnpm install` also switches on the git pre-push hook (`.husky/pre-push`, set up by the `prepare` script). Every `git push`, including from GitHub Desktop, then runs type-check, lint, tests and build first and is blocked if one fails. If a push says `pnpm: command not found`, tell Claude: the hook looks for Homebrew and fnm in the usual macOS places.
+
 ## 4. Environment files
 
 Real `.env` files are never committed. When the project needs them, copy the template:

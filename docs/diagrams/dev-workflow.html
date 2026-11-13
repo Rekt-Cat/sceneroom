@@ -544,10 +544,11 @@
   <header>
     <h1>SceneRoom Dev Flow</h1>
     <p class="lede">
-      How one edit travels from Claude Code on your Mac to a green check on
-      GitHub, and what each part of the setup does along the way. Click a
-      numbered box to jump to its explanation. Words you may not know are
-      explained further down, in the deep dives and the glossary.
+      How one edit travels from Claude Code on your Mac, through the checks, to
+      GitHub and the live Vercel site, and what each part of the setup does
+      along the way. Click a numbered box to jump to its explanation. Words you
+      may not know are explained further down, in the deep dives and the
+      glossary.
     </p>
   </header>
 
@@ -557,7 +558,7 @@
         class="diagram"
         viewBox="0 0 980 632"
         role="group"
-        aria-label="Diagram. Edits made in Claude Code (1) are written to files (2), formatted by a Prettier hook (3), checked locally with Turborepo (4), committed and pushed through GitHub Desktop (5) to the GitHub repository (6), where a GitHub Actions workflow with eight steps verifies them (7). A second PC (8) pulls from the repository. Repo files (A) and a skill (B) support the process."
+        aria-label="Diagram. Edits made in Claude Code (1) are written to files (2), formatted by a Prettier hook (3), checked locally with Turborepo (4), committed and pushed through GitHub Desktop (5); a pre-push hook runs the checks again and blocks the push if one fails. The push reaches the GitHub repository (6), where a GitHub Actions workflow with nine steps verifies it (7), and Vercel builds and publishes it (9). A second PC (8) pulls from the repository. Repo files (A) and a skill (B) support the process."
       >
         <defs>
           <marker
@@ -633,7 +634,7 @@
           aria-label="3, Prettier hook: show explanation"
         >
           <rect
-            class="box pending"
+            class="box ok"
             x="416"
             y="48"
             width="150"
@@ -643,16 +644,9 @@
           <text class="t-title" x="428" y="72">Prettier hook</text>
           <text class="t-sub" x="428" y="92">PostToolUse hook</text>
           <text class="t-sub" x="428" y="107">matcher Write|Edit</text>
-          <rect
-            class="pill-pending"
-            x="428"
-            y="118"
-            width="126"
-            height="18"
-            rx="9"
-          />
-          <text class="pt-pending" x="491" y="130.5" text-anchor="middle">
-            needs /hooks reload
+          <rect class="pill-ok" x="428" y="118" width="64" height="18" rx="9" />
+          <text class="pt-ok" x="460" y="130.5" text-anchor="middle">
+            working
           </text>
           <circle class="badge" cx="550" cy="64" r="9" />
           <text class="badge-t" x="550" y="68" text-anchor="middle">3</text>
@@ -676,7 +670,7 @@
           />
           <text class="t-title" x="622" y="72">Local checks</text>
           <text class="t-sub" x="622" y="92">pnpm → Turborepo</text>
-          <text class="t-sub" x="622" y="107">lint · types · build</text>
+          <text class="t-sub" x="622" y="107">types·lint·test·build</text>
           <rect class="pill-ok" x="622" y="118" width="58" height="18" rx="9" />
           <text class="pt-ok" x="651" y="130.5" text-anchor="middle">
             passes
@@ -758,6 +752,14 @@
           pass
         </text>
 
+        <!-- Note under the 4 -> 5 arrow -->
+        <text class="arrow-label" x="865" y="176" text-anchor="end">
+          pre-push hook runs step 4 first;
+        </text>
+        <text class="arrow-label" x="865" y="190" text-anchor="end">
+          a failure blocks the push
+        </text>
+
         <!-- Repo docs group (A) -->
         <g
           class="hit"
@@ -798,14 +800,7 @@
           role="button"
           aria-label="B, update-what-we-used skill: show explanation"
         >
-          <rect
-            class="chip pending"
-            x="372"
-            y="264"
-            width="196"
-            height="26"
-            rx="6"
-          />
+          <rect class="chip" x="372" y="264" width="196" height="26" rx="6" />
           <text class="t-mono" x="470" y="281" text-anchor="middle">
             skill /update-what-we-used
           </text>
@@ -872,7 +867,7 @@
           <text class="t-sub" x="40" y="426">Rekt-Cat/sceneroom · main</text>
           <rect class="pill-ok" x="40" y="440" width="124" height="18" rx="9" />
           <text class="pt-ok" x="102" y="452.5" text-anchor="middle">
-            in sync with local
+            source of truth
           </text>
           <circle class="badge" cx="210" cy="406" r="9" />
           <text class="badge-t" x="210" y="410" text-anchor="middle">6</text>
@@ -917,14 +912,54 @@
         <line
           class="arrow"
           x1="230"
-          y1="430"
+          y1="468"
           x2="698"
-          y2="430"
+          y2="468"
           marker-end="url(#ah)"
         />
-        <text class="arrow-label" x="464" y="422" text-anchor="middle">
+        <text class="arrow-label" x="464" y="460" text-anchor="middle">
           git pull / clone
         </text>
+
+        <!-- repo -> Vercel -->
+        <line
+          class="arrow"
+          x1="230"
+          y1="418"
+          x2="298"
+          y2="418"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="264" y="410" text-anchor="middle">
+          deploys
+        </text>
+
+        <!-- Vercel (9) -->
+        <g
+          class="hit"
+          data-card="c9"
+          tabindex="0"
+          role="button"
+          aria-label="9, Vercel: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="300"
+            y="388"
+            width="320"
+            height="60"
+            rx="10"
+          />
+          <text class="t-title" x="312" y="410">Vercel (Hobby)</text>
+          <text class="t-sub" x="312" y="426">
+            every push builds; main = live site
+          </text>
+          <text class="t-sub" x="312" y="440">
+            other branches = preview URL
+          </text>
+          <circle class="badge" cx="602" cy="406" r="9" />
+          <text class="badge-t" x="602" y="410" text-anchor="middle">9</text>
+        </g>
 
         <!-- repo -> CI -->
         <line
@@ -936,7 +971,7 @@
           marker-end="url(#ah)"
         />
         <text class="arrow-label" x="140" y="494">
-          a push to main starts CI
+          a push to main or a pull request starts CI
         </text>
 
         <!-- CI group (7) -->
@@ -953,95 +988,94 @@
           <text class="badge-t" x="214" y="529" text-anchor="middle">7</text>
           <rect
             class="pill-ok"
-            x="806"
+            x="750"
             y="514"
-            width="130"
+            width="186"
             height="20"
             rx="10"
           />
-          <text class="pt-ok" x="871" y="528" text-anchor="middle">
-            green on b33fe6b
+          <text class="pt-ok" x="843" y="528" text-anchor="middle">
+            last seen green: b33fe6b
           </text>
 
-          <rect class="box" x="44" y="540" width="100" height="48" rx="8" />
-          <text class="t-step" x="94" y="560" text-anchor="middle">
+          <rect class="box" x="44" y="540" width="92" height="48" rx="8" />
+          <text class="t-step" x="90" y="560" text-anchor="middle">
             checkout
           </text>
-          <text class="t-mono-sm" x="94" y="576" text-anchor="middle">v7</text>
-
-          <rect class="box" x="156" y="540" width="100" height="48" rx="8" />
-          <text class="t-step" x="206" y="560" text-anchor="middle">
+          <text class="t-mono-sm" x="90" y="576" text-anchor="middle">v7</text>
+          <rect class="box" x="144" y="540" width="92" height="48" rx="8" />
+          <text class="t-step" x="190" y="560" text-anchor="middle">
             setup-node
           </text>
-          <text class="t-mono-sm" x="206" y="576" text-anchor="middle">
+          <text class="t-mono-sm" x="190" y="576" text-anchor="middle">
             .node-version
           </text>
-
-          <rect class="box" x="268" y="540" width="100" height="48" rx="8" />
-          <text class="t-step" x="318" y="560" text-anchor="middle">
+          <rect class="box" x="244" y="540" width="92" height="48" rx="8" />
+          <text class="t-step" x="290" y="560" text-anchor="middle">
             corepack
           </text>
-          <text class="t-mono-sm" x="318" y="576" text-anchor="middle">
+          <text class="t-mono-sm" x="290" y="576" text-anchor="middle">
             enable
           </text>
-
-          <rect class="box" x="380" y="540" width="100" height="48" rx="8" />
-          <text class="t-step" x="430" y="560" text-anchor="middle">
+          <rect class="box" x="344" y="540" width="92" height="48" rx="8" />
+          <text class="t-step" x="390" y="560" text-anchor="middle">
             install
           </text>
-          <text class="t-mono-sm" x="430" y="576" text-anchor="middle">
+          <text class="t-mono-sm" x="390" y="576" text-anchor="middle">
             frozen lockfile
           </text>
-
-          <rect class="box" x="492" y="540" width="100" height="48" rx="8" />
-          <text class="t-step" x="542" y="560" text-anchor="middle">
+          <rect class="box" x="444" y="540" width="92" height="48" rx="8" />
+          <text class="t-step" x="490" y="560" text-anchor="middle">
             format
           </text>
-          <text class="t-mono-sm" x="542" y="576" text-anchor="middle">
+          <text class="t-mono-sm" x="490" y="576" text-anchor="middle">
             prettier check
           </text>
-
-          <rect class="box" x="604" y="540" width="100" height="48" rx="8" />
-          <text class="t-step" x="654" y="560" text-anchor="middle">lint</text>
-          <text class="t-mono-sm" x="654" y="576" text-anchor="middle">
+          <rect class="box" x="544" y="540" width="92" height="48" rx="8" />
+          <text class="t-step" x="590" y="560" text-anchor="middle">lint</text>
+          <text class="t-mono-sm" x="590" y="576" text-anchor="middle">
             eslint
           </text>
-
           <rect
             class="box warn"
-            x="716"
+            x="644"
             y="540"
-            width="100"
+            width="92"
             height="48"
             rx="8"
           />
-          <text class="t-step" x="766" y="560" text-anchor="middle">types</text>
-          <text class="t-mono-sm" x="766" y="576" text-anchor="middle">
+          <text class="t-step" x="690" y="560" text-anchor="middle">types</text>
+          <text class="t-mono-sm" x="690" y="576" text-anchor="middle">
             typegen + tsc
           </text>
-
-          <rect class="box" x="828" y="540" width="100" height="48" rx="8" />
-          <text class="t-step" x="878" y="560" text-anchor="middle">build</text>
-          <text class="t-mono-sm" x="878" y="576" text-anchor="middle">
+          <rect class="box" x="744" y="540" width="92" height="48" rx="8" />
+          <text class="t-step" x="790" y="560" text-anchor="middle">test</text>
+          <text class="t-mono-sm" x="790" y="576" text-anchor="middle">
+            vitest
+          </text>
+          <rect class="box" x="844" y="540" width="92" height="48" rx="8" />
+          <text class="t-step" x="890" y="560" text-anchor="middle">build</text>
+          <text class="t-mono-sm" x="890" y="576" text-anchor="middle">
             next build
           </text>
-
-          <polygon class="chev" points="147,560 153,564 147,568" />
-          <polygon class="chev" points="259,560 265,564 259,568" />
-          <polygon class="chev" points="371,560 377,564 371,568" />
-          <polygon class="chev" points="483,560 489,564 483,568" />
-          <polygon class="chev" points="595,560 601,564 595,568" />
-          <polygon class="chev" points="707,560 713,564 707,568" />
-          <polygon class="chev" points="819,560 825,564 819,568" />
+          <polygon class="chev" points="137,560 142,564 137,568" />
+          <polygon class="chev" points="237,560 242,564 237,568" />
+          <polygon class="chev" points="337,560 342,564 337,568" />
+          <polygon class="chev" points="437,560 442,564 437,568" />
+          <polygon class="chev" points="537,560 542,564 537,568" />
+          <polygon class="chev" points="637,560 642,564 637,568" />
+          <polygon class="chev" points="737,560 742,564 737,568" />
+          <polygon class="chev" points="837,560 842,564 837,568" />
         </g>
-        <text class="note-warn" x="766" y="613" text-anchor="middle">
+        <text class="note-warn" x="690" y="613" text-anchor="middle">
           first run failed here; typegen added
         </text>
       </svg>
     </div>
     <figcaption>
-      Each edit is formatted by the hook, checked on your Mac, then checked
-      again on GitHub's machines. Numbers follow the order an edit travels.
+      Each edit is formatted by the hook, checked on your Mac (and again by the
+      pre-push hook before anything leaves your Mac), then checked on GitHub's
+      machines and built by Vercel. Numbers follow the order an edit travels.
       Letters mark supporting parts that are not steps in that path.
     </figcaption>
   </figure>
@@ -1117,7 +1151,7 @@
         <div class="card-head">
           <span class="num">3</span>
           <h3>Prettier hook</h3>
-          <span class="tag pending">needs /hooks reload</span>
+          <span class="tag ok">working</span>
         </div>
         <dl>
           <dt>What it is</dt>
@@ -1143,9 +1177,8 @@
           <dt>If it goes wrong</dt>
           <dd>
             The command ends with <code>|| true</code>, so it never blocks you,
-            which also means a broken hook fails silently. We tested it by hand,
-            but it has not fired yet: the settings folder is new, so Claude Code
-            needs <code>/hooks</code> opened once.
+            which also means a broken hook fails silently. It has fired: files
+            Claude edited on 13 Nov 2026 came back reformatted.
           </dd>
         </dl>
       </article>
@@ -1159,12 +1192,13 @@
         <dl>
           <dt>What it is</dt>
           <dd>
-            Three checks, started together by Turborepo (a task runner).
+            Four checks, run through Turborepo (a task runner).
             <strong>lint</strong> asks "does this look like a mistake?" (done by
             ESLint). <strong>types</strong> asks "do all the values fit
             together?" (done by TypeScript's checker, <code>tsc</code>, after
             <code>next typegen</code> has written type definitions for our
-            pages). <strong>build</strong> makes the real production version of
+            pages). <strong>test</strong> runs our Vitest tests on the scene
+            logic. <strong>build</strong> makes the real production version of
             the app (<code>next build</code>). More detail:
             <a href="#dd-checkers">the three checkers</a> and
             <a href="#dd-types">what "types" means</a>.
@@ -1176,10 +1210,14 @@
           </dd>
           <dt>What happens here</dt>
           <dd>
-            Run from the repo root with <code>pnpm lint</code>,
-            <code>pnpm check-types</code> and <code>pnpm build</code>. Turborepo
-            works out the order and caches results. "FULL TURBO" in its output
-            means it reused an earlier result.
+            Run from the repo root with <code>pnpm check-types</code>,
+            <code>pnpm lint</code>, <code>pnpm test</code> and
+            <code>pnpm build</code>. They also run automatically: a git
+            <code>pre-push</code> hook (Husky, <code>.husky/pre-push</code>)
+            runs all four before every push and blocks the push if one fails.
+            Skip it once from a terminal with <code>git push --no-verify</code>.
+            Turborepo works out the order and caches results. "FULL TURBO" in
+            its output means it reused an earlier result.
           </dd>
           <dt>If it goes wrong</dt>
           <dd>
@@ -1215,8 +1253,10 @@
           </dd>
           <dt>If it goes wrong</dt>
           <dd>
-            Local commits can still be fixed. After a push to a public repo,
-            assume everyone can read it, so secrets never go in (<code
+            The pre-push hook runs the checks first; it was tested with a
+            deliberate error from a terminal, but not yet from GitHub Desktop
+            itself. Local commits can still be fixed. After a push to a public
+            repo, assume everyone can read it, so secrets never go in (<code
               >.env</code
             >
             files are ignored).
@@ -1228,7 +1268,7 @@
         <div class="card-head">
           <span class="num">6</span>
           <h3>GitHub repository</h3>
-          <span class="tag ok">in sync</span>
+          <span class="tag ok">source of truth</span>
         </div>
         <dl>
           <dt>What it is</dt>
@@ -1241,8 +1281,9 @@
           <dd>The cloud server your version control syncs to.</dd>
           <dt>What happens here</dt>
           <dd>
-            Every push to <code>main</code> starts the CI workflow (7). Your
-            other PC (8) gets the code from here.
+            A push to <code>main</code>, or a pull request, starts the CI
+            workflow (7). Vercel (9) builds from here, and your other PC (8)
+            gets the code from here.
           </dd>
           <dt>If it goes wrong</dt>
           <dd>The repo is public: anything pushed can be read by anyone.</dd>
@@ -1253,21 +1294,22 @@
         <div class="card-head">
           <span class="num">7</span>
           <h3>GitHub Actions CI</h3>
-          <span class="tag ok">green on b33fe6b</span>
+          <span class="tag ok">last seen green: b33fe6b</span>
         </div>
         <dl>
           <dt>What it is</dt>
           <dd>
             A workflow file, <code>.github/workflows/ci.yml</code>. On every
-            push GitHub starts a fresh Linux machine, fetches your code and runs
-            the steps below. It repeats your local checks in a clean place.
+            push to <code>main</code> and every pull request, GitHub starts a
+            fresh Linux machine, fetches your code and runs the steps below. It
+            repeats your local checks in a clean place.
           </dd>
           <dt>Unity comparison</dt>
           <dd>
             A build server such as Unity Cloud Build that builds from a clean
             checkout, so "works on my machine" problems show up.
           </dd>
-          <dt>The eight steps, in order</dt>
+          <dt>The nine steps, in order</dt>
           <dd>
             <ol class="ci">
               <li>
@@ -1297,6 +1339,10 @@
                 <code>tsc</code>. This failed on the first run.
               </li>
               <li>
+                <strong>test</strong> runs <code>vitest</code> on the scene
+                logic in <code>packages/shared</code>.
+              </li>
+              <li>
                 <strong>build</strong> runs <code>next build</code>, a full
                 production build.
               </li>
@@ -1308,7 +1354,10 @@
             open the step to read its log. Our first run failed at
             <strong>types</strong>: Next.js generates some files that git
             ignores, so a clean checkout did not have them. The fix (commit
-            <code>e798eac</code>) generates them first.
+            <code>e798eac</code>) generates them first. CI does not stop Vercel:
+            the two run separately. CI has not been checked on commits since
+            <code>b33fe6b</code>, and pushing a plain branch does not start it
+            until a pull request is opened.
           </dd>
         </dl>
       </article>
@@ -1341,6 +1390,41 @@
           <dd>
             Untested. The guide assumes macOS, so say so if the other PC runs
             Windows.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c9">
+        <div class="card-head">
+          <span class="num">9</span>
+          <h3>Vercel</h3>
+          <span class="tag ok">live</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            The host for the web app (Hobby plan) at
+            <code>sceneroom.vercel.app</code>. It watches the GitHub repository
+            and builds the app on every push. Settings live in the Vercel
+            dashboard (Root Directory <code>apps/web</code>), not in the repo.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            Like a build server that also uploads each WebGL build to your web
+            host automatically.
+          </dd>
+          <dt>What happens here</dt>
+          <dd>
+            A push to <code>main</code> becomes the live site. Any other pushed
+            branch gets its own preview URL and does not touch the live site
+            (standard Vercel behaviour; no preview has been looked at yet).
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>
+            If the Vercel build fails, the old version stays live. If it builds
+            but the app is broken, that broken version goes live: Vercel does
+            not wait for CI. That is why the pre-push hook (step 4) matters. The
+            Deployments tab can roll back to an earlier version.
           </dd>
         </dl>
       </article>
@@ -1382,7 +1466,7 @@
         <div class="card-head">
           <span class="num">B</span>
           <h3>Skill: /update-what-we-used</h3>
-          <span class="tag pending">needs /reload-skills</span>
+          <span class="tag ok">working</span>
         </div>
         <dl>
           <dt>What it is</dt>
@@ -1399,8 +1483,8 @@
           </dd>
           <dt>What happens here</dt>
           <dd>
-            Written and committed. The skills folder is new this session, so
-            <code>/reload-skills</code> is needed once.
+            Loaded and used on 13 Nov 2026 to update
+            <code>WHAT-WE-USED.md</code>.
           </dd>
           <dt>If it goes wrong</dt>
           <dd>
@@ -1417,16 +1501,16 @@
     <h2>Deep dives</h2>
     <p class="hint">
       Plain-words explanations of the parts that need more than a card: the
-      three checkers, the Prettier hook, and what "types" means.
+      checkers, the Prettier hook, and what "types" means.
     </p>
 
     <div class="panel" id="dd-checkers">
-      <h3>Three checkers, three jobs</h3>
+      <h3>Checkers, each with its own job</h3>
       <p>
-        Your code is looked at by three automatic checkers. They are easy to mix
-        up because all three print warnings, but each one asks a different
-        question. A fourth step, the build, then proves the whole app really
-        compiles.
+        Your code is looked at by several automatic checkers. They are easy to
+        mix up because several of them print warnings, but each one asks a
+        different question. A fourth check runs our tests, and the build then
+        proves the whole app really compiles.
       </p>
       <div class="tbl-wrap">
         <table class="cmp">
@@ -1473,6 +1557,16 @@
               <td>No. <code>--noEmit</code> means check only.</td>
             </tr>
             <tr>
+              <td><strong>Vitest</strong> (the "test" step)</td>
+              <td>"Does our logic give the results we expect?"</td>
+              <td>
+                Wrong results in the scene functions, such as removing a node
+                but leaving its children behind
+              </td>
+              <td>Unity Test Framework (Edit Mode tests)</td>
+              <td>No. It only runs the tests and reports.</td>
+            </tr>
+            <tr>
               <td><strong>Build</strong> (<code>next build</code>)</td>
               <td>"Does the whole app really build for production?"</td>
               <td>Problems that only show up in a full build</td>
@@ -1509,7 +1603,8 @@ const position: Vec3 = [1, 2];
       <p>
         The ESLint and TypeScript lines are typical examples to show the kind of
         thing each tool finds. Which exact ESLint rules are on depends on the
-        project's ESLint settings. All three run on your Mac and again in CI.
+        project's ESLint settings. All of them run on your Mac (automatically
+        before each push, apart from Prettier's own step) and again in CI.
         Prettier is the only one that rewrites files.
       </p>
     </div>
@@ -1667,10 +1762,8 @@ const position: Vec3 = [1, 2];
       </p>
       <h4>Is it working?</h4>
       <p>
-        Not confirmed yet. We tested the command by hand and it worked, but the
-        hook has not fired in this session because the settings folder is new.
-        Once <code>/hooks</code> has been opened, an edit with bad spacing
-        should come back tidy.
+        Yes. On 13 Nov 2026 Claude Code reported that the hook had reformatted
+        files right after Claude wrote them.
       </p>
     </div>
 
@@ -1941,6 +2034,36 @@ const position: Vec3 = [1, 2];
           <dd>A local file for secrets and settings. It is never committed.</dd>
         </div>
         <div>
+          <dt>Git hook / pre-push</dt>
+          <dd>
+            A script git runs automatically at a set moment. A
+            <code>pre-push</code> hook runs just before a push and cancels it if
+            the script fails. Ours is in <code>.husky/pre-push</code>.
+          </dd>
+        </div>
+        <div>
+          <dt>Husky</dt>
+          <dd>
+            A small tool that keeps git hooks inside the repo, so every clone
+            gets them after <code>pnpm install</code>.
+          </dd>
+        </div>
+        <div>
+          <dt>Vitest</dt>
+          <dd>A test runner: it runs our test files and reports failures.</dd>
+        </div>
+        <div>
+          <dt>Vercel / preview deployment</dt>
+          <dd>
+            Vercel hosts the site. A preview deployment is a separate copy built
+            from a non-<code>main</code> branch, at its own URL.
+          </dd>
+        </div>
+        <div>
+          <dt>Pull request</dt>
+          <dd>A request to merge one branch into another. Ours triggers CI.</dd>
+        </div>
+        <div>
           <dt>Skill</dt>
           <dd>
             A saved set of instructions Claude can follow, stored in
@@ -1958,23 +2081,29 @@ const position: Vec3 = [1, 2];
     </div>
   </section>
 
-  <section class="status" aria-label="Status on 11 Nov 2026">
+  <section class="status" aria-label="Status on 13 Nov 2026">
     <div>
-      <h2><span class="dot ok"></span>Confirmed on 11 Nov 2026</h2>
+      <h2><span class="dot ok"></span>Confirmed on 13 Nov 2026</h2>
       <ul>
-        <li>CI is green on commit <code>b33fe6b</code></li>
-        <li>Format, lint, type-check and build pass locally and on GitHub</li>
-        <li>Push from GitHub Desktop reaches <code>main</code></li>
+        <li>Prettier hook fires on Claude's edits</li>
+        <li>Skill <code>/update-what-we-used</code> loads and runs</li>
+        <li>
+          Type-check, lint, 13 tests and build pass locally; the pre-push hook
+          blocks a push with a deliberate error (terminal test)
+        </li>
+        <li>
+          <code>sceneroom.vercel.app</code> answers with HTTP 200; the Vercel
+          dashboard has not been checked
+        </li>
+        <li>CI was last seen green on <code>b33fe6b</code></li>
       </ul>
     </div>
     <div>
-      <h2><span class="dot pending"></span>Written, waiting for a test</h2>
+      <h2><span class="dot pending"></span>Not confirmed yet</h2>
       <ul>
-        <li>
-          Prettier hook: <code>/hooks</code> reload, then one edit to watch it
-          format
-        </li>
-        <li>Skill: <code>/reload-skills</code>, then check it appears</li>
+        <li>Pre-push hook from GitHub Desktop itself</li>
+        <li>CI result on commits after <code>b33fe6b</code></li>
+        <li>A Vercel preview deployment from a branch</li>
         <li>
           Second-PC setup: follow <code>docs/SETUP-SECOND-PC.md</code> once
         </li>

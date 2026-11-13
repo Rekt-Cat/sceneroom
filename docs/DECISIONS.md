@@ -90,3 +90,15 @@ Schema in `packages/shared/src/scene.ts` (Zod 4.6.7; types are inferred from the
 `sceneOps.ts` (add, remove with descendants, duplicate subtree, update, set transform) returns new scenes and takes ids as arguments,
 so it is easy to unit-test (Vitest 5.1.0) and can later be reused by the collab server and undo/redo. The Zustand 5.1.0 store in
 `apps/web` holds the scene and calls these functions. `pnpm test` is a Turborepo task and a CI step.
+
+## 2026-11-13: Pre-push hook runs the four checks (Husky 9.1.7)
+
+Before this, type-check, lint, test and build ran only when someone remembered to; CI (push to `main`, pull requests) and Vercel
+ran after the code was already pushed, and a Vercel deploy is not blocked by CI. A git `pre-push` hook now runs
+`pnpm check-types && pnpm lint && pnpm test && pnpm build` and blocks the push on failure.
+
+- **Pre-push, not pre-commit:** the build takes seconds to tens of seconds; running it on every small commit would be slow.
+- **Husky** keeps the hook in the repo (`.husky/pre-push`), so a fresh clone gets it from `pnpm install` (the `prepare` script sets `core.hooksPath`).
+- **PATH handling:** GitHub Desktop does not load `~/.zshrc`, so the hook adds `/opt/homebrew/bin` and runs `fnm env` itself. Tested with a stripped environment (`env -i`): a deliberate type error exits 2, clean code exits 0. Not yet tested from GitHub Desktop itself.
+- `pnpm format:check` is not in the hook (the Prettier edit hook already formats); CI still runs it.
+- Escape hatch: `git push --no-verify` from a terminal.

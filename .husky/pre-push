@@ -1,0 +1,10 @@
+# Runs before every `git push` (also from GitHub Desktop). A failing command blocks the push.
+# GitHub Desktop does not load your shell profile, so find Homebrew and fnm (Node) ourselves.
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+if command -v fnm >/dev/null 2>&1; then
+  eval "$(fnm env --shell bash)"
+  fnm use >/dev/null 2>&1 || true
+fi
+
+# Push at your own risk: `git push --no-verify` skips this hook from the command line.
+pnpm check-types && pnpm lint && pnpm test && pnpm build
