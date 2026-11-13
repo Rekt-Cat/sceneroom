@@ -4,6 +4,7 @@ import { Canvas } from "@react-three/fiber";
 import { Grid, OrbitControls, Stats } from "@react-three/drei";
 import { MOUSE } from "three";
 import { useSceneStore } from "@/store/sceneStore";
+import CameraModifierSwitch from "./CameraModifierSwitch";
 import SceneNodes from "./SceneNodes";
 import { gizmoUsedRecently } from "./gizmoGuard";
 
@@ -47,6 +48,9 @@ export default function Viewport() {
         // OrbitControls). Middle and right buttons are left unmapped, so they do nothing.
         mouseButtons={{ LEFT: MOUSE.PAN }}
       />
+
+      {/* Lets Shift switch pan/rotate in the middle of a camera drag */}
+      <CameraModifierSwitch />
 
       {/* FPS counter (frames per second) in the corner */}
       <Stats />

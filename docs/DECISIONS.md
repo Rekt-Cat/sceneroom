@@ -123,3 +123,11 @@ Requested: only the left button moves the camera. `mouseButtons={{ LEFT: MOUSE.P
 with LEFT mapped to PAN, holding Shift, Ctrl or Cmd turns the drag into a rotate, so no custom code is needed. MIDDLE and RIGHT are
 left undefined, which the library treats as "no action". Scroll still zooms. Shift is also the temporary-snap key for the gizmo; the
 two do not clash because the gizmo pauses orbit controls while its handle is dragged (drei `dragging-changed`), but this needs a browser check.
+
+## 2026-11-13: Shift pressed mid-drag now switches pan/rotate (CameraModifierSwitch)
+
+three-stdlib 2.36.1 `OrbitControls` reads Shift/Ctrl/Cmd only inside `onMouseDown` and keeps that mode until the button is released, and
+its state is private. `CameraModifierSwitch.tsx` listens for modifier keys during a camera drag (using the controls' `start` and `end`
+events) and sends a synthetic `pointerup` plus `pointerdown` at the last pointer position with the new modifier state, so the mode
+changes without a jump. The events do not bubble, so R3F's click and select logic does not see them. Known edge case: if the cursor
+is over a gizmo handle at that moment, the gizmo's own pointerdown listener may start a handle drag. Needs a browser check.

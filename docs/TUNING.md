@@ -28,7 +28,8 @@ All of these live in one file: `apps/web/src/components/viewport/Viewport.tsx`.
 ### Camera controls (how dragging feels)
 
 Our mouse mapping (`mouseButtons={{ LEFT: MOUSE.PAN }}` in `Viewport.tsx`): **left-drag pans** the camera, **Shift + left-drag rotates** it
-(Ctrl or Cmd + left-drag also rotates; that comes from the library), scroll zooms. Middle and right buttons do nothing. To go back to the
+(Ctrl or Cmd + left-drag also rotates; that comes from the library), scroll zooms. Middle and right buttons do nothing. You can press or release Shift in the middle of a drag and the camera switches between pan and rotate
+(`CameraModifierSwitch.tsx`). To go back to the
 library default (left rotates, right pans, middle zooms), delete the `mouseButtons` line. The settings below are on `<OrbitControls ... />`.
 
 | Setting         | Our value | Library default | What it does                                                                                          |
