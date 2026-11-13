@@ -340,3 +340,13 @@ The Appearance swatch became a native `<input type="color">`: free choice of any
 - **One undo step per pick.** The picker sends a stream of `input` events while you drag inside it. The first one starts an edit (`beginEdit`), each one previews (`previewNodeColor`, which ignores bad colours, locked objects and calls with no edit in progress), and the browser's `change` or `blur` ends it (`endEdit(true)`). If the panel goes away in the middle (another object is selected) the cleanup ends the edit, so Undo is never left blocked.
 - **Trade-off:** the chooser looks different in each browser and operating system, and on some it only reports the final colour when closed. A custom picker (saturation square, hue bar, alpha) would look the same everywhere and could sit inside the panel; it is a possible later upgrade.
 - **Not verified:** how each browser fires `change` and `blur` around the picker. Needs a check in Chrome, Safari and Firefox; the worst case is two undo steps for one pick, not lost changes.
+
+## 2026-11-13: Proposed: "Surface and shading" step, and a `material` section in the scene data
+
+Agreed in principle (the name was chosen by the owner's request; "Appearance 2" was rejected as unclear). A plan only; nothing is built.
+
+- **What:** Emissive, Opacity (solid / see-through / cut-out), Double-sided, Smooth or flat shading with an angle limit, Cast and Receive shadow switches, Reflection strength. Built after model import and before lights. Each control gets a reset button, a named default and a row in `TUNING.md`.
+- **Move `roughness` and `metalness` into a `material` object** on each node, in the same step. With a dozen or more surface values, flat fields on the node get crowded, and later features need a place for them: shared materials (an id instead of inline values) and material slots (a list of materials per mesh).
+  Old scenes need no migration (Zod `.default(...)` fills the new section in), so the schema version can stay at 1, but this must be tested with an old-format scene.
+- **Order of the bigger ideas:** texture maps, presets and shared materials after the asset system (Phase 5); advanced surfaces and material slots after that; viewing aids (matcap, wireframe, normals, X-ray, UV checker) with Edit mode and Sculpting. Details in `ADVANCED-EDITING.md`, section F.
+- **Not verified:** that three.js's installed material class supports every advanced surface listed, and how each maps to glTF export; checked before building.

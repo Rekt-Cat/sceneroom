@@ -5,7 +5,7 @@
 - **Phase:** 4 (lights, materials, environment), started: materials (roughness and metalness) are written on branch `feature/materials`, waiting for a browser check
 - **Done:** Phases 0 to 3, all on `main` and live at https://sceneroom.vercel.app: 3D viewport; scene model; selection, multi-select, gizmo, camera controls; add / duplicate / delete / rename; scene list with search and drag-to-re-parent; Inspector (position, rotation, scale, colour, parent); undo/redo; resizable panels and value dragging; lock. A git pre-push hook runs type-check, lint, test and build before every push.
 - **CI:** green on pull requests #2 to #4 (last merge `4461bb0`).
-- **Next action:** test materials in the browser, then model import (`ASSETS-AND-IMPORT.md` steps 1 and 2: import a GLB, Assets panel), then lights, then environment settings. Plans for later are in `ADVANCED-EDITING.md` and `ASSETS-AND-IMPORT.md`. Still open: test `SETUP-SECOND-PC.md` on the second PC; try the pre-push hook from GitHub Desktop; optional `/code-review` of the Phase 0-3 diffs.
+- **Next action:** push and merge `feature/materials`. Then model import (`ASSETS-AND-IMPORT.md` steps 1 and 2: import a GLB, Assets panel), then **Surface and shading**, then lights, then environment settings. Plans for later are in `ADVANCED-EDITING.md` and `ASSETS-AND-IMPORT.md`. Still open: test `SETUP-SECOND-PC.md` on the second PC; try the pre-push hook from GitHub Desktop; optional `/code-review` of the Phase 0-3 diffs.
 
 Update this block at the end of every sub-phase and commit it.
 
@@ -62,8 +62,10 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 
 ### Phase 4: Lights, materials, environment
 
-- [x] Materials: roughness and metalness per object, sliders in the Inspector (branch `feature/materials`, needs a browser check)
-- [ ] Point/spot/directional lights; texture maps; HDRI sky and an environment for reflections; shadows, fog; camera nodes
+- [x] Materials: roughness and metalness per object, sliders in the Inspector (branch `feature/materials`, committed; waiting for the pull request)
+- [ ] **Surface and shading** (after model import, before lights): move the material values into a `material` section of the scene data (so later shared materials and material slots fit); add Emissive (colour and strength), Opacity (solid / see-through / cut-out), Double-sided, Smooth or flat shading (with an angle limit), Cast and Receive shadow switches, Reflection strength. Each with its own reset button, a default in `TUNING.md` and tests
+- [ ] Point/spot/directional lights; HDRI sky and an environment for reflections; shadows, fog; camera nodes
+- [ ] Later, once the asset system exists: texture maps (base colour, normal, roughness, metalness, occlusion, height, emissive) with tiling, material presets, shared materials. Advanced surfaces (clearcoat, transmission, sheen, subsurface, anisotropy, iridescence) and material slots: see `ADVANCED-EDITING.md`, section F
 
 ### Phase 5: Import/export and local save
 

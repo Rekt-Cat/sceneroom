@@ -90,9 +90,21 @@ A list of non-destructive deformers on an object, editable in the Inspector, eac
 - Export a character as **GLB with skeleton and morphs** (Phase 5 export must plan for this).
 - Animation (a timeline) is a separate, later project.
 
-### F. Materials and texturing for all of the above
+### F. Materials, surfaces and viewing aids for all of the above
 
-Roughness and metalness (Phase 4), then **texture painting**, **decals**, and **PBR texture sets** (needs the asset panel from Phase 5).
+What an object's **Appearance** can grow into, in the order we would add it:
+
+1. **Done:** colour, roughness, metalness.
+2. **Surface and shading** (next, small, fits what we have; planned after model import and before lights):
+   **Emissive** (glow), **Opacity** (solid, see-through, cut-out), **Double-sided**, **Smooth or flat shading** (with an angle limit), **Cast and receive shadow** switches, **Reflection strength**.
+   First the material values move into a `material` section of the scene data, so that shared materials and material slots (below) fit later without another change.
+3. **Needs the asset system (Phase 5):** **texture maps** (base colour, normal, roughness, metalness, occlusion, height, emissive) with tiling, offset and strength; **material presets** (plastic, gold, rubber, glass, skin, your own); **shared materials** (many objects use one material).
+4. **Advanced surfaces** (cars, creatures, characters): **clearcoat** (car paint), **transmission, refraction and thickness** (glass, water, gems), **sheen** (cloth), **subsurface or translucency** (skin, wax; the web only has approximations), **anisotropy** (brushed metal), **iridescence**; and **material slots**, meaning one mesh with several materials (skin, clothes and eyes on a character; body, glass and tyres on a car), which imported models already need.
+   three.js's physical material is expected to cover most of these, and glTF has matching extensions; to verify against the installed versions.
+5. **Viewing aids for modelling and sculpting** (viewport settings, mostly not per object; added with Edit mode and Sculpting): **shading modes** (solid, material, wireframe, **matcap**, the flat clay look sculptors use), **show edges** (wireframe overlay), **show normals**, **X-ray**, a **UV checker** texture, **vertex colours** (view and paint), and stylised looks (toon shading, outlines, rim light).
+6. **Painting:** texture painting and decals (needs textures and the mesh tools).
+
+Unity comparison: Unity's "Smoothness" is the opposite of our Roughness (1 minus it). Items in step 4 are what its HDRP Lit shader offers.
 
 ## Proposed order
 
