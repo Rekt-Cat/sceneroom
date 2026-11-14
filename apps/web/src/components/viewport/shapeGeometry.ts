@@ -8,7 +8,7 @@ import {
   SphereGeometry,
 } from "three";
 import {
-  deformPoints,
+  deformMesh,
   type Modifier,
   type PrimitiveKind,
 } from "@sceneroom/shared";
@@ -46,9 +46,24 @@ export function buildShapeGeometry(
   if (!modifiers.some((modifier) => modifier.enabled)) return geometry;
 
   const position = geometry.getAttribute("position");
-  const deformed = deformPoints(position.array as Float32Array, modifiers);
-  geometry.setAttribute("position", new BufferAttribute(deformed, 3));
+  const before = position.count;
+  const index = geometry.index;
+  // Every built-in shape has triangles; a shape without would be read as one triangle after another
+  const indices = index
+    ? Uint32Array.from(index.array)
+    : Uint32Array.from({ length: before }, (_, i) => i);
+  const result = deformMesh(
+    { positions: position.array as Float32Array, indices },
+    modifiers,
+  );
+  geometry.setAttribute("position", new BufferAttribute(result.positions, 3));
+  geometry.setIndex(new BufferAttribute(result.indices, 1));
+  // The pieces of the old index (used for several materials) no longer line up
+  geometry.clearGroups();
+  // Mirror and array change how many points there are, so the old picture coordinates no longer fit
+  if (result.positions.length / 3 !== before) geometry.deleteAttribute("uv");
   // The old normals no longer match the new shape; click detection also needs fresh bounds
+  geometry.deleteAttribute("normal");
   geometry.computeVertexNormals();
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();

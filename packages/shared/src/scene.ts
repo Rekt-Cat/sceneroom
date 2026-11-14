@@ -107,6 +107,14 @@ export const MAX_SEGMENTS = 32;
 export const MODIFIER_AXES = ["x", "y", "z"] as const;
 export type ModifierAxis = (typeof MODIFIER_AXES)[number];
 
+/** Limits of the stretch factor and the array modifier. */
+export const MIN_STRETCH = 0.1;
+export const MAX_MIRROR_OFFSET = 3;
+export const MAX_STRETCH = 5;
+export const MIN_ARRAY_COUNT = 2;
+export const MAX_ARRAY_COUNT = 20;
+export const MAX_ARRAY_SPACING = 5;
+
 const modifierBase = {
   id: z.string().min(1),
   /** A switched-off modifier stays in the list but does nothing. */
@@ -120,6 +128,10 @@ const modifierBase = {
  * - bend: curves the shape around an arc (angle in degrees, along the axis)
  * - twist: turns each slice more than the one before (angle in degrees from end to end)
  * - taper: makes one end thinner (amount 0 = no change, 1 = a point, below 0 = wider)
+ * - stretch: makes the shape longer or shorter along the axis
+ * - noise: pushes points around in a smooth, bumpy pattern (the axis does not matter)
+ * - mirror: adds a reflected copy on the other side of the middle of the object
+ * - array: repeats the shape along the axis
  */
 export const modifierSchema = z.discriminatedUnion("type", [
   z.object({
@@ -136,6 +148,51 @@ export const modifierSchema = z.discriminatedUnion("type", [
     ...modifierBase,
     type: z.literal("taper"),
     amount: z.number().min(-1).max(1).default(0.5),
+  }),
+  z.object({
+    ...modifierBase,
+    type: z.literal("stretch"),
+    /** 1 = no change; 2 = twice as long along the axis; 0.5 = squashed to half. */
+    factor: z.number().min(MIN_STRETCH).max(MAX_STRETCH).default(1.5),
+    /** Make the other two directions thinner as it gets longer (and fatter as it gets shorter), like squashy dough. */
+    keepVolume: z.boolean().default(false),
+  }),
+  z.object({
+    ...modifierBase,
+    type: z.literal("noise"),
+    /** How far points are pushed, as a fraction of the size of the shape. */
+    strength: z.number().min(0).max(1).default(0.1),
+    /** How many bumps: higher is finer and busier. */
+    scale: z.number().min(0.1).max(10).default(2),
+    /** A different number gives a different, but repeatable, pattern. */
+    seed: z.number().int().min(0).max(9999).default(1),
+  }),
+  z.object({
+    ...modifierBase,
+    type: z.literal("mirror"),
+    /**
+     * Where the mirror plane stands along the axis, measured from the middle of the object in lengths of
+     * the shape (0 = through the middle, 0.5 = at the side of a centred shape, so the copy sits next to
+     * it). A shape that is the same on both sides and mirrored through the middle would just land on itself.
+     */
+    offset: z
+      .number()
+      .min(-MAX_MIRROR_OFFSET)
+      .max(MAX_MIRROR_OFFSET)
+      .default(0.5),
+  }),
+  z.object({
+    ...modifierBase,
+    type: z.literal("array"),
+    /** How many copies in total (the original included). */
+    count: z
+      .number()
+      .int()
+      .min(MIN_ARRAY_COUNT)
+      .max(MAX_ARRAY_COUNT)
+      .default(3),
+    /** Distance between copies, as a multiple of the length of the shape along the axis (1 = touching). */
+    spacing: z.number().min(0).max(MAX_ARRAY_SPACING).default(1.2),
   }),
 ]);
 

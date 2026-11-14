@@ -105,7 +105,7 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 ### Phase 11: Deformers (can move earlier, right after Phase 5)
 
 - [x] Step 1 (`feature/modifiers`, waiting for a browser check): segment counts on primitives; modifier stack in the Inspector with Bend, Twist, Taper
-- [ ] Step 2: Stretch, Noise, Mirror, Array, Subdivide
+- [x] Step 2 (`feature/modifiers-2`, waiting for a browser check): Stretch, Noise, Mirror, Array. Left for the editable-mesh step: Subdivide
 - [ ] Step 3: Apply (bake the modifiers into an editable mesh; needs the mesh format from Phase 5)
 
 ### Phase 12: Environment-building tools
