@@ -3,6 +3,7 @@ import {
   IDENTITY_TRANSFORM,
   addAsset,
   addNode,
+  availableName,
   createEmptyScene,
   createHistory,
   copyToClipboard,
@@ -17,10 +18,13 @@ import {
   pasteFromClipboard,
   recordChange,
   redoStep,
+  removeAsset,
+  renameAsset,
   removeNodes,
   reparentNodes,
   resolveSelection,
   sanitizeMaterialChange,
+  setAssetNote,
   setTransforms,
   toggleInSelection,
   transformsEqual,
@@ -88,6 +92,17 @@ type SceneState = {
    * and selects it. One undo step. Returns the new object's id.
    */
   importModel: (info: AssetInfo) => string;
+  /**
+   * Adds another object that shows an already imported file (from the Assets panel), at the middle of
+   * the scene, and selects it. One undo step. Returns the new object's id, or null if the file is unknown.
+   */
+  placeAsset: (assetId: string) => string | null;
+  /** Renames an imported file in the Assets panel (objects keep their names). One undo step. */
+  renameAsset: (assetId: string, name: string) => void;
+  /** Sets an imported file's source / licence note. One undo step. */
+  setAssetNote: (assetId: string, note: string) => void;
+  /** Deletes an imported file and every object that shows it, as one undo step. */
+  deleteAsset: (assetId: string) => void;
   /** Deletes the selected objects and everything below them. Locked objects are left alone. */
   deleteSelected: () => void;
   /** Copies the selected objects (and everything below them), placed beside the originals, and selects the copies. */
@@ -241,6 +256,47 @@ export const useSceneStore = create<SceneState>()((set) => ({
     }));
     return id;
   },
+  placeAsset: (assetId) => {
+    const info = useSceneStore.getState().scene.assets[assetId];
+    if (!info) return null;
+    const id = crypto.randomUUID();
+    set((state) => ({
+      scene: addNode(
+        state.scene,
+        createModelNode(
+          id,
+          availableName(state.scene, info.name),
+          info.id,
+          fitScale(info),
+        ),
+      ),
+      selectedIds: [id],
+      history: record(state, `Place ${info.name}`),
+    }));
+    return id;
+  },
+  renameAsset: (assetId, name) =>
+    set((state) => {
+      const scene = renameAsset(state.scene, assetId, name);
+      if (scene === state.scene) return state;
+      return { scene, history: record(state, "Rename asset") };
+    }),
+  setAssetNote: (assetId, note) =>
+    set((state) => {
+      const scene = setAssetNote(state.scene, assetId, note);
+      if (scene === state.scene) return state;
+      return { scene, history: record(state, "Edit asset note") };
+    }),
+  deleteAsset: (assetId) =>
+    set((state) => {
+      const result = removeAsset(state.scene, assetId);
+      if (result.scene === state.scene) return state;
+      return {
+        scene: result.scene,
+        selectedIds: resolveSelection(result.scene, state.selectedIds),
+        history: record(state, "Delete asset"),
+      };
+    }),
   deleteSelected: () =>
     set((state) => {
       const ids = editableIds(state.scene, state.selectedIds);

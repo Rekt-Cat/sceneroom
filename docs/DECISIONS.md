@@ -442,3 +442,11 @@ Asked for: put a child right under its parent, and rearrange the hierarchy.
 - **Dragging several selected rows** puts them in front of the same place in the order they are listed. Dropping a row next to itself is not offered.
 - **Moves between parents keep the world position** as before; a reorder inside the same parent keeps the transform exactly as it is (no recomputing, so no rounding noise).
 - **Also:** Move up and Move down in the right-click menu (one place among the siblings, single object, not locked). Keyboard reordering (Alt + arrows) is not done.
+
+## Assets panel (2026-11-14)
+
+- **A tab in the left panel** next to Scene (each tab shows a count; the Add button only shows on the Scene tab; Import is on both). It first was a folded section under the scene list, which the owner did not like, so it became a tab. With no imports the tab says how to import. Each file shows its name, triangles, size and how many objects use it. Buttons: place another copy, source and licence note, delete.
+- **Rename** changes the file's name in the panel only; objects keep their own names. **Note** (up to 500 characters) lives on the asset record in the scene, so it is saved with the scene. Old scenes load with an empty note.
+- **Deleting a file also deletes every object that shows it** (and their children) as ONE undo step, after a confirmation when objects use it. An object without its file would only be a placeholder. Undo brings all of it back.
+- **Known gap:** the file's bytes stay in the browser's IndexedDB after delete (so Undo can restore it). Cleaning up files no scene uses is not done yet.
+- **Not done:** thumbnails (need an offscreen render; planned), dragging an asset from the panel into the 3D view, search and folders.

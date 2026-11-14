@@ -487,6 +487,7 @@ describe("importing a model", () => {
     triangles: 9000,
     boundsMin: [-1, 0.2, -5] as [number, number, number],
     boundsMax: [1, 1.8, 5] as [number, number, number],
+    note: "",
   };
 
   it("adds the file's record and an object that uses it, scaled to fit, and selects it", () => {
@@ -700,6 +701,7 @@ describe("copy and paste", () => {
       triangles: 1,
       boundsMin: [0, 0, 0] as [number, number, number],
       boundsMax: [1, 1, 1] as [number, number, number],
+      note: "",
     };
     const id = get().importModel(info);
     get().select(id);
@@ -893,5 +895,68 @@ describe("order of siblings", () => {
     const saved = JSON.parse(JSON.stringify(get().scene));
     get().loadScene(saved);
     expect(order(null)).toEqual(["Sphere", "Cube"]);
+  });
+});
+
+describe("the Assets panel actions", () => {
+  const info = {
+    id: "hash-of-a-car",
+    name: "Muscle car",
+    type: "model" as const,
+    bytes: 2048,
+    triangles: 9000,
+    boundsMin: [-1, 0.2, -5] as [number, number, number],
+    boundsMax: [1, 1.8, 5] as [number, number, number],
+    note: "",
+  };
+
+  it("places another object that uses the same file, with a free name, and selects it", () => {
+    const first = get().importModel(info);
+    const second = get().placeAsset(info.id)!;
+    expect(second).not.toBe(first);
+    expect(get().scene.nodes[second]).toMatchObject({
+      kind: "model",
+      assetId: info.id,
+      name: "Muscle car (1)",
+    });
+    expect(Object.keys(get().scene.assets)).toEqual([info.id]);
+    expect(get().selectedIds).toEqual([second]);
+    expect(nextUndoLabel(get().history)).toBe("Place Muscle car");
+  });
+
+  it("placing an unknown file does nothing", () => {
+    const before = get().scene;
+    expect(get().placeAsset("nope")).toBeNull();
+    expect(get().scene).toBe(before);
+  });
+
+  it("renames the file and edits its note, each as one undo step, and ignores no-ops", () => {
+    get().importModel(info);
+    get().renameAsset(info.id, "Red car");
+    expect(get().scene.assets[info.id]?.name).toBe("Red car");
+    get().setAssetNote(info.id, "CC-BY, by Jane");
+    expect(get().scene.assets[info.id]?.note).toBe("CC-BY, by Jane");
+    const steps = get().history.past.length;
+    get().renameAsset(info.id, "Red car");
+    get().renameAsset(info.id, "   ");
+    get().setAssetNote(info.id, "CC-BY, by Jane");
+    expect(get().history.past).toHaveLength(steps);
+    get().undo();
+    expect(get().scene.assets[info.id]?.note).toBe("");
+  });
+
+  it("deleting a file removes the objects that use it, in one undo step", () => {
+    get().importModel(info);
+    get().placeAsset(info.id);
+    const others = Object.values(get().scene.nodes).filter(
+      (n) => n.assetId !== info.id,
+    ).length;
+    get().deleteAsset(info.id);
+    expect(get().scene.assets).toEqual({});
+    expect(Object.keys(get().scene.nodes)).toHaveLength(others);
+    expect(get().selectedIds).toEqual([]);
+    get().undo();
+    expect(Object.keys(get().scene.assets)).toEqual([info.id]);
+    expect(Object.keys(get().scene.nodes)).toHaveLength(others + 2);
   });
 });

@@ -168,6 +168,7 @@ export async function importGlbFile(
     name: assetNameFromFileName(file.name),
     type: "model",
     bytes: file.size,
+    note: "",
     ...measured,
   };
 }

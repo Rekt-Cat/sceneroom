@@ -250,6 +250,7 @@ describe("model objects", () => {
     triangles: 3,
     boundsMin: [0, 0, 0] as [number, number, number],
     boundsMax: [1, 1, 1] as [number, number, number],
+    note: "",
   };
 
   it("createModelNode makes a model object with an even scale at the middle of the scene", () => {

@@ -20,6 +20,7 @@ describe("parseSavedScene", () => {
       triangles: 3,
       boundsMin: [0, 0, 0],
       boundsMax: [1, 1, 1],
+      note: "",
     });
     scene = addNode(scene, createModelNode("m", "Car", "abc", 2));
     expect(parseSavedScene(JSON.parse(JSON.stringify(scene))).ok).toBe(true);

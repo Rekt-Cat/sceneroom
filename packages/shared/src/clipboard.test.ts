@@ -77,6 +77,7 @@ describe("copyToClipboard", () => {
       triangles: 1,
       boundsMin: [0, 0, 0] as [number, number, number],
       boundsMax: [1, 1, 1] as [number, number, number],
+      note: "",
     };
     let scene = addAsset(createEmptyScene(), info);
     scene = addNode(scene, createModelNode("m1", "Car", "f1", 1));
@@ -203,6 +204,7 @@ describe("pasteFromClipboard", () => {
       triangles: 1,
       boundsMin: [0, 0, 0] as [number, number, number],
       boundsMax: [1, 1, 1] as [number, number, number],
+      note: "",
     };
     let scene = addAsset(createEmptyScene(), info);
     scene = addNode(scene, createModelNode("m", "Car", "f1", 1));

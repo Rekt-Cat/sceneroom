@@ -5,6 +5,9 @@ export const SCENE_SCHEMA_VERSION = 1;
 
 export const NODE_NAME_MAX_LENGTH = 100;
 
+/** Longest source / licence note on an imported file. */
+export const ASSET_NOTE_MAX_LENGTH = 500;
+
 /** The colour of a new object (a light blue). */
 export const DEFAULT_COLOR = "#5cc4e0";
 
@@ -78,6 +81,8 @@ export const assetInfoSchema = z.object({
   /** Corners of the box around the model, in the model's own units, measured when it was imported. */
   boundsMin: vec3Schema,
   boundsMax: vec3Schema,
+  /** Where the file came from and its licence ("CC-BY, by Jane, sketchfab.com/..."). Old scenes load with none. */
+  note: z.string().max(ASSET_NOTE_MAX_LENGTH).default(""),
 });
 
 /**
