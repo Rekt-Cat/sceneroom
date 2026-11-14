@@ -29,6 +29,13 @@ const PATHS = {
       <path d="M2.5 5.2 8 8l5.5-2.8M8 8v6M5.2 3.9l5.5 2.8" />
     </>
   ),
+  // an editable mesh: a faceted shape
+  mesh: (
+    <>
+      <path d="M8 1.800 13.500 5v6L8 14.200 2.500 11V5L8 1.800Z" />
+      <path d="M8 1.800v6.300M2.500 5 8 8.100 13.500 5M8 8.100v6.100M5.200 3.400 8 5.100l2.800-1.700" />
+    </>
+  ),
   // lights: a sun, a bulb and a torch
   directional: (
     <>
@@ -164,6 +171,7 @@ export const KIND_LABELS: Record<NodeKind, string> = {
   cylinder: "Cylinder",
   plane: "Plane",
   cone: "Cone",
+  mesh: "Mesh",
   directional: "Directional light",
   point: "Point light",
   spot: "Spot light",

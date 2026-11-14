@@ -1,6 +1,8 @@
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
 import type { Object3D } from "three";
 import { loadModelScene } from "@/assets/loadModel";
+import { loadMeshData } from "@/assets/meshStorage";
+import type { ShapeMesh } from "@sceneroom/shared";
 import { download } from "@/sceneFile/download";
 import { useImportStore } from "@/store/importStore";
 import { useSceneStore } from "@/store/sceneStore";
@@ -37,6 +39,19 @@ async function loadModels(assetIds: readonly string[]) {
   return models;
 }
 
+/** Loads the editable meshes the scene uses. One that cannot be loaded is left out. */
+async function loadMeshes(assetIds: readonly string[]) {
+  const meshes = new Map<string, ShapeMesh>();
+  for (const id of assetIds) {
+    try {
+      meshes.set(id, await loadMeshData(id));
+    } catch (error) {
+      console.warn(`Mesh ${id} could not be loaded for export:`, error);
+    }
+  }
+  return meshes;
+}
+
 /** Builds the GLB of the current scene. Also gives back what was exported and what was left out. */
 export async function buildGlb(): Promise<{
   bytes: ArrayBuffer;
@@ -48,7 +63,16 @@ export async function buildGlb(): Promise<{
       node.kind === "model" && node.assetId ? [node.assetId] : [],
     ),
   );
-  const { root, report } = buildExportScene(scene, (id) => models.get(id));
+  const meshes = await loadMeshes(
+    Object.values(scene.nodes).flatMap((node) =>
+      node.kind === "mesh" && node.assetId ? [node.assetId] : [],
+    ),
+  );
+  const { root, report } = buildExportScene(
+    scene,
+    (id) => models.get(id),
+    (id) => meshes.get(id),
+  );
   try {
     return { bytes: await sceneToGlb(root), report };
   } finally {

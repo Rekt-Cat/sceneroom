@@ -309,6 +309,15 @@ Details of the file: `docs/SCENE-FILE-FORMAT.md`.
 | Hidden objects  | `onlyVisible` in `sceneToGlb`                       | `true`                 | Hidden objects are left out. Set to `false` to export them too.                                                    |
 | Light decay     | `buildObject` in `export/buildExportScene.ts`       | `2`                    | How fast point and spot lights fade with distance (the physical value, as in the editor).                          |
 
+## Editable meshes
+
+| What                | Setting                                                | Our value         | What it does                                                                                   |
+| ------------------- | ------------------------------------------------------ | ----------------- | ---------------------------------------------------------------------------------------------- |
+| Most points         | `MAX_MESH_POINTS` in `packages/shared/src/meshData.ts` | `1,000,000`       | A mesh with more points is refused when made and when opened (keeps the editor from freezing). |
+| Most triangles      | `MAX_MESH_TRIANGLES` in `meshData.ts`                  | `1,000,000`       | The same for triangles.                                                                        |
+| Mesh format version | `MESH_FORMAT_VERSION` in `meshData.ts`                 | `1`               | Raised only when the stored layout changes.                                                    |
+| Name of a new mesh  | `bakeNodeToMesh` in `apps/web/src/mesh/bakeMesh.ts`    | the object's name | A mesh made with Apply or Convert is named after the object.                                   |
+
 ## Locking objects
 
 | What               | Setting                                                                                              | Our value | What it does                                                                                                                                          |

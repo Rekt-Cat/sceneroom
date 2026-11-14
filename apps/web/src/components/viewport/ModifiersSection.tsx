@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   MAX_ARRAY_COUNT,
   MAX_ARRAY_SPACING,
@@ -21,6 +22,7 @@ import {
   type ModifierType,
   type SceneNode,
 } from "@sceneroom/shared";
+import { bakeNodeToMesh } from "@/mesh/bakeMesh";
 import { useSceneStore } from "@/store/sceneStore";
 import { Icon } from "./icons";
 import { ValueSlider } from "./InspectorFields";
@@ -153,23 +155,30 @@ export default function ModifiersSection({
     <section aria-label="Shape" className="border-t border-ed-line">
       <h3 className={sectionTitle}>Shape</h3>
       <div className="space-y-2.5 px-4 pb-4">
-        <ValueSlider
-          label="Segments"
-          value={node.segments}
-          defaultValue={1}
-          min={1}
-          max={MAX_SEGMENTS}
-          step={1}
-          decimals={0}
-          disabled={disabled}
-          editLabel="Segments"
-          onCommit={(value) => setNodeSegments(node.id, value)}
-          onPreview={(value) => previewNodeSegments(node.id, value)}
-        />
-        <p className="text-[11px] leading-relaxed text-ed-text-3">
-          More segments let a bend or twist curve smoothly. A sphere is always
-          finely cut.
-        </p>
+        <BakeButton node={node} disabled={disabled} />
+        {node.kind === "mesh" ? (
+          <MeshInfo node={node} />
+        ) : (
+          <>
+            <ValueSlider
+              label="Segments"
+              value={node.segments}
+              defaultValue={1}
+              min={1}
+              max={MAX_SEGMENTS}
+              step={1}
+              decimals={0}
+              disabled={disabled}
+              editLabel="Segments"
+              onCommit={(value) => setNodeSegments(node.id, value)}
+              onPreview={(value) => previewNodeSegments(node.id, value)}
+            />
+            <p className="text-[11px] leading-relaxed text-ed-text-3">
+              More segments let a bend or twist curve smoothly. A sphere is
+              always finely cut.
+            </p>
+          </>
+        )}
 
         {node.modifiers.map((modifier, index) => (
           <ModifierCard
@@ -211,6 +220,72 @@ export default function ModifiersSection({
         </p>
       </div>
     </section>
+  );
+}
+
+/** What an editable mesh is made of, or why it cannot be shown. */
+function MeshInfo({ node }: { node: SceneNode }) {
+  const info = useSceneStore((state) =>
+    node.assetId ? state.scene.assets[node.assetId] : undefined,
+  );
+  return (
+    <div className="space-y-1.5">
+      <p className="text-[11px] leading-relaxed text-ed-text-3">
+        {info
+          ? `Editable mesh: ${info.triangles.toLocaleString("en-US")} triangles. Modifiers below are applied on top of it without changing it.`
+          : "The record of this mesh is missing, so it cannot be shown."}
+      </p>
+      {info?.note && (
+        <div className="rounded-md bg-ed-field px-2.5 py-2 text-[11px] leading-relaxed text-ed-text-2">
+          <p className="mb-0.5 font-semibold tracking-wide text-ed-text-3 uppercase">
+            How it was made
+          </p>
+          <p className="whitespace-pre-line">{info.note}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * "Make mesh": turns what the object looks like now into real points and triangles. After that it is an
+ * editable mesh and any modifiers are gone (they are baked into the points; the mesh keeps a written
+ * record of them). Undo brings the shape and its modifiers back. The same label whether or not there are
+ * modifiers, with a plain line saying which case this is.
+ */
+function BakeButton({
+  node,
+  disabled,
+}: {
+  node: SceneNode;
+  disabled: boolean;
+}) {
+  const [busy, setBusy] = useState(false);
+  const active = node.modifiers.filter((modifier) => modifier.enabled);
+  // A mesh with nothing to bake is already a mesh
+  if (node.kind === "mesh" && active.length === 0) return null;
+  const names = active.map((m) => MODIFIER_INFO[m.type].label).join(", ");
+  return (
+    <div className="border-b border-ed-line pb-3">
+      <button
+        type="button"
+        disabled={disabled || busy}
+        title="Turn this object into an editable mesh (undo brings it back)"
+        onClick={() => {
+          setBusy(true);
+          void bakeNodeToMesh(node.id).finally(() => setBusy(false));
+        }}
+        className="flex h-8 w-full items-center justify-center gap-2 rounded-md border border-ed-line-strong bg-ed-raised text-sm font-medium hover:brightness-110 focus-visible:outline-2 focus-visible:outline-ed-accent disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <Icon name="mesh" />
+        Make mesh
+      </button>
+      <p className="mt-1.5 text-[11px] leading-relaxed text-ed-text-3">
+        {active.length > 0
+          ? `Bakes ${active.length === 1 ? "the modifier" : `the ${active.length} modifiers`} (${names}) into the shape for good. The sliders go away; a note of the values is kept.`
+          : "Turns this shape into real points and triangles, so it can be edited point by point (coming with edit mode)."}
+      </p>
+    </div>
   );
 }
 

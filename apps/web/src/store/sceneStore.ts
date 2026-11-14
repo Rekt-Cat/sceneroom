@@ -4,6 +4,7 @@ import {
   addAsset,
   addNode,
   availableName,
+  bakeToMesh,
   createEmptyScene,
   createHistory,
   copyToClipboard,
@@ -151,6 +152,11 @@ type SceneState = {
   setNodeSegments: (nodeId: string, segments: number) => void;
   /** Like setNodeSegments but without an undo step; only while an edit is in progress. */
   previewNodeSegments: (nodeId: string, segments: number) => void;
+  /**
+   * Turns an object into an editable mesh pointing to the stored data `info` (see `bakeToMesh`), as one
+   * undo step with the given label. Ignored for locked objects and objects that cannot become a mesh.
+   */
+  bakeNodeToMesh: (nodeId: string, info: AssetInfo, label: string) => void;
   /** Changes some settings of the world (background, reflections, fog, base lighting) as one undo step. */
   setEnvironmentSettings: (change: EnvironmentChange) => void;
   /** Like setEnvironmentSettings but without an undo step; only while an edit is in progress (dragging a slider). */
@@ -429,6 +435,21 @@ export const useSceneStore = create<SceneState>()((set) => ({
       }
       const scene = setSegments(state.scene, nodeId, segments);
       return scene === state.scene ? state : { scene };
+    }),
+  bakeNodeToMesh: (nodeId, info, label) =>
+    set((state) => {
+      const node = state.scene.nodes[nodeId];
+      if (
+        !node ||
+        !supportsModifiers(node) ||
+        isEffectivelyLocked(state.scene, nodeId)
+      ) {
+        return state;
+      }
+      return {
+        scene: bakeToMesh(state.scene, nodeId, info),
+        history: record(state, label),
+      };
     }),
   setEnvironmentSettings: (change) =>
     set((state) => {

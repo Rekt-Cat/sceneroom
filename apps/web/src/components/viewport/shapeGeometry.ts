@@ -11,6 +11,7 @@ import {
   deformMesh,
   type Modifier,
   type PrimitiveKind,
+  type ShapeMesh,
 } from "@sceneroom/shared";
 
 /** How many pieces around the round shapes (sphere, cylinder, cone). Bending and twisting need cuts along the length, not around. */
@@ -42,9 +43,52 @@ export function buildShapeGeometry(
   segments: number,
   modifiers: readonly Modifier[],
 ): BufferGeometry {
-  const geometry = baseGeometry(kind, segments);
-  if (!modifiers.some((modifier) => modifier.enabled)) return geometry;
+  return withModifiers(baseGeometry(kind, segments), modifiers);
+}
 
+/**
+ * The geometry of an editable mesh with its modifiers applied (the mesh's own points are never
+ * changed). The caller owns the result and must `dispose()` it. Normals are worked out from the triangles.
+ */
+export function buildMeshGeometry(
+  mesh: ShapeMesh,
+  modifiers: readonly Modifier[],
+): BufferGeometry {
+  const geometry = new BufferGeometry();
+  // Copies: the stored mesh is shared, and the geometry may be changed by the modifiers
+  geometry.setAttribute(
+    "position",
+    new BufferAttribute(new Float32Array(mesh.positions), 3),
+  );
+  geometry.setIndex(new BufferAttribute(new Uint32Array(mesh.indices), 1));
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  return withModifiers(geometry, modifiers);
+}
+
+/** The points and triangles of a geometry, copied out (to store as a mesh). */
+export function geometryToMesh(geometry: BufferGeometry): ShapeMesh {
+  const position = geometry.getAttribute("position");
+  const positions = new Float32Array(position.count * 3);
+  for (let i = 0; i < position.count; i++) {
+    positions[i * 3] = position.getX(i);
+    positions[i * 3 + 1] = position.getY(i);
+    positions[i * 3 + 2] = position.getZ(i);
+  }
+  const index = geometry.index;
+  const indices = index
+    ? Uint32Array.from(index.array)
+    : Uint32Array.from({ length: position.count }, (_, i) => i);
+  return { positions, indices };
+}
+
+/** Applies the active modifiers to a geometry (made here, so it may be changed) and refreshes what depends on its points. */
+function withModifiers(
+  geometry: BufferGeometry,
+  modifiers: readonly Modifier[],
+): BufferGeometry {
+  if (!modifiers.some((modifier) => modifier.enabled)) return geometry;
   const position = geometry.getAttribute("position");
   const before = position.count;
   const index = geometry.index;

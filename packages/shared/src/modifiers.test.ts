@@ -6,7 +6,10 @@ import {
   createModifier,
   MAX_DEFORMED_POINTS,
   deformMesh,
+  appendNoteLine,
   deformPoints,
+  summariseModifier,
+  summariseModifiers,
   describeModifier,
   duplicateModifier,
   nextAxis,
@@ -575,5 +578,55 @@ describe("the new modifiers in the data", () => {
       offset: 3,
     });
     expect(describeModifier(make("array", { count: 5 }))).toContain("5 times");
+  });
+});
+
+describe("the record of applied modifiers", () => {
+  it("each kind is written as one short line", () => {
+    expect(summariseModifier(make("bend", { angle: 45 }))).toBe(
+      "Bend along Y 45°",
+    );
+    expect(summariseModifier(make("twist", { axis: "z", angle: -90 }))).toBe(
+      "Twist around Z -90°",
+    );
+    expect(summariseModifier(make("taper", { amount: 0.5 }))).toBe(
+      "Taper along Y 0.5",
+    );
+    expect(
+      summariseModifier(make("stretch", { factor: 1.5, keepVolume: true })),
+    ).toBe("Stretch along Y ×1.5 (keep volume)");
+    expect(summariseModifier(make("noise"))).toBe(
+      "Noise strength 0.1, scale 2, seed 1",
+    );
+    expect(summariseModifier(make("mirror"))).toBe(
+      "Mirror across X, offset 0.5",
+    );
+    expect(summariseModifier(make("array"))).toBe(
+      "Array ×3 along X, spacing 1.2",
+    );
+    expect(summariseModifier(make("bend", { angle: 1.2300001 }))).toBe(
+      "Bend along Y 1.23°",
+    );
+  });
+
+  it("the line lists only the modifiers that were on, in order, and is empty when none were", () => {
+    const line = summariseModifiers([
+      make("bend", { angle: 30 }),
+      make("twist", { enabled: false }),
+      make("taper"),
+    ]);
+    expect(line).toBe("Applied: Bend along Y 30°, Taper along Y 0.5");
+    expect(summariseModifiers([])).toBe("");
+    expect(summariseModifiers([make("bend", { enabled: false })])).toBe("");
+  });
+
+  it("lines are added below the earlier ones, and the oldest go first when there is no room", () => {
+    expect(appendNoteLine("", "Applied: Bend")).toBe("Applied: Bend");
+    expect(appendNoteLine("Applied: Bend", "Applied: Twist")).toBe(
+      "Applied: Bend\nApplied: Twist",
+    );
+    expect(appendNoteLine("Applied: Bend", "")).toBe("Applied: Bend");
+    expect(appendNoteLine("aaaa\nbbbb", "cccc", 10)).toBe("bbbb\ncccc");
+    expect(appendNoteLine("aaaa", "x".repeat(50), 10)).toBe("x".repeat(10));
   });
 });

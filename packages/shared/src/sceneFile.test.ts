@@ -6,6 +6,7 @@ const text = globalThis as unknown as {
 };
 const encode = (input: string) => new text.TextEncoder().encode(input);
 import { createEmptyScene, type AssetInfo } from "./scene";
+import { encodeMeshData } from "./meshData";
 import { addAsset, addNode, createModelNode, createNode } from "./sceneOps";
 import {
   MAX_SCENE_FILE_BYTES,
@@ -199,5 +200,64 @@ describe("scene file: refusing bad files", () => {
   it("a file over the size limit is refused before it is read", () => {
     const tooBig = { length: MAX_SCENE_FILE_BYTES + 1 } as Uint8Array;
     expect(reason(decodeSceneFile(tooBig))).toContain("limit");
+  });
+});
+
+describe("scene file: editable meshes", () => {
+  const meshData = encodeMeshData({
+    positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+    indices: new Uint32Array([0, 1, 2]),
+  });
+  const meshInfo = (id: string): AssetInfo => ({
+    id,
+    name: "Trunk",
+    type: "mesh",
+    bytes: meshData.length,
+    triangles: 1,
+    boundsMin: [0, 0, 0],
+    boundsMax: [1, 1, 0],
+    note: "",
+  });
+  const sceneWithMesh = (id = "m1") => {
+    let scene = addAsset(createEmptyScene(), meshInfo(id));
+    scene = addNode(scene, {
+      ...createNode("t", "cube"),
+      kind: "mesh",
+      assetId: id,
+    });
+    return scene;
+  };
+
+  it("packs a mesh with the scene and gives it back, checked", () => {
+    const scene = sceneWithMesh();
+    const { bytes, missing } = encodeSceneFile(scene, { m1: meshData });
+    expect(missing).toEqual([]);
+    const result = decodeSceneFile(bytes);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.scene).toEqual(scene);
+    expect(Array.from(result.assets["m1"]!)).toEqual(Array.from(meshData));
+  });
+
+  it("leaves out a mesh that no object uses (kept in memory only so that Undo works)", () => {
+    let scene = sceneWithMesh("used");
+    scene = addAsset(scene, meshInfo("old"));
+    const { bytes, missing } = encodeSceneFile(scene, {
+      used: meshData,
+      old: meshData,
+    });
+    expect(missing).toEqual([]);
+    const result = decodeSceneFile(bytes);
+    expect(result.ok && Object.keys(result.scene.assets)).toEqual(["used"]);
+    expect(result.ok && Object.keys(result.assets)).toEqual(["used"]);
+  });
+
+  it("refuses a mesh whose data is damaged, naming it", () => {
+    const damaged = new Uint8Array(meshData);
+    damaged[0] = 0x58;
+    const { bytes } = encodeSceneFile(sceneWithMesh(), { m1: damaged });
+    const result = decodeSceneFile(bytes);
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.reason).toContain('The mesh "Trunk"');
   });
 });

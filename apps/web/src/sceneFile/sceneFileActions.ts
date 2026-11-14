@@ -3,6 +3,7 @@ import {
   SCENE_FILE_EXTENSION,
   decodeSceneFile,
   encodeSceneFile,
+  pruneUnusedMeshAssets,
   sceneFileName,
   type EncodedSceneFile,
 } from "@sceneroom/shared";
@@ -14,7 +15,8 @@ import { download } from "./download";
 
 /** Packs the current scene and the model files it uses (read from the browser's storage). */
 export async function buildSceneFile(): Promise<EncodedSceneFile> {
-  const { scene } = useSceneStore.getState();
+  // Mesh versions that only Undo could bring back are not saved, so they are not even read
+  const scene = pruneUnusedMeshAssets(useSceneStore.getState().scene);
   const assets: Record<string, Uint8Array> = {};
   for (const id of Object.keys(scene.assets)) {
     const data = await assetStorage.get(id);
