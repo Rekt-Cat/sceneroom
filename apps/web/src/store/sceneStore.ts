@@ -11,6 +11,7 @@ import {
   createModelNode,
   createNode,
   duplicateNodes,
+  environmentChangeDiffers,
   editableIds,
   fitScale,
   isEffectivelyLocked,
@@ -26,8 +27,10 @@ import {
   reparentNodes,
   resolveSelection,
   materialChangeDiffers,
+  sanitizeEnvironmentChange,
   sanitizeLightChange,
   sanitizeMaterialChange,
+  setEnvironment,
   setLight,
   setMaterial,
   setAssetNote,
@@ -38,6 +41,7 @@ import {
   updateNode,
   type AssetInfo,
   type ClipboardData,
+  type EnvironmentChange,
   type History,
   type LightChange,
   type LightKind,
@@ -106,6 +110,10 @@ type SceneState = {
    * the scene, and selects it. One undo step. Returns the new object's id, or null if the file is unknown.
    */
   placeAsset: (assetId: string, at?: [number, number, number]) => string | null;
+  /** Changes some settings of the world (background, reflections, fog, base lighting) as one undo step. */
+  setEnvironmentSettings: (change: EnvironmentChange) => void;
+  /** Like setEnvironmentSettings but without an undo step; only while an edit is in progress (dragging a slider). */
+  previewEnvironmentSettings: (change: EnvironmentChange) => void;
   /** Adds a light of this kind (aimed at the middle of the scene) and selects it. One undo step. Returns its id. */
   addLight: (kind: LightKind) => string;
   /** Changes some settings of a light object as one undo step. Ignored for locked objects and objects that are not lights. */
@@ -278,6 +286,23 @@ export const useSceneStore = create<SceneState>()((set) => ({
     }));
     return id;
   },
+  setEnvironmentSettings: (change) =>
+    set((state) => {
+      const clean = sanitizeEnvironmentChange(change);
+      if (!environmentChangeDiffers(state.scene.environment, clean))
+        return state;
+      return {
+        scene: setEnvironment(state.scene, clean),
+        history: record(state, "Environment"),
+      };
+    }),
+  previewEnvironmentSettings: (change) =>
+    set((state) => {
+      if (!state.pendingEdit) return state;
+      const clean = sanitizeEnvironmentChange(change);
+      if (Object.keys(clean).length === 0) return state;
+      return { scene: setEnvironment(state.scene, clean) };
+    }),
   addLight: (kind) => {
     const id = crypto.randomUUID();
     set((state) => ({

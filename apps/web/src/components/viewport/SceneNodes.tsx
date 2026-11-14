@@ -17,6 +17,7 @@ import {
 } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
 import LightObject from "./LightObject";
+import { useEnvironmentTexture } from "./environmentTexture";
 import ModelObject from "./ModelObject";
 import MultiSelectionGizmo from "./MultiSelectionGizmo";
 import SelectionGizmo from "./SelectionGizmo";
@@ -80,6 +81,10 @@ function NodeMesh({
   const { position, rotation, scale } = node.transform;
   const material = node.material;
   const seeThrough = cut || material.opacity < 1;
+  const envTexture = useEnvironmentTexture((state) => state.texture);
+  const reflectionStrength = useSceneStore(
+    (state) => state.scene.environment.reflectionStrength,
+  );
 
   // Must keep the same identity between renders: React calls a changed ref callback again every render
   const nodeId = node.id;
@@ -174,7 +179,11 @@ function NodeMesh({
       <meshStandardMaterial
         // A new material when the shading, the side or solid / see-through changes: three.js builds its
         // shader for these (a solid material is compiled to ignore opacity completely)
-        key={`${material.flatShading}-${material.doubleSided}-${seeThrough}`}
+        key={`${material.flatShading}-${material.doubleSided}-${seeThrough}-${envTexture !== null}`}
+        // What the surface reflects. Set on each material (and not left to the scene) so that the
+        // object's own Reflection strength can scale it
+        envMap={envTexture}
+        envMapIntensity={material.reflectionStrength * reflectionStrength}
         color={node.color}
         roughness={material.roughness}
         metalness={material.metalness}

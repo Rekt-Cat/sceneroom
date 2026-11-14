@@ -1082,3 +1082,54 @@ describe("light objects", () => {
     expect(copy?.light).toMatchObject({ angle: 20 });
   });
 });
+
+describe("environment settings", () => {
+  const environment = () => get().scene.environment;
+
+  it("changes some settings as one undo step, cleaned to their range", () => {
+    get().setEnvironmentSettings({
+      sunElevation: 200,
+      fogEnabled: true,
+      skyTop: "#FF0000",
+    });
+    expect(environment()).toMatchObject({
+      sunElevation: 90,
+      fogEnabled: true,
+      skyTop: "#ff0000",
+      sunIntensity: 1.6,
+    });
+    expect(nextUndoLabel(get().history)).toBe("Environment");
+    get().undo();
+    expect(environment().fogEnabled).toBe(false);
+    expect(environment().sunElevation).toBe(51);
+  });
+
+  it("records nothing for a change that changes nothing, or for nonsense", () => {
+    get().setEnvironmentSettings({ sunEnabled: true });
+    get().setEnvironmentSettings({ sunIntensity: NaN });
+    get().setEnvironmentSettings({ reflections: "forest" as never });
+    expect(get().history.past).toHaveLength(0);
+  });
+
+  it("dragging a slider is many previews and one undo step", () => {
+    get().beginEdit("Environment");
+    get().previewEnvironmentSettings({ ambientIntensity: 1 });
+    get().previewEnvironmentSettings({ ambientIntensity: 1.5 });
+    expect(get().history.past).toHaveLength(0);
+    get().endEdit(true);
+    expect(environment().ambientIntensity).toBe(1.5);
+    expect(get().history.past).toHaveLength(1);
+  });
+
+  it("previews are ignored when no edit is in progress", () => {
+    get().previewEnvironmentSettings({ ambientIntensity: 2 });
+    expect(environment().ambientIntensity).toBe(0.6);
+  });
+
+  it("an object's reflection strength is a surface value with its own limit", () => {
+    get().setNodeMaterial("initial-cube", { reflectionStrength: 9 });
+    expect(get().scene.nodes["initial-cube"]?.material.reflectionStrength).toBe(
+      3,
+    );
+  });
+});

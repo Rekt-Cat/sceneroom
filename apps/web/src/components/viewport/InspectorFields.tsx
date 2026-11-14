@@ -526,7 +526,12 @@ export function MaterialSlider({
   max = 1,
 }: {
   node: SceneNode;
-  property: "roughness" | "metalness" | "opacity" | "emissiveIntensity";
+  property:
+    | "roughness"
+    | "metalness"
+    | "opacity"
+    | "emissiveIntensity"
+    | "reflectionStrength";
   label: string;
   disabled: boolean;
   max?: number;

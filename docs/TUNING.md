@@ -248,6 +248,25 @@ Lights are objects you add from the Add menu (Directional, Point, Spot). Their s
 
 The always-on sun and soft light in `Viewport.tsx` are still there, so a scene is never dark. They become settings in the environment step.
 
+## Scene settings (background, reflections, fog, base lighting)
+
+Shown in the right panel when nothing is selected. The starting values are `environmentSchema` in `packages/shared/src/scene.ts` (the defaults of each field); every value has a reset button back to them.
+
+| What                | Setting (in `environmentSchema`)              | Our value                       | What it does                                                                                                      |
+| ------------------- | --------------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Background          | `backgroundMode`, `backgroundColor`           | colour `#14191d`                | A flat colour, or "Sky" (a gradient from top, through the horizon, to the ground).                                |
+| Sky colours         | `skyTop`, `skyHorizon`, `skyGround`           | `#3f6fb5`, `#bcd6ea`, `#3a3f45` | The three colours of the sky. The reflections can use the same sky.                                               |
+| Reflections         | `reflections`                                 | `studio`                        | What shiny surfaces reflect: off, a generated studio room (no download), or the sky.                              |
+| Reflection strength | `reflectionStrength` (scene)                  | `0.6`                           | How strong the reflected light is. Each object also has its own Reflect slider in Surface, which multiplies this. |
+| Fog                 | `fogEnabled`, `fogColor`, `fogNear`, `fogFar` | off, `#14191d`, `10`, `60`      | Things fade into the fog colour between the near and far distance (in units from the camera).                     |
+| Ambient light       | `ambientIntensity`                            | `0.6`                           | The soft light that comes from everywhere.                                                                        |
+| Built-in sun        | `sunEnabled`, `sunIntensity`                  | on, `1.6`                       | The always-on sun. It stops casting shadows once the scene has a light of its own.                                |
+| Sun direction       | `sunAzimuth`, `sunElevation`                  | `51`, `51` degrees              | Compass direction and height of the sun. `51`, `51` is where the old fixed sun stood.                             |
+| Object reflection   | `MAX_REFLECTION_STRENGTH` in `scene.ts`       | `3`                             | The right end of an object's Reflect slider (default 1).                                                          |
+| Studio softness     | `STUDIO_BLUR` in `SceneEnvironment.tsx`       | `0.04`                          | How blurred the studio reflections are (0 sharp, 1 very soft).                                                    |
+| Sky picture size    | `SKY_PICTURE_SIZE` in `SceneEnvironment.tsx`  | `8 x 256` pixels                | The strip the sky gradient is drawn on. It is smooth, so a thin strip is enough.                                  |
+| Sun distance        | `SUN_DISTANCE` in `environment.ts`            | `12` units                      | How far from the middle the built-in sun stands (only its direction matters for the light).                       |
+
 ## Locking objects
 
 | What               | Setting                                                                                              | Our value | What it does                                                                                                                                          |

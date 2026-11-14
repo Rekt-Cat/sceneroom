@@ -1,5 +1,6 @@
 "use client";
 
+import EnvironmentPanel from "./EnvironmentPanel";
 import LightSection from "./LightSection";
 import SurfaceSection from "./SurfaceSection";
 import { useState } from "react";
@@ -26,7 +27,7 @@ const actionButton =
 
 /**
  * Right panel. One object selected: its name and actions. Several: only a count and the names
- * (no per-object details). Nothing selected: a short hint.
+ * (no per-object details). Nothing selected: the settings of the world.
  */
 export default function InspectorPanel() {
   const selectedIds = useSceneStore((state) => state.selectedIds);
@@ -60,16 +61,9 @@ export default function InspectorPanel() {
   );
 }
 
+/** Nothing selected: the settings of the world (background, reflections, fog, base lighting). */
 function EmptyState() {
-  return (
-    <div className="px-5 py-8 text-sm leading-relaxed text-ed-text-3">
-      <p className="mb-1 font-medium text-ed-text-2">Nothing selected</p>
-      <p>
-        Click an object in the list or in the 3D view to see it here. Drag a box
-        with Ctrl or Cmd held to select several.
-      </p>
-    </div>
-  );
+  return <EnvironmentPanel />;
 }
 
 function Actions({ ids }: { ids: string[] }) {

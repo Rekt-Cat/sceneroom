@@ -4,12 +4,14 @@ import { useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Grid, OrbitControls, Stats } from "@react-three/drei";
 import { MOUSE, type DirectionalLight } from "three";
+import { sunPosition } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
 import AssetDropController from "./AssetDropController";
 import AssetPreview from "./AssetPreview";
 import BoxSelectController from "./BoxSelectController";
 import CameraModifierSwitch from "./CameraModifierSwitch";
 import ViewportContextMenuController from "./ViewportContextMenuController";
+import SceneEnvironment from "./SceneEnvironment";
 import SceneNodes from "./SceneNodes";
 import { shouldIgnoreClick } from "./gizmoGuard";
 import { useShadowCamera } from "./useShadowCamera";
@@ -27,7 +29,15 @@ const GROUND_SIZE = 200;
  * The built-in sun: always there, so a scene is never dark. It stands at a fixed spot and shadows
  * everything within `SHADOW_AREA` units of the middle.
  */
-function BaseSun({ castShadow }: { castShadow: boolean }) {
+function BaseSun({
+  castShadow,
+  intensity,
+  position,
+}: {
+  castShadow: boolean;
+  intensity: number;
+  position: [number, number, number];
+}) {
   const ref = useRef<DirectionalLight>(null);
   useShadowCamera(ref, {
     near: 1,
@@ -40,8 +50,8 @@ function BaseSun({ castShadow }: { castShadow: boolean }) {
   return (
     <directionalLight
       ref={ref}
-      position={[5, 8, 4]}
-      intensity={1.6}
+      position={position}
+      intensity={intensity}
       castShadow={castShadow}
       shadow-mapSize={[SHADOW_MAP_SIZE, SHADOW_MAP_SIZE]}
       shadow-bias={-0.0003}
@@ -57,6 +67,7 @@ function BaseSun({ castShadow }: { castShadow: boolean }) {
  */
 export default function Viewport() {
   const select = useSceneStore((state) => state.select);
+  const environment = useSceneStore((state) => state.scene.environment);
   // The built-in sun stops casting its own shadow once the scene has a light of its own: two lights
   // casting shadows from different directions make a messy double shadow
   const hasOwnLight = useSceneStore((state) =>
@@ -73,10 +84,20 @@ export default function Viewport() {
         if (!shouldIgnoreClick()) select(null);
       }}
     >
-      <color attach="background" args={["#14191d"]} />
+      {/* The background, reflections and fog, from the scene's environment settings */}
+      <SceneEnvironment />
 
-      <ambientLight intensity={0.6} />
-      <BaseSun castShadow={!hasOwnLight} />
+      <ambientLight intensity={environment.ambientIntensity} />
+      {environment.sunEnabled && (
+        <BaseSun
+          castShadow={!hasOwnLight}
+          intensity={environment.sunIntensity}
+          position={sunPosition(
+            environment.sunAzimuth,
+            environment.sunElevation,
+          )}
+        />
+      )}
       {/* Shadows need a surface to fall on: the ground catches them (and draws nothing else) */}
       <mesh
         rotation-x={-Math.PI / 2}

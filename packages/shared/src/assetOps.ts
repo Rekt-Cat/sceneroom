@@ -13,7 +13,9 @@ export function nodesUsingAsset(scene: Scene, assetId: string): string[] {
 }
 
 /** How many objects show each imported file, by asset id (files nobody uses are not listed). */
-export function assetUsageCounts(scene: Scene): Record<string, number> {
+export function assetUsageCounts(
+  scene: Pick<Scene, "nodes">,
+): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const node of Object.values(scene.nodes)) {
     if (node.assetId) counts[node.assetId] = (counts[node.assetId] ?? 0) + 1;
