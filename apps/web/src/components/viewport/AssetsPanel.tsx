@@ -29,10 +29,7 @@ export default function AssetsPanel() {
   const assets = useSceneStore((state) => state.scene.assets);
   const nodes = useSceneStore((state) => state.scene.nodes);
   const list = Object.values(assets);
-  const usage = useMemo(
-    () => assetUsageCounts({ version: 1, nodes, assets }),
-    [nodes, assets],
-  );
+  const usage = useMemo(() => assetUsageCounts({ nodes }), [nodes]);
 
   if (list.length === 0) {
     return (

@@ -1,5 +1,10 @@
 import { normalizeHexColor } from "./color";
-import { MAX_EMISSIVE_INTENSITY, type Material, type Transform } from "./scene";
+import {
+  MAX_EMISSIVE_INTENSITY,
+  MAX_REFLECTION_STRENGTH,
+  type Material,
+  type Transform,
+} from "./scene";
 
 /** Which part of a transform a field edits. */
 export type TransformGroup = "position" | "rotation" | "scale";
@@ -102,6 +107,13 @@ export function sanitizeMaterialChange(change: MaterialChange): MaterialChange {
     if (typeof value === "number" && Number.isFinite(value)) {
       clean[key] = Math.min(1, Math.max(0, value));
     }
+  }
+  const reflection = change.reflectionStrength;
+  if (typeof reflection === "number" && Number.isFinite(reflection)) {
+    clean.reflectionStrength = Math.min(
+      MAX_REFLECTION_STRENGTH,
+      Math.max(0, reflection),
+    );
   }
   const glow = change.emissiveIntensity;
   if (typeof glow === "number" && Number.isFinite(glow)) {

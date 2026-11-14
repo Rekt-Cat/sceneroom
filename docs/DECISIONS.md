@@ -490,3 +490,15 @@ The owner found the shadows "kinda bad", and worse after adding and moving a lig
 - **No bias.** Surfaces shadowed themselves in stripes and acne. Every light now has `bias`, `normalBias` and a shadow `radius` (see `SHADOW_QUALITY`), and near and far planes that fit the scene instead of three.js's 0.5 to 500.
 - **Shadow type.** `shadows` was on the default "soft" mode, which this three.js version (0.187) has removed; it fell back to the standard one with a console warning every frame. Now `shadows="percentage"` (the standard one), with softness from each light's `radius`.
 - **Not done:** shadows beyond 15 units of the middle; contact shadows; a setting for the scene's shadow area (it belongs with the environment settings).
+
+## Environment (2026-11-14)
+
+Second half of the lights step: the world around the objects, as scene-wide settings (`scene.environment`, Zod defaults so older scenes load with the starting look; the schema version stays 1).
+
+- **Where:** the right panel shows the scene settings when nothing is selected (like a World panel), instead of the old "nothing selected" hint. Undo covers every change; sliders and colour pickers are one undo step per drag.
+- **Background:** a colour or a sky. The sky is a small canvas gradient (top, horizon, ground) used as an equirectangular texture, so it is drawn behind everything and can also be reflected. No image downloads.
+- **Reflections:** off, "studio" (three.js's `RoomEnvironment`, built in code, run through `PMREMGenerator`), or the sky picture. Default is studio at strength 0.6: dark metal now has something to reflect, and every older scene looks a little brighter. The generated pictures are remade only when their kind or the sky colours change, not for strength or fog changes.
+- **Per-object Reflection strength** (the postponed item from Surface and shading). three.js ignores a material's own `envMapIntensity` when the environment comes from the scene, so each shape material gets the environment picture itself (`envMap`) and `envMapIntensity` = its own strength times the scene's. Imported models keep their own materials and use the scene's environment and strength.
+- **Fog:** linear fog (colour, start, full distance). Off by default.
+- **Base lighting:** the always-on ambient light and sun are settings now (strength, sun on or off, sun compass direction and height). The sun still stops casting shadows once the scene has a light of its own (see "Shadow fixes"). `sunPosition` (pure, tested) turns direction and height into a position; the defaults reproduce the old fixed sun.
+- **Not done:** a shadow-area setting for the built-in sun; HDRI files (they need the asset system and a licence check); a sun disc or clouds in the sky; per-object fog; camera objects (a separate item in the plan, they need a "view through camera" mode).

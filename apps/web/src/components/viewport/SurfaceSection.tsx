@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import {
   DEFAULT_MATERIAL,
   MAX_EMISSIVE_INTENSITY,
+  MAX_REFLECTION_STRENGTH,
   type Material,
   type SceneNode,
 } from "@sceneroom/shared";
@@ -77,6 +78,13 @@ export default function SurfaceSection({
               node={node}
               property="opacity"
               label="Opacity"
+              disabled={disabled}
+            />
+            <MaterialSlider
+              node={node}
+              property="reflectionStrength"
+              label="Reflect"
+              max={MAX_REFLECTION_STRENGTH}
               disabled={disabled}
             />
           </>

@@ -15,6 +15,9 @@ export const DEFAULT_COLOR = "#5cc4e0";
 export const DEFAULT_ROUGHNESS = 0.6;
 export const DEFAULT_METALNESS = 0.1;
 
+/** The strongest Reflection strength setting of an object. */
+export const MAX_REFLECTION_STRENGTH = 3;
+
 /** Glow colour of a new object: black means no glow. */
 export const DEFAULT_EMISSIVE_COLOR = "#000000";
 
@@ -83,6 +86,8 @@ export const materialSchema = z.object({
   doubleSided: z.boolean().default(false),
   /** Show every flat face of the shape separately, instead of blending them into a smooth curve. */
   flatShading: z.boolean().default(false),
+  /** How strongly the object shows the reflections of the environment (1 = as set in the scene). */
+  reflectionStrength: z.number().min(0).max(MAX_REFLECTION_STRENGTH).default(1),
   /** Does the object throw a shadow? */
   castShadow: z.boolean().default(true),
   /** Do shadows fall on the object? */
@@ -186,6 +191,47 @@ export const assetInfoSchema = z.object({
 });
 
 /**
+ * The world around the objects: what is behind them, what they reflect, fog, and the always-on
+ * lights. Every field has a default, so older scenes (without it) load with the starting look.
+ */
+export const environmentSchema = z.object({
+  /** What is drawn behind everything: one colour, or a sky that fades from the top, through the horizon, to the ground. */
+  backgroundMode: z.enum(["color", "sky"]).default("color"),
+  backgroundColor: hexColorSchema.default("#14191d"),
+  skyTop: hexColorSchema.default("#3f6fb5"),
+  skyHorizon: hexColorSchema.default("#bcd6ea"),
+  skyGround: hexColorSchema.default("#3a3f45"),
+  /**
+   * What shiny surfaces reflect, and what lights them from all sides: nothing, a generated "studio"
+   * (a bright room with soft light boxes), or the sky above.
+   */
+  reflections: z.enum(["off", "studio", "sky"]).default("studio"),
+  /** How strong that reflected light is. */
+  reflectionStrength: z.number().min(0).max(5).default(0.6),
+  fogEnabled: z.boolean().default(false),
+  fogColor: hexColorSchema.default("#14191d"),
+  /** Fog starts this far from the camera and is complete at `fogFar`. */
+  fogNear: z.number().min(0).max(1000).default(10),
+  fogFar: z.number().min(1).max(2000).default(60),
+  /** The soft light that comes from everywhere. */
+  ambientIntensity: z.number().min(0).max(5).default(0.6),
+  /** The built-in sun: switched off, or its strength and direction (degrees). */
+  sunEnabled: z.boolean().default(true),
+  sunIntensity: z.number().min(0).max(10).default(1.6),
+  /** Which compass direction the sun stands in, 0 to 360. */
+  sunAzimuth: z.number().min(0).max(360).default(51),
+  /** How high the sun is, 0 (on the horizon) to 90 (straight above). */
+  sunElevation: z.number().min(0).max(90).default(51),
+});
+
+export type EnvironmentSettings = z.infer<typeof environmentSchema>;
+
+/** The starting environment. */
+export const DEFAULT_ENVIRONMENT: EnvironmentSettings = environmentSchema.parse(
+  {},
+);
+
+/**
  * Flat map of nodes by id (not a nested tree). A flat map is easier to update,
  * and maps cleanly onto a Yjs document later. The tree is rebuilt from parentId.
  */
@@ -194,6 +240,8 @@ export const sceneSchema = z.object({
   nodes: z.record(z.string(), sceneNodeSchema),
   /** Imported files used by the scene, by id. Old scenes without it load with none. */
   assets: z.record(z.string(), assetInfoSchema).default({}),
+  /** The world around the objects. Older scenes without it load with the starting look. */
+  environment: environmentSchema.default(DEFAULT_ENVIRONMENT),
 });
 
 export type PrimitiveKind = (typeof PRIMITIVE_KINDS)[number];
@@ -205,5 +253,10 @@ export type SceneNode = z.infer<typeof sceneNodeObjectSchema>;
 export type Scene = z.infer<typeof sceneSchema>;
 
 export function createEmptyScene(): Scene {
-  return { version: SCENE_SCHEMA_VERSION, nodes: {}, assets: {} };
+  return {
+    version: SCENE_SCHEMA_VERSION,
+    nodes: {},
+    assets: {},
+    environment: { ...DEFAULT_ENVIRONMENT },
+  };
 }
