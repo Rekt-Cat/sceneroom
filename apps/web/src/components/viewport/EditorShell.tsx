@@ -104,7 +104,7 @@ export default function EditorShell() {
               aria-hidden="true"
               className="pointer-events-none absolute inset-3 grid place-items-center rounded-xl border-2 border-dashed border-ed-accent bg-ed-accent/10 text-sm font-medium"
             >
-              Drop a .glb model to import it
+              Drop a .glb model to import it, or a .sceneroom file to open it
             </div>
           )}
           {droppingAsset && (

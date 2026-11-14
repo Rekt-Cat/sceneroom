@@ -288,6 +288,18 @@ In the Inspector's "Shape" section for the built-in shapes. Each value has its o
 | Most points            | `MAX_DEFORMED_POINTS` in `modifiers.ts`                                        | `400000`                         | Mirror and array are skipped if they would make a shape with more points than this (keeps the editor from freezing).                                                                                                                                    |
 | Round shape detail     | `ROUND_SEGMENTS` in `apps/web/src/components/viewport/shapeGeometry.ts`        | `32`                             | Pieces around a sphere, cylinder and cone (they are not controlled by Segments).                                                                                                                                                                        |
 
+## Saving and opening scene files
+
+Details of the file: `docs/SCENE-FILE-FORMAT.md`.
+
+| What           | Setting                                                      | Our value                    | What it does                                                            |
+| -------------- | ------------------------------------------------------------ | ---------------------------- | ----------------------------------------------------------------------- |
+| Largest file   | `MAX_SCENE_FILE_BYTES` in `packages/shared/src/sceneFile.ts` | `250 MB`                     | A bigger file is refused before it is read into memory.                 |
+| File extension | `SCENE_FILE_EXTENSION` in `sceneFile.ts`                     | `.sceneroom`                 | What Save writes and what Open and drag-and-drop look for.              |
+| File name      | `sceneFileName` in `sceneFile.ts`                            | `scene-YYYY-MM-DD.sceneroom` | The name Save suggests (from today's date).                             |
+| Save shortcut  | `useEditorShortcuts.ts`                                      | Ctrl or Cmd + S              | Saves the scene as a file (instead of the browser saving the web page). |
+| Format version | `SCENE_FILE_VERSION` in `sceneFile.ts`                       | `1`                          | Raised only when the layout of the file changes.                        |
+
 ## Locking objects
 
 | What               | Setting                                                                                              | Our value | What it does                                                                                                                                          |

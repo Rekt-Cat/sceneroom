@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { PRIMITIVE_KINDS, modeForKey } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
 import { SEARCH_INPUT_ID } from "./HierarchyPanel";
+import { saveSceneToFile } from "@/sceneFile/sceneFileActions";
 import { pasteClipboard } from "./clipboardActions";
 
 /** True when the user is typing in a field, so letter keys must not trigger shortcuts. */
@@ -45,6 +46,12 @@ export function useEditorShortcuts(): void {
         if (key === "y" && event.ctrlKey) {
           event.preventDefault();
           store.redo();
+          return;
+        }
+        // Ctrl/Cmd + S saves the scene as a file (the browser would otherwise offer to save the web page)
+        if (key === "s" && !event.shiftKey) {
+          event.preventDefault();
+          void saveSceneToFile();
           return;
         }
         // Ctrl/Cmd + C copies, X cuts, V pastes the selected objects. Only when there is something to

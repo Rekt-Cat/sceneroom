@@ -22,6 +22,7 @@ export * from "./placement";
 export * from "./lights";
 export * from "./environment";
 export * from "./modifiers";
+export * from "./sceneFile";
 export * from "./persistence";
 export * from "./clipboard";
 export * from "./siblingOrder";

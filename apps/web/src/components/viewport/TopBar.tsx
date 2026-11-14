@@ -1,6 +1,17 @@
 "use client";
 
-import { APP_NAME, nextRedoLabel, nextUndoLabel } from "@sceneroom/shared";
+import { useRef } from "react";
+import {
+  APP_NAME,
+  SCENE_FILE_EXTENSION,
+  nextRedoLabel,
+  nextUndoLabel,
+} from "@sceneroom/shared";
+import {
+  openSceneFromFile,
+  saveSceneToFile,
+} from "@/sceneFile/sceneFileActions";
+import { useImportStore } from "@/store/importStore";
 import {
   usePersistenceStore,
   type PersistenceStatus,
@@ -90,6 +101,52 @@ function SaveStatus() {
   );
 }
 
+const FILE_BUTTON =
+  "flex h-7 items-center gap-1.5 rounded-md px-2 text-sm text-ed-text-2 transition-colors hover:bg-ed-raised hover:text-ed-text focus-visible:outline-2 focus-visible:outline-ed-accent disabled:cursor-wait disabled:opacity-60";
+
+/** "Open" and "Save": the scene (and the models in it) as a file you can keep and send. */
+function FileButtons() {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const busy = useImportStore((state) => state.busy);
+  return (
+    <div className="flex gap-0.5">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => inputRef.current?.click()}
+        title="Open a scene file (.sceneroom), or drop one onto the 3D view"
+        className={FILE_BUTTON}
+      >
+        <Icon name="open" />
+        Open
+      </button>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => void saveSceneToFile()}
+        title="Save the scene as a file you can keep and send (Ctrl or Cmd + S)"
+        className={FILE_BUTTON}
+      >
+        <Icon name="save" />
+        Save
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={SCENE_FILE_EXTENSION}
+        className="hidden"
+        aria-label="Choose a scene file to open"
+        onChange={(event) => {
+          const [file] = Array.from(event.target.files ?? []);
+          // Empty the box, so choosing the same file again still counts as a change
+          event.target.value = "";
+          if (file) void openSceneFromFile(file);
+        }}
+      />
+    </div>
+  );
+}
+
 /** Bar across the top of the editor: logo, Undo and Redo, and the scene name (plain text for now). */
 export default function TopBar() {
   const undoLabel = useSceneStore((state) => nextUndoLabel(state.history));
@@ -120,6 +177,8 @@ export default function TopBar() {
           onClick={redo}
         />
       </div>
+      <span className="h-5 w-px bg-ed-line-strong" aria-hidden="true" />
+      <FileButtons />
       <span className="h-5 w-px bg-ed-line-strong" aria-hidden="true" />
       <span className="text-sm text-ed-text-3">Untitled scene</span>
       <SaveStatus />
