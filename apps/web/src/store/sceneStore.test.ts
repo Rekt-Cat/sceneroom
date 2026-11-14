@@ -1232,3 +1232,40 @@ describe("modifiers and segments", () => {
     expect(copy.modifiers).toHaveLength(1);
   });
 });
+
+describe("the other modifiers (stretch, noise, mirror, array)", () => {
+  const cube = () => get().scene.nodes["initial-cube"]!;
+
+  it("each can be added with its starting values", () => {
+    for (const type of ["stretch", "noise", "mirror", "array"] as const) {
+      get().addModifier("initial-cube", type);
+    }
+    expect(cube().modifiers.map((m) => m.type)).toEqual([
+      "stretch",
+      "noise",
+      "mirror",
+      "array",
+    ]);
+    expect(cube().modifiers[3]).toMatchObject({ count: 3, spacing: 1.2 });
+  });
+
+  it("settings are cleaned: whole numbers where needed, inside the range, and not for the wrong kind", () => {
+    get().addModifier("initial-cube", "array");
+    get().addModifier("initial-cube", "mirror");
+    const [array, mirror] = cube().modifiers;
+    get().setModifier("initial-cube", array!.id, { count: 99.6, spacing: 9 });
+    expect(cube().modifiers[0]).toMatchObject({ count: 20, spacing: 5 });
+    const steps = get().history.past.length;
+    get().setModifier("initial-cube", mirror!.id, { count: 5 });
+    expect(get().history.past).toHaveLength(steps);
+  });
+
+  it("the stretch keep-volume switch is one undo step", () => {
+    get().addModifier("initial-cube", "stretch");
+    const id = cube().modifiers[0]!.id;
+    get().setModifier("initial-cube", id, { keepVolume: true });
+    expect(cube().modifiers[0]).toMatchObject({ keepVolume: true });
+    get().undo();
+    expect(cube().modifiers[0]).toMatchObject({ keepVolume: false });
+  });
+});

@@ -67,4 +67,40 @@ describe("buildShapeGeometry", () => {
     }
     expect(widestAtTop).toBeCloseTo(0, 5);
   });
+
+  it("mirror and array add points and triangles, and the geometry stays valid", () => {
+    const plain = buildShapeGeometry("cube", 2, []);
+    const mirrored = buildShapeGeometry("cube", 2, [
+      createModifier("m", "mirror"),
+    ]);
+    expect(mirrored.getAttribute("position").count).toBe(
+      plain.getAttribute("position").count * 2,
+    );
+    expect(mirrored.index!.count).toBe(plain.index!.count * 2);
+    // the old picture coordinates no longer fit, so they are dropped
+    expect(mirrored.getAttribute("uv")).toBeUndefined();
+    expect(mirrored.getAttribute("normal").count).toBe(
+      mirrored.getAttribute("position").count,
+    );
+
+    const repeated = buildShapeGeometry("cube", 1, [
+      { ...createModifier("a", "array"), count: 4 } as Modifier,
+    ]);
+    expect(repeated.getAttribute("position").count).toBe(24 * 4);
+    repeated.computeBoundingBox();
+    // 4 cubes 1.2 lengths apart: from -0.5 to 0.5 + 3 * 1.2
+    expect(repeated.boundingBox!.max.x).toBeCloseTo(0.5 + 3 * 1.2);
+  });
+
+  it("noise and stretch keep the number of points", () => {
+    const plain = buildShapeGeometry("sphere", 1, []);
+    const shaken = buildShapeGeometry("sphere", 1, [
+      createModifier("n", "noise"),
+      createModifier("s", "stretch"),
+    ]);
+    expect(shaken.getAttribute("position").count).toBe(
+      plain.getAttribute("position").count,
+    );
+    expect(shaken.getAttribute("uv")).toBeDefined();
+  });
 });

@@ -5,13 +5,27 @@ import type {
   Scene,
   SceneNode,
 } from "./scene";
-import { MAX_MODIFIERS, MAX_SEGMENTS, PRIMITIVE_KINDS } from "./scene";
+import {
+  MAX_ARRAY_COUNT,
+  MAX_ARRAY_SPACING,
+  MAX_MIRROR_OFFSET,
+  MAX_MODIFIERS,
+  MAX_SEGMENTS,
+  MAX_STRETCH,
+  MIN_ARRAY_COUNT,
+  MIN_STRETCH,
+  PRIMITIVE_KINDS,
+} from "./scene";
 
 /** The kinds of modifier, in the order the "Add modifier" buttons show them. */
 export const MODIFIER_TYPES: readonly ModifierType[] = [
   "bend",
   "twist",
   "taper",
+  "stretch",
+  "noise",
+  "mirror",
+  "array",
 ];
 
 /** What a modifier is called and what it does, for the buttons and the cards. */
@@ -25,7 +39,16 @@ export const MODIFIER_INFO: Record<
     hint: "Turn each slice a bit more than the one before",
   },
   taper: { label: "Taper", hint: "Make one end thinner or wider" },
+  stretch: { label: "Stretch", hint: "Make the shape longer or shorter" },
+  noise: { label: "Noise", hint: "Make the surface bumpy and organic" },
+  mirror: { label: "Mirror", hint: "Add a reflected copy on the other side" },
+  array: { label: "Array", hint: "Repeat the shape in a line" },
 };
+
+/** The kinds of modifier that work along an axis (noise does not: it pushes points in all directions). */
+export function usesAxis(type: ModifierType): boolean {
+  return type !== "noise";
+}
 
 /** True for objects whose shape modifiers can change: the built-in shapes (not models, not lights). */
 export function supportsModifiers(node: SceneNode): boolean {
@@ -41,6 +64,29 @@ export function createModifier(id: string, type: ModifierType): Modifier {
       return { id, type, enabled: true, axis: "y", angle: 90 };
     case "taper":
       return { id, type, enabled: true, axis: "y", amount: 0.5 };
+    case "stretch":
+      return {
+        id,
+        type,
+        enabled: true,
+        axis: "y",
+        factor: 1.5,
+        keepVolume: false,
+      };
+    case "noise":
+      return {
+        id,
+        type,
+        enabled: true,
+        axis: "y",
+        strength: 0.1,
+        scale: 2,
+        seed: 1,
+      };
+    case "mirror":
+      return { id, type, enabled: true, axis: "x", offset: 0.5 };
+    case "array":
+      return { id, type, enabled: true, axis: "x", count: 3, spacing: 1.2 };
   }
 }
 
@@ -50,40 +96,66 @@ export type ModifierChange = {
   axis?: ModifierAxis;
   angle?: number;
   amount?: number;
+  factor?: number;
+  keepVolume?: boolean;
+  strength?: number;
+  scale?: number;
+  seed?: number;
+  count?: number;
+  spacing?: number;
+  offset?: number;
 };
 
-const ANGLE_LIMIT: Record<ModifierType, number> = {
-  bend: 360,
-  twist: 720,
-  taper: 0,
+/** The number settings of each kind: [smallest, largest, whole numbers only?]. */
+const NUMBER_SETTINGS: Record<
+  ModifierType,
+  Record<string, [number, number, boolean]>
+> = {
+  bend: { angle: [-360, 360, false] },
+  twist: { angle: [-720, 720, false] },
+  taper: { amount: [-1, 1, false] },
+  stretch: { factor: [MIN_STRETCH, MAX_STRETCH, false] },
+  noise: {
+    strength: [0, 1, false],
+    scale: [0.1, 10, false],
+    seed: [0, 9999, true],
+  },
+  mirror: { offset: [-MAX_MIRROR_OFFSET, MAX_MIRROR_OFFSET, false] },
+  array: {
+    count: [MIN_ARRAY_COUNT, MAX_ARRAY_COUNT, true],
+    spacing: [0, MAX_ARRAY_SPACING, false],
+  },
 };
 
 /**
  * Cleans up a change for a modifier: numbers that are not finite are dropped and the rest are kept
- * inside the range of that kind of modifier; the axis must be x, y or z; "enabled" true or false. A
- * setting that does not belong to the kind (an angle for a taper) is dropped.
+ * inside the range of that kind of modifier (whole numbers where that is needed); the axis must be x, y
+ * or z; the switches must be true or false. A setting that does not belong to the kind (an angle for a
+ * taper) is dropped.
  */
 export function sanitizeModifierChange(
   modifier: Modifier,
   change: ModifierChange,
 ): ModifierChange {
-  const clean: ModifierChange = {};
-  if (typeof change.enabled === "boolean") clean.enabled = change.enabled;
-  if (change.axis === "x" || change.axis === "y" || change.axis === "z") {
-    clean.axis = change.axis;
-  }
-  if (modifier.type !== "taper") {
-    const limit = ANGLE_LIMIT[modifier.type];
-    if (typeof change.angle === "number" && Number.isFinite(change.angle)) {
-      clean.angle = Math.min(limit, Math.max(-limit, change.angle));
-    }
-  } else if (
-    typeof change.amount === "number" &&
-    Number.isFinite(change.amount)
+  const clean: Record<string, unknown> = {};
+  if (typeof change.enabled === "boolean") clean["enabled"] = change.enabled;
+  if (
+    usesAxis(modifier.type) &&
+    (change.axis === "x" || change.axis === "y" || change.axis === "z")
   ) {
-    clean.amount = Math.min(1, Math.max(-1, change.amount));
+    clean["axis"] = change.axis;
   }
-  return clean;
+  if (modifier.type === "stretch" && typeof change.keepVolume === "boolean") {
+    clean["keepVolume"] = change.keepVolume;
+  }
+  const settings = NUMBER_SETTINGS[modifier.type];
+  for (const [key, [min, max, whole]] of Object.entries(settings)) {
+    const value = (change as Record<string, unknown>)[key];
+    if (typeof value !== "number" || !Number.isFinite(value)) continue;
+    const limited = Math.min(max, Math.max(min, value));
+    clean[key] = whole ? Math.round(limited) : limited;
+  }
+  return clean as ModifierChange;
 }
 
 /** True if applying the (cleaned) change would alter the modifier. */
@@ -165,8 +237,9 @@ export function duplicateModifier(
 ): Scene {
   const node = scene.nodes[nodeId];
   const index = node?.modifiers.findIndex((m) => m.id === modifierId) ?? -1;
-  if (!node || index < 0 || node.modifiers.length >= MAX_MODIFIERS)
+  if (!node || index < 0 || node.modifiers.length >= MAX_MODIFIERS) {
     return scene;
+  }
   const list = [...node.modifiers];
   list.splice(index + 1, 0, { ...node.modifiers[index]!, id: newId });
   return withNode(scene, nodeId, (n) => ({ ...n, modifiers: list }));
@@ -225,10 +298,29 @@ export function describeModifier(modifier: Modifier): string {
       return modifier.amount >= 0
         ? `Makes the far end along ${axis} thinner.`
         : `Makes the far end along ${axis} wider.`;
+    case "stretch":
+      return modifier.factor >= 1
+        ? `Makes the shape longer along ${axis}.`
+        : `Squashes the shape shorter along ${axis}.`;
+    case "noise":
+      return "Pushes points around in a smooth, bumpy pattern. Another seed gives another pattern.";
+    case "mirror":
+      return `Adds a flipped copy across a plane on ${axis}. Offset 0 puts the plane through the middle of the object; 0.5 puts it at the side of the shape.`;
+    case "array":
+      return `Repeats the shape ${modifier.count} times along ${axis}.`;
   }
 }
 
-// ---- The deformation itself: pure maths on a list of points ----
+// ---- The deformation itself: pure maths on points and triangles ----
+
+/**
+ * A shape as the modifiers see it: its points (x, y, z, x, y, z, ...) and its triangles (three point
+ * numbers each). Modifiers that only move points keep the triangles; mirror and array add more of both.
+ */
+export type ShapeMesh = { positions: Float32Array; indices: Uint32Array };
+
+/** The most points a shape may have after its modifiers; a modifier that would go past this is skipped. */
+export const MAX_DEFORMED_POINTS = 400_000;
 
 const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
 const AXIS_INDEX: Record<ModifierAxis, number> = { x: 0, y: 1, z: 2 };
@@ -250,32 +342,127 @@ function range(
 }
 
 /**
- * Applies the enabled modifiers, in order, to a list of points (x, y, z, x, y, z, ...) and returns the
- * new list; the input is not changed. Each modifier measures the shape as it is when its turn comes, so
- * the order matters. Points are in the object's own space.
+ * Applies the enabled modifiers, in order, to a shape and returns the new shape; the input is not
+ * changed. Each modifier measures the shape as it is when its turn comes, so the order matters. Points
+ * are in the object's own space.
  *
  * For an axis, "along" is that direction and "across" are the other two (next, then the one after, going
  * x, y, z, x, ...). Bend curves towards the next direction.
  */
-export function deformPoints(
-  points: Float32Array,
+export function deformMesh(
+  mesh: ShapeMesh,
   modifiers: readonly Modifier[],
-): Float32Array {
-  let current = points;
+): ShapeMesh {
+  let current = mesh;
   for (const modifier of modifiers) {
     if (!modifier.enabled) continue;
     current = applyModifier(current, modifier);
   }
-  return current === points ? new Float32Array(points) : current;
+  return current === mesh
+    ? {
+        positions: new Float32Array(mesh.positions),
+        indices: new Uint32Array(mesh.indices),
+      }
+    : current;
 }
 
-function applyModifier(points: Float32Array, modifier: Modifier): Float32Array {
+/** Like `deformMesh` for a list of points with no triangles (only for modifiers that move points). */
+export function deformPoints(
+  points: Float32Array,
+  modifiers: readonly Modifier[],
+): Float32Array {
+  return deformMesh(
+    { positions: points, indices: new Uint32Array(0) },
+    modifiers,
+  ).positions;
+}
+
+function applyModifier(mesh: ShapeMesh, modifier: Modifier): ShapeMesh {
+  switch (modifier.type) {
+    case "mirror":
+      return mirror(mesh, AXIS_INDEX[modifier.axis], modifier.offset);
+    case "array":
+      return array(
+        mesh,
+        AXIS_INDEX[modifier.axis],
+        modifier.count,
+        modifier.spacing,
+      );
+    default:
+      return {
+        positions: movePoints(mesh.positions, modifier),
+        indices: mesh.indices,
+      };
+  }
+}
+
+/**
+ * Reflects the shape across a plane on one axis and adds the reflection as a second shell. The plane
+ * stands `offset` shape-lengths from the middle of the object (the origin).
+ */
+function mirror(mesh: ShapeMesh, along: number, offset: number): ShapeMesh {
+  const count = mesh.positions.length / 3;
+  if (count * 2 > MAX_DEFORMED_POINTS) return mesh;
+  const { min, max } = range(mesh.positions, along);
+  const plane = offset * (max - min);
+  const positions = new Float32Array(mesh.positions.length * 2);
+  positions.set(mesh.positions);
+  positions.set(mesh.positions, mesh.positions.length);
+  for (let i = mesh.positions.length + along; i < positions.length; i += 3) {
+    // "+ 0" turns a negative zero into a plain zero
+    positions[i] = 2 * plane - positions[i]! + 0;
+  }
+  const indices = new Uint32Array(mesh.indices.length * 2);
+  indices.set(mesh.indices);
+  // A reflection turns the shape inside out, so the order of each triangle's corners is reversed
+  for (let t = 0; t < mesh.indices.length; t += 3) {
+    const at = mesh.indices.length + t;
+    indices[at] = mesh.indices[t]! + count;
+    indices[at + 1] = mesh.indices[t + 2]! + count;
+    indices[at + 2] = mesh.indices[t + 1]! + count;
+  }
+  return { positions, indices };
+}
+
+/** Repeats the shape `copies` times along one axis, `spacing` shape-lengths apart (1 = touching). */
+function array(
+  mesh: ShapeMesh,
+  along: number,
+  copies: number,
+  spacing: number,
+): ShapeMesh {
+  const count = mesh.positions.length / 3;
+  if (count * copies > MAX_DEFORMED_POINTS) return mesh;
+  const { min, max } = range(mesh.positions, along);
+  const step = (max - min) * spacing;
+  const positions = new Float32Array(mesh.positions.length * copies);
+  const indices = new Uint32Array(mesh.indices.length * copies);
+  for (let k = 0; k < copies; k++) {
+    const pointStart = k * mesh.positions.length;
+    positions.set(mesh.positions, pointStart);
+    for (
+      let i = pointStart + along;
+      i < pointStart + mesh.positions.length;
+      i += 3
+    ) {
+      positions[i] = positions[i]! + k * step;
+    }
+    for (let t = 0; t < mesh.indices.length; t++) {
+      indices[k * mesh.indices.length + t] = mesh.indices[t]! + k * count;
+    }
+  }
+  return { positions, indices };
+}
+
+/** The modifiers that only move the points. */
+function movePoints(points: Float32Array, modifier: Modifier): Float32Array {
+  if (modifier.type === "noise") return noise(points, modifier);
   const along = AXIS_INDEX[modifier.axis];
   const first = (along + 1) % 3;
   const second = (along + 2) % 3;
   const { min, max } = range(points, along);
   const length = max - min;
-  // A shape with no length along the axis (a plane seen edge-on) cannot be bent, twisted or tapered
+  // A shape with no length along the axis (a plane seen edge-on) cannot be bent, twisted, tapered or stretched
   if (!(length > EPSILON)) return points;
   const middle = (min + max) / 2;
   const result = new Float32Array(points);
@@ -311,7 +498,87 @@ function applyModifier(points: Float32Array, modifier: Modifier): Float32Array {
         result[i + first] = r - (r - u) * Math.cos(phi);
         break;
       }
+      case "stretch": {
+        result[i + along] = middle + (a - middle) * modifier.factor;
+        if (modifier.keepVolume) {
+          // Longer means thinner, so the volume stays about the same
+          const across = 1 / Math.sqrt(modifier.factor);
+          result[i + first] = u * across;
+          result[i + second] = v * across;
+        }
+        break;
+      }
     }
+  }
+  return result;
+}
+
+// ---- Noise: a smooth pattern that depends only on where a point is ----
+
+/** A repeatable random number from -1 to 1 for a whole-number spot in space. */
+function hash(ix: number, iy: number, iz: number, seed: number): number {
+  let h = Math.imul(ix, 374761393) ^ Math.imul(iy, 668265263);
+  h ^= Math.imul(iz, 2147483647) ^ Math.imul(seed + 1, 1274126177);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h ^= h >>> 16;
+  return ((h >>> 0) / 4294967295) * 2 - 1;
+}
+
+const smooth = (t: number) => t * t * (3 - 2 * t);
+
+/** Smooth "value noise": random numbers at the corners of a grid, blended in between. -1 to 1. */
+function valueNoise(x: number, y: number, z: number, seed: number): number {
+  const ix = Math.floor(x);
+  const iy = Math.floor(y);
+  const iz = Math.floor(z);
+  const fx = smooth(x - ix);
+  const fy = smooth(y - iy);
+  const fz = smooth(z - iz);
+  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+  const corner = (dx: number, dy: number, dz: number) =>
+    hash(ix + dx, iy + dy, iz + dz, seed);
+  return lerp(
+    lerp(
+      lerp(corner(0, 0, 0), corner(1, 0, 0), fx),
+      lerp(corner(0, 1, 0), corner(1, 1, 0), fx),
+      fy,
+    ),
+    lerp(
+      lerp(corner(0, 0, 1), corner(1, 0, 1), fx),
+      lerp(corner(0, 1, 1), corner(1, 1, 1), fx),
+      fy,
+    ),
+    fz,
+  );
+}
+
+/**
+ * Pushes every point by a smooth, repeatable amount. The push depends only on where the point is, so
+ * points that sit on the same spot (the corners of a cube, the seam of a cylinder) move together and no
+ * gaps open. `strength` is a fraction of the size of the shape; `scale` is how many bumps fit across it.
+ */
+function noise(
+  points: Float32Array,
+  modifier: Extract<Modifier, { type: "noise" }>,
+): Float32Array {
+  const [x0, x1] = [range(points, 0), range(points, 1)];
+  const z0 = range(points, 2);
+  const size = Math.max(x0.max - x0.min, x1.max - x1.min, z0.max - z0.min);
+  if (!(size > EPSILON) || modifier.strength === 0) return points;
+  const result = new Float32Array(points);
+  const push = modifier.strength * size;
+  for (let i = 0; i < points.length; i += 3) {
+    const qx = ((points[i]! - x0.min) / size) * modifier.scale;
+    const qy = ((points[i + 1]! - x1.min) / size) * modifier.scale;
+    const qz = ((points[i + 2]! - z0.min) / size) * modifier.scale;
+    // A different corner of the grid for each direction, so the three pushes are not the same
+    result[i] = points[i]! + valueNoise(qx, qy, qz, modifier.seed) * push;
+    result[i + 1] =
+      points[i + 1]! +
+      valueNoise(qx + 31.7, qy + 17.3, qz + 5.9, modifier.seed) * push;
+    result[i + 2] =
+      points[i + 2]! +
+      valueNoise(qx + 11.1, qy + 47.9, qz + 23.5, modifier.seed) * push;
   }
   return result;
 }

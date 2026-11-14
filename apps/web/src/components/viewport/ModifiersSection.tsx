@@ -1,16 +1,24 @@
 "use client";
 
 import {
+  MAX_ARRAY_COUNT,
+  MAX_ARRAY_SPACING,
+  MAX_MIRROR_OFFSET,
   MAX_MODIFIERS,
   MAX_SEGMENTS,
+  MAX_STRETCH,
   MODIFIER_AXES,
   MODIFIER_INFO,
+  MIN_ARRAY_COUNT,
+  MIN_STRETCH,
   MODIFIER_TYPES,
   createModifier,
   describeModifier,
+  usesAxis,
   type Modifier,
   type ModifierAxis,
   type ModifierChange,
+  type ModifierType,
   type SceneNode,
 } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
@@ -33,37 +41,98 @@ const AXIS_STYLE: Record<ModifierAxis, { text: string; active: string }> = {
   z: { text: "text-ed-z", active: "bg-ed-z/25 text-ed-z" },
 };
 
-/** The range and starting value of the main slider of each kind of modifier. */
-const MAIN_SETTING = {
-  bend: {
-    key: "angle",
-    label: "Angle",
-    min: -360,
-    max: 360,
-    step: 1,
-    decimals: 0,
-  },
-  twist: {
-    key: "angle",
-    label: "Angle",
-    min: -720,
-    max: 720,
-    step: 1,
-    decimals: 0,
-  },
-  taper: {
-    key: "amount",
-    label: "Amount",
-    min: -1,
-    max: 1,
-    step: 0.01,
-    decimals: 2,
-  },
-} as const;
+/** One slider of a modifier card. The range must match what `sanitizeModifierChange` allows. */
+type SliderSpec = {
+  key:
+    | "offset"
+    | "angle"
+    | "amount"
+    | "factor"
+    | "strength"
+    | "scale"
+    | "seed"
+    | "count"
+    | "spacing";
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  decimals: number;
+};
+
+/** The sliders each kind of modifier shows (the axis choice and any switch are added separately). */
+const SLIDERS: Record<ModifierType, readonly SliderSpec[]> = {
+  bend: [
+    { key: "angle", label: "Angle", min: -360, max: 360, step: 1, decimals: 0 },
+  ],
+  twist: [
+    { key: "angle", label: "Angle", min: -720, max: 720, step: 1, decimals: 0 },
+  ],
+  taper: [
+    {
+      key: "amount",
+      label: "Amount",
+      min: -1,
+      max: 1,
+      step: 0.01,
+      decimals: 2,
+    },
+  ],
+  stretch: [
+    {
+      key: "factor",
+      label: "Factor",
+      min: MIN_STRETCH,
+      max: MAX_STRETCH,
+      step: 0.01,
+      decimals: 2,
+    },
+  ],
+  noise: [
+    {
+      key: "strength",
+      label: "Strength",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      decimals: 2,
+    },
+    { key: "scale", label: "Scale", min: 0.1, max: 10, step: 0.1, decimals: 1 },
+    { key: "seed", label: "Seed", min: 0, max: 9999, step: 1, decimals: 0 },
+  ],
+  mirror: [
+    {
+      key: "offset",
+      label: "Offset",
+      min: -MAX_MIRROR_OFFSET,
+      max: MAX_MIRROR_OFFSET,
+      step: 0.01,
+      decimals: 2,
+    },
+  ],
+  array: [
+    {
+      key: "count",
+      label: "Count",
+      min: MIN_ARRAY_COUNT,
+      max: MAX_ARRAY_COUNT,
+      step: 1,
+      decimals: 0,
+    },
+    {
+      key: "spacing",
+      label: "Spacing",
+      min: 0,
+      max: MAX_ARRAY_SPACING,
+      step: 0.01,
+      decimals: 2,
+    },
+  ],
+};
 
 /**
  * The "Shape" section of the Inspector, for the built-in shapes: how finely the shape is cut up, and a
- * list of modifiers (bend, twist, taper) that change its form without touching the shape itself. They
+ * list of modifiers (bend, twist, taper, stretch, noise, mirror, array) that change its form without touching the shape itself. They
  * work from the top of the list down, so the order matters. Every value has its own reset button.
  */
 export default function ModifiersSection({
@@ -165,9 +234,8 @@ function ModifierCard({
   const duplicateModifier = useSceneStore((state) => state.duplicateModifier);
 
   const info = MODIFIER_INFO[modifier.type];
-  const main = MAIN_SETTING[modifier.type];
   const defaults = createModifier(modifier.id, modifier.type);
-  const read = (m: Modifier, key: "angle" | "amount") =>
+  const read = (m: Modifier, key: SliderSpec["key"]) =>
     (m as unknown as Record<string, number>)[key]!;
   const change = (c: ModifierChange) => setModifier(nodeId, modifier.id, c);
 
@@ -190,11 +258,13 @@ function ModifierCard({
             className="size-4 cursor-pointer accent-ed-accent"
           />
           {info.label}
-          <span
-            className={`font-mono text-xs uppercase ${AXIS_STYLE[modifier.axis].text}`}
-          >
-            · {modifier.axis}
-          </span>
+          {usesAxis(modifier.type) && (
+            <span
+              className={`font-mono text-xs uppercase ${AXIS_STYLE[modifier.axis].text}`}
+            >
+              · {modifier.axis}
+            </span>
+          )}
         </label>
         <button
           type="button"
@@ -243,27 +313,47 @@ function ModifierCard({
       </p>
 
       <div className="space-y-2.5">
-        <AxisChoice
-          axis={modifier.axis}
-          defaultAxis={defaults.axis}
-          disabled={disabled}
-          onChange={(axis) => change({ axis })}
-        />
-        <ValueSlider
-          label={main.label}
-          value={read(modifier, main.key)}
-          defaultValue={read(defaults, main.key)}
-          min={main.min}
-          max={main.max}
-          step={main.step}
-          decimals={main.decimals}
-          disabled={disabled}
-          editLabel={info.label}
-          onCommit={(value) => change({ [main.key]: value })}
-          onPreview={(value) =>
-            previewModifier(nodeId, modifier.id, { [main.key]: value })
-          }
-        />
+        {usesAxis(modifier.type) && (
+          <AxisChoice
+            axis={modifier.axis}
+            defaultAxis={defaults.axis}
+            disabled={disabled}
+            onChange={(axis) => change({ axis })}
+          />
+        )}
+        {SLIDERS[modifier.type].map((spec) => (
+          <ValueSlider
+            key={spec.key}
+            label={spec.label}
+            value={read(modifier, spec.key)}
+            defaultValue={read(defaults, spec.key)}
+            min={spec.min}
+            max={spec.max}
+            step={spec.step}
+            decimals={spec.decimals}
+            disabled={disabled}
+            editLabel={info.label}
+            onCommit={(value) => change({ [spec.key]: value })}
+            onPreview={(value) =>
+              previewModifier(nodeId, modifier.id, { [spec.key]: value })
+            }
+          />
+        ))}
+        {modifier.type === "stretch" && (
+          <label
+            title="Longer means thinner and shorter means fatter, so the volume stays about the same"
+            className="flex cursor-pointer items-center gap-2 text-xs text-ed-text-2 has-[:disabled]:cursor-not-allowed"
+          >
+            <input
+              type="checkbox"
+              checked={modifier.keepVolume}
+              disabled={disabled}
+              onChange={(event) => change({ keepVolume: event.target.checked })}
+              className="size-4 cursor-pointer accent-ed-accent disabled:cursor-not-allowed"
+            />
+            Keep volume
+          </label>
+        )}
       </div>
     </div>
   );

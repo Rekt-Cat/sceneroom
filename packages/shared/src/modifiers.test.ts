@@ -4,6 +4,8 @@ import { addNode, createModelNode, createNode } from "./sceneOps";
 import {
   addModifier,
   createModifier,
+  MAX_DEFORMED_POINTS,
+  deformMesh,
   deformPoints,
   describeModifier,
   duplicateModifier,
@@ -336,5 +338,242 @@ describe("describeModifier", () => {
       "z",
       "x",
     ]);
+  });
+});
+
+/** A modifier of a kind with some settings changed. */
+const make = (
+  type: Parameters<typeof createModifier>[1],
+  change: object = {},
+) => ({ ...createModifier("m", type), ...change }) as Modifier;
+
+describe("stretch", () => {
+  const points = new Float32Array([1, -1, 1, 1, 0, 1, 1, 1, 1]);
+
+  it("makes the shape longer along the axis, around its middle", () => {
+    const out = deformPoints(points, [make("stretch", { factor: 2 })]);
+    expect([out[1], out[4], out[7]]).toEqual([-2, 0, 2]);
+    expect([out[0], out[2]]).toEqual([1, 1]); // the other directions are not touched
+  });
+
+  it("squashes it with a factor below 1", () => {
+    const out = deformPoints(points, [make("stretch", { factor: 0.5 })]);
+    expect([out[1], out[7]]).toEqual([-0.5, 0.5]);
+  });
+
+  it("keep volume makes the other directions thinner as it gets longer", () => {
+    const out = deformPoints(points, [
+      make("stretch", { factor: 4, keepVolume: true }),
+    ]);
+    expect(out[7]).toBeCloseTo(4);
+    expect(out[6]).toBeCloseTo(0.5); // 1 / sqrt(4)
+    expect(out[8]).toBeCloseTo(0.5);
+  });
+});
+
+describe("noise", () => {
+  const grid = () => {
+    const list: number[] = [];
+    for (let x = 0; x <= 4; x++)
+      for (let y = 0; y <= 4; y++)
+        for (let z = 0; z <= 4; z++) list.push(x / 4, y / 4, z / 4);
+    return new Float32Array(list);
+  };
+
+  it("gives the same result for the same settings, and another for another seed", () => {
+    const a = deformPoints(grid(), [make("noise", { seed: 1 })]);
+    const b = deformPoints(grid(), [make("noise", { seed: 1 })]);
+    const c = deformPoints(grid(), [make("noise", { seed: 2 })]);
+    expect(Array.from(a)).toEqual(Array.from(b));
+    expect(Array.from(a)).not.toEqual(Array.from(c));
+  });
+
+  it("moves points by at most the strength times the size, and not at all with strength 0", () => {
+    const original = grid();
+    const out = deformPoints(original, [make("noise", { strength: 0.2 })]);
+    let furthest = 0;
+    for (let i = 0; i < out.length; i++) {
+      furthest = Math.max(furthest, Math.abs(out[i]! - original[i]!));
+    }
+    expect(furthest).toBeGreaterThan(0);
+    expect(furthest).toBeLessThanOrEqual(0.2 + 1e-6); // size is 1
+    const none = deformPoints(original, [make("noise", { strength: 0 })]);
+    expect(Array.from(none)).toEqual(Array.from(original));
+  });
+
+  it("moves points that sit on the same spot by the same amount (no gaps open)", () => {
+    const twins = new Float32Array([
+      0.3, 0.4, 0.5, 0.3, 0.4, 0.5, 0, 0, 0, 1, 1, 1,
+    ]);
+    const out = deformPoints(twins, [make("noise")]);
+    expect([out[0], out[1], out[2]]).toEqual([out[3], out[4], out[5]]);
+  });
+
+  it("makes a smooth surface: close points move by close amounts", () => {
+    const near = new Float32Array([
+      0.5, 0.5, 0.5, 0.501, 0.5, 0.5, 0, 0, 0, 1, 1, 1,
+    ]);
+    const out = deformPoints(near, [make("noise", { strength: 0.3 })]);
+    expect(Math.abs(out[3]! - 0.501 - (out[0]! - 0.5))).toBeLessThan(0.01);
+  });
+});
+
+/** Two triangles forming a square in the x-y plane, x from 1 to 3. */
+const square = (): { positions: Float32Array; indices: Uint32Array } => ({
+  positions: new Float32Array([1, 0, 0, 3, 0, 0, 3, 2, 0, 1, 2, 0]),
+  indices: new Uint32Array([0, 1, 2, 0, 2, 3]),
+});
+
+describe("mirror", () => {
+  it("with offset 0 the plane goes through the middle of the object (the origin)", () => {
+    const out = deformMesh(square(), [
+      make("mirror", { axis: "x", offset: 0 }),
+    ]);
+    expect(out.positions.length).toBe(24);
+    // the copy has x = -1 and -3 where the original has 1 and 3, the rest the same
+    expect(Array.from(out.positions.slice(12, 18))).toEqual([
+      -1, 0, 0, -3, 0, 0,
+    ]);
+    expect(out.positions[13]).toBe(0);
+    expect(Object.is(out.positions[14], 0)).toBe(true); // no negative zero
+  });
+
+  it("the offset moves the plane, in lengths of the shape from the origin", () => {
+    // the square is 2 long along x (from 1 to 3); offset 0.5 puts the plane at x = 1
+    const out = deformMesh(square(), [
+      make("mirror", { axis: "x", offset: 0.5 }),
+    ]);
+    expect(Array.from(out.positions.slice(12, 18))).toEqual([
+      1, 0, 0, -1, 0, 0,
+    ]);
+    // offset 1 puts it at x = 2: the copy is 1 and -1 further out than a mirror through the origin
+    const further = deformMesh(square(), [
+      make("mirror", { axis: "x", offset: 1 }),
+    ]);
+    expect(Array.from(further.positions.slice(12, 18))).toEqual([
+      3, 0, 0, 1, 0, 0,
+    ]);
+  });
+
+  it("on a shape centred on the origin, a mirror through the middle lands on the shape itself, but the default offset puts the copy beside it", () => {
+    const centred = {
+      positions: new Float32Array([-1, 0, 0, 1, 0, 0]),
+      indices: new Uint32Array(0),
+    };
+    const through = deformMesh(centred, [make("mirror", { offset: 0 })]);
+    expect(Array.from(through.positions.slice(6))).toEqual([1, 0, 0, -1, 0, 0]);
+    const beside = deformMesh(centred, [make("mirror")]);
+    // the shape is 2 long, so the plane stands at x = 1 and the copy covers 1 to 3 (each point keeps
+    // its place in the list: the point at -1 is reflected to 3, the point at 1 stays at 1)
+    expect(Array.from(beside.positions.slice(6))).toEqual([3, 0, 0, 1, 0, 0]);
+  });
+
+  it("points the copy's triangles the same way round (order of corners reversed)", () => {
+    const out = deformMesh(square(), [
+      make("mirror", { axis: "x", offset: 0 }),
+    ]);
+    expect(Array.from(out.indices)).toEqual([
+      0, 1, 2, 0, 2, 3, 4, 6, 5, 4, 7, 6,
+    ]);
+  });
+});
+
+describe("array", () => {
+  it("repeats the shape along the axis, spacing times its length apart", () => {
+    const out = deformMesh(square(), [
+      make("array", { axis: "x", count: 3, spacing: 1 }),
+    ]);
+    expect(out.positions.length).toBe(12 * 3);
+    // the shape is 2 long along x, so the copies start 2 and 4 further on
+    expect([out.positions[12], out.positions[24]]).toEqual([3, 5]);
+    expect(Array.from(out.indices.slice(6, 12))).toEqual([4, 5, 6, 4, 6, 7]);
+    expect(Array.from(out.indices.slice(12, 18))).toEqual([
+      8, 9, 10, 8, 10, 11,
+    ]);
+  });
+
+  it("spacing 0 puts the copies on top of each other, 2 leaves a gap as long as the shape", () => {
+    const stacked = deformMesh(square(), [
+      make("array", { count: 2, spacing: 0 }),
+    ]);
+    expect(stacked.positions[12]).toBe(1);
+    const gap = deformMesh(square(), [make("array", { count: 2, spacing: 2 })]);
+    expect(gap.positions[12]).toBe(5);
+  });
+
+  it("is skipped when it would make too many points", () => {
+    const big = {
+      positions: new Float32Array(3 * (MAX_DEFORMED_POINTS / 2 + 1)),
+      indices: new Uint32Array(0),
+    };
+    const out = deformMesh(big, [make("array", { count: 2 })]);
+    expect(out.positions.length).toBe(big.positions.length);
+    const mirrored = deformMesh(big, [make("mirror")]);
+    expect(mirrored.positions.length).toBe(big.positions.length);
+  });
+});
+
+describe("the new modifiers in the data", () => {
+  it("each kind is made with its starting values and passes the schema", () => {
+    for (const type of ["stretch", "noise", "mirror", "array"] as const) {
+      const node = {
+        ...createNode("a", "cube"),
+        modifiers: [createModifier("m", type)],
+      };
+      expect(sceneNodeSchema.safeParse(node).success).toBe(true);
+    }
+  });
+
+  it("the schema refuses values out of range", () => {
+    const bad = (modifier: object) =>
+      sceneNodeSchema.safeParse({
+        ...createNode("a", "cube"),
+        modifiers: [modifier],
+      }).success;
+    expect(bad({ ...createModifier("m", "stretch"), factor: 0 })).toBe(false);
+    expect(bad({ ...createModifier("m", "array"), count: 1 })).toBe(false);
+    expect(bad({ ...createModifier("m", "array"), count: 2.5 })).toBe(false);
+    expect(bad({ ...createModifier("m", "noise"), seed: -1 })).toBe(false);
+  });
+
+  it("sanitize keeps each setting in its range, rounds whole numbers and drops what does not belong", () => {
+    expect(
+      sanitizeModifierChange(make("stretch"), { factor: 50, keepVolume: true }),
+    ).toEqual({
+      factor: 5,
+      keepVolume: true,
+    });
+    expect(
+      sanitizeModifierChange(make("array"), { count: 99.4, spacing: -3 }),
+    ).toEqual({
+      count: 20,
+      spacing: 0,
+    });
+    expect(
+      sanitizeModifierChange(make("noise"), { seed: 12.6, scale: 0 }),
+    ).toEqual({
+      seed: 13,
+      scale: 0.1,
+    });
+    // noise has no axis; mirror has no numbers
+    expect(sanitizeModifierChange(make("noise"), { axis: "x" })).toEqual({});
+    expect(
+      sanitizeModifierChange(make("mirror"), { angle: 5, count: 3 }),
+    ).toEqual({});
+  });
+
+  it("describes each in plain words", () => {
+    expect(describeModifier(make("stretch", { factor: 2 }))).toContain(
+      "longer along Y (up)",
+    );
+    expect(describeModifier(make("stretch", { factor: 0.5 }))).toContain(
+      "Squashes",
+    );
+    expect(describeModifier(make("noise"))).toContain("bumpy");
+    expect(describeModifier(make("mirror"))).toContain("X (sideways)");
+    expect(sanitizeModifierChange(make("mirror"), { offset: 9 })).toEqual({
+      offset: 3,
+    });
+    expect(describeModifier(make("array", { count: 5 }))).toContain("5 times");
   });
 });
