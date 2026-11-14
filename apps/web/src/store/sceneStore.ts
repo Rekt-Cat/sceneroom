@@ -7,15 +7,22 @@ import {
   createEmptyScene,
   createHistory,
   copyToClipboard,
+  MAX_MODIFIERS,
+  addModifier,
   createLightNode,
+  createModifier,
   createModelNode,
   createNode,
+  duplicateModifier,
   duplicateNodes,
   environmentChangeDiffers,
   editableIds,
   fitScale,
   isEffectivelyLocked,
   lightChangeDiffers,
+  modifierChangeDiffers,
+  moveModifier,
+  removeModifier,
   normalizeHexColor,
   normalizeNodeName,
   pasteFromClipboard,
@@ -28,9 +35,13 @@ import {
   resolveSelection,
   materialChangeDiffers,
   sanitizeEnvironmentChange,
+  sanitizeModifierChange,
   sanitizeLightChange,
   sanitizeMaterialChange,
   setEnvironment,
+  setModifier,
+  setSegments,
+  supportsModifiers,
   setLight,
   setMaterial,
   setAssetNote,
@@ -45,6 +56,8 @@ import {
   type History,
   type LightChange,
   type LightKind,
+  type ModifierChange,
+  type ModifierType,
   type MaterialChange,
   type PrimitiveKind,
   type ReparentMove,
@@ -110,6 +123,34 @@ type SceneState = {
    * the scene, and selects it. One undo step. Returns the new object's id, or null if the file is unknown.
    */
   placeAsset: (assetId: string, at?: [number, number, number]) => string | null;
+  /** Adds a modifier (bend, twist, taper) to the end of an object's list. One undo step. Ignored for locked objects and objects that cannot have modifiers. */
+  addModifier: (nodeId: string, type: ModifierType) => void;
+  /** Removes a modifier. One undo step. */
+  removeModifier: (nodeId: string, modifierId: string) => void;
+  /** Changes some settings of a modifier as one undo step. */
+  setModifier: (
+    nodeId: string,
+    modifierId: string,
+    change: ModifierChange,
+  ) => void;
+  /** Like setModifier but without an undo step; only while an edit is in progress (dragging a slider). */
+  previewModifier: (
+    nodeId: string,
+    modifierId: string,
+    change: ModifierChange,
+  ) => void;
+  /** Copies a modifier and puts the copy right after it. One undo step. */
+  duplicateModifier: (nodeId: string, modifierId: string) => void;
+  /** Moves a modifier one place up or down the list (the order changes the result). One undo step. */
+  moveModifier: (
+    nodeId: string,
+    modifierId: string,
+    direction: "up" | "down",
+  ) => void;
+  /** Sets how finely a shape is cut up (1 to 32), as one undo step. */
+  setNodeSegments: (nodeId: string, segments: number) => void;
+  /** Like setNodeSegments but without an undo step; only while an edit is in progress. */
+  previewNodeSegments: (nodeId: string, segments: number) => void;
   /** Changes some settings of the world (background, reflections, fog, base lighting) as one undo step. */
   setEnvironmentSettings: (change: EnvironmentChange) => void;
   /** Like setEnvironmentSettings but without an undo step; only while an edit is in progress (dragging a slider). */
@@ -286,6 +327,109 @@ export const useSceneStore = create<SceneState>()((set) => ({
     }));
     return id;
   },
+  addModifier: (nodeId, type) =>
+    set((state) => {
+      const node = state.scene.nodes[nodeId];
+      if (
+        !node ||
+        !supportsModifiers(node) ||
+        node.modifiers.length >= MAX_MODIFIERS ||
+        isEffectivelyLocked(state.scene, nodeId)
+      ) {
+        return state;
+      }
+      return {
+        scene: addModifier(
+          state.scene,
+          nodeId,
+          createModifier(crypto.randomUUID(), type),
+        ),
+        history: record(state, `Add ${type}`),
+      };
+    }),
+  removeModifier: (nodeId, modifierId) =>
+    set((state) => {
+      if (isEffectivelyLocked(state.scene, nodeId)) return state;
+      const scene = removeModifier(state.scene, nodeId, modifierId);
+      if (scene === state.scene) return state;
+      return { scene, history: record(state, "Remove modifier") };
+    }),
+  setModifier: (nodeId, modifierId, change) =>
+    set((state) => {
+      const modifier = state.scene.nodes[nodeId]?.modifiers.find(
+        (m) => m.id === modifierId,
+      );
+      if (!modifier || isEffectivelyLocked(state.scene, nodeId)) return state;
+      const clean = sanitizeModifierChange(modifier, change);
+      if (!modifierChangeDiffers(modifier, clean)) return state;
+      return {
+        scene: setModifier(state.scene, nodeId, modifierId, clean),
+        history: record(state, "Modifier"),
+      };
+    }),
+  previewModifier: (nodeId, modifierId, change) =>
+    set((state) => {
+      const modifier = state.scene.nodes[nodeId]?.modifiers.find(
+        (m) => m.id === modifierId,
+      );
+      if (
+        !state.pendingEdit ||
+        !modifier ||
+        isEffectivelyLocked(state.scene, nodeId)
+      ) {
+        return state;
+      }
+      const clean = sanitizeModifierChange(modifier, change);
+      if (Object.keys(clean).length === 0) return state;
+      return { scene: setModifier(state.scene, nodeId, modifierId, clean) };
+    }),
+  duplicateModifier: (nodeId, modifierId) =>
+    set((state) => {
+      if (isEffectivelyLocked(state.scene, nodeId)) return state;
+      const scene = duplicateModifier(
+        state.scene,
+        nodeId,
+        modifierId,
+        crypto.randomUUID(),
+      );
+      if (scene === state.scene) return state;
+      return { scene, history: record(state, "Duplicate modifier") };
+    }),
+  moveModifier: (nodeId, modifierId, direction) =>
+    set((state) => {
+      if (isEffectivelyLocked(state.scene, nodeId)) return state;
+      const scene = moveModifier(state.scene, nodeId, modifierId, direction);
+      if (scene === state.scene) return state;
+      return { scene, history: record(state, "Move modifier") };
+    }),
+  setNodeSegments: (nodeId, segments) =>
+    set((state) => {
+      const node = state.scene.nodes[nodeId];
+      if (
+        !node ||
+        !supportsModifiers(node) ||
+        isEffectivelyLocked(state.scene, nodeId)
+      ) {
+        return state;
+      }
+      const scene = setSegments(state.scene, nodeId, segments);
+      if (scene === state.scene) return state;
+      return { scene, history: record(state, "Segments") };
+    }),
+  previewNodeSegments: (nodeId, segments) =>
+    set((state) => {
+      const node = state.scene.nodes[nodeId];
+      if (
+        !state.pendingEdit ||
+        !node ||
+        !supportsModifiers(node) ||
+        isEffectivelyLocked(state.scene, nodeId)
+      ) {
+        return state;
+      }
+      const scene = setSegments(state.scene, nodeId, segments);
+      return scene === state.scene ? state : { scene };
+    }),
   setEnvironmentSettings: (change) =>
     set((state) => {
       const clean = sanitizeEnvironmentChange(change);

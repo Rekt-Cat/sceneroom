@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { type ThreeEvent } from "@react-three/fiber";
 import { Outlines } from "@react-three/drei";
 import { DoubleSide, FrontSide, Mesh, type Object3D } from "three";
@@ -11,6 +17,7 @@ import {
   LIGHT_KINDS,
   isEffectivelyLocked,
   type LightKind,
+  type Modifier,
   type PrimitiveKind,
   type SceneNode,
   type TreeNode,
@@ -18,6 +25,7 @@ import {
 import { useSceneStore } from "@/store/sceneStore";
 import LightObject from "./LightObject";
 import { useEnvironmentTexture } from "./environmentTexture";
+import { buildShapeGeometry } from "./shapeGeometry";
 import ModelObject from "./ModelObject";
 import MultiSelectionGizmo from "./MultiSelectionGizmo";
 import SelectionGizmo from "./SelectionGizmo";
@@ -29,20 +37,25 @@ function isLightKind(kind: string): kind is LightKind {
   return (LIGHT_KINDS as readonly string[]).includes(kind);
 }
 
-/** One geometry per primitive kind; all are about 1 unit in size. */
-function Geometry({ kind }: { kind: PrimitiveKind }) {
-  switch (kind) {
-    case "cube":
-      return <boxGeometry args={[1, 1, 1]} />;
-    case "sphere":
-      return <sphereGeometry args={[0.5, 32, 16]} />;
-    case "cylinder":
-      return <cylinderGeometry args={[0.5, 0.5, 1, 32]} />;
-    case "plane":
-      return <planeGeometry args={[1, 1]} />;
-    case "cone":
-      return <coneGeometry args={[0.5, 1, 32]} />;
-  }
+/**
+ * The geometry of a shape: its plain form cut into segments, with the object's modifiers (bend, twist,
+ * taper) applied. Rebuilt only when the kind, the segments or the modifiers change; the old one is freed.
+ */
+function ShapeGeometry({
+  kind,
+  segments,
+  modifiers,
+}: {
+  kind: PrimitiveKind;
+  segments: number;
+  modifiers: readonly Modifier[];
+}) {
+  const geometry = useMemo(
+    () => buildShapeGeometry(kind, segments, modifiers),
+    [kind, segments, modifiers],
+  );
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  return <primitive object={geometry} attach="geometry" />;
 }
 
 /**
@@ -175,7 +188,11 @@ function NodeMesh({
       receiveShadow={material.receiveShadow}
       onClick={handleClick}
     >
-      <Geometry kind={node.kind} />
+      <ShapeGeometry
+        kind={node.kind}
+        segments={node.segments}
+        modifiers={node.modifiers}
+      />
       <meshStandardMaterial
         // A new material when the shading, the side or solid / see-through changes: three.js builds its
         // shader for these (a solid material is compiled to ignore opacity completely)

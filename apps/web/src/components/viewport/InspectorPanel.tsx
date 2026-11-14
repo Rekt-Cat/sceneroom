@@ -1,6 +1,7 @@
 "use client";
 
 import EnvironmentPanel from "./EnvironmentPanel";
+import ModifiersSection from "./ModifiersSection";
 import LightSection from "./LightSection";
 import SurfaceSection from "./SurfaceSection";
 import { useState } from "react";
@@ -8,6 +9,7 @@ import {
   NODE_NAME_MAX_LENGTH,
   editableIds,
   isEffectivelyLocked,
+  supportsModifiers,
   type SceneNode,
 } from "@sceneroom/shared";
 import { useLayoutStore } from "@/store/layoutStore";
@@ -212,6 +214,9 @@ function SingleObject({ node }: { node: SceneNode }) {
               <ModelSection node={node} />
             ) : (
               <AppearanceSection node={node} disabled={locked} />
+            )}
+            {supportsModifiers(node) && (
+              <ModifiersSection node={node} disabled={locked} />
             )}
             <SurfaceSection node={node} disabled={locked} />
           </>

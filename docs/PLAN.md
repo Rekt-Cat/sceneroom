@@ -2,10 +2,10 @@
 
 ## Current status
 
-- **Phase:** 4 (lights, materials, environment) started: materials, model import and autosave are merged; the right-click menu, clipboard and list ordering are done on `feature/context-menu` (committed, not yet pushed or merged)
-- **Done:** Phases 0 to 3, all on `main` and live at https://sceneroom.vercel.app: 3D viewport; scene model; selection, multi-select, gizmo, camera controls; add / duplicate / delete / rename; scene list with search and drag-to-re-parent; Inspector (position, rotation, scale, colour, parent); undo/redo; resizable panels and value dragging; lock. A git pre-push hook runs type-check, lint, test and build before every push.
-- **CI:** green on pull requests up to #7 (last merge `3c2098e`).
-- **Next action:** push `feature/context-menu` and merge it (GitHub Desktop); try autosave in the browser (import a model, reload, check it is still there). The Assets panel (list, place copies, rename, licence note, delete) is built on `feature/assets-panel` (thumbnails and drag-into-view still to do). Then **Surface and shading**, lights, environment settings. Small leftovers: keyboard reorder in the list (Alt + arrows), pasting into several selected objects. Still open: test `SETUP-SECOND-PC.md` on the second PC; try the pre-push hook from GitHub Desktop; optional `/code-review` of the Phase 0-3 diffs.
+- **Phase:** 4 (lights, materials, environment) is done and merged (pull requests up to #11). **Order change (2026-11-14):** the owner chose to build the 3D editing tools (Phases 11 to 15, plus what they need from Phase 5) BEFORE the database and multiplayer (Phases 6 to 10). Now in progress: Phase 11, modifiers (`feature/modifiers`).
+- **Done:** Phases 0 to 4, all on `main` and live at https://sceneroom.vercel.app: 3D viewport; scene model; selection, multi-select, gizmo, camera controls; add / duplicate / delete / rename; scene list with search and drag-to-re-parent; Inspector (position, rotation, scale, colour, parent); undo/redo; resizable panels and value dragging; lock. A git pre-push hook runs type-check, lint, test and build before every push. Since then: right-click menu and clipboard, list ordering, Assets tab (thumbnails, drag into the view), Surface and shading, lights, environment.
+- **CI:** green on pull requests up to #11.
+- **Next action:** Phase 11 step 1: segments on primitives and a modifier stack with Bend, Twist and Taper (non-destructive, no new mesh storage). Then: Stretch, Noise, Mirror, Array, Subdivide; Apply (needs the editable-mesh format from Phase 5); then Phase 12 (scatter, splines, plant generator, prefabs). Saving a scene as a file and GLB export (Phase 5) come before Apply. Still open: test `SETUP-SECOND-PC.md` on the second PC; optional `/code-review`.
 
 Update this block at the end of every sub-phase and commit it.
 
@@ -104,11 +104,15 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 
 ### Phase 11: Deformers (can move earlier, right after Phase 5)
 
-- [ ] Segment counts on primitives; modifier stack in the Inspector: Bend, Twist, Taper, Stretch, Noise, Mirror, Array, Subdivide; Apply (bake into a mesh)
+- [x] Step 1 (`feature/modifiers`, waiting for a browser check): segment counts on primitives; modifier stack in the Inspector with Bend, Twist, Taper
+- [ ] Step 2: Stretch, Noise, Mirror, Array, Subdivide
+- [ ] Step 3: Apply (bake the modifiers into an editable mesh; needs the mesh format from Phase 5)
 
 ### Phase 12: Environment-building tools
 
 - [ ] Boolean (union / subtract / intersect); scatter / instancing; terrain (heightmap); splines / tubes; align, distribute, snapping; groups and prefabs
+- [ ] **Plant generator**: trees and bushes from settings (trunk height and bend, branch count and angle, leaf density, random seed), built from splines, scatter and modifiers; a forest from one tree
+- [ ] **Prefabs**: save a group of objects as a reusable item in the Assets tab, place copies that stay linked to it
 
 ### Phase 13: Edit mode (modelling)
 
@@ -123,6 +127,8 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 - [ ] Base meshes; skeleton and weights (auto-weights, painting); posing and IK; morph targets; reference images; character export (GLB with skeleton)
 
 ## Milestones
+
+_Order change (2026-11-14): the editing tools (Phases 11 to 15) come before Phases 6 to 10. Milestone B and C move later; a new milestone D ("a modelling tool") comes first._
 
 - **A** after Phase 3: polished single-user 3D editor, live since Phase 1.
 - **B** after Phase 7: real-time multiplayer works.
