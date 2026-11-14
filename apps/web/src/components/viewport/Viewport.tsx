@@ -4,6 +4,8 @@ import { Canvas } from "@react-three/fiber";
 import { Grid, OrbitControls, Stats } from "@react-three/drei";
 import { MOUSE } from "three";
 import { useSceneStore } from "@/store/sceneStore";
+import AssetDropController from "./AssetDropController";
+import AssetPreview from "./AssetPreview";
 import BoxSelectController from "./BoxSelectController";
 import CameraModifierSwitch from "./CameraModifierSwitch";
 import ViewportContextMenuController from "./ViewportContextMenuController";
@@ -55,6 +57,9 @@ export default function Viewport() {
       <CameraModifierSwitch />
       {/* Ctrl/Cmd + left-drag draws a selection box */}
       <BoxSelectController />
+      {/* An asset dragged from the Assets tab can be dropped on the ground */}
+      <AssetDropController />
+      <AssetPreview />
       {/* A right-click on an object opens the menu */}
       <ViewportContextMenuController />
 

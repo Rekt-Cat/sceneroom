@@ -36,6 +36,7 @@ import {
   type MaterialChange,
   type PrimitiveKind,
   type ReparentMove,
+  type SceneNode,
   type Scene,
   type Transform,
   type TransformMode,
@@ -96,7 +97,7 @@ type SceneState = {
    * Adds another object that shows an already imported file (from the Assets panel), at the middle of
    * the scene, and selects it. One undo step. Returns the new object's id, or null if the file is unknown.
    */
-  placeAsset: (assetId: string) => string | null;
+  placeAsset: (assetId: string, at?: [number, number, number]) => string | null;
   /** Renames an imported file in the Assets panel (objects keep their names). One undo step. */
   renameAsset: (assetId: string, name: string) => void;
   /** Sets an imported file's source / licence note. One undo step. */
@@ -162,6 +163,13 @@ type SceneState = {
   /** Puts back the last undone change. */
   redo: () => void;
 };
+
+/** The model object standing at a spot on the ground instead of the middle (when a spot is given). */
+function placedAt(node: SceneNode, at?: [number, number, number]): SceneNode {
+  return at
+    ? { ...node, transform: { ...node.transform, position: at } }
+    : node;
+}
 
 function createInitialScene(): Scene {
   return addNode(createEmptyScene(), createNode("initial-cube", "cube"));
@@ -256,18 +264,21 @@ export const useSceneStore = create<SceneState>()((set) => ({
     }));
     return id;
   },
-  placeAsset: (assetId) => {
+  placeAsset: (assetId, at) => {
     const info = useSceneStore.getState().scene.assets[assetId];
     if (!info) return null;
     const id = crypto.randomUUID();
     set((state) => ({
       scene: addNode(
         state.scene,
-        createModelNode(
-          id,
-          availableName(state.scene, info.name),
-          info.id,
-          fitScale(info),
+        placedAt(
+          createModelNode(
+            id,
+            availableName(state.scene, info.name),
+            info.id,
+            fitScale(info),
+          ),
+          at,
         ),
       ),
       selectedIds: [id],

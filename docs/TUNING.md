@@ -173,14 +173,18 @@ To clear everything that is saved (start from the one starting cube): in Chrome 
 
 ## Importing models
 
-| What                 | Setting                                                   | Our value                 | What it does                                                                                                                     |
-| -------------------- | --------------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Largest file         | `MAX_MODEL_BYTES` in `packages/shared/src/assets.ts`      | `50 MB`                   | Bigger files are refused with a message that shows both sizes.                                                                   |
-| Most triangles       | `MAX_MODEL_TRIANGLES` in `assets.ts`                      | `500,000`                 | A model with more triangles is refused (the browser would get slow).                                                             |
-| Size of a new import | `TARGET_IMPORT_SIZE` in `assets.ts`                       | `4` units                 | A new model is scaled so its longest side is this long, whatever size it came in. Use Scale in the Inspector to change it later. |
-| Accepted files       | `importGlbFile` in `apps/web/src/assets/loadModel.ts`     | `.glb` only               | Other formats (glTF with separate files, OBJ) are later steps.                                                                   |
-| Note length          | `ASSET_NOTE_MAX_LENGTH` in `packages/shared/src/scene.ts` | `500` characters          | Longest source / licence note on an imported file (Assets panel).                                                                |
-| Where it appears     | `createModelNode` in `packages/shared/src/sceneOps.ts`    | the middle, on the ground | The model's origin is the middle of its bottom face (`modelOffset`), at position 0, 0, 0.                                        |
+| What                 | Setting                                                         | Our value                 | What it does                                                                                                                     |
+| -------------------- | --------------------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Largest file         | `MAX_MODEL_BYTES` in `packages/shared/src/assets.ts`            | `50 MB`                   | Bigger files are refused with a message that shows both sizes.                                                                   |
+| Most triangles       | `MAX_MODEL_TRIANGLES` in `assets.ts`                            | `500,000`                 | A model with more triangles is refused (the browser would get slow).                                                             |
+| Size of a new import | `TARGET_IMPORT_SIZE` in `assets.ts`                             | `4` units                 | A new model is scaled so its longest side is this long, whatever size it came in. Use Scale in the Inspector to change it later. |
+| Accepted files       | `importGlbFile` in `apps/web/src/assets/loadModel.ts`           | `.glb` only               | Other formats (glTF with separate files, OBJ) are later steps.                                                                   |
+| Thumbnail size       | `THUMBNAIL_SIZE_PX` in `apps/web/src/assets/thumbnail.ts`       | `128` px                  | Size of the picture drawn for each asset (shown at 48 px).                                                                       |
+| Thumbnail angle      | `THUMBNAIL_VIEW_DIRECTION` in `thumbnail.ts`                    | `[1, 0.75, 1.2]`          | Which side and how high the camera looks from when the picture is drawn.                                                         |
+| Preview opacity      | `PREVIEW_OPACITY` in `AssetPreview.tsx`                         | `0.4`                     | How solid the see-through preview looks while dragging an asset over the 3D view (1 = solid, 0 = invisible).                     |
+| Furthest drop        | `groundHit` `maxDistance` in `packages/shared/src/placement.ts` | `200` units               | A drop on the ground further away than this (looking along the horizon) is placed at the middle instead.                         |
+| Note length          | `ASSET_NOTE_MAX_LENGTH` in `packages/shared/src/scene.ts`       | `500` characters          | Longest source / licence note on an imported file (Assets panel).                                                                |
+| Where it appears     | `createModelNode` in `packages/shared/src/sceneOps.ts`          | the middle, on the ground | The model's origin is the middle of its bottom face (`modelOffset`), at position 0, 0, 0.                                        |
 
 ## Reset buttons (the starting values)
 

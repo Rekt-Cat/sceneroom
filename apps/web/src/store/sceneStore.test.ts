@@ -924,6 +924,14 @@ describe("the Assets panel actions", () => {
     expect(nextUndoLabel(get().history)).toBe("Place Muscle car");
   });
 
+  it("places the object at the given spot on the ground (a drop on the 3D view)", () => {
+    get().importModel(info);
+    const id = get().placeAsset(info.id, [3, 0, -2])!;
+    expect(get().scene.nodes[id]?.transform.position).toEqual([3, 0, -2]);
+    const middle = get().placeAsset(info.id)!;
+    expect(get().scene.nodes[middle]?.transform.position).toEqual([0, 0, 0]);
+  });
+
   it("placing an unknown file does nothing", () => {
     const before = get().scene;
     expect(get().placeAsset("nope")).toBeNull();
