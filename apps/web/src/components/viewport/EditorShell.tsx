@@ -5,6 +5,7 @@ import { importFiles } from "@/assets/importFile";
 import { startPersistence } from "@/persistence/startPersistence";
 import { useLayoutStore } from "@/store/layoutStore";
 import BoxSelectOverlay from "./BoxSelectOverlay";
+import ContextMenu from "./ContextMenu";
 import ControlsLegend from "./ControlsLegend";
 import HierarchyPanel from "./HierarchyPanel";
 import ImportBanner from "./ImportBanner";
@@ -105,6 +106,7 @@ export default function EditorShell() {
         <InspectorPanel />
       </div>
       <BoxSelectOverlay />
+      <ContextMenu />
     </div>
   );
 }

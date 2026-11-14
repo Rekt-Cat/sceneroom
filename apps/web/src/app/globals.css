@@ -44,3 +44,15 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
 }
+
+/* The editor is dark whatever the system theme is: this makes the browser draw its own parts (scroll bars,
+   form controls) dark too, instead of white on a light-theme system. */
+html {
+  color-scheme: dark;
+}
+
+/* Scroll bars in the editor colours: thin, a quiet thumb, no solid track. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #343d48 #14181d; /* thumb = ed-line-strong, track = ed-panel */
+}

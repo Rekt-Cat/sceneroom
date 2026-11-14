@@ -6,6 +6,7 @@ import { Outlines } from "@react-three/drei";
 import { DoubleSide, FrontSide, Mesh, type Object3D } from "three";
 import {
   buildSceneTree,
+  cutNodeIds,
   isEffectivelyLocked,
   type PrimitiveKind,
   type SceneNode,
@@ -48,6 +49,7 @@ function NodeMesh({
   onSoleSelectedMesh,
   ancestorHidden,
   ancestorLocked,
+  cut,
   children,
 }: {
   node: SceneNode;
@@ -60,6 +62,8 @@ function NodeMesh({
   ancestorHidden: boolean;
   /** True if something this object sits inside is locked (so it is locked too). */
   ancestorLocked: boolean;
+  /** True if the object is marked as cut (waiting to be pasted): it is drawn faded. */
+  cut: boolean;
   /** The objects inside this one. Drawn as children of this mesh, so they move, turn and scale with it. */
   children?: ReactNode;
 }) {
@@ -96,13 +100,14 @@ function NodeMesh({
     return (
       <group
         ref={setMesh}
+        userData={{ nodeId: node.id }}
         visible={node.visible}
         position={position}
         rotation={rotation}
         scale={scale}
         onClick={interactive ? handleClick : undefined}
       >
-        <ModelObject assetId={node.assetId} selected={selected} />
+        <ModelObject assetId={node.assetId} selected={selected} cut={cut} />
         {children}
       </group>
     );
@@ -111,6 +116,7 @@ function NodeMesh({
   return (
     <mesh
       ref={setMesh}
+      userData={{ nodeId: node.id }}
       visible={node.visible}
       raycast={
         // Hidden and locked objects let clicks pass through to whatever is behind them
@@ -129,6 +135,10 @@ function NodeMesh({
         color={node.color}
         roughness={node.roughness}
         metalness={node.metalness}
+        // A cut object is drawn faded until it is pasted
+        transparent={cut}
+        opacity={cut ? 0.4 : 1}
+        depthWrite={!cut}
         side={node.kind === "plane" ? DoubleSide : FrontSide}
       />
       {selected && (
@@ -145,10 +155,12 @@ function NodeTree({
   selectedIds,
   soleId,
   onSoleSelectedMesh,
+  cutIds,
   ancestorHidden = false,
   ancestorLocked = false,
 }: {
   entry: TreeNode;
+  cutIds: ReadonlySet<string>;
   selectedIds: string[];
   soleId: string | null;
   onSoleSelectedMesh: (object: Object3D | null) => void;
@@ -164,6 +176,7 @@ function NodeTree({
       onSoleSelectedMesh={onSoleSelectedMesh}
       ancestorHidden={ancestorHidden}
       ancestorLocked={ancestorLocked}
+      cut={cutIds.has(node.id)}
     >
       {children.map((child) => (
         <NodeTree
@@ -174,6 +187,7 @@ function NodeTree({
           onSoleSelectedMesh={onSoleSelectedMesh}
           ancestorHidden={ancestorHidden || !node.visible}
           ancestorLocked={ancestorLocked || node.locked}
+          cutIds={cutIds}
         />
       ))}
     </NodeMesh>
@@ -190,6 +204,11 @@ export default function SceneNodes() {
   const [soleObject, setSoleObject] = useState<Object3D | null>(null);
 
   const tree = useMemo(() => buildSceneTree(scene), [scene]);
+  const clipboard = useSceneStore((state) => state.clipboard);
+  const cutIds = useMemo(
+    () => cutNodeIds(scene, clipboard),
+    [scene, clipboard],
+  );
   const soleId = selectedIds.length === 1 ? (selectedIds[0] ?? null) : null;
 
   return (
@@ -201,6 +220,7 @@ export default function SceneNodes() {
           selectedIds={selectedIds}
           soleId={soleId}
           onSoleSelectedMesh={setSoleObject}
+          cutIds={cutIds}
         />
       ))}
       {soleId && soleObject && !isEffectivelyLocked(scene, soleId) && (

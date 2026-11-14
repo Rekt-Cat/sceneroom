@@ -2,10 +2,10 @@
 
 ## Current status
 
-- **Phase:** 4 (lights, materials, environment) started: materials done; model import and autosave are written on stacked branches (`feature/model-import`, `feature/autosave`), waiting for browser checks and merging
+- **Phase:** 4 (lights, materials, environment) started: materials, model import and autosave are merged; the right-click menu, clipboard and list ordering are done on `feature/context-menu` (committed, not yet pushed or merged)
 - **Done:** Phases 0 to 3, all on `main` and live at https://sceneroom.vercel.app: 3D viewport; scene model; selection, multi-select, gizmo, camera controls; add / duplicate / delete / rename; scene list with search and drag-to-re-parent; Inspector (position, rotation, scale, colour, parent); undo/redo; resizable panels and value dragging; lock. A git pre-push hook runs type-check, lint, test and build before every push.
-- **CI:** green on pull requests #2 to #4 (last merge `4461bb0`).
-- **Next action:** push and merge `feature/materials`, `feature/model-import` and `feature/autosave` (stacked: one pull request from `feature/autosave` carries all three); test autosave in the browser (import a model, reload the page, check it is still there). Then the Assets panel (`ASSETS-AND-IMPORT.md` step 2), **Surface and shading**, lights, environment settings. Still open: test `SETUP-SECOND-PC.md` on the second PC; try the pre-push hook from GitHub Desktop; optional `/code-review` of the Phase 0-3 diffs.
+- **CI:** green on pull requests up to #7 (last merge `3c2098e`).
+- **Next action:** push `feature/context-menu` and merge it (GitHub Desktop); try autosave in the browser (import a model, reload, check it is still there). Then the Assets panel (`ASSETS-AND-IMPORT.md` step 2), **Surface and shading**, lights, environment settings. Small leftovers: keyboard reorder in the list (Alt + arrows), pasting into several selected objects. Still open: test `SETUP-SECOND-PC.md` on the second PC; try the pre-push hook from GitHub Desktop; optional `/code-review` of the Phase 0-3 diffs.
 
 Update this block at the end of every sub-phase and commit it.
 
@@ -55,6 +55,7 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 - [ ] Layout: toolbar, Hierarchy, Inspector, Viewport (shadcn/ui)
 - [x] Hierarchy tree with visibility, search, Add menu, docked panels and tool dock (branch `feature/hierarchy`)
 - [x] Inspector fields: position, rotation, scale, colour (branch `feature/inspector`); material values later
+- [x] Copy, cut and paste (Ctrl/Cmd + C, X, V), a right-click menu on objects and rows, Shift-click range selection and Ctrl/Cmd-click toggling in the scene list (branch `feature/context-menu`, needs a browser check)
 - [x] Lock objects: padlock in the scene list and Inspector, key `L`; a locked object cannot be edited (branch `feature/lock`, needs a browser check)
 - [x] Re-parenting: drag rows in the scene list or use the Parent list in the Inspector; children are drawn inside their parents (branch `feature/reparenting`, needs a browser check)
 - [x] Resizable side panels (drag the edge) and Unity-style dragging of X / Y / Z values (branch `feature/panels-scrub`)

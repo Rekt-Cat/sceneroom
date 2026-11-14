@@ -4,6 +4,7 @@ const CONTROLS: [string, string][] = [
   ["Right-drag", "Orbit"],
   ["Scroll", "Zoom"],
   ["Ctrl/Cmd-drag", "Select box"],
+  ["Right-click", "Menu"],
 ];
 
 export default function ControlsLegend() {

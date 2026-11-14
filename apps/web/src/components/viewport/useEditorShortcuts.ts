@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { PRIMITIVE_KINDS, modeForKey } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
 import { SEARCH_INPUT_ID } from "./HierarchyPanel";
+import { pasteClipboard } from "./clipboardActions";
 
 /** True when the user is typing in a field, so letter keys must not trigger shortcuts. */
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -16,6 +17,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
 /**
  * W / E / R switch the gizmo, X toggles snapping, Escape clears the selection,
  * Delete or Backspace deletes the selected object, Ctrl/Cmd + D duplicates it,
+ * Ctrl/Cmd + C copies, + X cuts (marks) and + V pastes beside the selection (Shift + V: inside it),
  * Ctrl/Cmd + Z undoes and Ctrl/Cmd + Shift + Z (or Ctrl + Y) redoes,
  * 1 to 5 add a shape, "/" focuses the search box, L locks or unlocks the selection,
  * and holding Shift flips snapping while it is held.
@@ -43,6 +45,36 @@ export function useEditorShortcuts(): void {
         if (key === "y" && event.ctrlKey) {
           event.preventDefault();
           store.redo();
+          return;
+        }
+        // Ctrl/Cmd + C copies, X cuts, V pastes the selected objects. Only when there is something to
+        // copy or paste, and not when text on the page is selected (then the browser's own copy applies).
+        const textIsSelected = (window.getSelection()?.toString() ?? "") !== "";
+        if (
+          !event.shiftKey &&
+          !textIsSelected &&
+          store.selectedIds.length > 0
+        ) {
+          if (key === "c") {
+            event.preventDefault();
+            store.copySelected();
+            return;
+          }
+          if (key === "x") {
+            event.preventDefault();
+            store.cutSelected();
+            return;
+          }
+        }
+        if (key === "v" && store.clipboard) {
+          event.preventDefault();
+          if (event.shiftKey) {
+            // Ctrl/Cmd + Shift + V: next to the selected object instead of inside it
+            pasteClipboard("beside");
+          } else {
+            // Ctrl/Cmd + V: inside the single selected object (it becomes the parent), else see resolveAutoPlacement
+            pasteClipboard("auto");
+          }
           return;
         }
       }
@@ -90,7 +122,11 @@ export function useEditorShortcuts(): void {
       const mode = modeForKey(event.key);
       if (mode) store.setTransformMode(mode);
       else if (event.key.toLowerCase() === "x") store.toggleSnap();
-      else if (event.key === "Escape") store.select(null);
+      else if (event.key === "Escape") {
+        store.select(null);
+        // Escape also cancels a cut that has not been pasted yet (the objects stop being greyed)
+        if (store.clipboard?.mode === "cut") store.clearClipboard();
+      }
     }
 
     function onKeyUp(event: KeyboardEvent) {

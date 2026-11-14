@@ -980,11 +980,12 @@
           <dd>
             The data that describes the scene: a list of objects, each with a
             position, rotation, scale, colour and surface finish (roughness and
-            metalness), whether it is hidden or locked, and its parent (or, for
-            an imported model, which file it shows), plus what is selected and
-            which gizmo is active. Today (Zustand) the store holds it and calls
-            pure functions from the shared package (4) to change it. It also
-            keeps the undo and redo history; materials come later.
+            metalness), whether it is hidden or locked, and its parent and place
+            among its siblings (or, for an imported model, which file it shows),
+            plus what is selected and which gizmo is active. Today (Zustand) the
+            store holds it and calls pure functions from the shared package (4)
+            to change it. It also keeps the undo and redo history; materials
+            come later.
             <strong>Zustand</strong> is a small library that holds this kind of
             shared data. In Phase 7 it becomes a <strong>Yjs document</strong>,
             which many people can edit at once.
@@ -1019,7 +1020,10 @@
             delete, the Inspector's value fields (position, rotation, scale,
             colour, for one object), Undo and Redo (buttons and Ctrl/Cmd+Z),
             resizable panels, dragging objects into one another (or a Parent
-            list in the Inspector) and the shortcuts exist.
+            list in the Inspector), reordering objects among their siblings, a
+            right-click menu, copy, cut and paste (paste goes inside the
+            selected object), range selection in the list, and the shortcuts
+            exist.
           </dd>
           <dt>Unity comparison</dt>
           <dd>The Hierarchy and Inspector windows.</dd>

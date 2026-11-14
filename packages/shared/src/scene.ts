@@ -56,6 +56,12 @@ export const sceneNodeSchema = z.object({
    * apart from the scene, because it can be many megabytes. null for the built-in shapes.
    */
   assetId: z.string().min(1).nullable().default(null),
+  /**
+   * The place among the objects that share this parent: smaller numbers come first, and objects with
+   * the same number keep the order they were created in. Old scenes without it load as 0 for every
+   * object, which means "in creation order", as before.
+   */
+  order: z.number().default(0),
 });
 
 /**

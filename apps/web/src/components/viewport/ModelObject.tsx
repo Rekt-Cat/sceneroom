@@ -75,9 +75,12 @@ class ModelErrorBoundary extends Component<
 export default function ModelObject({
   assetId,
   selected,
+  cut,
 }: {
   assetId: string | null;
   selected: boolean;
+  /** True if the object is marked as cut: a grey wireframe box is drawn over the model (a model's own materials are shared, so it cannot be faded). */
+  cut: boolean;
 }) {
   const info = useSceneStore((state) =>
     assetId ? state.scene.assets[assetId] : undefined,
@@ -98,6 +101,7 @@ export default function ModelObject({
         </Suspense>
       </ModelErrorBoundary>
       {selected && <SelectionBox size={size} />}
+      {cut && <Placeholder size={size} failed={false} />}
     </>
   );
 }

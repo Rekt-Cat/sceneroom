@@ -1,12 +1,19 @@
 import type { Scene, Transform } from "./scene";
 import { topLevelSelection } from "./selection";
+import { transformsEqual } from "./sceneOps";
 import { isEffectivelyLocked } from "./sceneTree";
+import { placeAmongSiblings } from "./siblingOrder";
 
 /** One object moving to a new parent (null = top level), with the transform it should have there. */
 export type ReparentMove = {
   id: string;
   parentId: string | null;
   transform: Transform;
+  /**
+   * Where among the new parent's children: just before this object, or at the end if null. If left
+   * out, an object that stays in the same parent keeps its place, and one that changes parent goes to the end.
+   */
+  beforeId?: string | null;
 };
 
 /** True if `nodeId` is `rootId` itself or sits anywhere below it. */
@@ -59,7 +66,7 @@ export function movableSelection(
 }
 
 /**
- * Moves objects to new parents. The moves are applied one after the other, each checked against the
+ * Moves objects to new parents (and places them among the objects there). The moves are applied one after the other, each checked against the
  * scene as it is by then. If any move is not allowed this throws and nothing is changed.
  */
 export function reparentNodes(
@@ -74,17 +81,24 @@ export function reparentNodes(
       );
     }
     const node = next.nodes[move.id]!;
-    next = {
-      ...next,
-      nodes: {
-        ...next.nodes,
-        [move.id]: {
-          ...node,
-          parentId: move.parentId,
-          transform: move.transform,
+    const parentChanged = node.parentId !== move.parentId;
+    // Only replace the object if something about it changes, so a move that changes nothing is easy to see
+    if (parentChanged || !transformsEqual(node.transform, move.transform)) {
+      next = {
+        ...next,
+        nodes: {
+          ...next.nodes,
+          [move.id]: {
+            ...node,
+            parentId: move.parentId,
+            transform: move.transform,
+          },
         },
-      },
-    };
+      };
+    }
+    if (parentChanged || move.beforeId !== undefined) {
+      next = placeAmongSiblings(next, move.id, move.beforeId ?? null);
+    }
   }
   return next;
 }

@@ -3,6 +3,7 @@ import { createEmptyScene, sceneNodeSchema, sceneSchema } from "./scene";
 import {
   addNode,
   addAsset,
+  availableName,
   createModelNode,
   createNode,
   isModelNode,
@@ -289,5 +290,14 @@ describe("model objects", () => {
       name: "Car (1)",
     });
     expect(Object.keys(copy.assets)).toEqual(["abc123"]);
+  });
+});
+
+describe("availableName", () => {
+  it("keeps a free name and numbers a taken one", () => {
+    let scene = createEmptyScene();
+    scene = addNode(scene, { ...createNode("a", "cube"), name: "Crate" });
+    expect(availableName(scene, "Barrel")).toBe("Barrel");
+    expect(availableName(scene, "Crate")).toBe("Crate (1)");
   });
 });

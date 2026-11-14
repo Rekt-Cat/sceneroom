@@ -6,6 +6,7 @@ import { MOUSE } from "three";
 import { useSceneStore } from "@/store/sceneStore";
 import BoxSelectController from "./BoxSelectController";
 import CameraModifierSwitch from "./CameraModifierSwitch";
+import ViewportContextMenuController from "./ViewportContextMenuController";
 import SceneNodes from "./SceneNodes";
 import { shouldIgnoreClick } from "./gizmoGuard";
 
@@ -54,6 +55,8 @@ export default function Viewport() {
       <CameraModifierSwitch />
       {/* Ctrl/Cmd + left-drag draws a selection box */}
       <BoxSelectController />
+      {/* A right-click on an object opens the menu */}
+      <ViewportContextMenuController />
 
       {/* FPS counter (frames per second). The class moves it from the page corner to the corner of the
           3D view: the Scene panel width (a CSS variable set in EditorShell) + 12px across, 48px (top bar) + 12px down. */}

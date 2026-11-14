@@ -563,3 +563,335 @@ describe("loading a whole scene", () => {
     expect(get().pendingEdit).toBeNull();
   });
 });
+
+describe("copy and paste", () => {
+  const names = () =>
+    Object.values(get().scene.nodes)
+      .map((n) => n.name)
+      .sort();
+
+  it("copy changes nothing in the scene and does not add an undo step", () => {
+    get().select("initial-cube");
+    const scene = get().scene;
+    get().copySelected();
+    expect(get().scene).toBe(scene);
+    expect(get().history.past).toHaveLength(0);
+    expect(get().clipboard).toMatchObject({
+      mode: "copy",
+      rootIds: ["initial-cube"],
+    });
+  });
+
+  it("pasting a copy adds it beside the original, selects it, and is one undo step", () => {
+    get().select("initial-cube");
+    get().copySelected();
+    get().pasteCopies(null);
+    expect(names()).toEqual(["Cube", "Cube (1)"]);
+    const copy = Object.values(get().scene.nodes).find(
+      (n) => n.name === "Cube (1)",
+    )!;
+    expect(copy.transform.position).toEqual([1, 0.5, 0]); // one step beside the original
+    expect(get().selectedIds).toEqual([copy.id]);
+    expect(nextUndoLabel(get().history)).toBe("Paste");
+    get().undo();
+    expect(names()).toEqual(["Cube"]);
+  });
+
+  it("each paste lands a step further along, so copies do not pile up", () => {
+    get().select("initial-cube");
+    get().copySelected();
+    get().pasteCopies(null);
+    get().pasteCopies(null);
+    get().pasteCopies(null);
+    const xs = Object.values(get().scene.nodes)
+      .map((n) => n.transform.position[0])
+      .sort();
+    expect(xs).toEqual([0, 1, 2, 3]);
+  });
+
+  it("a copy can be pasted inside another object, and inside the thing it was copied from", () => {
+    const other = get().addPrimitive("sphere");
+    get().select("initial-cube");
+    get().copySelected();
+    get().pasteCopies(other);
+    const inside = Object.values(get().scene.nodes).find(
+      (n) => n.name === "Cube (1)",
+    )!;
+    expect(inside.parentId).toBe(other);
+    get().pasteCopies("initial-cube");
+    const inOriginal = Object.values(get().scene.nodes).find(
+      (n) => n.parentId === "initial-cube",
+    )!;
+    expect(inOriginal.kind).toBe("cube");
+  });
+
+  it("the given transforms replace the copied ones for the top objects (then the step along)", () => {
+    get().select("initial-cube");
+    get().copySelected();
+    get().pasteCopies(null, {
+      "initial-cube": {
+        position: [10, 0, 0],
+        rotation: [0, 0, 0],
+        scale: [3, 3, 3],
+      },
+    });
+    const copy = Object.values(get().scene.nodes).find(
+      (n) => n.name === "Cube (1)",
+    )!;
+    expect(copy.transform.position).toEqual([11, 0, 0]);
+    expect(copy.transform.scale).toEqual([3, 3, 3]);
+  });
+
+  it("paste with nothing copied does nothing", () => {
+    const scene = get().scene;
+    get().pasteCopies(null);
+    expect(get().scene).toBe(scene);
+  });
+
+  it("the clipboard keeps what was copied even after the original is deleted", () => {
+    get().select("initial-cube");
+    get().copySelected();
+    get().deleteSelected();
+    expect(names()).toEqual([]);
+    get().pasteCopies(null);
+    expect(names()).toEqual(["Cube"]);
+  });
+
+  it("a locked object can be copied and pasted (the copy is locked too)", () => {
+    get().setNodesLocked(["initial-cube"], true);
+    get().select("initial-cube");
+    get().copySelected();
+    get().pasteCopies(null);
+    expect(
+      Object.values(get().scene.nodes).filter((n) => n.locked),
+    ).toHaveLength(2);
+  });
+
+  it("copying a parent copies what is inside it, with the structure kept", () => {
+    const child = get().addPrimitive("sphere");
+    get().reparentNodes(
+      [
+        {
+          id: child,
+          parentId: "initial-cube",
+          transform: get().scene.nodes[child]!.transform,
+        },
+      ],
+      "Move",
+    );
+    get().select("initial-cube");
+    get().copySelected();
+    get().pasteCopies(null);
+    expect(Object.keys(get().scene.nodes)).toHaveLength(4);
+    const [newRoot] = get().selectedIds;
+    const children = Object.values(get().scene.nodes).filter(
+      (n) => n.parentId === newRoot,
+    );
+    expect(children).toHaveLength(1);
+    expect(children[0]?.kind).toBe("sphere");
+  });
+
+  it("pasting a model works and shares the same file", () => {
+    const info = {
+      id: "f1",
+      name: "Car",
+      type: "model" as const,
+      bytes: 1,
+      triangles: 1,
+      boundsMin: [0, 0, 0] as [number, number, number],
+      boundsMax: [1, 1, 1] as [number, number, number],
+    };
+    const id = get().importModel(info);
+    get().select(id);
+    get().copySelected();
+    get().pasteCopies(null);
+    const models = Object.values(get().scene.nodes).filter(
+      (n) => n.kind === "model",
+    );
+    expect(models).toHaveLength(2);
+    expect(new Set(models.map((m) => m.assetId))).toEqual(new Set(["f1"]));
+    expect(Object.keys(get().scene.assets)).toEqual(["f1"]);
+  });
+});
+
+describe("cut (marks the objects; pasting moves them)", () => {
+  it("cut only MARKS the objects: nothing is deleted or moved, and there is no undo step", () => {
+    get().select("initial-cube");
+    const scene = get().scene;
+    get().cutSelected();
+    expect(get().scene).toBe(scene);
+    expect(get().history.past).toHaveLength(0);
+    expect(get().clipboard).toMatchObject({
+      mode: "cut",
+      rootIds: ["initial-cube"],
+    });
+  });
+
+  it("cut skips locked objects, and does nothing if nothing is left to cut", () => {
+    get().setNodesLocked(["initial-cube"], true);
+    get().select("initial-cube");
+    get().cutSelected();
+    expect(get().clipboard).toBeNull();
+    expect(get().scene.nodes["initial-cube"]).toBeDefined();
+  });
+
+  it("cutting something else replaces the mark", () => {
+    const b = get().addPrimitive("sphere");
+    get().select("initial-cube");
+    get().cutSelected();
+    get().select(b);
+    get().cutSelected();
+    expect(get().clipboard?.rootIds).toEqual([b]);
+  });
+
+  it("copying after a cut replaces the cut, so the cut object stops being marked", () => {
+    get().select("initial-cube");
+    get().cutSelected();
+    get().copySelected();
+    expect(get().clipboard?.mode).toBe("copy");
+  });
+
+  it("pasteCopies does nothing when the clipboard holds a cut (a cut is moved, see pasteClipboard)", () => {
+    get().select("initial-cube");
+    get().cutSelected();
+    const scene = get().scene;
+    get().pasteCopies(null);
+    expect(get().scene).toBe(scene);
+  });
+
+  it("clearClipboard forgets a cut, so the object is no longer marked", () => {
+    get().select("initial-cube");
+    get().cutSelected();
+    get().clearClipboard();
+    expect(get().clipboard).toBeNull();
+  });
+});
+
+describe("reset transform and hide / show for the selection", () => {
+  it("reset transform puts position, rotation and scale of the selected objects back, in one step", () => {
+    const a = get().scene.nodes["initial-cube"]!;
+    const b = get().addPrimitive("sphere");
+    get().setNodeTransform("initial-cube", {
+      ...a.transform,
+      position: [5, 5, 5],
+      scale: [2, 2, 2],
+    });
+    get().setSelection(["initial-cube", b]);
+    const steps = get().history.past.length;
+    get().resetSelectedTransforms();
+    expect(get().scene.nodes["initial-cube"]?.transform).toEqual({
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+      scale: [1, 1, 1],
+    });
+    expect(get().scene.nodes[b]?.transform.position).toEqual([0, 0, 0]);
+    expect(get().history.past).toHaveLength(steps + 1);
+    expect(nextUndoLabel(get().history)).toBe("Reset transform");
+  });
+
+  it("reset leaves locked objects alone and records nothing if nothing changes", () => {
+    get().setNodesLocked(["initial-cube"], true);
+    const moved = { ...get().scene.nodes["initial-cube"]!.transform };
+    get().select("initial-cube");
+    const steps = get().history.past.length;
+    get().resetSelectedTransforms();
+    expect(get().scene.nodes["initial-cube"]?.transform).toEqual(moved);
+    expect(get().history.past).toHaveLength(steps);
+  });
+
+  it("hide and show work on several objects as one undo step", () => {
+    const b = get().addPrimitive("sphere");
+    get().setNodesVisible(["initial-cube", b], false);
+    expect(get().scene.nodes["initial-cube"]?.visible).toBe(false);
+    expect(get().scene.nodes[b]?.visible).toBe(false);
+    expect(nextUndoLabel(get().history)).toBe("Hide");
+    get().undo();
+    expect(get().scene.nodes[b]?.visible).toBe(true);
+    const steps = get().history.past.length;
+    get().setNodesVisible(["initial-cube"], true); // already visible: nothing to do
+    expect(get().history.past).toHaveLength(steps);
+  });
+});
+
+describe("order of siblings", () => {
+  const order = (parentId: string | null) =>
+    Object.values(get().scene.nodes)
+      .filter((n) => n.parentId === parentId)
+      .sort((a, b) => a.order - b.order)
+      .map((n) => n.name);
+  const move = (
+    id: string,
+    parentId: string | null,
+    beforeId: string | null | undefined,
+    label = "Reorder",
+  ) =>
+    get().reparentNodes(
+      [{ id, parentId, transform: get().scene.nodes[id]!.transform, beforeId }],
+      label,
+    );
+
+  it("new objects, pastes and imports go after the existing ones", () => {
+    get().addPrimitive("sphere");
+    get().addPrimitive("cone");
+    expect(order(null)).toEqual(["Cube", "Sphere", "Cone"]);
+  });
+
+  it("moving an object before another reorders them, as one undo step that undo reverses", () => {
+    const sphere = get().addPrimitive("sphere");
+    const cone = get().addPrimitive("cone");
+    move(cone, null, "initial-cube");
+    expect(order(null)).toEqual(["Cone", "Cube", "Sphere"]);
+    expect(nextUndoLabel(get().history)).toBe("Reorder");
+    get().undo();
+    expect(order(null)).toEqual(["Cube", "Sphere", "Cone"]);
+    expect(sphere).toBeDefined();
+  });
+
+  it("a move that changes nothing records no undo step", () => {
+    get().addPrimitive("sphere");
+    const steps = get().history.past.length;
+    move("initial-cube", null, null); // moving the first object to the end... is a change
+    expect(get().history.past).toHaveLength(steps + 1);
+    const after = get().history.past.length;
+    const first = Object.values(get().scene.nodes).sort(
+      (a, b) => a.order - b.order,
+    )[0]!;
+    move(first.id, null, undefined); // no place given, same parent: nothing to do
+    expect(get().history.past).toHaveLength(after);
+  });
+
+  it("an object can be put first inside a parent: right under the parent", () => {
+    const parent = get().addPrimitive("cube");
+    const a = get().addPrimitive("sphere");
+    const b = get().addPrimitive("cone");
+    move(a, parent, null, "Move");
+    move(b, parent, a, "Move"); // before a
+    expect(order(parent)).toEqual(["Cone", "Sphere"]);
+  });
+
+  it("a copy keeps the order of the objects inside the original", () => {
+    const parent = get().addPrimitive("cube");
+    const x = get().addPrimitive("sphere");
+    const y = get().addPrimitive("cone");
+    move(x, parent, null, "Move");
+    move(y, parent, x, "Move"); // inside the parent: Cone, Sphere
+    get().select(parent);
+    get().duplicateSelected();
+    const copy = Object.values(get().scene.nodes).find(
+      (n) => n.name === "Cube (1)",
+    )!;
+    const inside = Object.values(get().scene.nodes)
+      .filter((n) => n.parentId === copy.id)
+      .sort((p, q) => p.order - q.order)
+      .map((n) => n.name);
+    expect(inside).toEqual(["Cone", "Sphere"]);
+  });
+
+  it("the order is saved with the scene and survives loading it again", () => {
+    const sphere = get().addPrimitive("sphere");
+    move(sphere, null, "initial-cube");
+    const saved = JSON.parse(JSON.stringify(get().scene));
+    get().loadScene(saved);
+    expect(order(null)).toEqual(["Sphere", "Cube"]);
+  });
+});

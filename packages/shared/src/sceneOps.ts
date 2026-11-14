@@ -10,6 +10,7 @@ import {
   type Transform,
 } from "./scene";
 import { topLevelSelection } from "./selection";
+import { groupChildren, nextOrder } from "./siblingOrder";
 
 /**
  * Pure scene operations: each takes a scene and returns a NEW scene, never mutating the input.
@@ -38,6 +39,7 @@ export function createNode(id: string, kind: PrimitiveKind): SceneNode {
     roughness: DEFAULT_ROUGHNESS,
     metalness: DEFAULT_METALNESS,
     assetId: null,
+    order: 0,
   };
 }
 
@@ -80,16 +82,18 @@ export function addNode(scene: Scene, node: SceneNode): Scene {
   if (node.parentId !== null && !scene.nodes[node.parentId]) {
     throw new Error(`Parent "${node.parentId}" does not exist`);
   }
-  return { ...scene, nodes: { ...scene.nodes, [node.id]: node } };
+  // A new object goes after the others in its parent (the order it comes with is ignored)
+  const placed = { ...node, order: nextOrder(scene, node.parentId) };
+  return { ...scene, nodes: { ...scene.nodes, [node.id]: placed } };
 }
 
 /** Ids of a node and everything below it. */
 export function getSubtreeIds(scene: Scene, rootId: string): string[] {
+  const groups = groupChildren(scene);
   const ids = [rootId];
+  // Each node's children are added in display order, so copies come out in the order they are shown
   for (const id of ids) {
-    for (const node of Object.values(scene.nodes)) {
-      if (node.parentId === id) ids.push(node.id);
-    }
+    for (const child of groups.get(id) ?? []) ids.push(child.id);
   }
   return ids;
 }
@@ -121,6 +125,12 @@ export function uniqueCopyName(scene: Scene, name: string): string {
       base.slice(0, NODE_NAME_MAX_LENGTH - suffix.length) + suffix;
     if (!taken.has(candidate)) return candidate;
   }
+}
+
+/** `name` if no object has it yet, otherwise the next free numbered copy name ("Cube (1)"). */
+export function availableName(scene: Scene, name: string): string {
+  const taken = Object.values(scene.nodes).some((node) => node.name === name);
+  return taken ? uniqueCopyName(scene, name) : name;
 }
 
 /**

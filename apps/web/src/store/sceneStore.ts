@@ -1,9 +1,11 @@
 import { create } from "zustand";
 import {
+  IDENTITY_TRANSFORM,
   addAsset,
   addNode,
   createEmptyScene,
   createHistory,
+  copyToClipboard,
   createModelNode,
   createNode,
   duplicateNodes,
@@ -12,6 +14,7 @@ import {
   isEffectivelyLocked,
   normalizeHexColor,
   normalizeNodeName,
+  pasteFromClipboard,
   recordChange,
   redoStep,
   removeNodes,
@@ -24,6 +27,7 @@ import {
   undoStep,
   updateNode,
   type AssetInfo,
+  type ClipboardData,
   type History,
   type MaterialChange,
   type PrimitiveKind,
@@ -56,6 +60,8 @@ type SceneState = {
   snapEnabled: boolean;
   /** True while Shift is held: inverts snapEnabled for as long as it is held. */
   snapKeyHeld: boolean;
+  /** What Copy or Cut set aside, waiting to be pasted. Not part of the undo history. */
+  clipboard: ClipboardData | null;
   /** Earlier states for Undo, and undone states for Redo. */
   history: History<Snapshot>;
   /**
@@ -87,12 +93,35 @@ type SceneState = {
   /** Copies the selected objects (and everything below them), placed beside the originals, and selects the copies. */
   duplicateSelected: () => void;
   /**
-   * Moves objects under new parents (null = top level) as one undo step. Moves that change nothing
-   * are skipped. Throws if a move would make a loop; check with canReparent first.
+   * Moves objects under new parents (null = top level), and to a place among the objects there, as one
+   * undo step. Moves that change nothing record nothing. Throws if a move would make a loop; check with
+   * canReparent first.
    */
   reparentNodes: (moves: ReparentMove[], label: string) => void;
   /** Locks or unlocks nodes as one change. A locked node cannot be edited (see isEffectivelyLocked). */
   setNodesLocked: (ids: string[], locked: boolean) => void;
+  /** Sets the selected objects aside to paste later. Changes nothing in the scene. */
+  copySelected: () => void;
+  /**
+   * Marks the selected objects as cut (they are shown greyed). Nothing is deleted or moved until they
+   * are pasted, which MOVES them. Locked objects cannot be cut. Changes nothing in the scene.
+   */
+  cutSelected: () => void;
+  /**
+   * Pastes a copy of what was copied into `parentId` (null = top level) and selects the new objects, as
+   * one undo step. `rootTransforms` replaces the copied transforms of the top objects (by the id they
+   * were copied from). Each paste lands one step further along. Does nothing if the clipboard holds a cut.
+   */
+  pasteCopies: (
+    parentId: string | null,
+    rootTransforms?: Record<string, Transform>,
+  ) => void;
+  /** Forgets what was copied or cut (a cut object stops being greyed). */
+  clearClipboard: () => void;
+  /** Puts position, rotation and scale of the selected objects back to their starting values, as one undo step. Locked ones are left alone. */
+  resetSelectedTransforms: () => void;
+  /** Shows or hides several nodes in the viewport as one change. */
+  setNodesVisible: (ids: string[], visible: boolean) => void;
   /** Shows or hides a node in the viewport. */
   setNodeVisible: (id: string, visible: boolean) => void;
   /** Sets how shiny / metal an object looks (0 to 1 each), as one undo step. Ignored for locked objects. */
@@ -138,6 +167,7 @@ export const useSceneStore = create<SceneState>()((set) => ({
   snapEnabled: false,
   snapKeyHeld: false,
   history: createHistory<Snapshot>(),
+  clipboard: null,
   pendingEdit: null,
   select: (id) =>
     set((state) => ({
@@ -243,19 +273,84 @@ export const useSceneStore = create<SceneState>()((set) => ({
     }),
   reparentNodes: (moves, label) =>
     set((state) => {
-      const changing = moves.filter((move) => {
-        const node = state.scene.nodes[move.id];
-        return (
-          node &&
-          (node.parentId !== move.parentId ||
-            !transformsEqual(node.transform, move.transform))
-        );
-      });
-      if (changing.length === 0) return state;
+      const scene = reparentNodes(state.scene, moves);
+      // Moves that change nothing leave every object as it was (the same object), so they record no undo step
+      const changed = Object.keys(scene.nodes).some(
+        (id) => scene.nodes[id] !== state.scene.nodes[id],
+      );
+      if (!changed) return state;
+      return { scene, history: record(state, label) };
+    }),
+  copySelected: () =>
+    set((state) => {
+      const clipboard = copyToClipboard(state.scene, state.selectedIds, "copy");
+      return clipboard ? { clipboard } : state;
+    }),
+  cutSelected: () =>
+    set((state) => {
+      // A locked object cannot be moved, so it cannot be cut
+      const clipboard = copyToClipboard(
+        state.scene,
+        editableIds(state.scene, state.selectedIds),
+        "cut",
+      );
+      return clipboard ? { clipboard } : state;
+    }),
+  pasteCopies: (parentId, rootTransforms) =>
+    set((state) => {
+      const clipboard = state.clipboard;
+      if (!clipboard || clipboard.mode !== "copy") return state;
+      // A copy lands one step beside where it came from, and each further paste one step further
+      const steps = clipboard.pasteCount + 1;
+      const offset: [number, number, number] = [
+        DUPLICATE_OFFSET[0] * steps,
+        DUPLICATE_OFFSET[1] * steps,
+        DUPLICATE_OFFSET[2] * steps,
+      ];
+      const result = pasteFromClipboard(
+        state.scene,
+        clipboard,
+        () => crypto.randomUUID(),
+        { parentId, offset, rootTransforms },
+      );
       return {
-        scene: reparentNodes(state.scene, changing),
-        history: record(state, label),
+        scene: result.scene,
+        selectedIds: result.rootIds,
+        clipboard: { ...clipboard, pasteCount: clipboard.pasteCount + 1 },
+        history: record(state, "Paste"),
       };
+    }),
+  clearClipboard: () => set({ clipboard: null }),
+  resetSelectedTransforms: () =>
+    set((state) => {
+      const changing = editableIds(state.scene, state.selectedIds).filter(
+        (id) =>
+          !transformsEqual(
+            state.scene.nodes[id]!.transform,
+            IDENTITY_TRANSFORM,
+          ),
+      );
+      if (changing.length === 0) return state;
+      const updates = Object.fromEntries(
+        changing.map((id) => [id, IDENTITY_TRANSFORM]),
+      );
+      return {
+        scene: setTransforms(state.scene, updates),
+        history: record(state, "Reset transform"),
+      };
+    }),
+  setNodesVisible: (ids, visible) =>
+    set((state) => {
+      const changing = ids.filter(
+        (id) =>
+          state.scene.nodes[id] && state.scene.nodes[id].visible !== visible,
+      );
+      if (changing.length === 0) return state;
+      const scene = changing.reduce(
+        (next, id) => updateNode(next, id, { visible }),
+        state.scene,
+      );
+      return { scene, history: record(state, visible ? "Show" : "Hide") };
     }),
   setNodesLocked: (ids, locked) =>
     set((state) => {
