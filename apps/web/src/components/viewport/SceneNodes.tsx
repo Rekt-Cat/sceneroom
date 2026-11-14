@@ -9,18 +9,12 @@ import {
 } from "react";
 import { type ThreeEvent } from "@react-three/fiber";
 import { Outlines } from "@react-three/drei";
-import {
-  BufferAttribute,
-  BufferGeometry,
-  DoubleSide,
-  FrontSide,
-  Mesh,
-  type Object3D,
-} from "three";
+import { BufferAttribute, BufferGeometry, Mesh, type Object3D } from "three";
 import {
   buildSceneTree,
   cutNodeIds,
   DEFAULT_LIGHTS,
+  DEFAULT_PLANT,
   LIGHT_KINDS,
   isEffectivelyLocked,
   type LightKind,
@@ -35,7 +29,8 @@ import LightObject from "./LightObject";
 import { loadMeshData, peekMeshData } from "@/assets/meshStorage";
 import { useEditStore } from "@/store/editStore";
 import { PLACEHOLDER_FLAG } from "./MeshEditor";
-import { useEnvironmentTexture } from "./environmentTexture";
+import PlantObject from "./PlantObject";
+import SurfaceMaterial from "./SurfaceMaterial";
 import { buildMeshGeometry, buildShapeGeometry } from "./shapeGeometry";
 import ModelObject from "./ModelObject";
 import MultiSelectionGizmo from "./MultiSelectionGizmo";
@@ -172,11 +167,6 @@ function NodeMesh({
   const toggleSelect = useSceneStore((state) => state.toggleSelect);
   const { position, rotation, scale } = node.transform;
   const material = node.material;
-  const seeThrough = cut || material.opacity < 1;
-  const envTexture = useEnvironmentTexture((state) => state.texture);
-  const reflectionStrength = useSceneStore(
-    (state) => state.scene.environment.reflectionStrength,
-  );
 
   // Must keep the same identity between renders: React calls a changed ref callback again every render
   const nodeId = node.id;
@@ -220,6 +210,32 @@ function NodeMesh({
           // A light object always has its settings; the default only guards against damaged data
           light={node.light ?? DEFAULT_LIGHTS[node.kind]}
           selected={selected}
+        />
+        {children}
+      </group>
+    );
+  }
+
+  // A plant: a group holding the wood and the leaves grown from its settings. Like a model, it only takes
+  // clicks when it can be edited.
+  if (node.kind === "plant") {
+    return (
+      <group
+        ref={setMesh}
+        userData={{ nodeId: node.id }}
+        visible={node.visible}
+        position={position}
+        rotation={rotation}
+        scale={scale}
+        onClick={interactive ? handleClick : undefined}
+      >
+        <PlantObject
+          // A plant object always has its settings; the default only guards against damaged data
+          plant={node.plant ?? DEFAULT_PLANT}
+          color={node.color}
+          material={material}
+          selected={selected}
+          cut={cut}
         />
         {children}
       </group>
@@ -279,27 +295,7 @@ function NodeMesh({
           modifiers={node.modifiers}
         />
       )}
-      <meshStandardMaterial
-        // A new material when the shading, the side or solid / see-through changes: three.js builds its
-        // shader for these (a solid material is compiled to ignore opacity completely)
-        key={`${material.flatShading}-${material.doubleSided}-${seeThrough}-${envTexture !== null}`}
-        // What the surface reflects. Set on each material (and not left to the scene) so that the
-        // object's own Reflection strength can scale it
-        envMap={envTexture}
-        envMapIntensity={material.reflectionStrength * reflectionStrength}
-        color={node.color}
-        roughness={material.roughness}
-        metalness={material.metalness}
-        emissive={material.emissiveColor}
-        emissiveIntensity={material.emissiveIntensity}
-        flatShading={material.flatShading}
-        // A cut object is drawn faded until it is pasted; a see-through one does not hide what is behind it
-        transparent={seeThrough}
-        opacity={cut ? Math.min(0.4, material.opacity) : material.opacity}
-        depthWrite={!seeThrough}
-        // A plane has no thickness, so it needs both sides to be seen from behind
-        side={material.doubleSided ? DoubleSide : FrontSide}
-      />
+      <SurfaceMaterial color={node.color} material={material} cut={cut} />
       {selected && (
         <Outlines color={OUTLINE_COLOR} thickness={OUTLINE_THICKNESS} />
       )}

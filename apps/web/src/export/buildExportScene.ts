@@ -14,6 +14,7 @@ import {
 import { clone } from "three/examples/jsm/utils/SkeletonUtils.js";
 import {
   buildSceneTree,
+  generatePlant,
   modelOffset,
   type Scene,
   type ShapeMesh,
@@ -129,6 +130,10 @@ function createObject(
     return null;
   }
 
+  if (node.kind === "plant") {
+    return node.plant ? plantObject(node) : null;
+  }
+
   if (node.kind === "model") {
     const info = node.assetId ? scene.assets[node.assetId] : undefined;
     const loaded = node.assetId ? getModel(node.assetId) : undefined;
@@ -172,6 +177,35 @@ function createObject(
   // Marked so only what was made here is freed afterwards (a model's own parts are shared with the screen)
   mesh.userData["exportOwned"] = true;
   return mesh;
+}
+
+/** A plant: its wood and its leaves as two meshes (each with its own colour) in one object. */
+function plantObject(node: SceneNode): Object3D {
+  const plant = node.plant!;
+  const { bark, leaves } = generatePlant(plant);
+  const group = new Group();
+  const part = (mesh: ShapeMesh, color: string, name: string) => {
+    const object = new Mesh(
+      finish(buildMeshGeometry(mesh, []), node),
+      new MeshStandardMaterial({
+        color,
+        roughness: node.material.roughness,
+        metalness: node.material.metalness,
+        emissive: new Color(node.material.emissiveColor),
+        emissiveIntensity: node.material.emissiveIntensity,
+        opacity: node.material.opacity,
+        transparent: node.material.opacity < 1,
+        side: node.material.doubleSided ? DoubleSide : FrontSide,
+      }),
+    );
+    object.name = name;
+    object.userData["exportOwned"] = true;
+    group.add(object);
+  };
+  part(bark, node.color, `${node.name} wood`);
+  if (leaves.positions.length > 0)
+    part(leaves, plant.leafColor, `${node.name} leaves`);
+  return group;
 }
 
 function shapeGeometry(node: SceneNode) {

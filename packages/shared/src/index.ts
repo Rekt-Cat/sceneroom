@@ -26,6 +26,7 @@ export * from "./sceneFile";
 export * from "./meshData";
 export * from "./meshOps";
 export * from "./meshEdit";
+export * from "./plant";
 export * from "./persistence";
 export * from "./clipboard";
 export * from "./siblingOrder";

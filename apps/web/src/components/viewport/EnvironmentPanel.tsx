@@ -176,7 +176,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /** A row of exclusive choices with a reset button. */
-function Choice<T extends string>({
+export function Choice<T extends string>({
   label,
   choices,
   value,

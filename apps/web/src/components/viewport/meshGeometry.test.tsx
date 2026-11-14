@@ -299,3 +299,74 @@ describe("editing the points of a mesh", () => {
     expect(problems(scene)).toEqual([]);
   });
 });
+
+describe("plants in the 3D view", () => {
+  it("a selected plant (with its outline) keeps valid geometry through a change of seed, a kind, and no leaves", async () => {
+    const { default: PlantObject } = await import("./PlantObject");
+    const { DEFAULT_PLANT } = await import("@sceneroom/shared");
+    const material = createNode("m", "cube").material;
+    let change!: (settings: typeof DEFAULT_PLANT) => void;
+    function Probe() {
+      const [settings, setSettings] = useState(DEFAULT_PLANT);
+      change = setSettings;
+      return (
+        <group name="plant">
+          <PlantObject
+            plant={settings}
+            color="#7a5230"
+            material={material}
+            selected
+            cut={false}
+          />
+        </group>
+      );
+    }
+    const scene = await mount(<Probe />);
+    const parts = () =>
+      scene
+        .getObjectByName("plant")!
+        .children.filter((c): c is THREE.Mesh => c instanceof THREE.Mesh);
+    expect(parts()).toHaveLength(2); // wood and leaves
+    expect(problems(scene)).toEqual([]);
+
+    await act(async () => change({ ...DEFAULT_PLANT, seed: 99 }));
+    expect(problems(scene)).toEqual([]);
+    await act(async () =>
+      change({ ...DEFAULT_PLANT, height: 8, levels: 3, sides: 12, rings: 8 }),
+    );
+    expect(problems(scene)).toEqual([]);
+    // no leaves: only the wood is drawn
+    await act(async () => change({ ...DEFAULT_PLANT, leafDensity: 0 }));
+    expect(parts()).toHaveLength(1);
+    expect(problems(scene)).toEqual([]);
+    // and back again
+    await act(async () => change({ ...DEFAULT_PLANT, leafDensity: 1 }));
+    expect(parts()).toHaveLength(2);
+    expect(problems(scene)).toEqual([]);
+  });
+
+  it("the real scene tree draws plants, and a forest of them", async () => {
+    useSceneStore.getState().loadScene(createEmptyScene());
+    const id = useSceneStore.getState().addPlant("tree");
+    useSceneStore.getState().scatterPlant(id, [
+      { x: 3, z: 0, turn: 0, size: 1, seed: 5 },
+      { x: -3, z: 0, turn: 1, size: 1.2, seed: 6 },
+    ]);
+    // nothing selected: the move handle needs a real browser
+    useSceneStore.getState().select(null);
+    const scene = await mount(<SceneNodes />);
+    expect(problems(scene)).toEqual([]);
+    let meshes = 0;
+    scene.traverse((o) => {
+      if (o instanceof THREE.Mesh) meshes += 1;
+    });
+    expect(meshes).toBe(6); // three plants, wood and leaves each
+    // the pointer code can work with them
+    expect(new THREE.Box3().setFromObject(scene).isEmpty()).toBe(false);
+    const ray = new THREE.Raycaster(
+      new THREE.Vector3(0, 2, 10),
+      new THREE.Vector3(0, 0, -1),
+    );
+    expect(() => ray.intersectObject(scene, true)).not.toThrow();
+  });
+});
