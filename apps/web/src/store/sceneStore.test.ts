@@ -1133,3 +1133,102 @@ describe("environment settings", () => {
     );
   });
 });
+
+describe("modifiers and segments", () => {
+  const cube = () => get().scene.nodes["initial-cube"]!;
+
+  it("adds a modifier with its starting values as one undo step", () => {
+    get().addModifier("initial-cube", "bend");
+    expect(cube().modifiers).toHaveLength(1);
+    expect(cube().modifiers[0]).toMatchObject({
+      type: "bend",
+      enabled: true,
+      angle: 45,
+    });
+    expect(nextUndoLabel(get().history)).toBe("Add bend");
+    get().undo();
+    expect(cube().modifiers).toEqual([]);
+  });
+
+  it("changes a modifier, cleaned to its range, and records nothing for no change", () => {
+    get().addModifier("initial-cube", "twist");
+    const id = cube().modifiers[0]!.id;
+    get().setModifier("initial-cube", id, { angle: 5000 });
+    expect(cube().modifiers[0]).toMatchObject({ angle: 720 });
+    const steps = get().history.past.length;
+    get().setModifier("initial-cube", id, { angle: 720 });
+    get().setModifier("initial-cube", "nope", { angle: 1 });
+    expect(get().history.past).toHaveLength(steps);
+  });
+
+  it("dragging a slider is many previews and one undo step", () => {
+    get().addModifier("initial-cube", "bend");
+    const id = cube().modifiers[0]!.id;
+    const steps = get().history.past.length;
+    get().beginEdit("Bend");
+    get().previewModifier("initial-cube", id, { angle: 10 });
+    get().previewModifier("initial-cube", id, { angle: 20 });
+    expect(get().history.past).toHaveLength(steps);
+    get().endEdit(true);
+    expect(cube().modifiers[0]).toMatchObject({ angle: 20 });
+    expect(get().history.past).toHaveLength(steps + 1);
+  });
+
+  it("moves and removes modifiers", () => {
+    get().addModifier("initial-cube", "bend");
+    get().addModifier("initial-cube", "taper");
+    const [first, second] = cube().modifiers.map((m) => m.id);
+    get().moveModifier("initial-cube", second!, "up");
+    expect(cube().modifiers.map((m) => m.id)).toEqual([second, first]);
+    get().removeModifier("initial-cube", first!);
+    expect(cube().modifiers.map((m) => m.id)).toEqual([second]);
+  });
+
+  it("duplicates a modifier right after the original, as one undo step", () => {
+    get().addModifier("initial-cube", "bend");
+    get().addModifier("initial-cube", "twist");
+    const [bend] = cube().modifiers;
+    get().duplicateModifier("initial-cube", bend!.id);
+    expect(cube().modifiers.map((m) => m.type)).toEqual([
+      "bend",
+      "bend",
+      "twist",
+    ]);
+    expect(cube().modifiers[1]!.id).not.toBe(bend!.id);
+    expect(nextUndoLabel(get().history)).toBe("Duplicate modifier");
+    get().undo();
+    expect(cube().modifiers).toHaveLength(2);
+  });
+
+  it("sets segments between 1 and 32 as one undo step", () => {
+    get().setNodeSegments("initial-cube", 12);
+    expect(cube().segments).toBe(12);
+    get().setNodeSegments("initial-cube", 500);
+    expect(cube().segments).toBe(32);
+    get().undo();
+    expect(cube().segments).toBe(12);
+  });
+
+  it("a locked object, a model and a light cannot have them changed or added", () => {
+    get().setNodesLocked(["initial-cube"], true);
+    get().addModifier("initial-cube", "bend");
+    get().setNodeSegments("initial-cube", 4);
+    expect(cube().modifiers).toEqual([]);
+    expect(cube().segments).toBe(1);
+    const light = get().addLight("point");
+    get().addModifier(light, "bend");
+    expect(get().scene.nodes[light]?.modifiers).toEqual([]);
+  });
+
+  it("a duplicate keeps the segments and the modifiers", () => {
+    get().setNodeSegments("initial-cube", 6);
+    get().addModifier("initial-cube", "bend");
+    get().select("initial-cube");
+    get().duplicateSelected();
+    const copy = Object.values(get().scene.nodes).find(
+      (n) => n.id !== "initial-cube",
+    )!;
+    expect(copy.segments).toBe(6);
+    expect(copy.modifiers).toHaveLength(1);
+  });
+});

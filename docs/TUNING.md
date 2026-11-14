@@ -267,6 +267,20 @@ Shown in the right panel when nothing is selected. The starting values are `envi
 | Sky picture size    | `SKY_PICTURE_SIZE` in `SceneEnvironment.tsx`  | `8 x 256` pixels                | The strip the sky gradient is drawn on. It is smooth, so a thin strip is enough.                                  |
 | Sun distance        | `SUN_DISTANCE` in `environment.ts`            | `12` units                      | How far from the middle the built-in sun stands (only its direction matters for the light).                       |
 
+## Shape: segments and modifiers (bend, twist, taper)
+
+In the Inspector's "Shape" section for the built-in shapes. Each value has its own reset button. The maths is in `packages/shared/src/modifiers.ts`.
+
+| What                  | Setting                                                                 | Our value                       | What it does                                                                                                                                             |
+| --------------------- | ----------------------------------------------------------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Segments              | `segments` (default `1`), `MAX_SEGMENTS` in `scene.ts`                  | `1`, up to `32`                 | How many pieces a straight side of a shape is cut into. More pieces let a bend or twist curve smoothly; too many slows the editor. Not used by a sphere. |
+| Most modifiers        | `MAX_MODIFIERS` in `scene.ts`                                           | `8`                             | How long an object's list of modifiers can be.                                                                                                           |
+| Bend starting angle   | `createModifier` in `modifiers.ts`                                      | `45` degrees, range `-360..360` | How far the shape curves from end to end. Negative bends the other way.                                                                                  |
+| Twist starting angle  | `createModifier` in `modifiers.ts`                                      | `90` degrees, range `-720..720` | How far the far end is turned compared with the near end (the middle stays). Follows the right-hand rule about the axis, like rotation.                  |
+| Taper starting amount | `createModifier` in `modifiers.ts`                                      | `0.5`, range `-1..1`            | How much thinner the far end gets: 0 no change, 1 a point, below 0 wider.                                                                                |
+| Starting axis         | `createModifier` in `modifiers.ts`                                      | `y` (up)                        | The direction of the shape the modifier works along. Bend curves towards the next direction (x, y, z, x, ...).                                           |
+| Round shape detail    | `ROUND_SEGMENTS` in `apps/web/src/components/viewport/shapeGeometry.ts` | `32`                            | Pieces around a sphere, cylinder and cone (they are not controlled by Segments).                                                                         |
+
 ## Locking objects
 
 | What               | Setting                                                                                              | Our value | What it does                                                                                                                                          |

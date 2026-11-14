@@ -99,6 +99,49 @@ export type Material = z.infer<typeof materialSchema>;
 /** The surface of a new object. */
 export const DEFAULT_MATERIAL: Material = materialSchema.parse({});
 
+/** Most modifiers on one object, and the most segments a shape can be cut into. */
+export const MAX_MODIFIERS = 8;
+export const MAX_SEGMENTS = 32;
+
+/** The three directions of space; the modifiers work along one of them (the object's own, not the world's). */
+export const MODIFIER_AXES = ["x", "y", "z"] as const;
+export type ModifierAxis = (typeof MODIFIER_AXES)[number];
+
+const modifierBase = {
+  id: z.string().min(1),
+  /** A switched-off modifier stays in the list but does nothing. */
+  enabled: z.boolean().default(true),
+  axis: z.enum(MODIFIER_AXES).default("y"),
+};
+
+/**
+ * A change made to the shape of an object without touching the shape itself: the object keeps its shape
+ * and a short list of these, applied in order. Change or remove one at any time.
+ * - bend: curves the shape around an arc (angle in degrees, along the axis)
+ * - twist: turns each slice more than the one before (angle in degrees from end to end)
+ * - taper: makes one end thinner (amount 0 = no change, 1 = a point, below 0 = wider)
+ */
+export const modifierSchema = z.discriminatedUnion("type", [
+  z.object({
+    ...modifierBase,
+    type: z.literal("bend"),
+    angle: z.number().min(-360).max(360).default(45),
+  }),
+  z.object({
+    ...modifierBase,
+    type: z.literal("twist"),
+    angle: z.number().min(-720).max(720).default(90),
+  }),
+  z.object({
+    ...modifierBase,
+    type: z.literal("taper"),
+    amount: z.number().min(-1).max(1).default(0.5),
+  }),
+]);
+
+export type Modifier = z.infer<typeof modifierSchema>;
+export type ModifierType = Modifier["type"];
+
 /** The settings of a light object. Which ones matter depends on the kind (see `lights.ts`). */
 export const lightSchema = z.object({
   color: hexColorSchema.default("#ffffff"),
@@ -130,6 +173,13 @@ export const sceneNodeObjectSchema = z.object({
   transform: transformSchema,
   /** CSS hex colour such as "#ff8800". */
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  /**
+   * How finely the shape is cut up (1 = the plain shape). Bending and twisting need more pieces to curve
+   * smoothly. Only the built-in shapes use it. Older scenes load with 1.
+   */
+  segments: z.number().int().min(1).max(MAX_SEGMENTS).default(1),
+  /** The shape changes (bend, twist, taper), applied in order. Older scenes load with none. */
+  modifiers: z.array(modifierSchema).max(MAX_MODIFIERS).default([]),
   /** Only for the light kinds: how the light shines. null for every other object. Older scenes load with null. */
   light: lightSchema.nullable().default(null),
   /** The surface values. Scenes saved before this section existed had `roughness` and `metalness` on the node itself. */

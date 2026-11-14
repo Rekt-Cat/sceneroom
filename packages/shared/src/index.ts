@@ -21,6 +21,7 @@ export * from "./assetOps";
 export * from "./placement";
 export * from "./lights";
 export * from "./environment";
+export * from "./modifiers";
 export * from "./persistence";
 export * from "./clipboard";
 export * from "./siblingOrder";

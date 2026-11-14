@@ -392,7 +392,7 @@ export function AppearanceSection({
 }
 
 /**
- * A slider with a number box and a reset button, for a value from 0 up to `max`. Dragging the slider
+ * A slider with a number box and a reset button, for a value from `min` (0) up to `max`. Dragging the slider
  * changes the object live (`onPreview`) but is ONE undo step; typing a number or using the arrow keys
  * is one step per change (`onCommit`). `editLabel` names that undo step.
  */
@@ -400,6 +400,7 @@ export function ValueSlider({
   label,
   value,
   defaultValue,
+  min = 0,
   max = 1,
   step = 0.01,
   decimals = 2,
@@ -411,7 +412,9 @@ export function ValueSlider({
   label: string;
   value: number;
   defaultValue: number;
-  /** The largest value (the smallest is 0). */
+  /** The smallest value (0 unless it can go below, like an angle). */
+  min?: number;
+  /** The largest value. */
   max?: number;
   step?: number;
   /** How many decimals the number box shows. */
@@ -429,7 +432,7 @@ export function ValueSlider({
 
   const parse = (text: string) => {
     const typed = parseNumberInput(text);
-    return typed !== null && typed >= 0 && typed <= max ? typed : null;
+    return typed !== null && typed >= min && typed <= max ? typed : null;
   };
   const invalid = draft !== null && parse(draft) === null;
   const shown = (number: number) => number.toFixed(decimals);
@@ -468,7 +471,7 @@ export function ValueSlider({
       <input
         id={id}
         type="range"
-        min={0}
+        min={min}
         max={max}
         step={step}
         value={value}
@@ -478,7 +481,7 @@ export function ValueSlider({
         className="h-4 min-w-0 cursor-pointer accent-ed-accent disabled:cursor-not-allowed disabled:opacity-50"
       />
       <input
-        aria-label={`${label}, number from 0 to ${max}`}
+        aria-label={`${label}, number from ${min} to ${max}`}
         aria-invalid={invalid}
         value={draft ?? shown(value)}
         disabled={disabled}

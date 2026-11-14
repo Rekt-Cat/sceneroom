@@ -40,6 +40,8 @@ export function createNode(id: string, kind: PrimitiveKind): SceneNode {
     material: { ...DEFAULT_MATERIAL, doubleSided: kind === "plane" },
     assetId: null,
     light: null,
+    segments: 1,
+    modifiers: [],
     order: 0,
   };
 }
