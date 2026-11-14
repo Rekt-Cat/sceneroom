@@ -318,6 +318,21 @@ Details of the file: `docs/SCENE-FILE-FORMAT.md`.
 | Mesh format version | `MESH_FORMAT_VERSION` in `meshData.ts`                 | `1`               | Raised only when the stored layout changes.                                                    |
 | Name of a new mesh  | `bakeNodeToMesh` in `apps/web/src/mesh/bakeMesh.ts`    | the object's name | A mesh made with Apply or Convert is named after the object.                                   |
 
+## Edit mode (points)
+
+| What                 | Setting                                                    | Our value          | What it does                                                                                                         |
+| -------------------- | ---------------------------------------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| Enter and leave      | `useEditorShortcuts.ts`                                    | Tab; Escape leaves | Tab enters edit mode for the one selected shape or mesh (a shape is turned into a mesh first); Tab or Escape leaves. |
+| Select all points    | `useEditorShortcuts.ts`                                    | A                  | Selects every point of the mesh being edited.                                                                        |
+| Add to the selection | `selectionAfterClick` in `packages/shared/src/meshEdit.ts` | Shift + click      | Adds a point, or takes it out if it was already selected.                                                            |
+| Box select           | `BoxSelectController.tsx`                                  | Ctrl or Cmd + drag | Selects the points inside the box (Shift adds to the selection).                                                     |
+| Click distance       | `PICK_DISTANCE_PX` in `MeshEditor.tsx`                     | `12` px            | How close the pointer must be to a point for a click to pick it.                                                     |
+| Click or drag        | `CLICK_MOVE_LIMIT_PX` in `MeshEditor.tsx`                  | `4` px             | A press that moves less than this is a click; more is a camera drag.                                                 |
+| Dot size             | `POINT_SIZE_PX` in `apps/web/src/meshEdit/editOverlay.ts`  | `8` px             | Size of the dot on every point.                                                                                      |
+| Dot colours          | `POINT_COLOR`, `SELECTED_COLOR` in `editOverlay.ts`        | light blue, amber  | A point, and a selected point (the same amber as a selected object).                                                 |
+| Wire lines           | `WIRE_OPACITY` in `editOverlay.ts`                         | `0.35`             | How strongly the edges are drawn over the mesh (0 not at all, 1 solid).                                              |
+| Snapping             | `SNAP.translate` in `snapSettings.ts`                      | `0.5` units        | When snapping is on (X, or hold Shift), moving points snaps to steps of this size, like moving objects.              |
+
 ## Locking objects
 
 | What               | Setting                                                                                              | Our value | What it does                                                                                                                                          |

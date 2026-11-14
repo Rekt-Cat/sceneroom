@@ -4,8 +4,11 @@ import { useEffect } from "react";
 import { PRIMITIVE_KINDS, modeForKey } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
 import { SEARCH_INPUT_ID } from "./HierarchyPanel";
+import { stopEditing, toggleEditMode } from "@/meshEdit/startEditing";
 import { saveSceneToFile } from "@/sceneFile/sceneFileActions";
+import { useEditStore } from "@/store/editStore";
 import { pasteClipboard } from "./clipboardActions";
+import { selectAllPoints } from "./MeshEditor";
 
 /** True when the user is typing in a field, so letter keys must not trigger shortcuts. */
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -34,6 +37,18 @@ export function useEditorShortcuts(): void {
 
       const store = useSceneStore.getState();
 
+      // Tab enters edit mode for the selected shape or mesh, and leaves it again
+      if (
+        event.key === "Tab" &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey
+      ) {
+        event.preventDefault();
+        void toggleEditMode();
+        return;
+      }
+
       // Ctrl/Cmd + Z undoes, Ctrl/Cmd + Shift + Z or Ctrl + Y redoes
       const key = event.key.toLowerCase();
       if ((event.ctrlKey || event.metaKey) && !event.altKey) {
@@ -52,6 +67,14 @@ export function useEditorShortcuts(): void {
         if (key === "s" && !event.shiftKey) {
           event.preventDefault();
           void saveSceneToFile();
+          return;
+        }
+        // Editing points: copy, cut, paste and duplicate act on whole objects, so they are off
+        if (
+          useEditStore.getState().nodeId &&
+          ["c", "x", "v", "d"].includes(key)
+        ) {
+          event.preventDefault();
           return;
         }
         // Ctrl/Cmd + C copies, X cuts, V pastes the selected objects. Only when there is something to
@@ -84,6 +107,20 @@ export function useEditorShortcuts(): void {
           }
           return;
         }
+      }
+
+      // Editing points: the keys that act on whole objects (delete, duplicate, copy, add, lock ...) must not
+      // do that now. Only these work: Escape leaves, A selects every point.
+      if (useEditStore.getState().nodeId) {
+        const plain = !event.ctrlKey && !event.metaKey && !event.altKey;
+        if (event.key === "Escape") {
+          event.preventDefault();
+          stopEditing();
+        } else if (plain && event.key.toLowerCase() === "a") {
+          event.preventDefault();
+          selectAllPoints();
+        }
+        return;
       }
 
       // Ctrl/Cmd + D: the browser would otherwise bookmark the page

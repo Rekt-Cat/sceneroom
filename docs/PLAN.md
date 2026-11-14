@@ -118,7 +118,8 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 
 ### Phase 13: Edit mode (modelling)
 
-- [ ] Editable meshes; point / edge / face selection; extrude, inset, bevel, loop cut, knife, merge, bridge; soft selection; mirror editing; basic UVs; difference-based undo
+- [x] Step 1 (`feature/edit-mode`, waiting for a browser check): enter edit mode (Tab), see points and edges, select points (click, Shift, box, A), move them with the handle, one undo step per drag
+- [ ] Next: rotate and scale selected points; delete, extrude, inset, bevel, loop cut, knife, merge, bridge; edge and face selection; selecting visible points only; soft selection; mirror editing; basic UVs; difference-based undo
 
 ### Phase 14: Sculpting
 

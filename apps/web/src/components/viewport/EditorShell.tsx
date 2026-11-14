@@ -2,12 +2,14 @@
 
 import { useEffect, useState, type DragEvent } from "react";
 import { importFiles } from "@/assets/importFile";
+import { watchEditMode } from "@/meshEdit/startEditing";
 import { startPersistence } from "@/persistence/startPersistence";
 import { useLayoutStore } from "@/store/layoutStore";
 import { carriesAsset } from "./assetDrag";
 import BoxSelectOverlay from "./BoxSelectOverlay";
 import ContextMenu from "./ContextMenu";
 import ControlsLegend from "./ControlsLegend";
+import EditModeBar from "./EditModeBar";
 import HierarchyPanel from "./HierarchyPanel";
 import ImportBanner from "./ImportBanner";
 import InspectorPanel from "./InspectorPanel";
@@ -27,6 +29,9 @@ function carriesFiles(event: DragEvent | globalThis.DragEvent): boolean {
  */
 export default function EditorShell() {
   useEditorShortcuts();
+
+  // Edit mode ends by itself when its object is no longer the selected one (or is gone)
+  useEffect(() => watchEditMode(), []);
 
   // Restore the scene saved last time, then save every change (see startPersistence)
   useEffect(() => startPersistence(), []);
@@ -99,6 +104,7 @@ export default function EditorShell() {
           <ControlsLegend />
           <ToolDock />
           <ImportBanner />
+          <EditModeBar />
           {dropping && (
             <div
               aria-hidden="true"

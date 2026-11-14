@@ -14,6 +14,8 @@ import { MemoryAssetStorage, setAssetStorage } from "@/assets/assetStorage";
 import { clearMeshCache, storeMesh } from "@/assets/meshStorage";
 import { bakeNodeToMesh } from "@/mesh/bakeMesh";
 import { useSceneStore } from "@/store/sceneStore";
+import { buildEditOverlay } from "@/meshEdit/editOverlay";
+import { PLACEHOLDER_FLAG } from "./MeshEditor";
 import SceneNodes, { MeshGeometry, ShapeGeometry } from "./SceneNodes";
 import { buildShapeGeometry, geometryToMesh } from "./shapeGeometry";
 
@@ -225,5 +227,75 @@ describe("the real scene tree", () => {
       new THREE.Vector3(0, 0, -1),
     );
     expect(() => ray.intersectObject(scene, true)).not.toThrow();
+  });
+});
+
+describe("editing the points of a mesh", () => {
+  it("the placeholder is flagged, so edit mode never mistakes it for the real mesh", async () => {
+    // a storage that never answers, so the mesh stays "loading"
+    setAssetStorage({
+      put: async () => undefined,
+      has: async () => false,
+      get: () => new Promise(() => undefined),
+    });
+    const scene = await mount(
+      <mesh name="loading">
+        <MeshGeometry assetId="not-stored-yet" modifiers={[]} />
+        <meshStandardMaterial />
+      </mesh>,
+    );
+    const geometry = (scene.getObjectByName("loading") as THREE.Mesh)
+      .geometry as THREE.BufferGeometry;
+    expect(geometry.userData[PLACEHOLDER_FLAG]).toBe(true);
+  });
+
+  it("a newly stored version is shown at once, with no empty moment, and the overlay can be put on it again", async () => {
+    const first = geometryToMesh(buildShapeGeometry("cube", 2, []));
+    const { id: before } = await storeMesh(first);
+    const moved = {
+      positions: new Float32Array(first.positions),
+      indices: first.indices,
+    };
+    moved.positions[0] += 3;
+    const { id: after } = await storeMesh(moved);
+
+    let flip!: () => void;
+    function Probe() {
+      const [id, setId] = useState(before);
+      flip = () => setId(after);
+      return (
+        <mesh name="block">
+          <MeshGeometry assetId={id} modifiers={[]} />
+          <meshStandardMaterial />
+          <Outlines color="#ffb020" thickness={0.05} />
+        </mesh>
+      );
+    }
+    const scene = await mount(<Probe />);
+    const block = () => scene.getObjectByName("block") as THREE.Mesh;
+    const geometry = () => block().geometry as THREE.BufferGeometry;
+
+    const overlay = buildEditOverlay(geometry());
+    block().add(overlay.group);
+    expect(block().children).toContain(overlay.group);
+    const oldGeometry = geometry();
+
+    // no waiting: the version is in memory, so the very next render already has it
+    await act(async () => {
+      flip();
+    });
+    expect(problems(scene)).toEqual([]);
+    expect(geometry()).not.toBe(oldGeometry);
+    expect(geometry().userData[PLACEHOLDER_FLAG]).toBeUndefined();
+    expect(geometry().getAttribute("position").getX(0)).toBeCloseTo(
+      first.positions[0]! + 3,
+    );
+
+    // the overlay is rebuilt on the new geometry (what MeshEditor does when it notices the change)
+    overlay.dispose();
+    const next = buildEditOverlay(geometry());
+    block().add(next.group);
+    expect(next.group.children).toHaveLength(2);
+    expect(problems(scene)).toEqual([]);
   });
 });
