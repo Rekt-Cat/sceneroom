@@ -1,8 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Grid, OrbitControls, Stats } from "@react-three/drei";
-import { MOUSE } from "three";
+import { MOUSE, type DirectionalLight } from "three";
 import { useSceneStore } from "@/store/sceneStore";
 import AssetDropController from "./AssetDropController";
 import AssetPreview from "./AssetPreview";
@@ -11,6 +12,7 @@ import CameraModifierSwitch from "./CameraModifierSwitch";
 import ViewportContextMenuController from "./ViewportContextMenuController";
 import SceneNodes from "./SceneNodes";
 import { shouldIgnoreClick } from "./gizmoGuard";
+import { useShadowCamera } from "./useShadowCamera";
 
 /** How sharp the shadows are (pixels of the shadow picture, per side). */
 const SHADOW_MAP_SIZE = 2048;
@@ -22,15 +24,50 @@ const SHADOW_OPACITY = 0.35;
 const GROUND_SIZE = 200;
 
 /**
+ * The built-in sun: always there, so a scene is never dark. It stands at a fixed spot and shadows
+ * everything within `SHADOW_AREA` units of the middle.
+ */
+function BaseSun({ castShadow }: { castShadow: boolean }) {
+  const ref = useRef<DirectionalLight>(null);
+  useShadowCamera(ref, {
+    near: 1,
+    far: 60,
+    left: -SHADOW_AREA,
+    right: SHADOW_AREA,
+    top: SHADOW_AREA,
+    bottom: -SHADOW_AREA,
+  });
+  return (
+    <directionalLight
+      ref={ref}
+      position={[5, 8, 4]}
+      intensity={1.6}
+      castShadow={castShadow}
+      shadow-mapSize={[SHADOW_MAP_SIZE, SHADOW_MAP_SIZE]}
+      shadow-bias={-0.0003}
+      shadow-normalBias={0.04}
+      shadow-radius={3}
+    />
+  );
+}
+
+/**
  * The 3D viewport: a camera you can orbit around the scene nodes on an infinite grid.
  * Browser-only (WebGL), so it is loaded through ViewportLoader with SSR switched off.
  */
 export default function Viewport() {
   const select = useSceneStore((state) => state.select);
+  // The built-in sun stops casting its own shadow once the scene has a light of its own: two lights
+  // casting shadows from different directions make a messy double shadow
+  const hasOwnLight = useSceneStore((state) =>
+    Object.values(state.scene.nodes).some((node) => node.light && node.visible),
+  );
   return (
     // Clicking empty space (no mesh hit) clears the selection
     <Canvas
-      shadows
+      // "percentage" = the standard shadow type of this three.js version (the soft one was removed);
+      // each light sets its own softness (shadow radius)
+      shadows="percentage"
       camera={{ position: [5, 4, 7], fov: 50 }}
       onPointerMissed={() => {
         if (!shouldIgnoreClick()) select(null);
@@ -39,17 +76,7 @@ export default function Viewport() {
       <color attach="background" args={["#14191d"]} />
 
       <ambientLight intensity={0.6} />
-      <directionalLight
-        position={[5, 8, 4]}
-        intensity={1.6}
-        castShadow
-        shadow-mapSize={[SHADOW_MAP_SIZE, SHADOW_MAP_SIZE]}
-        shadow-camera-left={-SHADOW_AREA}
-        shadow-camera-right={SHADOW_AREA}
-        shadow-camera-top={SHADOW_AREA}
-        shadow-camera-bottom={-SHADOW_AREA}
-        shadow-bias={-0.0005}
-      />
+      <BaseSun castShadow={!hasOwnLight} />
       {/* Shadows need a surface to fall on: the ground catches them (and draws nothing else) */}
       <mesh
         rotation-x={-Math.PI / 2}

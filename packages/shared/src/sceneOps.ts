@@ -39,6 +39,7 @@ export function createNode(id: string, kind: PrimitiveKind): SceneNode {
     // A plane has no thickness, so it starts drawn from both sides
     material: { ...DEFAULT_MATERIAL, doubleSided: kind === "plane" },
     assetId: null,
+    light: null,
     order: 0,
   };
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import LightSection from "./LightSection";
 import SurfaceSection from "./SurfaceSection";
 import { useState } from "react";
 import {
@@ -209,12 +210,18 @@ function SingleObject({ node }: { node: SceneNode }) {
       <div className="min-h-0 flex-1 overflow-y-auto">
         <ParentSection node={node} disabled={locked} />
         <TransformSection node={node} disabled={locked} />
-        {node.kind === "model" ? (
-          <ModelSection node={node} />
+        {node.light ? (
+          <LightSection node={node} disabled={locked} />
         ) : (
-          <AppearanceSection node={node} disabled={locked} />
+          <>
+            {node.kind === "model" ? (
+              <ModelSection node={node} />
+            ) : (
+              <AppearanceSection node={node} disabled={locked} />
+            )}
+            <SurfaceSection node={node} disabled={locked} />
+          </>
         )}
-        <SurfaceSection node={node} disabled={locked} />
       </div>
       <Actions ids={[node.id]} />
     </>

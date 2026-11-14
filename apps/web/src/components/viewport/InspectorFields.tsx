@@ -392,45 +392,52 @@ export function AppearanceSection({
 }
 
 /**
- * A 0 to 1 slider with a number box, for how the surface looks. Dragging the slider changes the
- * object live but is ONE undo step; typing a number or using the arrow keys is one step per change.
+ * A slider with a number box and a reset button, for a value from 0 up to `max`. Dragging the slider
+ * changes the object live (`onPreview`) but is ONE undo step; typing a number or using the arrow keys
+ * is one step per change (`onCommit`). `editLabel` names that undo step.
  */
-export function MaterialSlider({
-  node,
-  property,
+export function ValueSlider({
   label,
-  disabled,
+  value,
+  defaultValue,
   max = 1,
+  step = 0.01,
+  decimals = 2,
+  disabled,
+  editLabel,
+  onCommit,
+  onPreview,
 }: {
-  node: SceneNode;
-  property: "roughness" | "metalness" | "opacity" | "emissiveIntensity";
   label: string;
-  disabled: boolean;
+  value: number;
+  defaultValue: number;
   /** The largest value (the smallest is 0). */
   max?: number;
+  step?: number;
+  /** How many decimals the number box shows. */
+  decimals?: number;
+  disabled: boolean;
+  editLabel: string;
+  onCommit: (value: number) => void;
+  onPreview: (value: number) => void;
 }) {
-  const setNodeMaterial = useSceneStore((state) => state.setNodeMaterial);
-  const previewNodeMaterial = useSceneStore(
-    (state) => state.previewNodeMaterial,
-  );
   const beginEdit = useSceneStore((state) => state.beginEdit);
   const endEdit = useSceneStore((state) => state.endEdit);
   const id = useId();
   const dragging = useRef(false);
   const [draft, setDraft] = useState<string | null>(null);
 
-  const value = node.material[property];
   const parse = (text: string) => {
     const typed = parseNumberInput(text);
     return typed !== null && typed >= 0 && typed <= max ? typed : null;
   };
   const invalid = draft !== null && parse(draft) === null;
-  const defaultValue = DEFAULT_MATERIAL[property];
+  const shown = (number: number) => number.toFixed(decimals);
 
   function onPointerDown() {
     if (disabled) return;
     dragging.current = true;
-    beginEdit("Material");
+    beginEdit(editLabel);
     // The release can happen anywhere on the page, so listen on the window
     const stop = () => {
       window.removeEventListener("pointerup", stop);
@@ -443,13 +450,13 @@ export function MaterialSlider({
   }
 
   function onSliderChange(next: number) {
-    if (dragging.current) previewNodeMaterial(node.id, { [property]: next });
-    else setNodeMaterial(node.id, { [property]: next });
+    if (dragging.current) onPreview(next);
+    else onCommit(next);
   }
 
   function finishTyping() {
     const typed = draft === null ? null : parse(draft);
-    if (typed !== null) setNodeMaterial(node.id, { [property]: typed });
+    if (typed !== null) onCommit(typed);
     setDraft(null);
   }
 
@@ -463,7 +470,7 @@ export function MaterialSlider({
         type="range"
         min={0}
         max={max}
-        step={0.01}
+        step={step}
         value={value}
         disabled={disabled}
         onPointerDown={onPointerDown}
@@ -473,12 +480,12 @@ export function MaterialSlider({
       <input
         aria-label={`${label}, number from 0 to ${max}`}
         aria-invalid={invalid}
-        value={draft ?? value.toFixed(2)}
+        value={draft ?? shown(value)}
         disabled={disabled}
         spellCheck={false}
         inputMode="decimal"
         onFocus={(event) => {
-          setDraft(value.toFixed(2));
+          setDraft(shown(value));
           event.currentTarget.select();
         }}
         onChange={(event) => setDraft(event.target.value)}
@@ -498,15 +505,47 @@ export function MaterialSlider({
       />
       <button
         type="button"
-        aria-label={`Reset ${label.toLowerCase()} to ${defaultValue.toFixed(2)}`}
-        title={`Reset to ${defaultValue.toFixed(2)}`}
+        aria-label={`Reset ${label.toLowerCase()} to ${shown(defaultValue)}`}
+        title={`Reset to ${shown(defaultValue)}`}
         disabled={disabled || value === defaultValue}
-        onClick={() => setNodeMaterial(node.id, { [property]: defaultValue })}
+        onClick={() => onCommit(defaultValue)}
         className="grid size-[26px] place-items-center rounded-md text-ed-text-3 hover:bg-ed-raised hover:text-ed-text focus-visible:outline-2 focus-visible:outline-ed-accent disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
       >
         <Icon name="reset" />
       </button>
     </div>
+  );
+}
+
+/** A slider for one of the surface values of an object (roughness, metalness, opacity, glow strength). */
+export function MaterialSlider({
+  node,
+  property,
+  label,
+  disabled,
+  max = 1,
+}: {
+  node: SceneNode;
+  property: "roughness" | "metalness" | "opacity" | "emissiveIntensity";
+  label: string;
+  disabled: boolean;
+  max?: number;
+}) {
+  const setNodeMaterial = useSceneStore((state) => state.setNodeMaterial);
+  const previewNodeMaterial = useSceneStore(
+    (state) => state.previewNodeMaterial,
+  );
+  return (
+    <ValueSlider
+      label={label}
+      value={node.material[property]}
+      defaultValue={DEFAULT_MATERIAL[property]}
+      max={max}
+      disabled={disabled}
+      editLabel="Material"
+      onCommit={(value) => setNodeMaterial(node.id, { [property]: value })}
+      onPreview={(value) => previewNodeMaterial(node.id, { [property]: value })}
+    />
   );
 }
 

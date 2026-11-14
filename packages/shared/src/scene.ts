@@ -33,8 +33,21 @@ export const PRIMITIVE_KINDS = [
   "cone",
 ] as const;
 
-/** Every kind of object: the built-in shapes, and "model" for a file imported from outside (see `assetId`). */
-export const NODE_KINDS = [...PRIMITIVE_KINDS, "model"] as const;
+/**
+ * The kinds of light: "directional" (sunlight: the same everywhere, only its direction matters),
+ * "point" (a bulb: shines in all directions from a spot) and "spot" (a torch: a cone of light).
+ */
+export const LIGHT_KINDS = ["directional", "point", "spot"] as const;
+
+/**
+ * Every kind of object: the built-in shapes, the lights, and "model" for a file imported from outside
+ * (see `assetId`).
+ */
+export const NODE_KINDS = [
+  ...PRIMITIVE_KINDS,
+  ...LIGHT_KINDS,
+  "model",
+] as const;
 
 const vec3Schema = z.tuple([z.number(), z.number(), z.number()]);
 
@@ -81,6 +94,22 @@ export type Material = z.infer<typeof materialSchema>;
 /** The surface of a new object. */
 export const DEFAULT_MATERIAL: Material = materialSchema.parse({});
 
+/** The settings of a light object. Which ones matter depends on the kind (see `lights.ts`). */
+export const lightSchema = z.object({
+  color: hexColorSchema.default("#ffffff"),
+  /** Strength. What a good number is depends on the kind of light (see `maxLightIntensity`). */
+  intensity: z.number().min(0).max(1000).default(1),
+  /** Point and spot: how far the light reaches (it fades out towards this distance). 0 = no limit. */
+  range: z.number().min(0).max(1000).default(0),
+  /** Spot: half the width of the cone, in degrees. */
+  angle: z.number().min(1).max(85).default(40),
+  /** Spot: how soft the edge of the cone is, 0 (sharp) to 1 (soft). */
+  penumbra: z.number().min(0).max(1).default(0.3),
+  castShadow: z.boolean().default(true),
+});
+
+export type LightSettings = z.infer<typeof lightSchema>;
+
 export const sceneNodeObjectSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).max(NODE_NAME_MAX_LENGTH),
@@ -96,6 +125,8 @@ export const sceneNodeObjectSchema = z.object({
   transform: transformSchema,
   /** CSS hex colour such as "#ff8800". */
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  /** Only for the light kinds: how the light shines. null for every other object. Older scenes load with null. */
+  light: lightSchema.nullable().default(null),
   /** The surface values. Scenes saved before this section existed had `roughness` and `metalness` on the node itself. */
   material: materialSchema.default(DEFAULT_MATERIAL),
   /**
@@ -166,6 +197,7 @@ export const sceneSchema = z.object({
 });
 
 export type PrimitiveKind = (typeof PRIMITIVE_KINDS)[number];
+export type LightKind = (typeof LIGHT_KINDS)[number];
 export type NodeKind = (typeof NODE_KINDS)[number];
 export type AssetInfo = z.infer<typeof assetInfoSchema>;
 export type Transform = z.infer<typeof transformSchema>;

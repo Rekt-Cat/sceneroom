@@ -29,6 +29,25 @@ const PATHS = {
       <path d="M2.5 5.2 8 8l5.5-2.8M8 8v6M5.2 3.9l5.5 2.8" />
     </>
   ),
+  // lights: a sun, a bulb and a torch
+  directional: (
+    <>
+      <circle cx="8" cy="8" r="2.7" />
+      <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4" />
+    </>
+  ),
+  point: (
+    <>
+      <path d="M5.5 10.5a4 4 0 1 1 5 0c-.6.5-1 1-1 1.8h-3c0-.8-.4-1.300-1-1.800Z" />
+      <path d="M6.200 14h3.600" />
+    </>
+  ),
+  spot: (
+    <>
+      <path d="M5.500 2.500h5l1 3.500h-7l1-3.500Z" />
+      <path d="M4.500 6 2.500 13.500M11.500 6l2 7.500M8 8v5.500" />
+    </>
+  ),
   import: <path d="M8 2.5v7M5 6.8l3 3 3-3M3 13h10" />,
   eye: (
     <>
@@ -138,5 +157,8 @@ export const KIND_LABELS: Record<NodeKind, string> = {
   cylinder: "Cylinder",
   plane: "Plane",
   cone: "Cone",
+  directional: "Directional light",
+  point: "Point light",
+  spot: "Spot light",
   model: "Model",
 };
