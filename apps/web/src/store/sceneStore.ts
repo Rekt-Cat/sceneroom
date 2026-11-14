@@ -7,12 +7,14 @@ import {
   createEmptyScene,
   createHistory,
   copyToClipboard,
+  createLightNode,
   createModelNode,
   createNode,
   duplicateNodes,
   editableIds,
   fitScale,
   isEffectivelyLocked,
+  lightChangeDiffers,
   normalizeHexColor,
   normalizeNodeName,
   pasteFromClipboard,
@@ -24,7 +26,9 @@ import {
   reparentNodes,
   resolveSelection,
   materialChangeDiffers,
+  sanitizeLightChange,
   sanitizeMaterialChange,
+  setLight,
   setMaterial,
   setAssetNote,
   setTransforms,
@@ -35,6 +39,8 @@ import {
   type AssetInfo,
   type ClipboardData,
   type History,
+  type LightChange,
+  type LightKind,
   type MaterialChange,
   type PrimitiveKind,
   type ReparentMove,
@@ -100,6 +106,12 @@ type SceneState = {
    * the scene, and selects it. One undo step. Returns the new object's id, or null if the file is unknown.
    */
   placeAsset: (assetId: string, at?: [number, number, number]) => string | null;
+  /** Adds a light of this kind (aimed at the middle of the scene) and selects it. One undo step. Returns its id. */
+  addLight: (kind: LightKind) => string;
+  /** Changes some settings of a light object as one undo step. Ignored for locked objects and objects that are not lights. */
+  setNodeLight: (id: string, change: LightChange) => void;
+  /** Like setNodeLight but without an undo step; only while an edit is in progress (dragging a slider). */
+  previewNodeLight: (id: string, change: LightChange) => void;
   /** Renames an imported file in the Assets panel (objects keep their names). One undo step. */
   renameAsset: (assetId: string, name: string) => void;
   /** Sets an imported file's source / licence note. One undo step. */
@@ -266,6 +278,40 @@ export const useSceneStore = create<SceneState>()((set) => ({
     }));
     return id;
   },
+  addLight: (kind) => {
+    const id = crypto.randomUUID();
+    set((state) => ({
+      scene: addNode(state.scene, createLightNode(id, kind)),
+      selectedIds: [id],
+      history: record(state, `Add ${kind} light`),
+    }));
+    return id;
+  },
+  setNodeLight: (id, change) =>
+    set((state) => {
+      const node = state.scene.nodes[id];
+      if (!node?.light || isEffectivelyLocked(state.scene, id)) return state;
+      const clean = sanitizeLightChange(node.kind as LightKind, change);
+      if (!lightChangeDiffers(node.light, clean)) return state;
+      return {
+        scene: setLight(state.scene, id, clean),
+        history: record(state, "Light"),
+      };
+    }),
+  previewNodeLight: (id, change) =>
+    set((state) => {
+      const node = state.scene.nodes[id];
+      if (
+        !state.pendingEdit ||
+        !node?.light ||
+        isEffectivelyLocked(state.scene, id)
+      ) {
+        return state;
+      }
+      const clean = sanitizeLightChange(node.kind as LightKind, change);
+      if (Object.keys(clean).length === 0) return state;
+      return { scene: setLight(state.scene, id, clean) };
+    }),
   placeAsset: (assetId, at) => {
     const info = useSceneStore.getState().scene.assets[assetId];
     if (!info) return null;

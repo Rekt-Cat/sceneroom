@@ -19,6 +19,7 @@ export * from "./reparent";
 export * from "./assets";
 export * from "./assetOps";
 export * from "./placement";
+export * from "./lights";
 export * from "./persistence";
 export * from "./clipboard";
 export * from "./siblingOrder";

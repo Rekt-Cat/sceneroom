@@ -102,12 +102,51 @@ function GlowColor({ node, disabled }: { node: SceneNode; disabled: boolean }) {
   const previewNodeMaterial = useSceneStore(
     (state) => state.previewNodeMaterial,
   );
-  const beginEdit = useSceneStore((state) => state.beginEdit);
-  const color = node.material.emissiveColor;
-  const isDefault = color === DEFAULT_MATERIAL.emissiveColor;
+  return (
+    <ColorRow
+      label="Glow colour"
+      title="Black means no glow"
+      value={node.material.emissiveColor}
+      defaultValue={DEFAULT_MATERIAL.emissiveColor}
+      resetHint="no glow"
+      disabled={disabled}
+      editLabel="Glow colour"
+      onCommit={(emissiveColor) => setNodeMaterial(node.id, { emissiveColor })}
+      onPreview={(emissiveColor) =>
+        previewNodeMaterial(node.id, { emissiveColor })
+      }
+    />
+  );
+}
 
-  // Like the main colour picker: a stream of changes while dragging inside the picker is ONE undo step,
-  // ended when the browser says the picker was closed or the choice confirmed.
+/**
+ * A colour swatch (opens the browser's colour picker) with the hex code and a reset button. The picker
+ * sends a stream of changes while you drag inside it: they change the object live (`onPreview`) but are
+ * ONE undo step, ended when the browser says the picker was closed or the choice confirmed.
+ */
+export function ColorRow({
+  label,
+  title,
+  value,
+  defaultValue,
+  resetHint,
+  disabled,
+  editLabel,
+  onCommit,
+  onPreview,
+}: {
+  label: string;
+  title: string;
+  value: string;
+  defaultValue: string;
+  /** Said in the reset button's label: "Reset to ...". */
+  resetHint: string;
+  disabled: boolean;
+  editLabel: string;
+  onCommit: (color: string) => void;
+  onPreview: (color: string) => void;
+}) {
+  const beginEdit = useSceneStore((state) => state.beginEdit);
   const pickerRef = useRef<HTMLInputElement>(null);
   const picking = useRef(false);
   useEffect(() => {
@@ -129,39 +168,35 @@ function GlowColor({ node, disabled }: { node: SceneNode; disabled: boolean }) {
   function onPick(next: string) {
     if (!picking.current) {
       picking.current = true;
-      beginEdit("Glow colour");
+      beginEdit(editLabel);
     }
-    previewNodeMaterial(node.id, { emissiveColor: next });
+    onPreview(next);
   }
 
   return (
     <div className="grid grid-cols-[58px_1fr_26px] items-center gap-2">
-      <span className="text-xs text-ed-text-2">Glow colour</span>
+      <span className="text-xs text-ed-text-2">{label}</span>
       <div className="flex items-center gap-2">
         <input
           ref={pickerRef}
           type="color"
-          value={color}
+          value={value}
           disabled={disabled}
-          aria-label="Pick the glow colour"
-          title="Black means no glow"
+          aria-label={`Pick the ${label.toLowerCase()}`}
+          title={title}
           onChange={(event) => onPick(event.target.value)}
           className="size-[26px] shrink-0 cursor-pointer appearance-none rounded-md border-2 border-ed-line-strong bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ed-accent disabled:cursor-not-allowed disabled:opacity-50 [&::-moz-color-swatch]:rounded-sm [&::-moz-color-swatch]:border-0 [&::-webkit-color-swatch]:rounded-sm [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0"
         />
         <span className="font-mono text-xs text-ed-text-3">
-          {color.toUpperCase()}
+          {value.toUpperCase()}
         </span>
       </div>
       <button
         type="button"
-        aria-label="Reset the glow colour (no glow)"
-        title="Reset to no glow"
-        disabled={disabled || isDefault}
-        onClick={() =>
-          setNodeMaterial(node.id, {
-            emissiveColor: DEFAULT_MATERIAL.emissiveColor,
-          })
-        }
+        aria-label={`Reset the ${label.toLowerCase()} (${resetHint})`}
+        title={`Reset to ${resetHint}`}
+        disabled={disabled || value === defaultValue}
+        onClick={() => onCommit(defaultValue)}
         className={RESET_BUTTON}
       >
         <Icon name="reset" />

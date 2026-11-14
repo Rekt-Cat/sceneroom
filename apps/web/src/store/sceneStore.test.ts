@@ -1018,3 +1018,67 @@ describe("surface values (glow, opacity, sides, shading, shadows)", () => {
     expect(copy.material).toMatchObject({ opacity: 0.3, doubleSided: true });
   });
 });
+
+describe("light objects", () => {
+  it("adds a light with the defaults of its kind, selects it and is one undo step", () => {
+    const id = get().addLight("spot");
+    expect(get().scene.nodes[id]).toMatchObject({
+      kind: "spot",
+      name: "Spot light",
+      light: { intensity: 80, angle: 40 },
+    });
+    expect(get().selectedIds).toEqual([id]);
+    expect(nextUndoLabel(get().history)).toBe("Add spot light");
+    get().undo();
+    expect(get().scene.nodes[id]).toBeUndefined();
+  });
+
+  it("changes light settings as one undo step, cleaned to what the kind allows", () => {
+    const id = get().addLight("directional");
+    get().setNodeLight(id, { intensity: 99, color: "#FF8800" });
+    expect(get().scene.nodes[id]?.light).toMatchObject({
+      intensity: 10,
+      color: "#ff8800",
+    });
+    get().undo();
+    expect(get().scene.nodes[id]?.light?.intensity).toBe(1.5);
+  });
+
+  it("records nothing for a change that changes nothing, or for an object that is not a light", () => {
+    const id = get().addLight("point");
+    const steps = get().history.past.length;
+    get().setNodeLight(id, { intensity: 40 });
+    get().setNodeLight("initial-cube", { intensity: 5 });
+    expect(get().history.past).toHaveLength(steps);
+  });
+
+  it("dragging a slider is many previews and one undo step", () => {
+    const id = get().addLight("point");
+    const steps = get().history.past.length;
+    get().beginEdit("Light strength");
+    get().previewNodeLight(id, { intensity: 50 });
+    get().previewNodeLight(id, { intensity: 60 });
+    expect(get().history.past).toHaveLength(steps);
+    get().endEdit(true);
+    expect(get().scene.nodes[id]?.light?.intensity).toBe(60);
+    expect(get().history.past).toHaveLength(steps + 1);
+  });
+
+  it("a locked light cannot be changed", () => {
+    const id = get().addLight("point");
+    get().setNodesLocked([id], true);
+    get().setNodeLight(id, { intensity: 5 });
+    expect(get().scene.nodes[id]?.light?.intensity).toBe(40);
+  });
+
+  it("a duplicate of a light is a light with the same settings", () => {
+    const id = get().addLight("spot");
+    get().setNodeLight(id, { angle: 20 });
+    get().select(id);
+    get().duplicateSelected();
+    const copy = Object.values(get().scene.nodes).find(
+      (node) => node.kind === "spot" && node.id !== id,
+    );
+    expect(copy?.light).toMatchObject({ angle: 20 });
+  });
+});

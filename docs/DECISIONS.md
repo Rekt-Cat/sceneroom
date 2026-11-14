@@ -466,3 +466,27 @@ Built from the plan "Surface and shading" (2026-11-13), with these choices.
 - **Changing a shader setting rebuilds the material** (`key` on flat shading, double-sided and solid / see-through), because three.js builds its shader for those. Bug found in testing: without solid / see-through in the key, lowering opacity did nothing until double-sided was toggled, because a material first drawn solid is compiled with an `OPAQUE` switch that forces full opacity.
 - **One undo step per glow-colour pick**, as for the main colour; each slider drag is one step.
 - **Not done:** the angle limit, cut-out, reflection strength, shadows from lights other than the one sun (lights come next), shadows beyond 15 units.
+
+## Lights (2026-11-14)
+
+First half of the plan line "point / spot / directional lights; HDRI sky and environment; shadows, fog". The second half (environment, fog) is its own next step, because it is scene-wide settings and not objects.
+
+- **Lights are scene objects**, with three new kinds (`directional`, `point`, `spot`) and a `light` section on the node (colour, intensity, range, angle, softness, cast shadow). `light` is `null` for every other object, so older scenes load unchanged. Because lights are ordinary objects, everything already built works on them: selecting, the gizmo, hide, lock, rename, duplicate, copy and paste, parenting, drag and drop in the scene list, undo and autosave. A light inside a parent moves and turns with it.
+- **A light shines along its own -Z (its front).** A new light is aimed at the middle of the scene by `aimRotation` (pure, tested by turning the front vector back and checking it points at the target, including straight up and down). To aim it, rotate it with the gizmo; a target object is not exposed. Internally, directional and spot lights use a target one unit in front that moves with the object.
+- **Markers.** A light is drawn as a small ball in its colour, plus an arrow (directional) or a wire cone showing the beam width (spot). The marker takes the clicks and gets the amber outline when selected. Markers do not cast shadows.
+- **Strength units.** three.js measures a point or spot light in candela that fades with the square of the distance, but sunlight as a plain strength. So the ranges differ per kind (`MAX_LIGHT_INTENSITY`): 10, 300 and 600. Defaults were chosen to light a unit cube a few units away about as strongly as the built-in sun; to be tuned by eye.
+- **The built-in sun and soft light stay** until the environment step, so an empty scene is not black. New lights add to them.
+- **Shadows:** each light has a switch. Point lights start off (six shadow pictures each) and use smaller pictures. Many shadow-casting lights get slow: this is not limited yet.
+- **Inspector:** lights get a "Light" section instead of Appearance and Surface (a light has no surface). `ValueSlider` (the slider with number box and reset) and `ColorRow` (swatch, hex, reset) were pulled out of the material controls so lights reuse them.
+- **Not done:** a visible handle for the aim of a point light is not needed; a "look at" tool; light helpers for shadow areas; IES profiles; area lights; limiting the number of lights.
+
+## Shadow fixes (2026-11-14)
+
+The owner found the shadows "kinda bad", and worse after adding and moving a light. Causes found and fixed:
+
+- **The shadow area of sunlight was never applied.** React Three Fiber sets `shadow-camera-left` and the others as plain numbers but never tells three.js to rebuild the shadow camera's projection, and three.js only does it by itself for spot lights. So for the built-in sun (and for my first directional light) the shadow area stayed at three.js's default, about 5 units each way: anything further out had no shadow. Now `useShadowCamera` sets near, far and the box and calls `updateProjectionMatrix`.
+- **Two suns.** The built-in sun kept casting its own shadow next to the one from a light the owner added, so shadows crossed. The built-in sun now stops casting shadows as soon as the scene has a visible light of its own (it still lights the scene).
+- **A directional light's shadow depended on where its marker stood.** The picture was taken from the marker, so moving the marker sideways made the shadows miss the scene. A directional light has only a direction, so now its shadow picture is taken from 30 units behind the middle of the scene along the light's direction (position set every frame in `LightObject`), and moving the marker changes nothing but where it is drawn.
+- **No bias.** Surfaces shadowed themselves in stripes and acne. Every light now has `bias`, `normalBias` and a shadow `radius` (see `SHADOW_QUALITY`), and near and far planes that fit the scene instead of three.js's 0.5 to 500.
+- **Shadow type.** `shadows` was on the default "soft" mode, which this three.js version (0.187) has removed; it fell back to the standard one with a console warning every frame. Now `shadows="percentage"` (the standard one), with softness from each light's `radius`.
+- **Not done:** shadows beyond 15 units of the middle; contact shadows; a setting for the scene's shadow area (it belongs with the environment settings).

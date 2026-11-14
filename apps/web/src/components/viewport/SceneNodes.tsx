@@ -7,18 +7,26 @@ import { DoubleSide, FrontSide, Mesh, type Object3D } from "three";
 import {
   buildSceneTree,
   cutNodeIds,
+  DEFAULT_LIGHTS,
+  LIGHT_KINDS,
   isEffectivelyLocked,
+  type LightKind,
   type PrimitiveKind,
   type SceneNode,
   type TreeNode,
 } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
+import LightObject from "./LightObject";
 import ModelObject from "./ModelObject";
 import MultiSelectionGizmo from "./MultiSelectionGizmo";
 import SelectionGizmo from "./SelectionGizmo";
 import { shouldIgnoreClick } from "./gizmoGuard";
 import { registerMesh } from "./meshRegistry";
 import { OUTLINE_COLOR, OUTLINE_THICKNESS } from "./selectionStyle";
+
+function isLightKind(kind: string): kind is LightKind {
+  return (LIGHT_KINDS as readonly string[]).includes(kind);
+}
 
 /** One geometry per primitive kind; all are about 1 unit in size. */
 function Geometry({ kind }: { kind: PrimitiveKind }) {
@@ -93,6 +101,29 @@ function NodeMesh({
     // Shift + click adds or removes this object; a plain click selects only it
     if (event.nativeEvent.shiftKey) toggleSelect(node.id);
     else select(node.id);
+  }
+
+  // A light: a group holding the light and its marker. Like a model, it only takes clicks when it can be edited.
+  if (isLightKind(node.kind)) {
+    return (
+      <group
+        ref={setMesh}
+        userData={{ nodeId: node.id }}
+        visible={node.visible}
+        position={position}
+        rotation={rotation}
+        scale={scale}
+        onClick={interactive ? handleClick : undefined}
+      >
+        <LightObject
+          kind={node.kind}
+          // A light object always has its settings; the default only guards against damaged data
+          light={node.light ?? DEFAULT_LIGHTS[node.kind]}
+          selected={selected}
+        />
+        {children}
+      </group>
+    );
   }
 
   // An imported model: a group holding the loaded file. A group has no `raycast` of its own that
