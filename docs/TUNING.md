@@ -300,6 +300,15 @@ Details of the file: `docs/SCENE-FILE-FORMAT.md`.
 | Save shortcut  | `useEditorShortcuts.ts`                                      | Ctrl or Cmd + S              | Saves the scene as a file (instead of the browser saving the web page). |
 | Format version | `SCENE_FILE_VERSION` in `sceneFile.ts`                       | `1`                          | Raised only when the layout of the file changes.                        |
 
+## Exporting a GLB
+
+| What            | Setting                                             | Our value              | What it does                                                                                                       |
+| --------------- | --------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| File name       | `glbFileName` in `apps/web/src/export/exportGlb.ts` | `scene-YYYY-MM-DD.glb` | The name the download suggests.                                                                                    |
+| Transform style | `trs` in `sceneToGlb`                               | `true`                 | Each object is written with position, rotation and scale (easier to read in other programs) instead of one matrix. |
+| Hidden objects  | `onlyVisible` in `sceneToGlb`                       | `true`                 | Hidden objects are left out. Set to `false` to export them too.                                                    |
+| Light decay     | `buildObject` in `export/buildExportScene.ts`       | `2`                    | How fast point and spot lights fade with distance (the physical value, as in the editor).                          |
+
 ## Locking objects
 
 | What               | Setting                                                                                              | Our value | What it does                                                                                                                                          |

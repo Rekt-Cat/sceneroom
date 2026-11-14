@@ -7,6 +7,7 @@ import {
   nextRedoLabel,
   nextUndoLabel,
 } from "@sceneroom/shared";
+import { exportSceneToGlb } from "@/export/exportGlb";
 import {
   openSceneFromFile,
   saveSceneToFile,
@@ -129,6 +130,16 @@ function FileButtons() {
       >
         <Icon name="save" />
         Save
+      </button>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => void exportSceneToGlb()}
+        title="Export the scene as a .glb file for other programs (Unity, Blender, web viewers)"
+        className={FILE_BUTTON}
+      >
+        <Icon name="export" />
+        Export
       </button>
       <input
         ref={inputRef}
