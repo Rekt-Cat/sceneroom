@@ -1269,3 +1269,126 @@ describe("the other modifiers (stretch, noise, mirror, array)", () => {
     expect(cube().modifiers[0]).toMatchObject({ keepVolume: false });
   });
 });
+
+describe("plants", () => {
+  const plant = (id: string) => get().scene.nodes[id]!;
+
+  it("adds a plant of a kind with its numbers and colour, selects it, in one undo step", () => {
+    const id = get().addPlant("pine");
+    expect(plant(id)).toMatchObject({
+      kind: "plant",
+      name: "Pine",
+      color: "#5e4026",
+      plant: { height: 5, levels: 1 },
+    });
+    expect(get().selectedIds).toEqual([id]);
+    expect(nextUndoLabel(get().history)).toBe("Add pine");
+    get().undo();
+    expect(get().scene.nodes[id]).toBeUndefined();
+  });
+
+  it("each new plant has its own seed, and its name is free", () => {
+    const a = get().addPlant("tree");
+    const b = get().addPlant("tree");
+    expect(plant(a).name).toBe("Tree");
+    expect(plant(b).name).toBe("Tree (1)");
+    expect(plant(a).plant!.seed).not.toBe(plant(b).plant!.seed);
+  });
+
+  it("changes settings, cleaned to their range, as one undo step; nothing for no change", () => {
+    const id = get().addPlant("tree");
+    const before = plant(id).plant!;
+    get().setNodePlant(id, { height: 99, levels: 2.6, leafColor: "#00FF00" });
+    expect(plant(id).plant).toMatchObject({
+      height: 30,
+      levels: 3,
+      leafColor: "#00ff00",
+    });
+    const steps = get().history.past.length;
+    get().setNodePlant(id, { height: 30 });
+    get().setNodePlant("initial-cube", { height: 5 });
+    expect(get().history.past).toHaveLength(steps);
+    get().undo();
+    expect(plant(id).plant).toEqual(before);
+  });
+
+  it("dragging a slider is many previews and one undo step", () => {
+    const id = get().addPlant("tree");
+    const steps = get().history.past.length;
+    get().beginEdit("Plant");
+    get().previewNodePlant(id, { height: 5 });
+    get().previewNodePlant(id, { height: 6 });
+    expect(get().history.past).toHaveLength(steps);
+    get().endEdit(true);
+    expect(plant(id).plant!.height).toBe(6);
+    expect(get().history.past).toHaveLength(steps + 1);
+  });
+
+  it("a kind button gives the numbers and the trunk colour of that kind but keeps the seed", () => {
+    const id = get().addPlant("tree");
+    get().setNodePlant(id, { seed: 4242 });
+    get().applyPlantPreset(id, "bush");
+    expect(plant(id).plant).toMatchObject({
+      seed: 4242,
+      height: 0.9,
+      levels: 2,
+    });
+    expect(plant(id).color).toBe("#6b4a2b");
+    expect(nextUndoLabel(get().history)).toBe("Make it a bush");
+  });
+
+  it("a locked plant cannot be changed", () => {
+    const id = get().addPlant("tree");
+    get().setNodesLocked([id], true);
+    get().setNodePlant(id, { height: 9 });
+    get().applyPlantPreset(id, "pine");
+    expect(
+      get().scatterPlant(id, [{ x: 1, z: 1, turn: 0, size: 1, seed: 5 }]),
+    ).toEqual([]);
+    expect(plant(id).plant!.height).toBe(3);
+  });
+
+  it("scatter adds a copy at each spot, selects them, and is one undo step", () => {
+    const id = get().addPlant("tree");
+    const spots = [
+      { x: 2, z: 0, turn: 1, size: 1.2, seed: 11 },
+      { x: -2, z: 3, turn: 2, size: 0.8, seed: 12 },
+    ];
+    const ids = get().scatterPlant(id, spots);
+    expect(ids).toHaveLength(2);
+    expect(get().selectedIds).toEqual(ids);
+    expect(plant(ids[0]!)).toMatchObject({
+      kind: "plant",
+      plant: { seed: 11 },
+    });
+    expect(plant(ids[0]!).transform.position).toEqual([2, 0, 0]);
+    expect(plant(ids[1]!).transform.scale[0]).toBeCloseTo(0.8);
+    expect(nextUndoLabel(get().history)).toBe("Scatter 2 plants");
+    get().undo();
+    expect(
+      Object.values(get().scene.nodes).filter((n) => n.kind === "plant"),
+    ).toHaveLength(1);
+  });
+
+  it("scatter with no spots, or for an object that is not a plant, does nothing", () => {
+    const id = get().addPlant("tree");
+    const steps = get().history.past.length;
+    expect(get().scatterPlant(id, [])).toEqual([]);
+    expect(
+      get().scatterPlant("initial-cube", [
+        { x: 1, z: 1, turn: 0, size: 1, seed: 5 },
+      ]),
+    ).toEqual([]);
+    expect(get().history.past).toHaveLength(steps);
+  });
+
+  it("copies of a plant keep its settings (duplicate and copy and paste work as for any object)", () => {
+    const id = get().addPlant("pine");
+    get().select(id);
+    get().duplicateSelected();
+    const copy = Object.values(get().scene.nodes).find(
+      (n) => n.kind === "plant" && n.id !== id,
+    )!;
+    expect(copy.plant).toEqual(plant(id).plant);
+  });
+});

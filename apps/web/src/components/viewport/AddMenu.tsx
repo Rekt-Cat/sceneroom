@@ -3,14 +3,20 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import {
   LIGHT_KINDS,
+  PLANT_PRESET_INFO,
+  PLANT_PRESET_NAMES,
   PRIMITIVE_KINDS,
   type LightKind,
+  type PlantPresetName,
   type PrimitiveKind,
 } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
 import { Icon, KIND_LABELS, KindIcon } from "./icons";
 
-const KIND_HINTS: Record<PrimitiveKind | LightKind, string> = {
+/** Everything the menu can add. */
+type MenuKind = PrimitiveKind | LightKind | PlantPresetName;
+
+const KIND_HINTS: Record<MenuKind, string> = {
   cube: "Box, 1 × 1 × 1",
   sphere: "Ball, 1 across",
   cylinder: "Round column",
@@ -19,11 +25,19 @@ const KIND_HINTS: Record<PrimitiveKind | LightKind, string> = {
   directional: "Sunlight: same everywhere, shines along its arrow",
   point: "A bulb: shines in all directions",
   spot: "A torch: a cone of light",
+  tree: PLANT_PRESET_INFO.tree.hint,
+  pine: PLANT_PRESET_INFO.pine.hint,
+  bush: PLANT_PRESET_INFO.bush.hint,
 };
 
-/** The two tabs of the menu, and what each one lists. */
+function isPlantPreset(kind: MenuKind): kind is PlantPresetName {
+  return (PLANT_PRESET_NAMES as readonly string[]).includes(kind);
+}
+
+/** The tabs of the menu, and what each one lists. */
 const TABS = [
   { id: "shapes", label: "Shapes", kinds: PRIMITIVE_KINDS },
+  { id: "plants", label: "Plants", kinds: PLANT_PRESET_NAMES },
   { id: "lights", label: "Lights", kinds: LIGHT_KINDS },
 ] as const;
 
@@ -33,9 +47,10 @@ type TabId = (typeof TABS)[number]["id"];
 export default function AddMenu() {
   const addPrimitive = useSceneStore((state) => state.addPrimitive);
   const addLight = useSceneStore((state) => state.addLight);
+  const addPlant = useSceneStore((state) => state.addPlant);
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<TabId>("shapes");
-  const kinds: readonly (PrimitiveKind | LightKind)[] =
+  const kinds: readonly MenuKind[] =
     TABS.find((entry) => entry.id === tab)?.kinds ?? PRIMITIVE_KINDS;
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -62,7 +77,14 @@ export default function AddMenu() {
     } else if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
       // Left and right switch between the tabs
       event.preventDefault();
-      setTab((current) => (current === "shapes" ? "lights" : "shapes"));
+      // Left and right go to the tab before or after this one
+      const order = TABS.map((entry) => entry.id);
+      setTab((current) => {
+        const step = event.key === "ArrowRight" ? 1 : -1;
+        return order[
+          (order.indexOf(current) + step + order.length) % order.length
+        ]!;
+      });
     } else if (event.key === "ArrowDown") {
       event.preventDefault();
       items[(index + 1) % items.length]?.focus();
@@ -72,9 +94,11 @@ export default function AddMenu() {
     }
   }
 
-  function choose(kind: PrimitiveKind | LightKind) {
+  function choose(kind: MenuKind) {
     if ((LIGHT_KINDS as readonly string[]).includes(kind)) {
       addLight(kind as LightKind);
+    } else if ((PLANT_PRESET_NAMES as readonly string[]).includes(kind)) {
+      addPlant(kind as PlantPresetName);
     } else {
       addPrimitive(kind as PrimitiveKind);
     }
@@ -140,11 +164,17 @@ export default function AddMenu() {
               className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left hover:bg-ed-accent/30 focus-visible:bg-ed-accent/30 focus-visible:outline-none"
             >
               <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-ed-panel text-ed-text-2">
-                <KindIcon kind={kind} />
+                {isPlantPreset(kind) ? (
+                  <Icon name={kind} />
+                ) : (
+                  <KindIcon kind={kind} />
+                )}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium">
-                  {KIND_LABELS[kind]}
+                  {isPlantPreset(kind)
+                    ? PLANT_PRESET_INFO[kind].label
+                    : KIND_LABELS[kind]}
                 </span>
                 <span className="block truncate text-xs text-ed-text-3">
                   {KIND_HINTS[kind]}
@@ -160,7 +190,9 @@ export default function AddMenu() {
           <p className="mx-1.5 mt-1.5 mb-1 border-t border-ed-line-strong pt-2 text-[11px] text-ed-text-3">
             {tab === "shapes"
               ? "New shapes appear in the middle of the scene and are selected."
-              : "New lights start above the scene, aimed at the middle."}
+              : tab === "plants"
+                ? "New plants grow in the middle of the scene. Change every number, or the seed, in the Inspector."
+                : "New lights start above the scene, aimed at the middle."}
           </p>
         </div>
       )}

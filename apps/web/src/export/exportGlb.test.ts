@@ -8,6 +8,8 @@ import {
   createModelNode,
   createModifier,
   createNode,
+  createPlantNode,
+  setPlant as setPlantInScene,
   type AssetInfo,
   type Modifier,
   type Scene,
@@ -366,5 +368,73 @@ describe("exporting an editable mesh", () => {
     expect(report.missingModels).toEqual(["Panel"]);
     expect(report.objects).toBe(0);
     disposeExportScene(root);
+  });
+});
+
+describe("exporting a plant", () => {
+  it("a plant is exported as two meshes, wood and leaves, each with its own colour", async () => {
+    let scene = createEmptyScene();
+    scene = addNode(scene, { ...createPlantNode("p", "tree", 9), name: "Oak" });
+    const { gltf, report } = await exportOf(scene);
+    expect(report.objects).toBe(1);
+    const wood = named(gltf, "Oak wood")!;
+    const leaves = named(gltf, "Oak leaves")!;
+    expect(wood.mesh).toBeDefined();
+    expect(leaves.mesh).toBeDefined();
+    const colorOf = (node: { mesh?: number }) => {
+      const primitive = gltf.meshes[node.mesh!]!.primitives[0] as unknown as {
+        material: number;
+      };
+      return (
+        gltf.materials[primitive.material] as {
+          pbrMetallicRoughness: { baseColorFactor: number[] };
+        }
+      ).pbrMetallicRoughness.baseColorFactor;
+    };
+    // the leaves are greener than the wood
+    expect(colorOf(leaves)[1]!).toBeGreaterThan(colorOf(wood)[1]!);
+    expect(colorOf(wood)[0]!).toBeGreaterThan(colorOf(wood)[2]!);
+  });
+
+  it("a plant with no leaves is only wood, and a bigger plant has more points", async () => {
+    let bare = createEmptyScene();
+    bare = addNode(bare, { ...createPlantNode("p", "tree", 9), name: "Bare" });
+    bare = setPlantInScene(bare, "p", { leafDensity: 0, levels: 0 });
+    const { gltf } = await exportOf(bare);
+    expect(named(gltf, "Bare wood")).toBeDefined();
+    expect(named(gltf, "Bare leaves")).toBeUndefined();
+    const small =
+      gltf.accessors[
+        gltf.meshes[named(gltf, "Bare wood")!.mesh!]!.primitives[0]!.attributes[
+          "POSITION"
+        ]!
+      ]!.count;
+
+    let big = createEmptyScene();
+    big = addNode(big, { ...createPlantNode("p", "tree", 9), name: "Big" });
+    const { gltf: gltf2 } = await exportOf(big);
+    const bigger =
+      gltf2.accessors[
+        gltf2.meshes[named(gltf2, "Big wood")!.mesh!]!.primitives[0]!
+          .attributes["POSITION"]!
+      ]!.count;
+    expect(bigger).toBeGreaterThan(small);
+  });
+
+  it("a plant keeps its place in the scene", async () => {
+    let scene = createEmptyScene();
+    scene = addNode(scene, {
+      ...createPlantNode("p", "pine", 2),
+      name: "Pine",
+      transform: {
+        position: [3, 0, 4],
+        rotation: [0, 0, 0],
+        scale: [1.5, 1.5, 1.5],
+      },
+    });
+    const { gltf } = await exportOf(scene);
+    const pine = named(gltf, "Pine")!;
+    expect(pine.translation).toEqual([3, 0, 4]);
+    expect(pine.scale).toEqual([1.5, 1.5, 1.5]);
   });
 });

@@ -113,7 +113,7 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 ### Phase 12: Environment-building tools
 
 - [ ] Boolean (union / subtract / intersect); scatter / instancing; terrain (heightmap); splines / tubes; align, distribute, snapping; groups and prefabs
-- [ ] **Plant generator**: trees and bushes from settings (trunk height and bend, branch count and angle, leaf density, random seed), built from splines, scatter and modifiers; a forest from one tree
+- [x] **Plant generator**, step 1 (`feature/plants`, waiting for a browser check): trees, pines and bushes from settings and a seed, scatter copies as a forest, Make mesh, GLB export. Not done: leaves facing along branches, seasons or wind, other kinds (palm, cactus), level of detail for big forests, growing along a drawn curve
 - [ ] **Prefabs**: save a group of objects as a reusable item in the Assets tab, place copies that stay linked to it
 
 ### Phase 13: Edit mode (modelling)

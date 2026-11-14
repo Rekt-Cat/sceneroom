@@ -51,6 +51,7 @@ export const NODE_KINDS = [
   ...LIGHT_KINDS,
   "model",
   "mesh",
+  "plant",
 ] as const;
 
 const vec3Schema = z.tuple([z.number(), z.number(), z.number()]);
@@ -200,6 +201,55 @@ export const modifierSchema = z.discriminatedUnion("type", [
 export type Modifier = z.infer<typeof modifierSchema>;
 export type ModifierType = Modifier["type"];
 
+/** The kinds of leaf a plant can have: "blobs" are small faceted lumps (a low-poly look), "cards" are flat crossed leaves. */
+export const LEAF_STYLES = ["blobs", "cards"] as const;
+
+/**
+ * The settings of a "plant" object (a tree, a pine, a bush ...): a trunk, branches that grow out of it
+ * and out of each other, and leaves. The shape is worked out from these numbers and the seed (the same
+ * numbers always give the same plant); nothing of the shape itself is stored.
+ */
+export const plantSchema = z.object({
+  /** A different number grows a different, but similar, plant. */
+  seed: z.number().int().min(0).max(99999).default(1),
+  /** How tall the trunk is, in units. */
+  height: z.number().min(0.2).max(30).default(3),
+  /** How thick the trunk is at the bottom. */
+  trunkRadius: z.number().min(0.005).max(2).default(0.12),
+  /** How much thinner a branch is at its tip: 0 = same all the way, 0.9 = nearly a point. */
+  taper: z.number().min(0).max(0.95).default(0.7),
+  /** How much the trunk and branches wander from straight, 0 (straight) to 1 (very crooked). */
+  crookedness: z.number().min(0).max(1).default(0.25),
+  /** How many generations of branches grow out of the trunk (0 = only a trunk). */
+  levels: z.number().int().min(0).max(3).default(2),
+  /** How many branches grow from each branch. */
+  branches: z.number().int().min(1).max(10).default(5),
+  /** The angle between a branch and the one it grows from, in degrees (small = upwards, large = sideways). */
+  branchAngle: z.number().min(5).max(90).default(40),
+  /** How long a branch is compared to its parent (0.5 = half as long). */
+  branchLength: z.number().min(0.15).max(0.95).default(0.6),
+  /** Where along its parent a branch can start, 0 = the very bottom, 0.9 = near the tip. */
+  branchStart: z.number().min(0).max(0.9).default(0.35),
+  /** Branches hang down (above 0) or reach up (below 0), -1 to 1. A pine droops a little. */
+  droop: z.number().min(-1).max(1).default(0),
+  leafStyle: z.enum(LEAF_STYLES).default("blobs"),
+  /** How many leaves there are, 0 (none) to 1 (a lot). */
+  leafDensity: z.number().min(0).max(1).default(0.7),
+  /** How big each leaf (lump or card) is, in units. */
+  leafSize: z.number().min(0.03).max(3).default(0.35),
+  /** The colour of the leaves. The trunk takes the object's own colour. */
+  leafColor: hexColorSchema.default("#4f9a3d"),
+  /** How many sides the trunk and branches have (3 = a triangle, more is rounder and heavier). */
+  sides: z.number().int().min(3).max(12).default(6),
+  /** How many pieces each branch is cut into along its length (more is smoother and heavier). */
+  rings: z.number().int().min(2).max(10).default(4),
+});
+
+export type PlantSettings = z.infer<typeof plantSchema>;
+
+/** The settings of a new plant (a tree). */
+export const DEFAULT_PLANT: PlantSettings = plantSchema.parse({});
+
 /** The settings of a light object. Which ones matter depends on the kind (see `lights.ts`). */
 export const lightSchema = z.object({
   color: hexColorSchema.default("#ffffff"),
@@ -238,6 +288,8 @@ export const sceneNodeObjectSchema = z.object({
   segments: z.number().int().min(1).max(MAX_SEGMENTS).default(1),
   /** The shape changes (bend, twist, taper), applied in order. Older scenes load with none. */
   modifiers: z.array(modifierSchema).max(MAX_MODIFIERS).default([]),
+  /** Only for "plant" objects: how the plant grows. null for every other object. Older scenes load with null. */
+  plant: plantSchema.nullable().default(null),
   /** Only for the light kinds: how the light shines. null for every other object. Older scenes load with null. */
   light: lightSchema.nullable().default(null),
   /** The surface values. Scenes saved before this section existed had `roughness` and `metalness` on the node itself. */
@@ -356,6 +408,7 @@ export const sceneSchema = z.object({
 
 export type PrimitiveKind = (typeof PRIMITIVE_KINDS)[number];
 export type LightKind = (typeof LIGHT_KINDS)[number];
+export type LeafStyle = (typeof LEAF_STYLES)[number];
 export type NodeKind = (typeof NODE_KINDS)[number];
 export type AssetInfo = z.infer<typeof assetInfoSchema>;
 export type Transform = z.infer<typeof transformSchema>;

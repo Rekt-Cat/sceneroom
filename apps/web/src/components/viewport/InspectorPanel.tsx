@@ -3,6 +3,7 @@
 import EnvironmentPanel from "./EnvironmentPanel";
 import ModifiersSection from "./ModifiersSection";
 import LightSection from "./LightSection";
+import PlantSection from "./PlantSection";
 import SurfaceSection from "./SurfaceSection";
 import { useState } from "react";
 import {
@@ -208,6 +209,11 @@ function SingleObject({ node }: { node: SceneNode }) {
         <TransformSection node={node} disabled={locked} />
         {node.light ? (
           <LightSection node={node} disabled={locked} />
+        ) : node.plant ? (
+          <>
+            <PlantSection node={node} disabled={locked} />
+            <SurfaceSection node={node} disabled={locked} />
+          </>
         ) : (
           <>
             {node.kind === "model" ? (

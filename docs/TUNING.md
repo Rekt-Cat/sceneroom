@@ -340,6 +340,34 @@ Details of the file: `docs/SCENE-FILE-FORMAT.md`.
 | Same-spot tolerance  | `weldGroups` `tolerance` in `meshEdit.ts`                      | `0.0001` units     | Points closer than this count as one spot: they are selected and moved together, so a surface never tears.                                   |
 | Snapping             | `SNAP.translate` in `snapSettings.ts`                          | `0.5` units        | When snapping is on (X, or hold Shift), moving points snaps to steps of this size, like moving objects.                                      |
 
+## Plants (trees, pines, bushes)
+
+Added from the Add menu's "Plants" tab. All the numbers are in `plantSchema` (`packages/shared/src/scene.ts`) and the three kinds are in `PLANT_PRESETS` (`packages/shared/src/plant.ts`). Every slider in the Inspector has a reset button (to the value of a tree).
+
+| What            | Setting (`plantSchema`)                       | Tree / Pine / Bush                                    | What it does                                                                                         |
+| --------------- | --------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Seed            | `seed` `0..99999`                             | random per plant                                      | A different number grows a different but similar plant. The same numbers always give the same plant. |
+| Height          | `height` `0.2..30`                            | `3` / `5` / `0.9`                                     | How tall the trunk is, in units.                                                                     |
+| Trunk thickness | `trunkRadius` `0.005..2`                      | `0.12` / `0.1` / `0.05`                               | Radius at the bottom.                                                                                |
+| Taper           | `taper` `0..0.95`                             | `0.7` / `0.85` / `0.5`                                | How much thinner a branch is at its tip.                                                             |
+| Crookedness     | `crookedness` `0..1`                          | `0.25` / `0.08` / `0.4`                               | How much the trunk and branches wander from straight.                                                |
+| Levels          | `levels` `0..3`                               | `2` / `1` / `2`                                       | Generations of branches (0 = a bare trunk). Each level multiplies the work, so 3 is heavy.           |
+| Branches        | `branches` `1..10`                            | `5` / `10` / `6`                                      | How many branches grow from each branch.                                                             |
+| Branch angle    | `branchAngle` `5..90`                         | `40` / `75` / `50` degrees                            | Angle from the branch it grows from (small = up, large = sideways).                                  |
+| Branch length   | `branchLength` `0.15..0.95`                   | `0.6` / `0.28` / `0.75`                               | Length compared with the parent.                                                                     |
+| Branch start    | `branchStart` `0..0.9`                        | `0.35` / `0.15` / `0.05`                              | Where along the parent branches can start (0 = the very bottom).                                     |
+| Droop           | `droop` `-1..1`                               | `0` / `0.55` / `-0.1`                                 | Branches hang down (above 0) or reach up (below 0).                                                  |
+| Leaf style      | `leafStyle`                                   | lumps / lumps / lumps                                 | "Lumps" are small faceted blobs (low-poly), "Cards" are flat crossed leaves.                         |
+| Leaf density    | `leafDensity` `0..1`                          | `0.7` / `0.9` / `1`                                   | How many leaves (0 = none).                                                                          |
+| Leaf size       | `leafSize` `0.03..3`                          | `0.35` / `0.45` / `0.3`                               | Size of each lump or card.                                                                           |
+| Leaf colour     | `leafColor`                                   | `#4f9a3d` / `#2f6b3c` / `#5aa845`                     | The trunk takes the object's own colour (`#7a5230` / `#5e4026` / `#6b4a2b`, in `PLANT_PRESET_INFO`). |
+| Sides           | `sides` `3..12`                               | `6`                                                   | Sides of each branch (more is rounder and heavier).                                                  |
+| Rings           | `rings` `2..10`                               | `4`                                                   | Pieces along each branch (more is smoother and heavier).                                             |
+| Forest copies   | `FOREST_DEFAULTS` in `PlantSection.tsx`       | `12` copies, radius `6`, space `1.5`, size mix `0.25` | The starting numbers of the Scatter copies controls (not saved).                                     |
+| Golden angle    | `GOLDEN_ANGLE` in `growBranches` (`plant.ts`) | `2.4` radians                                         | How branches are spread round their parent so they do not line up.                                   |
+
+A default tree is about 3,200 triangles and takes 2 ms to grow; the largest the sliders allow is about 312,000 triangles and 28 ms.
+
 ## Locking objects
 
 | What               | Setting                                                                                              | Our value | What it does                                                                                                                                          |

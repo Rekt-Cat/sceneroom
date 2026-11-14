@@ -4,13 +4,17 @@ import {
   addAsset,
   addNode,
   availableName,
+  bakePlantToMeshes,
   bakeToMesh,
   createEmptyScene,
   createHistory,
   copyToClipboard,
   MAX_MODIFIERS,
   addModifier,
+  PLANT_PRESETS,
+  PLANT_PRESET_INFO,
   createLightNode,
+  createPlantNode,
   createModifier,
   createModelNode,
   createNode,
@@ -26,6 +30,7 @@ import {
   removeModifier,
   normalizeHexColor,
   normalizeNodeName,
+  plantChangeDiffers,
   pasteFromClipboard,
   recordChange,
   redoStep,
@@ -39,12 +44,15 @@ import {
   sanitizeEnvironmentChange,
   sanitizeModifierChange,
   sanitizeLightChange,
+  sanitizePlantChange,
+  scatterPlants,
   sanitizeMaterialChange,
   setEnvironment,
   setModifier,
   setSegments,
   supportsModifiers,
   setLight,
+  setPlant,
   setMaterial,
   setAssetNote,
   setTransforms,
@@ -58,6 +66,9 @@ import {
   type History,
   type LightChange,
   type LightKind,
+  type PlantChange,
+  type PlantPresetName,
+  type Scatter,
   type ModifierChange,
   type ModifierType,
   type MaterialChange,
@@ -163,6 +174,25 @@ type SceneState = {
    * edited), as one undo step with the given label. Ignored for locked objects and objects that are not meshes.
    */
   replaceNodeMesh: (nodeId: string, info: AssetInfo, label: string) => void;
+  /** Adds a plant (tree, pine or bush) at the middle of the scene with a random-looking seed, and selects it. One undo step. Returns its id. */
+  addPlant: (preset: PlantPresetName) => string;
+  /** Changes some settings of a plant as one undo step. Ignored for locked objects and objects that are not plants. */
+  setNodePlant: (id: string, change: PlantChange) => void;
+  /** Like setNodePlant but without an undo step; only while an edit is in progress (dragging a slider). */
+  previewNodePlant: (id: string, change: PlantChange) => void;
+  /** Gives a plant the numbers and trunk colour of a preset, keeping its seed. One undo step. */
+  applyPlantPreset: (id: string, preset: PlantPresetName) => void;
+  /** Adds copies of a plant at the given spots (a forest), selects them and returns their ids. One undo step. */
+  scatterPlant: (id: string, spots: readonly Scatter[]) => string[];
+  /**
+   * Turns a plant into editable meshes: the object becomes the wood and a new object inside it holds the
+   * leaves (see `bakePlantToMeshes`). One undo step. Ignored for locked objects and objects that are not plants.
+   */
+  bakePlantNode: (
+    id: string,
+    barkInfo: AssetInfo,
+    leaves: { info: AssetInfo; nodeId: string } | null,
+  ) => void;
   /** Changes some settings of the world (background, reflections, fog, base lighting) as one undo step. */
   setEnvironmentSettings: (change: EnvironmentChange) => void;
   /** Like setEnvironmentSettings but without an undo step; only while an edit is in progress (dragging a slider). */
@@ -470,6 +500,91 @@ export const useSceneStore = create<SceneState>()((set) => ({
       return {
         scene: replaceMesh(state.scene, nodeId, info),
         history: record(state, label),
+      };
+    }),
+  addPlant: (preset) => {
+    const id = crypto.randomUUID();
+    // A seed that looks random: a different plant every time one is added
+    const seed = Math.floor(Math.random() * 100000);
+    set((state) => ({
+      scene: addNode(state.scene, {
+        ...createPlantNode(id, preset, seed),
+        name: availableName(state.scene, PLANT_PRESET_INFO[preset].label),
+      }),
+      selectedIds: [id],
+      history: record(state, `Add ${preset}`),
+    }));
+    return id;
+  },
+  setNodePlant: (id, change) =>
+    set((state) => {
+      const node = state.scene.nodes[id];
+      if (!node?.plant || isEffectivelyLocked(state.scene, id)) return state;
+      const clean = sanitizePlantChange(change);
+      if (!plantChangeDiffers(node.plant, clean)) return state;
+      return {
+        scene: setPlant(state.scene, id, clean),
+        history: record(state, "Plant"),
+      };
+    }),
+  previewNodePlant: (id, change) =>
+    set((state) => {
+      const node = state.scene.nodes[id];
+      if (
+        !state.pendingEdit ||
+        !node?.plant ||
+        isEffectivelyLocked(state.scene, id)
+      ) {
+        return state;
+      }
+      const clean = sanitizePlantChange(change);
+      if (Object.keys(clean).length === 0) return state;
+      return { scene: setPlant(state.scene, id, clean) };
+    }),
+  applyPlantPreset: (id, preset) =>
+    set((state) => {
+      const node = state.scene.nodes[id];
+      if (!node?.plant || isEffectivelyLocked(state.scene, id)) return state;
+      const scene = updateNode(
+        setPlant(state.scene, id, {
+          ...PLANT_PRESETS[preset],
+          seed: node.plant.seed,
+        }),
+        id,
+        { color: PLANT_PRESET_INFO[preset].barkColor },
+      );
+      return { scene, history: record(state, `Make it a ${preset}`) };
+    }),
+  scatterPlant: (id, spots) => {
+    let ids: string[] = [];
+    set((state) => {
+      const node = state.scene.nodes[id];
+      if (
+        !node?.plant ||
+        isEffectivelyLocked(state.scene, id) ||
+        spots.length === 0
+      ) {
+        return state;
+      }
+      const result = scatterPlants(state.scene, id, spots, () =>
+        crypto.randomUUID(),
+      );
+      ids = result.ids;
+      return {
+        scene: result.scene,
+        selectedIds: result.ids,
+        history: record(state, `Scatter ${result.ids.length} plants`),
+      };
+    });
+    return ids;
+  },
+  bakePlantNode: (id, barkInfo, leaves) =>
+    set((state) => {
+      const node = state.scene.nodes[id];
+      if (!node?.plant || isEffectivelyLocked(state.scene, id)) return state;
+      return {
+        scene: bakePlantToMeshes(state.scene, id, barkInfo, leaves),
+        history: record(state, "Make mesh"),
       };
     }),
   setEnvironmentSettings: (change) =>
