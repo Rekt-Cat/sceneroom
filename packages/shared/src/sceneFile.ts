@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { checkGlbBytes } from "./assets";
+import { decodeMeshData } from "./meshData";
+import { pruneUnusedMeshAssets } from "./meshOps";
 import { parseSavedScene } from "./persistence";
 import type { Scene } from "./scene";
 
@@ -57,9 +59,11 @@ export type EncodedSceneFile = { bytes: Uint8Array; missing: string[] };
  * placeholders when the file is opened). Files in `assets` that the scene does not mention are not packed.
  */
 export function encodeSceneFile(
-  scene: Scene,
+  fullScene: Scene,
   assets: Readonly<Record<string, Uint8Array>>,
 ): EncodedSceneFile {
+  // A mesh that no object uses any more (only kept in memory so that Undo can bring it back) is not saved
+  const scene = pruneUnusedMeshAssets(fullScene);
   const included: { id: string; data: Uint8Array }[] = [];
   const missing: string[] = [];
   for (const id of Object.keys(scene.assets)) {
@@ -168,11 +172,12 @@ export function decodeSceneFile(bytes: Uint8Array): DecodedSceneFile {
     offset += entry.bytes;
     // Only files the scene really uses are taken
     if (!parsed.scene.assets[entry.id]) continue;
-    const check = checkGlbBytes(data);
-    if (!check.ok) {
-      const name = parsed.scene.assets[entry.id]?.name ?? entry.id;
+    const info = parsed.scene.assets[entry.id]!;
+    const problem = checkAssetBytes(info.type, data);
+    if (problem) {
+      const what = info.type === "mesh" ? "mesh" : "model";
       return fail(
-        `The model "${name}" in this file is not usable: ${check.reason}`,
+        `The ${what} "${info.name}" in this file is not usable: ${problem}`,
       );
     }
     assets[entry.id] = data;
@@ -181,6 +186,19 @@ export function decodeSceneFile(bytes: Uint8Array): DecodedSceneFile {
     return fail("The file is damaged (it has data after the end).");
   }
   return { ok: true, scene: parsed.scene, assets };
+}
+
+/** What is wrong with the stored bytes of a model (a GLB file) or a mesh, or null if they are fine. */
+function checkAssetBytes(
+  type: "model" | "mesh",
+  data: Uint8Array,
+): string | null {
+  if (type === "mesh") {
+    const mesh = decodeMeshData(data);
+    return mesh.ok ? null : mesh.reason;
+  }
+  const check = checkGlbBytes(data);
+  return check.ok ? null : check.reason;
 }
 
 function megabytes(bytes: number): string {

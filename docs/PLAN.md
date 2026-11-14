@@ -79,7 +79,7 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 - [x] Saving the scene as a file and opening it (`.sceneroom`, branch `feature/scene-file`, waiting for a browser check); scene versions and migrations are covered by the Zod defaults and the file version number
 - [x] GLB export (`feature/glb-export`, waiting for a browser check, then trying the file in Blender or Unity)
 - [ ] glTF with separate files, compressed models, then OBJ
-- [ ] Design the editable-mesh data format and where big meshes are stored (see `ADVANCED-EDITING.md`, "The foundation"), so custom meshes can be saved and exported
+- [x] The editable-mesh foundation (`feature/editable-mesh`, waiting for a browser check): the "mesh" object kind, its stored format, Apply modifiers and Convert to mesh, saved in the scene file and exported to GLB. Still to do for it: clean-up of old mesh versions in browser storage; undo by difference (with sculpting)
 
 ### Phase 6: Docker, database, project backend
 
@@ -108,7 +108,7 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 
 - [x] Step 1 (`feature/modifiers`, waiting for a browser check): segment counts on primitives; modifier stack in the Inspector with Bend, Twist, Taper
 - [x] Step 2 (`feature/modifiers-2`, waiting for a browser check): Stretch, Noise, Mirror, Array. Left for the editable-mesh step: Subdivide
-- [ ] Step 3: Apply (bake the modifiers into an editable mesh; needs the mesh format from Phase 5)
+- [x] Step 3: Apply (bake the modifiers into an editable mesh), done with the editable-mesh foundation
 
 ### Phase 12: Environment-building tools
 

@@ -6,6 +6,7 @@ import type {
   SceneNode,
 } from "./scene";
 import {
+  ASSET_NOTE_MAX_LENGTH,
   MAX_ARRAY_COUNT,
   MAX_ARRAY_SPACING,
   MAX_MIRROR_OFFSET,
@@ -50,9 +51,12 @@ export function usesAxis(type: ModifierType): boolean {
   return type !== "noise";
 }
 
-/** True for objects whose shape modifiers can change: the built-in shapes (not models, not lights). */
+/** True for objects whose shape modifiers can change: the built-in shapes and editable meshes (not imported models, not lights). */
 export function supportsModifiers(node: SceneNode): boolean {
-  return (PRIMITIVE_KINDS as readonly string[]).includes(node.kind);
+  return (
+    node.kind === "mesh" ||
+    (PRIMITIVE_KINDS as readonly string[]).includes(node.kind)
+  );
 }
 
 /** A new modifier of a kind, with its starting values. */
@@ -309,6 +313,58 @@ export function describeModifier(modifier: Modifier): string {
     case "array":
       return `Repeats the shape ${modifier.count} times along ${axis}.`;
   }
+}
+
+/** A number without trailing zeros: 45 -> "45", 0.5 -> "0.5", 1.2300001 -> "1.23". */
+function plain(value: number): string {
+  return String(Number(value.toFixed(2)));
+}
+
+/** One short line saying what a modifier was set to, for the record kept when it is applied. */
+export function summariseModifier(modifier: Modifier): string {
+  const axis = modifier.axis.toUpperCase();
+  switch (modifier.type) {
+    case "bend":
+      return `Bend along ${axis} ${plain(modifier.angle)}°`;
+    case "twist":
+      return `Twist around ${axis} ${plain(modifier.angle)}°`;
+    case "taper":
+      return `Taper along ${axis} ${plain(modifier.amount)}`;
+    case "stretch":
+      return `Stretch along ${axis} ×${plain(modifier.factor)}${modifier.keepVolume ? " (keep volume)" : ""}`;
+    case "noise":
+      return `Noise strength ${plain(modifier.strength)}, scale ${plain(modifier.scale)}, seed ${modifier.seed}`;
+    case "mirror":
+      return `Mirror across ${axis}, offset ${plain(modifier.offset)}`;
+    case "array":
+      return `Array ×${modifier.count} along ${axis}, spacing ${plain(modifier.spacing)}`;
+  }
+}
+
+/** The line that is written down when modifiers are applied: only the ones that were on, in order. Empty if none. */
+export function summariseModifiers(modifiers: readonly Modifier[]): string {
+  const on = modifiers.filter((modifier) => modifier.enabled);
+  return on.length === 0
+    ? ""
+    : `Applied: ${on.map(summariseModifier).join(", ")}`;
+}
+
+/**
+ * Adds a line to the notes of a mesh, below the earlier ones. The notes have a size limit, so when they
+ * would be too long the OLDEST lines are dropped (never the new one).
+ */
+export function appendNoteLine(
+  notes: string,
+  line: string,
+  maxLength: number = ASSET_NOTE_MAX_LENGTH,
+): string {
+  if (line === "") return notes;
+  const lines = [
+    ...notes.split("\n").filter((l) => l !== ""),
+    line.slice(0, maxLength),
+  ];
+  while (lines.length > 1 && lines.join("\n").length > maxLength) lines.shift();
+  return lines.join("\n");
 }
 
 // ---- The deformation itself: pure maths on points and triangles ----

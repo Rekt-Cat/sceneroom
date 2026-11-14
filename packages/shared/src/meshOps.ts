@@ -1,0 +1,75 @@
+import { addAsset } from "./sceneOps";
+import { type AssetInfo, type Scene } from "./scene";
+import { supportsModifiers } from "./modifiers";
+import { NODE_NAME_MAX_LENGTH } from "./scene";
+import { meshStats } from "./meshData";
+import type { ShapeMesh } from "./modifiers";
+
+/** The record that goes into `scene.assets` for a stored mesh (its data is stored apart, under `id`). */
+export function meshAssetInfo(
+  id: string,
+  name: string,
+  mesh: ShapeMesh,
+  storedBytes: number,
+  /** What to write in the mesh's notes (for example what was applied to make it). */
+  note = "",
+): AssetInfo {
+  const { triangles, boundsMin, boundsMax } = meshStats(mesh);
+  return {
+    id,
+    name: name.slice(0, NODE_NAME_MAX_LENGTH) || "Mesh",
+    type: "mesh",
+    bytes: storedBytes,
+    triangles,
+    boundsMin,
+    boundsMax,
+    note,
+  };
+}
+
+/**
+ * Turns a shape (or a mesh) and its modifiers into a plain editable mesh, in place: the object keeps its
+ * place in the scene (position, rotation, scale, parent, children, colour, surface) and becomes a "mesh"
+ * object that points to the stored data `info`. Its modifiers and segments are cleared, because they are
+ * now part of the points. Throws for an object that cannot be turned into a mesh, or if `info` is not a mesh.
+ */
+export function bakeToMesh(
+  scene: Scene,
+  nodeId: string,
+  info: AssetInfo,
+): Scene {
+  const node = scene.nodes[nodeId];
+  if (!node) throw new Error(`Node "${nodeId}" does not exist`);
+  if (!supportsModifiers(node)) {
+    throw new Error(`Node "${nodeId}" cannot be turned into a mesh`);
+  }
+  if (info.type !== "mesh") throw new Error("The stored data is not a mesh");
+  const withData = addAsset(scene, info);
+  return {
+    ...withData,
+    nodes: {
+      ...withData.nodes,
+      [nodeId]: {
+        ...node,
+        kind: "mesh",
+        assetId: info.id,
+        modifiers: [],
+        segments: 1,
+      },
+    },
+  };
+}
+
+/** Meshes that no object uses are not worth keeping: the scene without their records (their data is dropped when saving). */
+export function pruneUnusedMeshAssets(scene: Scene): Scene {
+  const used = new Set<string>();
+  for (const node of Object.values(scene.nodes)) {
+    if (node.assetId) used.add(node.assetId);
+  }
+  const entries = Object.entries(scene.assets);
+  const kept = entries.filter(
+    ([id, info]) => info.type !== "mesh" || used.has(id),
+  );
+  if (kept.length === entries.length) return scene;
+  return { ...scene, assets: Object.fromEntries(kept) };
+}

@@ -43,13 +43,14 @@ export const PRIMITIVE_KINDS = [
 export const LIGHT_KINDS = ["directional", "point", "spot"] as const;
 
 /**
- * Every kind of object: the built-in shapes, the lights, and "model" for a file imported from outside
- * (see `assetId`).
+ * Every kind of object: the built-in shapes, the lights, "model" for a file imported from outside, and
+ * "mesh" for an editable mesh made in the editor (both point to their data with `assetId`).
  */
 export const NODE_KINDS = [
   ...PRIMITIVE_KINDS,
   ...LIGHT_KINDS,
   "model",
+  "mesh",
 ] as const;
 
 const vec3Schema = z.tuple([z.number(), z.number(), z.number()]);
@@ -242,8 +243,9 @@ export const sceneNodeObjectSchema = z.object({
   /** The surface values. Scenes saved before this section existed had `roughness` and `metalness` on the node itself. */
   material: materialSchema.default(DEFAULT_MATERIAL),
   /**
-   * For a "model": the id of the imported file (a key of `scene.assets`). The file itself is stored
-   * apart from the scene, because it can be many megabytes. null for the built-in shapes.
+   * For a "model" or a "mesh": the id of its data (a key of `scene.assets`). The data itself (an imported
+   * file, or the points and triangles of the mesh) is stored apart from the scene, because it can be many
+   * megabytes. null for the built-in shapes and lights.
    */
   assetId: z.string().min(1).nullable().default(null),
   /**
@@ -287,7 +289,8 @@ export const assetInfoSchema = z.object({
   id: z.string().min(1),
   /** Shown in the Inspector; from the file name. */
   name: z.string().min(1).max(NODE_NAME_MAX_LENGTH),
-  type: z.literal("model"),
+  /** "model": an imported GLB file. "mesh": the points and triangles of an editable mesh made in the editor. */
+  type: z.enum(["model", "mesh"]),
   bytes: z.number().int().nonnegative(),
   triangles: z.number().int().nonnegative(),
   /** Corners of the box around the model, in the model's own units, measured when it was imported. */

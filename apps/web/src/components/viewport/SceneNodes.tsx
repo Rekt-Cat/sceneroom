@@ -9,7 +9,14 @@ import {
 } from "react";
 import { type ThreeEvent } from "@react-three/fiber";
 import { Outlines } from "@react-three/drei";
-import { DoubleSide, FrontSide, Mesh, type Object3D } from "three";
+import {
+  BufferAttribute,
+  BufferGeometry,
+  DoubleSide,
+  FrontSide,
+  Mesh,
+  type Object3D,
+} from "three";
 import {
   buildSceneTree,
   cutNodeIds,
@@ -18,14 +25,16 @@ import {
   isEffectivelyLocked,
   type LightKind,
   type Modifier,
+  type ShapeMesh,
   type PrimitiveKind,
   type SceneNode,
   type TreeNode,
 } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
 import LightObject from "./LightObject";
+import { loadMeshData } from "@/assets/meshStorage";
 import { useEnvironmentTexture } from "./environmentTexture";
-import { buildShapeGeometry } from "./shapeGeometry";
+import { buildMeshGeometry, buildShapeGeometry } from "./shapeGeometry";
 import ModelObject from "./ModelObject";
 import MultiSelectionGizmo from "./MultiSelectionGizmo";
 import SelectionGizmo from "./SelectionGizmo";
@@ -41,7 +50,7 @@ function isLightKind(kind: string): kind is LightKind {
  * The geometry of a shape: its plain form cut into segments, with the object's modifiers (bend, twist,
  * taper) applied. Rebuilt only when the kind, the segments or the modifiers change; the old one is freed.
  */
-function ShapeGeometry({
+export function ShapeGeometry({
   kind,
   segments,
   modifiers,
@@ -56,6 +65,69 @@ function ShapeGeometry({
   );
   useEffect(() => () => geometry.dispose(), [geometry]);
   return <primitive object={geometry} attach="geometry" />;
+}
+
+/**
+ * What an editable mesh shows while its data is still being read: one triangle with no area, so nothing is
+ * drawn. An object must never be left with NO points: the selection outline works out smoothed normals for
+ * the geometry it sits on and fails on an empty one, which crashed the whole 3D view. Shared by all meshes
+ * and never freed (nothing is allowed to dispose it).
+ */
+const PLACEHOLDER_GEOMETRY = (() => {
+  const geometry = new BufferGeometry();
+  geometry.setAttribute(
+    "position",
+    new BufferAttribute(new Float32Array(9), 3),
+  );
+  geometry.setIndex([0, 1, 2]);
+  return geometry;
+})();
+
+/**
+ * The geometry of an editable mesh: its stored points and triangles with the object's modifiers applied.
+ * The stored data is read once (it never changes: an edit makes a new one). While it is being read the
+ * object shows nothing; if it is missing or damaged a plain box stands in, and the Inspector says why.
+ */
+export function MeshGeometry({
+  assetId,
+  modifiers,
+}: {
+  assetId: string | null;
+  modifiers: readonly Modifier[];
+}) {
+  const [data, setData] = useState<
+    { id: string; mesh: ShapeMesh } | { id: string; failed: true } | null
+  >(null);
+
+  useEffect(() => {
+    if (!assetId) return;
+    let current = true;
+    loadMeshData(assetId)
+      .then((mesh) => {
+        if (current) setData({ id: assetId, mesh });
+      })
+      .catch((error: unknown) => {
+        console.warn("Could not load a mesh:", error);
+        if (current) setData({ id: assetId, failed: true });
+      });
+    return () => {
+      current = false;
+    };
+  }, [assetId]);
+
+  // Only the data that belongs to the current id (the old one may still be in state for a moment)
+  const ready = data && data.id === assetId ? data : null;
+  const mesh = ready && "mesh" in ready ? ready.mesh : null;
+  const geometry = useMemo(
+    () => (mesh ? buildMeshGeometry(mesh, modifiers) : null),
+    [mesh, modifiers],
+  );
+  useEffect(() => () => geometry?.dispose(), [geometry]);
+
+  if (geometry) return <primitive object={geometry} attach="geometry" />;
+  if (ready && "failed" in ready) return <boxGeometry args={[1, 1, 1]} />;
+  // While the data is being read: an invisible placeholder, never an object with no geometry at all
+  return <primitive object={PLACEHOLDER_GEOMETRY} attach="geometry" />;
 }
 
 /**
@@ -188,11 +260,15 @@ function NodeMesh({
       receiveShadow={material.receiveShadow}
       onClick={handleClick}
     >
-      <ShapeGeometry
-        kind={node.kind}
-        segments={node.segments}
-        modifiers={node.modifiers}
-      />
+      {node.kind === "mesh" ? (
+        <MeshGeometry assetId={node.assetId} modifiers={node.modifiers} />
+      ) : (
+        <ShapeGeometry
+          kind={node.kind}
+          segments={node.segments}
+          modifiers={node.modifiers}
+        />
+      )}
       <meshStandardMaterial
         // A new material when the shading, the side or solid / see-through changes: three.js builds its
         // shader for these (a solid material is compiled to ignore opacity completely)

@@ -22,11 +22,31 @@ All numbers are little-endian, like a GLB file.
   id, so a changed file is refused.
 - The model files are not inside the JSON because as text they would be a third bigger and slow to read.
 
+## Editable meshes in the file
+
+An editable mesh (see "Apply modifiers" and "Convert to mesh" in the Inspector) is stored like a model file: as one
+of the data blobs after the header, listed in `assets` with `type: "mesh"` in the scene. Its bytes (code:
+`packages/shared/src/meshData.ts`):
+
+| Bytes         | What                                                 |
+| ------------- | ---------------------------------------------------- |
+| 0 to 3        | The letters `SRMH`                                   |
+| 4 to 7        | Version of the mesh layout (now `1`)                 |
+| 8 to 11       | `P`: the number of points                            |
+| 12 to 15      | `I`: the number of triangle corners (3 per triangle) |
+| next `P * 12` | The points: x, y, z as 32-bit floats                 |
+| next `I * 4`  | The corners: point numbers as 32-bit whole numbers   |
+
+The id of a mesh is the SHA-256 of exactly these bytes. Normals are not stored; they are worked out from the triangles.
+A mesh that no object uses is not saved (the editor keeps old versions in memory only so Undo can bring them back).
+Opening checks a mesh like a model: the layout, the sizes against the header (before allocating anything), that every
+number is finite, that no triangle uses a point that does not exist, and the fingerprint.
+
 ## Rules when opening (the file is outside data)
 
 - Larger than 250 MB: refused before it is read.
 - Wrong letters, a newer version, a header that does not fit, a header that is not JSON of the right shape, a scene that
-  does not pass the same checks as the autosave, a model file that is not a real GLB, a file that is cut short or has data
+  does not pass the same checks as the autosave, a model file that is not a real GLB, a mesh that is not valid mesh data, a file that is cut short or has data
   after the end, a model file listed twice: each is refused with a plain message. Nothing is changed in the editor.
 - Model files the scene does not mention are ignored. Model files the scene mentions but the file does not contain are
   allowed: those models show as red boxes.

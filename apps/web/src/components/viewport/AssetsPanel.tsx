@@ -28,7 +28,8 @@ const ICON_BUTTON =
 export default function AssetsPanel() {
   const assets = useSceneStore((state) => state.scene.assets);
   const nodes = useSceneStore((state) => state.scene.nodes);
-  const list = Object.values(assets);
+  // The tab lists imported models; the data of editable meshes is internal to the objects that use it
+  const list = Object.values(assets).filter((asset) => asset.type === "model");
   const usage = useMemo(() => assetUsageCounts({ nodes }), [nodes]);
 
   if (list.length === 0) {

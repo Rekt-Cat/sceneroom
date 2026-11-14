@@ -1,4 +1,5 @@
 import {
+  BufferGeometry,
   Color,
   DirectionalLight,
   DoubleSide,
@@ -15,13 +16,20 @@ import {
   buildSceneTree,
   modelOffset,
   type Scene,
+  type ShapeMesh,
   type SceneNode,
   type TreeNode,
 } from "@sceneroom/shared";
-import { buildShapeGeometry } from "@/components/viewport/shapeGeometry";
+import {
+  buildMeshGeometry,
+  buildShapeGeometry,
+} from "@/components/viewport/shapeGeometry";
 
 /** The loaded three.js scene of an imported model file, or undefined if it is not available. */
 export type ModelLookup = (assetId: string) => Object3D | undefined;
+
+/** The points and triangles of an editable mesh, or undefined if its data is not available. */
+export type MeshLookup = (assetId: string) => ShapeMesh | undefined;
 
 /** What was left out of the export, so the user can be told. */
 export type ExportReport = {
@@ -51,6 +59,7 @@ export type ExportReport = {
 export function buildExportScene(
   scene: Scene,
   getModel: ModelLookup,
+  getMesh: MeshLookup = () => undefined,
 ): { root: Group; report: ExportReport } {
   const root = new Group();
   root.name = "SceneRoom scene";
@@ -62,7 +71,7 @@ export function buildExportScene(
     hidden: 0,
   };
   const add = (entry: TreeNode, parent: Object3D) => {
-    const object = buildObject(scene, entry.node, getModel, report);
+    const object = buildObject(scene, entry.node, getModel, getMesh, report);
     if (object) {
       parent.add(object);
       for (const child of entry.children) add(child, object);
@@ -76,9 +85,10 @@ function buildObject(
   scene: Scene,
   node: SceneNode,
   getModel: ModelLookup,
+  getMesh: MeshLookup,
   report: ExportReport,
 ): Object3D | null {
-  const object = createObject(scene, node, getModel, report);
+  const object = createObject(scene, node, getModel, getMesh, report);
   if (!object) return null;
   object.name = node.name;
   object.visible = node.visible;
@@ -95,6 +105,7 @@ function createObject(
   scene: Scene,
   node: SceneNode,
   getModel: ModelLookup,
+  getMesh: MeshLookup,
   report: ExportReport,
 ): Object3D | null {
   if (node.light) {
@@ -136,7 +147,17 @@ function createObject(
     return group;
   }
 
-  const geometry = shapeGeometry(node);
+  let geometry: BufferGeometry;
+  if (node.kind === "mesh") {
+    const mesh = node.assetId ? getMesh(node.assetId) : undefined;
+    if (!mesh) {
+      report.missingModels.push(node.name);
+      return null;
+    }
+    geometry = finish(buildMeshGeometry(mesh, node.modifiers), node);
+  } else {
+    geometry = shapeGeometry(node);
+  }
   const material = new MeshStandardMaterial({
     color: node.color,
     roughness: node.material.roughness,
@@ -154,11 +175,18 @@ function createObject(
 }
 
 function shapeGeometry(node: SceneNode) {
-  const geometry = buildShapeGeometry(
-    node.kind as Parameters<typeof buildShapeGeometry>[0],
-    node.segments,
-    node.modifiers,
+  return finish(
+    buildShapeGeometry(
+      node.kind as Parameters<typeof buildShapeGeometry>[0],
+      node.segments,
+      node.modifiers,
+    ),
+    node,
   );
+}
+
+/** Flat shading as flat normals (see below); a smooth object is left as it is. */
+function finish(geometry: BufferGeometry, node: SceneNode): BufferGeometry {
   if (!node.material.flatShading) return geometry;
   // Flat shading as flat normals: every triangle gets its own points, so its corners do not share a normal
   const flat = geometry.toNonIndexed();

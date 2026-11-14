@@ -46,7 +46,9 @@ export default function HierarchyPanel() {
   const { drag, startDrag, justDragged } = useRowDrag();
 
   const total = Object.keys(scene.nodes).length;
-  const assetCount = Object.keys(scene.assets).length;
+  const assetCount = Object.values(scene.assets).filter(
+    (asset) => asset.type === "model",
+  ).length;
   // Which tab of the left panel is showing (not saved: it starts on the scene list)
   const [tab, setTab] = useState<"scene" | "assets">("scene");
   // Objects that are cut (waiting to be pasted somewhere) are shown greyed

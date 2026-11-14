@@ -312,3 +312,59 @@ describe("exporting the scene as a GLB", () => {
 beforeEach(() => {
   useSceneStore.getState().loadScene(createEmptyScene());
 });
+
+describe("exporting an editable mesh", () => {
+  it("a mesh is exported with the points it has, with its modifiers applied", async () => {
+    const mesh = {
+      positions: new Float32Array([0, 0, 0, 2, 0, 0, 2, 3, 0, 0, 3, 0]),
+      indices: new Uint32Array([0, 1, 2, 0, 2, 3]),
+    };
+    let scene = createEmptyScene();
+    scene = addAsset(scene, {
+      id: "m1",
+      name: "Panel",
+      type: "mesh",
+      bytes: 1,
+      triangles: 2,
+      boundsMin: [0, 0, 0],
+      boundsMax: [2, 3, 0],
+      note: "",
+    });
+    scene = addNode(scene, {
+      ...createNode("p", "cube"),
+      kind: "mesh",
+      assetId: "m1",
+      name: "Panel",
+    });
+    const { root, report } = buildExportScene(
+      scene,
+      () => undefined,
+      () => mesh,
+    );
+    const gltf = readGlb(await sceneToGlb(root));
+    disposeExportScene(root);
+    expect(report.objects).toBe(1);
+    const primitive = gltf.meshes[named(gltf, "Panel")!.mesh!]!.primitives[0]!;
+    const accessor = gltf.accessors[primitive.attributes["POSITION"]!]!;
+    expect(accessor.max).toEqual([2, 3, 0]);
+    expect(accessor.count).toBe(4);
+  });
+
+  it("a mesh whose data is not available is left out and reported", () => {
+    let scene = createEmptyScene();
+    scene = addNode(scene, {
+      ...createNode("p", "cube"),
+      kind: "mesh",
+      assetId: "gone",
+      name: "Panel",
+    });
+    const { root, report } = buildExportScene(
+      scene,
+      () => undefined,
+      () => undefined,
+    );
+    expect(report.missingModels).toEqual(["Panel"]);
+    expect(report.objects).toBe(0);
+    disposeExportScene(root);
+  });
+});
