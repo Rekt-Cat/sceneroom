@@ -16,6 +16,7 @@ import { useSceneStore } from "@/store/sceneStore";
 import AddMenu from "./AddMenu";
 import ImportButton from "./ImportButton";
 import PanelResizer from "./PanelResizer";
+import AssetsPanel from "./AssetsPanel";
 import {
   ROOT_DROP_ID,
   SCROLL_LIST_ATTRIBUTE,
@@ -45,6 +46,9 @@ export default function HierarchyPanel() {
   const { drag, startDrag, justDragged } = useRowDrag();
 
   const total = Object.keys(scene.nodes).length;
+  const assetCount = Object.keys(scene.assets).length;
+  // Which tab of the left panel is showing (not saved: it starts on the scene list)
+  const [tab, setTab] = useState<"scene" | "assets">("scene");
   // Objects that are cut (waiting to be pasted somewhere) are shown greyed
   const cutIds = useMemo(
     () => cutNodeIds(scene, clipboard),
@@ -114,91 +118,139 @@ export default function HierarchyPanel() {
     >
       <PanelResizer side="left" />
       <div className="flex h-13 shrink-0 items-center gap-2 px-3.5">
-        <h2 className="text-[13px] font-semibold tracking-wide">Scene</h2>
-        <span className="text-xs text-ed-text-3">
-          {total} {total === 1 ? "object" : "objects"}
-        </span>
+        <div role="tablist" aria-label="Left panel" className="flex gap-1">
+          <PanelTab
+            label="Scene"
+            count={total}
+            active={tab === "scene"}
+            onSelect={() => setTab("scene")}
+          />
+          <PanelTab
+            label="Assets"
+            count={assetCount}
+            active={tab === "assets"}
+            onSelect={() => setTab("assets")}
+          />
+        </div>
         <span className="flex-1" />
         <ImportButton />
-        <AddMenu />
+        {tab === "scene" && <AddMenu />}
       </div>
 
-      <label className="mx-3 mb-2 flex h-8 items-center gap-2 rounded-lg border border-ed-line bg-ed-field px-2.5 text-ed-text-3 focus-within:border-ed-accent">
-        <Icon name="search" />
-        <input
-          id={SEARCH_INPUT_ID}
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              setQuery("");
-              event.currentTarget.blur();
-            }
-          }}
-          placeholder="Search objects"
-          aria-label="Search objects"
-          className="min-w-0 flex-1 bg-transparent text-sm text-ed-text outline-none placeholder:text-ed-text-3"
-        />
-        <kbd className="rounded border border-ed-line-strong px-1.5 font-mono text-[11px] leading-[17px]">
-          /
-        </kbd>
-      </label>
-
-      {rows.length === 0 ? (
-        <p className="px-4 py-3 text-sm text-ed-text-3">
-          {total === 0
-            ? "The scene is empty. Use Add to place your first object."
-            : "No objects match your search."}
-        </p>
+      {tab === "assets" ? (
+        <AssetsPanel />
       ) : (
-        // The space between rows is padding on each row (py-0.5 twice = 4px), so it is part of the drop area
-        <div className="relative flex min-h-0 flex-1 flex-col">
-          <ul
-            {...{ [SCROLL_LIST_ATTRIBUTE]: "" }}
-            className={`flex min-h-0 flex-1 flex-col overflow-y-auto px-2 py-1 select-none ${
-              drag ? "pb-14" : ""
-            }`}
-          >
-            {/* While dragging something that sits inside a parent: a bar that stays at the top, to drop it onto */}
-            {drag && drag.ids.some((id) => scene.nodes[id]?.parentId) && (
-              <TopLevelDrop drag={drag} variant="bar" />
-            )}
-            {rows.map((row) => (
-              <HierarchyRow
-                key={row.node.id}
-                row={row}
-                selected={selectedIds.includes(row.node.id)}
-                isCut={cutIds.has(row.node.id)}
-                drag={drag}
-                onToggleCollapsed={toggleCollapsed}
-                onPressNode={startDrag}
-                onSelectRow={selectRow}
-                justDragged={justDragged}
-                lockedByParent={
-                  !row.node.locked && isEffectivelyLocked(scene, row.node.id)
+        <>
+          <label className="mx-3 mb-2 flex h-8 items-center gap-2 rounded-lg border border-ed-line bg-ed-field px-2.5 text-ed-text-3 focus-within:border-ed-accent">
+            <Icon name="search" />
+            <input
+              id={SEARCH_INPUT_ID}
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  setQuery("");
+                  event.currentTarget.blur();
                 }
-              />
-            ))}
-            {/* The empty space under the rows is the "top level" drop target too (not drawn) */}
-            <TopLevelDrop drag={drag} variant="fill" />
-          </ul>
-          {/* While dragging: a drop area pinned to the bottom of the list, wherever the rows end */}
-          {drag && <TopLevelDrop drag={drag} variant="pinned" />}
-        </div>
-      )}
+              }}
+              placeholder="Search objects"
+              aria-label="Search objects"
+              className="min-w-0 flex-1 bg-transparent text-sm text-ed-text outline-none placeholder:text-ed-text-3"
+            />
+            <kbd className="rounded border border-ed-line-strong px-1.5 font-mono text-[11px] leading-[17px]">
+              /
+            </kbd>
+          </label>
 
-      <p className="m-3 rounded-lg bg-ed-field px-3 py-2.5 text-xs leading-relaxed text-ed-text-2">
-        Click to select. <b className="font-medium text-ed-text">Shift-click</b>{" "}
-        selects everything in between,{" "}
-        <b className="font-medium text-ed-text">Ctrl/Cmd-click</b> adds or
-        removes one. Drag a row onto the middle of another to make it a child,
-        onto an edge to put it before or after, or into the empty space to take
-        it out of its parent.
-      </p>
+          {rows.length === 0 ? (
+            <p className="px-4 py-3 text-sm text-ed-text-3">
+              {total === 0
+                ? "The scene is empty. Use Add to place your first object."
+                : "No objects match your search."}
+            </p>
+          ) : (
+            // The space between rows is padding on each row (py-0.5 twice = 4px), so it is part of the drop area
+            <div className="relative flex min-h-0 flex-1 flex-col">
+              <ul
+                {...{ [SCROLL_LIST_ATTRIBUTE]: "" }}
+                className={`flex min-h-0 flex-1 flex-col overflow-y-auto px-2 py-1 select-none ${
+                  drag ? "pb-14" : ""
+                }`}
+              >
+                {/* While dragging something that sits inside a parent: a bar that stays at the top, to drop it onto */}
+                {drag && drag.ids.some((id) => scene.nodes[id]?.parentId) && (
+                  <TopLevelDrop drag={drag} variant="bar" />
+                )}
+                {rows.map((row) => (
+                  <HierarchyRow
+                    key={row.node.id}
+                    row={row}
+                    selected={selectedIds.includes(row.node.id)}
+                    isCut={cutIds.has(row.node.id)}
+                    drag={drag}
+                    onToggleCollapsed={toggleCollapsed}
+                    onPressNode={startDrag}
+                    onSelectRow={selectRow}
+                    justDragged={justDragged}
+                    lockedByParent={
+                      !row.node.locked &&
+                      isEffectivelyLocked(scene, row.node.id)
+                    }
+                  />
+                ))}
+                {/* The empty space under the rows is the "top level" drop target too (not drawn) */}
+                <TopLevelDrop drag={drag} variant="fill" />
+              </ul>
+              {/* While dragging: a drop area pinned to the bottom of the list, wherever the rows end */}
+              {drag && <TopLevelDrop drag={drag} variant="pinned" />}
+            </div>
+          )}
+
+          <p className="m-3 rounded-lg bg-ed-field px-3 py-2.5 text-xs leading-relaxed text-ed-text-2">
+            Click to select.{" "}
+            <b className="font-medium text-ed-text">Shift-click</b> selects
+            everything in between,{" "}
+            <b className="font-medium text-ed-text">Ctrl/Cmd-click</b> adds or
+            removes one. Drag a row onto the middle of another to make it a
+            child, onto an edge to put it before or after, or into the empty
+            space to take it out of its parent.
+          </p>
+        </>
+      )}
 
       {drag && <DragGhost drag={drag} />}
     </aside>
+  );
+}
+
+/** One of the two tabs at the top of the left panel. */
+function PanelTab({
+  label,
+  count,
+  active,
+  onSelect,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onSelect}
+      className={`flex h-7 items-center gap-1.5 rounded-md px-2 text-[13px] font-semibold tracking-wide focus-visible:outline-2 focus-visible:outline-ed-accent ${
+        active
+          ? "bg-ed-raised text-ed-text"
+          : "text-ed-text-3 hover:bg-ed-field hover:text-ed-text"
+      }`}
+    >
+      {label}
+      <span className="text-xs font-normal text-ed-text-3">{count}</span>
+    </button>
   );
 }
 

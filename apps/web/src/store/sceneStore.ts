@@ -3,6 +3,7 @@ import {
   IDENTITY_TRANSFORM,
   addAsset,
   addNode,
+  availableName,
   createEmptyScene,
   createHistory,
   copyToClipboard,
@@ -17,10 +18,15 @@ import {
   pasteFromClipboard,
   recordChange,
   redoStep,
+  removeAsset,
+  renameAsset,
   removeNodes,
   reparentNodes,
   resolveSelection,
+  materialChangeDiffers,
   sanitizeMaterialChange,
+  setMaterial,
+  setAssetNote,
   setTransforms,
   toggleInSelection,
   transformsEqual,
@@ -32,6 +38,7 @@ import {
   type MaterialChange,
   type PrimitiveKind,
   type ReparentMove,
+  type SceneNode,
   type Scene,
   type Transform,
   type TransformMode,
@@ -88,6 +95,17 @@ type SceneState = {
    * and selects it. One undo step. Returns the new object's id.
    */
   importModel: (info: AssetInfo) => string;
+  /**
+   * Adds another object that shows an already imported file (from the Assets panel), at the middle of
+   * the scene, and selects it. One undo step. Returns the new object's id, or null if the file is unknown.
+   */
+  placeAsset: (assetId: string, at?: [number, number, number]) => string | null;
+  /** Renames an imported file in the Assets panel (objects keep their names). One undo step. */
+  renameAsset: (assetId: string, name: string) => void;
+  /** Sets an imported file's source / licence note. One undo step. */
+  setAssetNote: (assetId: string, note: string) => void;
+  /** Deletes an imported file and every object that shows it, as one undo step. */
+  deleteAsset: (assetId: string) => void;
   /** Deletes the selected objects and everything below them. Locked objects are left alone. */
   deleteSelected: () => void;
   /** Copies the selected objects (and everything below them), placed beside the originals, and selects the copies. */
@@ -147,6 +165,13 @@ type SceneState = {
   /** Puts back the last undone change. */
   redo: () => void;
 };
+
+/** The model object standing at a spot on the ground instead of the middle (when a spot is given). */
+function placedAt(node: SceneNode, at?: [number, number, number]): SceneNode {
+  return at
+    ? { ...node, transform: { ...node.transform, position: at } }
+    : node;
+}
 
 function createInitialScene(): Scene {
   return addNode(createEmptyScene(), createNode("initial-cube", "cube"));
@@ -241,6 +266,50 @@ export const useSceneStore = create<SceneState>()((set) => ({
     }));
     return id;
   },
+  placeAsset: (assetId, at) => {
+    const info = useSceneStore.getState().scene.assets[assetId];
+    if (!info) return null;
+    const id = crypto.randomUUID();
+    set((state) => ({
+      scene: addNode(
+        state.scene,
+        placedAt(
+          createModelNode(
+            id,
+            availableName(state.scene, info.name),
+            info.id,
+            fitScale(info),
+          ),
+          at,
+        ),
+      ),
+      selectedIds: [id],
+      history: record(state, `Place ${info.name}`),
+    }));
+    return id;
+  },
+  renameAsset: (assetId, name) =>
+    set((state) => {
+      const scene = renameAsset(state.scene, assetId, name);
+      if (scene === state.scene) return state;
+      return { scene, history: record(state, "Rename asset") };
+    }),
+  setAssetNote: (assetId, note) =>
+    set((state) => {
+      const scene = setAssetNote(state.scene, assetId, note);
+      if (scene === state.scene) return state;
+      return { scene, history: record(state, "Edit asset note") };
+    }),
+  deleteAsset: (assetId) =>
+    set((state) => {
+      const result = removeAsset(state.scene, assetId);
+      if (result.scene === state.scene) return state;
+      return {
+        scene: result.scene,
+        selectedIds: resolveSelection(result.scene, state.selectedIds),
+        history: record(state, "Delete asset"),
+      };
+    }),
   deleteSelected: () =>
     set((state) => {
       const ids = editableIds(state.scene, state.selectedIds);
@@ -379,12 +448,9 @@ export const useSceneStore = create<SceneState>()((set) => ({
       const node = state.scene.nodes[id];
       if (!node || isEffectivelyLocked(state.scene, id)) return state;
       const clean = sanitizeMaterialChange(change);
-      const differs = (["roughness", "metalness"] as const).some(
-        (key) => clean[key] !== undefined && clean[key] !== node[key],
-      );
-      if (!differs) return state;
+      if (!materialChangeDiffers(node.material, clean)) return state;
       return {
-        scene: updateNode(state.scene, id, clean),
+        scene: setMaterial(state.scene, id, clean),
         history: record(state, "Material"),
       };
     }),
@@ -396,7 +462,7 @@ export const useSceneStore = create<SceneState>()((set) => ({
       }
       const clean = sanitizeMaterialChange(change);
       if (Object.keys(clean).length === 0) return state;
-      return { scene: updateNode(state.scene, id, clean) };
+      return { scene: setMaterial(state.scene, id, clean) };
     }),
   previewNodeColor: (id, color) =>
     set((state) => {

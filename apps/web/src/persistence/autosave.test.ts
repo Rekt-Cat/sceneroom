@@ -18,6 +18,7 @@ const sceneWith = (n: number): Scene => ({
       triangles: 1,
       boundsMin: [0, 0, 0],
       boundsMax: [1, 1, 1],
+      note: "",
     },
   },
 });

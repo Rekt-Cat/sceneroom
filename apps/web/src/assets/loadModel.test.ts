@@ -151,6 +151,7 @@ describe("importGlbFile", () => {
       triangles: 3,
       boundsMin: [0, 0, 0],
       boundsMax: [2, 1, 0],
+      note: "",
     });
     expect(info.id).toBe(await sha256Hex(data));
     expect(await assetStorage.has(info.id)).toBe(true);

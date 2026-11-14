@@ -442,3 +442,27 @@ Asked for: put a child right under its parent, and rearrange the hierarchy.
 - **Dragging several selected rows** puts them in front of the same place in the order they are listed. Dropping a row next to itself is not offered.
 - **Moves between parents keep the world position** as before; a reorder inside the same parent keeps the transform exactly as it is (no recomputing, so no rounding noise).
 - **Also:** Move up and Move down in the right-click menu (one place among the siblings, single object, not locked). Keyboard reordering (Alt + arrows) is not done.
+
+## Assets panel (2026-11-14)
+
+- **A tab in the left panel** next to Scene (each tab shows a count; the Add button only shows on the Scene tab; Import is on both). It first was a folded section under the scene list, which the owner did not like, so it became a tab. With no imports the tab says how to import. Each file shows its name, triangles, size and how many objects use it. Buttons: place another copy, source and licence note, delete.
+- **Rename** changes the file's name in the panel only; objects keep their own names. **Note** (up to 500 characters) lives on the asset record in the scene, so it is saved with the scene. Old scenes load with an empty note.
+- **Deleting a file also deletes every object that shows it** (and their children) as ONE undo step, after a confirmation when objects use it. An object without its file would only be a placeholder. Undo brings all of it back.
+- **Known gap:** the file's bytes stay in the browser's IndexedDB after delete (so Undo can restore it). Cleaning up files no scene uses is not done yet.
+- **Thumbnails** are drawn in the browser with one shared small three.js renderer (128 px, transparent background, one asset at a time in a queue), from a copy of the loaded model, framed by `thumbnailFraming` (pure, tested). They are kept in memory for the visit, not saved: they are cheap to draw again and would only make the scene bigger. While one is being drawn, or if it fails, a model icon shows.
+- **Dragging an asset into the 3D view** uses the browser's own drag and drop (the whole asset card is the handle, except while pressing in a text box, so typing and selecting text still work; the label is `application/x-sceneroom-asset`, value = asset id). `AssetDropController` (inside the Canvas, because it needs the camera) turns the drop point into a ray and `groundHit` (pure, tested) finds where it meets the floor at height 0; the object stands there. A drop above the horizon puts it at the middle. While the pointer is over the 3D view a see-through copy (40% opaque, its own copies of the materials so the real objects are not faded; `AssetPreview.tsx`, `PREVIEW_OPACITY`) follows it, and on drop the solid object takes its place. One undo step "Place <name>".
+- **Not done:** search and folders in the Assets tab; drop onto a specific object to make it a parent.
+
+## Surface and shading (2026-11-14)
+
+Built from the plan "Surface and shading" (2026-11-13), with these choices.
+
+- **`material` section.** `roughness` and `metalness` moved off the node into `node.material`, with the new values: `emissiveColor`, `emissiveIntensity`, `opacity`, `doubleSided`, `flatShading`, `castShadow`, `receiveShadow`. Colour stays on the node. Every field has a Zod default, so the schema version stays 1. `sceneNodeSchema` first runs `migrateLegacyMaterial`: an older saved object with flat `roughness` / `metalness` gets them moved into `material` (and an older plane becomes double-sided, because it was always drawn from both sides). Tested with the old shape, with a missing section, with a half-filled section, and with out-of-range values (still refused, also in the old flat shape).
+- **The migration also covers the browser's autosave**, so a scene saved before this change opens normally.
+- **Opacity is one slider.** The plan had "solid / see-through / cut-out". Cut-out needs a texture with transparent parts, which we do not have until texture maps, so it waits for them. 1 = solid, below 1 = see-through (`transparent`, no `depthWrite`). A cut object is still drawn at 40% (or less if the object is already more see-through).
+- **Flat shading, without the angle limit.** A switch (`flatShading`). The angle limit (smooth edges below an angle, hard above) needs normals recalculated on the geometry; left for later.
+- **Reflection strength postponed** until the environment step: with no environment map it would change nothing you can see.
+- **Shadows.** The canvas has shadows on; the one directional light casts them (2048 map, a 15-unit area around the middle); an invisible 200-unit ground (`shadowMaterial`, no clicks) catches them. Default is cast ON and receive ON, so existing scenes now show shadows. Models take the two switches too (applied to every part of the model); their own materials are left alone, so a model shows only the two shadow switches in the Inspector.
+- **Changing a shader setting rebuilds the material** (`key` on flat shading, double-sided and solid / see-through), because three.js builds its shader for those. Bug found in testing: without solid / see-through in the key, lowering opacity did nothing until double-sided was toggled, because a material first drawn solid is compiled with an `OPAQUE` switch that forces full opacity.
+- **One undo step per glow-colour pick**, as for the main colour; each slider drag is one step.
+- **Not done:** the angle limit, cut-out, reflection strength, shadows from lights other than the one sun (lights come next), shadows beyond 15 units.

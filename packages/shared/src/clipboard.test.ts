@@ -7,7 +7,7 @@ import {
   pasteTarget,
   resolveAutoPlacement,
 } from "./clipboard";
-import { createEmptyScene, sceneSchema } from "./scene";
+import { DEFAULT_MATERIAL, createEmptyScene, sceneSchema } from "./scene";
 import {
   addAsset,
   addNode,
@@ -77,6 +77,7 @@ describe("copyToClipboard", () => {
       triangles: 1,
       boundsMin: [0, 0, 0] as [number, number, number],
       boundsMax: [1, 1, 1] as [number, number, number],
+      note: "",
     };
     let scene = addAsset(createEmptyScene(), info);
     scene = addNode(scene, createModelNode("m1", "Car", "f1", 1));
@@ -203,6 +204,7 @@ describe("pasteFromClipboard", () => {
       triangles: 1,
       boundsMin: [0, 0, 0] as [number, number, number],
       boundsMax: [1, 1, 1] as [number, number, number],
+      note: "",
     };
     let scene = addAsset(createEmptyScene(), info);
     scene = addNode(scene, createModelNode("m", "Car", "f1", 1));
@@ -222,8 +224,7 @@ describe("pasteFromClipboard", () => {
     scene = addNode(scene, {
       ...createNode("a", "cube"),
       color: "#112233",
-      roughness: 0.2,
-      metalness: 0.9,
+      material: { ...DEFAULT_MATERIAL, roughness: 0.2, metalness: 0.9 },
       visible: false,
       locked: true,
     });
@@ -233,8 +234,7 @@ describe("pasteFromClipboard", () => {
     });
     expect(after.nodes["new1"]).toMatchObject({
       color: "#112233",
-      roughness: 0.2,
-      metalness: 0.9,
+      material: { roughness: 0.2, metalness: 0.9 },
       visible: false,
       locked: true,
     });

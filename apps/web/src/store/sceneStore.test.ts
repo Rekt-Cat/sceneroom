@@ -377,19 +377,19 @@ describe("material (roughness and metalness)", () => {
 
   it("changes the values and is one undo step", () => {
     get().setNodeMaterial("initial-cube", { roughness: 0.2, metalness: 0.9 });
-    expect(cube()).toMatchObject({ roughness: 0.2, metalness: 0.9 });
+    expect(cube().material).toMatchObject({ roughness: 0.2, metalness: 0.9 });
     expect(nextUndoLabel(get().history)).toBe("Material");
     get().undo();
-    expect(cube()).toMatchObject({ roughness: 0.6, metalness: 0.1 });
+    expect(cube().material).toMatchObject({ roughness: 0.6, metalness: 0.1 });
   });
 
   it("keeps values between 0 and 1 and ignores nonsense", () => {
     get().setNodeMaterial("initial-cube", { roughness: 5, metalness: -3 });
-    expect(cube()).toMatchObject({ roughness: 1, metalness: 0 });
+    expect(cube().material).toMatchObject({ roughness: 1, metalness: 0 });
     const steps = get().history.past.length;
     get().setNodeMaterial("initial-cube", { roughness: NaN });
     expect(get().history.past).toHaveLength(steps);
-    expect(cube().roughness).toBe(1);
+    expect(cube().material.roughness).toBe(1);
   });
 
   it("records nothing when the value does not change", () => {
@@ -404,15 +404,15 @@ describe("material (roughness and metalness)", () => {
     get().previewNodeMaterial("initial-cube", { roughness: 0.3 });
     expect(get().history.past).toHaveLength(0);
     get().endEdit(true);
-    expect(cube().roughness).toBe(0.3);
+    expect(cube().material.roughness).toBe(0.3);
     expect(get().history.past).toHaveLength(1);
     get().undo();
-    expect(cube().roughness).toBe(0.6);
+    expect(cube().material.roughness).toBe(0.6);
   });
 
   it("previews are ignored when no edit is in progress", () => {
     get().previewNodeMaterial("initial-cube", { roughness: 0.1 });
-    expect(cube().roughness).toBe(0.6);
+    expect(cube().material.roughness).toBe(0.6);
   });
 
   it("a locked object's material cannot be changed", () => {
@@ -421,7 +421,7 @@ describe("material (roughness and metalness)", () => {
     get().beginEdit("Material");
     get().previewNodeMaterial("initial-cube", { roughness: 0.1 });
     get().endEdit(true);
-    expect(cube().roughness).toBe(0.6);
+    expect(cube().material.roughness).toBe(0.6);
   });
 
   it("a duplicate has the same material", () => {
@@ -432,7 +432,7 @@ describe("material (roughness and metalness)", () => {
       (node) => node.id !== "initial-cube",
     );
     expect(copies).toHaveLength(1);
-    expect(copies[0]?.metalness).toBe(0.8);
+    expect(copies[0]?.material.metalness).toBe(0.8);
   });
 });
 
@@ -487,6 +487,7 @@ describe("importing a model", () => {
     triangles: 9000,
     boundsMin: [-1, 0.2, -5] as [number, number, number],
     boundsMax: [1, 1.8, 5] as [number, number, number],
+    note: "",
   };
 
   it("adds the file's record and an object that uses it, scaled to fit, and selects it", () => {
@@ -700,6 +701,7 @@ describe("copy and paste", () => {
       triangles: 1,
       boundsMin: [0, 0, 0] as [number, number, number],
       boundsMax: [1, 1, 1] as [number, number, number],
+      note: "",
     };
     const id = get().importModel(info);
     get().select(id);
@@ -893,5 +895,126 @@ describe("order of siblings", () => {
     const saved = JSON.parse(JSON.stringify(get().scene));
     get().loadScene(saved);
     expect(order(null)).toEqual(["Sphere", "Cube"]);
+  });
+});
+
+describe("the Assets panel actions", () => {
+  const info = {
+    id: "hash-of-a-car",
+    name: "Muscle car",
+    type: "model" as const,
+    bytes: 2048,
+    triangles: 9000,
+    boundsMin: [-1, 0.2, -5] as [number, number, number],
+    boundsMax: [1, 1.8, 5] as [number, number, number],
+    note: "",
+  };
+
+  it("places another object that uses the same file, with a free name, and selects it", () => {
+    const first = get().importModel(info);
+    const second = get().placeAsset(info.id)!;
+    expect(second).not.toBe(first);
+    expect(get().scene.nodes[second]).toMatchObject({
+      kind: "model",
+      assetId: info.id,
+      name: "Muscle car (1)",
+    });
+    expect(Object.keys(get().scene.assets)).toEqual([info.id]);
+    expect(get().selectedIds).toEqual([second]);
+    expect(nextUndoLabel(get().history)).toBe("Place Muscle car");
+  });
+
+  it("places the object at the given spot on the ground (a drop on the 3D view)", () => {
+    get().importModel(info);
+    const id = get().placeAsset(info.id, [3, 0, -2])!;
+    expect(get().scene.nodes[id]?.transform.position).toEqual([3, 0, -2]);
+    const middle = get().placeAsset(info.id)!;
+    expect(get().scene.nodes[middle]?.transform.position).toEqual([0, 0, 0]);
+  });
+
+  it("placing an unknown file does nothing", () => {
+    const before = get().scene;
+    expect(get().placeAsset("nope")).toBeNull();
+    expect(get().scene).toBe(before);
+  });
+
+  it("renames the file and edits its note, each as one undo step, and ignores no-ops", () => {
+    get().importModel(info);
+    get().renameAsset(info.id, "Red car");
+    expect(get().scene.assets[info.id]?.name).toBe("Red car");
+    get().setAssetNote(info.id, "CC-BY, by Jane");
+    expect(get().scene.assets[info.id]?.note).toBe("CC-BY, by Jane");
+    const steps = get().history.past.length;
+    get().renameAsset(info.id, "Red car");
+    get().renameAsset(info.id, "   ");
+    get().setAssetNote(info.id, "CC-BY, by Jane");
+    expect(get().history.past).toHaveLength(steps);
+    get().undo();
+    expect(get().scene.assets[info.id]?.note).toBe("");
+  });
+
+  it("deleting a file removes the objects that use it, in one undo step", () => {
+    get().importModel(info);
+    get().placeAsset(info.id);
+    const others = Object.values(get().scene.nodes).filter(
+      (n) => n.assetId !== info.id,
+    ).length;
+    get().deleteAsset(info.id);
+    expect(get().scene.assets).toEqual({});
+    expect(Object.keys(get().scene.nodes)).toHaveLength(others);
+    expect(get().selectedIds).toEqual([]);
+    get().undo();
+    expect(Object.keys(get().scene.assets)).toEqual([info.id]);
+    expect(Object.keys(get().scene.nodes)).toHaveLength(others + 2);
+  });
+});
+
+describe("surface values (glow, opacity, sides, shading, shadows)", () => {
+  const cube = () => get().scene.nodes["initial-cube"]!;
+
+  it("changes several values in one undo step and keeps the others", () => {
+    get().setNodeMaterial("initial-cube", {
+      emissiveColor: "#FF8800",
+      emissiveIntensity: 2,
+      opacity: 0.5,
+      flatShading: true,
+    });
+    expect(cube().material).toMatchObject({
+      emissiveColor: "#ff8800",
+      emissiveIntensity: 2,
+      opacity: 0.5,
+      flatShading: true,
+      roughness: 0.6,
+      castShadow: true,
+    });
+    expect(get().history.past).toHaveLength(1);
+    get().undo();
+    expect(cube().material.opacity).toBe(1);
+    expect(cube().material.flatShading).toBe(false);
+  });
+
+  it("the shadow switches turn off and back on", () => {
+    get().setNodeMaterial("initial-cube", { castShadow: false });
+    expect(cube().material.castShadow).toBe(false);
+    get().setNodeMaterial("initial-cube", { castShadow: true });
+    expect(cube().material.castShadow).toBe(true);
+    expect(get().history.past).toHaveLength(2);
+  });
+
+  it("a locked object's surface cannot be changed", () => {
+    get().setNodesLocked(["initial-cube"], true);
+    get().setNodeMaterial("initial-cube", { opacity: 0.2 });
+    expect(cube().material.opacity).toBe(1);
+  });
+
+  it("a copy has the same surface", () => {
+    get().setNodeMaterial("initial-cube", { opacity: 0.3, doubleSided: true });
+    get().select("initial-cube");
+    get().copySelected();
+    get().pasteCopies(null);
+    const copy = Object.values(get().scene.nodes).find(
+      (node) => node.id !== "initial-cube",
+    )!;
+    expect(copy.material).toMatchObject({ opacity: 0.3, doubleSided: true });
   });
 });

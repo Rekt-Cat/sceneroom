@@ -173,13 +173,18 @@ To clear everything that is saved (start from the one starting cube): in Chrome 
 
 ## Importing models
 
-| What                 | Setting                                                | Our value                 | What it does                                                                                                                     |
-| -------------------- | ------------------------------------------------------ | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Largest file         | `MAX_MODEL_BYTES` in `packages/shared/src/assets.ts`   | `50 MB`                   | Bigger files are refused with a message that shows both sizes.                                                                   |
-| Most triangles       | `MAX_MODEL_TRIANGLES` in `assets.ts`                   | `500,000`                 | A model with more triangles is refused (the browser would get slow).                                                             |
-| Size of a new import | `TARGET_IMPORT_SIZE` in `assets.ts`                    | `4` units                 | A new model is scaled so its longest side is this long, whatever size it came in. Use Scale in the Inspector to change it later. |
-| Accepted files       | `importGlbFile` in `apps/web/src/assets/loadModel.ts`  | `.glb` only               | Other formats (glTF with separate files, OBJ) are later steps.                                                                   |
-| Where it appears     | `createModelNode` in `packages/shared/src/sceneOps.ts` | the middle, on the ground | The model's origin is the middle of its bottom face (`modelOffset`), at position 0, 0, 0.                                        |
+| What                 | Setting                                                         | Our value                 | What it does                                                                                                                     |
+| -------------------- | --------------------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Largest file         | `MAX_MODEL_BYTES` in `packages/shared/src/assets.ts`            | `50 MB`                   | Bigger files are refused with a message that shows both sizes.                                                                   |
+| Most triangles       | `MAX_MODEL_TRIANGLES` in `assets.ts`                            | `500,000`                 | A model with more triangles is refused (the browser would get slow).                                                             |
+| Size of a new import | `TARGET_IMPORT_SIZE` in `assets.ts`                             | `4` units                 | A new model is scaled so its longest side is this long, whatever size it came in. Use Scale in the Inspector to change it later. |
+| Accepted files       | `importGlbFile` in `apps/web/src/assets/loadModel.ts`           | `.glb` only               | Other formats (glTF with separate files, OBJ) are later steps.                                                                   |
+| Thumbnail size       | `THUMBNAIL_SIZE_PX` in `apps/web/src/assets/thumbnail.ts`       | `128` px                  | Size of the picture drawn for each asset (shown at 48 px).                                                                       |
+| Thumbnail angle      | `THUMBNAIL_VIEW_DIRECTION` in `thumbnail.ts`                    | `[1, 0.75, 1.2]`          | Which side and how high the camera looks from when the picture is drawn.                                                         |
+| Preview opacity      | `PREVIEW_OPACITY` in `AssetPreview.tsx`                         | `0.4`                     | How solid the see-through preview looks while dragging an asset over the 3D view (1 = solid, 0 = invisible).                     |
+| Furthest drop        | `groundHit` `maxDistance` in `packages/shared/src/placement.ts` | `200` units               | A drop on the ground further away than this (looking along the horizon) is placed at the middle instead.                         |
+| Note length          | `ASSET_NOTE_MAX_LENGTH` in `packages/shared/src/scene.ts`       | `500` characters          | Longest source / licence note on an imported file (Assets panel).                                                                |
+| Where it appears     | `createModelNode` in `packages/shared/src/sceneOps.ts`          | the middle, on the ground | The model's origin is the middle of its bottom face (`modelOffset`), at position 0, 0, 0.                                        |
 
 ## Reset buttons (the starting values)
 
@@ -204,6 +209,24 @@ Not given a reset button on purpose: the name (free text, no starting value), th
 Each slider has a small reset button that puts it back to the starting value above (greyed out when it is already there).
 
 Metal needs something to reflect. Until the environment step adds reflections, high metalness looks dark rather than shiny.
+
+## Surface and shading (glow, opacity, sides, shadows)
+
+All of these live in each object's `material` section (`materialSchema` in `packages/shared/src/scene.ts`) and have a reset button in the Inspector's "Surface" section.
+
+| What                   | Setting                                    | Our value                                               | What it does                                                                                                                                     |
+| ---------------------- | ------------------------------------------ | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Starting glow colour   | `DEFAULT_EMISSIVE_COLOR` in `scene.ts`     | `#000000`                                               | Black = no glow. Pick another colour and the object glows with it.                                                                               |
+| Starting glow strength | `DEFAULT_EMISSIVE_INTENSITY` in `scene.ts` | `1`                                                     | Multiplies the glow colour. Only matters once the glow colour is not black.                                                                      |
+| Strongest glow         | `MAX_EMISSIVE_INTENSITY` in `scene.ts`     | `5`                                                     | The right end of the Glow slider.                                                                                                                |
+| Starting opacity       | `DEFAULT_OPACITY` in `scene.ts`            | `1`                                                     | 1 = solid, 0 = invisible, in between = see-through. A see-through object stops hiding what is behind it from the depth buffer (no `depthWrite`). |
+| Starting switches      | `DEFAULT_MATERIAL` in `scene.ts`           | cast on, receive on, double-sided off, flat shading off | A new plane starts double-sided (`createNode` in `sceneOps.ts`).                                                                                 |
+| Shadow sharpness       | `SHADOW_MAP_SIZE` in `Viewport.tsx`        | `2048`                                                  | Pixels of the shadow picture per side. Higher is sharper and slower.                                                                             |
+| Shadow area            | `SHADOW_AREA` in `Viewport.tsx`            | `15` units                                              | Objects further than this from the middle get no shadow (the light sees a square this wide).                                                     |
+| Shadow darkness        | `SHADOW_OPACITY` in `Viewport.tsx`         | `0.35`                                                  | How dark shadows are on the ground, 0 to 1.                                                                                                      |
+| Ground size            | `GROUND_SIZE` in `Viewport.tsx`            | `200` units                                             | The invisible floor that catches shadows.                                                                                                        |
+
+Not here yet: Reflection strength (needs the environment step) and the angle limit for smooth shading.
 
 ## Locking objects
 

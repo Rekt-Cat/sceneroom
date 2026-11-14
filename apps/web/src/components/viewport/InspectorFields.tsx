@@ -3,8 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import {
   DEFAULT_COLOR,
-  DEFAULT_METALNESS,
-  DEFAULT_ROUGHNESS,
+  DEFAULT_MATERIAL,
   buildSceneTree,
   canReparent,
   flattenTree,
@@ -14,7 +13,7 @@ import {
   editTransform,
   formatNumber,
   normalizeHexColor,
-  parseUnitInput,
+  parseNumberInput,
   resetTransformGroup,
   transformsEqual,
   type Axis,
@@ -396,16 +395,19 @@ export function AppearanceSection({
  * A 0 to 1 slider with a number box, for how the surface looks. Dragging the slider changes the
  * object live but is ONE undo step; typing a number or using the arrow keys is one step per change.
  */
-function MaterialSlider({
+export function MaterialSlider({
   node,
   property,
   label,
   disabled,
+  max = 1,
 }: {
   node: SceneNode;
-  property: "roughness" | "metalness";
+  property: "roughness" | "metalness" | "opacity" | "emissiveIntensity";
   label: string;
   disabled: boolean;
+  /** The largest value (the smallest is 0). */
+  max?: number;
 }) {
   const setNodeMaterial = useSceneStore((state) => state.setNodeMaterial);
   const previewNodeMaterial = useSceneStore(
@@ -417,10 +419,13 @@ function MaterialSlider({
   const dragging = useRef(false);
   const [draft, setDraft] = useState<string | null>(null);
 
-  const value = node[property];
-  const invalid = draft !== null && parseUnitInput(draft) === null;
-  const defaultValue =
-    property === "roughness" ? DEFAULT_ROUGHNESS : DEFAULT_METALNESS;
+  const value = node.material[property];
+  const parse = (text: string) => {
+    const typed = parseNumberInput(text);
+    return typed !== null && typed >= 0 && typed <= max ? typed : null;
+  };
+  const invalid = draft !== null && parse(draft) === null;
+  const defaultValue = DEFAULT_MATERIAL[property];
 
   function onPointerDown() {
     if (disabled) return;
@@ -443,7 +448,7 @@ function MaterialSlider({
   }
 
   function finishTyping() {
-    const typed = draft === null ? null : parseUnitInput(draft);
+    const typed = draft === null ? null : parse(draft);
     if (typed !== null) setNodeMaterial(node.id, { [property]: typed });
     setDraft(null);
   }
@@ -457,7 +462,7 @@ function MaterialSlider({
         id={id}
         type="range"
         min={0}
-        max={1}
+        max={max}
         step={0.01}
         value={value}
         disabled={disabled}
@@ -466,7 +471,7 @@ function MaterialSlider({
         className="h-4 min-w-0 cursor-pointer accent-ed-accent disabled:cursor-not-allowed disabled:opacity-50"
       />
       <input
-        aria-label={`${label}, number from 0 to 1`}
+        aria-label={`${label}, number from 0 to ${max}`}
         aria-invalid={invalid}
         value={draft ?? value.toFixed(2)}
         disabled={disabled}

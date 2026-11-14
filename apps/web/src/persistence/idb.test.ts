@@ -56,6 +56,7 @@ describe("IndexedDbSceneRepository", () => {
       triangles: 2,
       boundsMin: [0, 0, 0],
       boundsMax: [1, 1, 1],
+      note: "",
     });
     scene = addNode(scene, createModelNode("m", "Car", "f1", 2));
     await repo.save(scene);
@@ -110,13 +111,9 @@ describe("IndexedDbSceneRepository", () => {
 
   it("the saved data is validated when read: a scene from an older version gets the new fields", async () => {
     const db = await freshDb();
-    const { locked, roughness, metalness, assetId, ...old } = createNode(
-      "a",
-      "cube",
-    );
+    const { locked, material, assetId, ...old } = createNode("a", "cube");
     void locked;
-    void roughness;
-    void metalness;
+    void material;
     void assetId;
     await run(db, STORE_SCENES, "readwrite", (s) =>
       s.put(

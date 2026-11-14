@@ -4,6 +4,7 @@ import { useEffect, useState, type DragEvent } from "react";
 import { importFiles } from "@/assets/importFile";
 import { startPersistence } from "@/persistence/startPersistence";
 import { useLayoutStore } from "@/store/layoutStore";
+import { carriesAsset } from "./assetDrag";
 import BoxSelectOverlay from "./BoxSelectOverlay";
 import ContextMenu from "./ContextMenu";
 import ControlsLegend from "./ControlsLegend";
@@ -45,6 +46,7 @@ export default function EditorShell() {
   // A file dropped on the 3D view is imported. Dropped anywhere else on the page, the browser would
   // open it and replace the editor (and the scene is not saved yet), so those drops are cancelled.
   const [dropping, setDropping] = useState(false);
+  const [droppingAsset, setDroppingAsset] = useState(false);
   useEffect(() => {
     const cancel = (event: globalThis.DragEvent) => {
       if (carriesFiles(event)) event.preventDefault();
@@ -67,6 +69,7 @@ export default function EditorShell() {
           className="relative min-w-0 flex-1 overflow-hidden bg-[#14191d]"
           onDragEnter={(event) => {
             if (carriesFiles(event)) setDropping(true);
+            if (carriesAsset(event)) setDroppingAsset(true);
           }}
           onDragOver={(event) => {
             if (!carriesFiles(event)) return;
@@ -79,9 +82,11 @@ export default function EditorShell() {
               !event.currentTarget.contains(event.relatedTarget as Node | null)
             ) {
               setDropping(false);
+              setDroppingAsset(false);
             }
           }}
           onDrop={(event) => {
+            setDroppingAsset(false);
             if (!carriesFiles(event)) return;
             event.preventDefault();
             setDropping(false);
@@ -100,6 +105,14 @@ export default function EditorShell() {
               className="pointer-events-none absolute inset-3 grid place-items-center rounded-xl border-2 border-dashed border-ed-accent bg-ed-accent/10 text-sm font-medium"
             >
               Drop a .glb model to import it
+            </div>
+          )}
+          {droppingAsset && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-3 grid place-items-center rounded-xl border-2 border-dashed border-ed-accent bg-ed-accent/10 text-sm font-medium"
+            >
+              Drop to place the model on the ground
             </div>
           )}
         </main>

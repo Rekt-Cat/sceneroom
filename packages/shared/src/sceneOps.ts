@@ -1,9 +1,9 @@
 import {
   DEFAULT_COLOR,
-  DEFAULT_METALNESS,
-  DEFAULT_ROUGHNESS,
+  DEFAULT_MATERIAL,
   NODE_NAME_MAX_LENGTH,
   type AssetInfo,
+  type Material,
   type PrimitiveKind,
   type Scene,
   type SceneNode,
@@ -36,8 +36,8 @@ export function createNode(id: string, kind: PrimitiveKind): SceneNode {
     // y = 0.5 puts a 1-unit primitive on top of the ground grid
     transform: { position: [0, 0.5, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
     color: DEFAULT_COLOR,
-    roughness: DEFAULT_ROUGHNESS,
-    metalness: DEFAULT_METALNESS,
+    // A plane has no thickness, so it starts drawn from both sides
+    material: { ...DEFAULT_MATERIAL, doubleSided: kind === "plane" },
     assetId: null,
     order: 0,
   };
@@ -183,16 +183,28 @@ export function duplicateNode(
 export function updateNode(
   scene: Scene,
   id: string,
-  changes: Partial<
-    Pick<
-      SceneNode,
-      "name" | "visible" | "color" | "locked" | "roughness" | "metalness"
-    >
-  >,
+  changes: Partial<Pick<SceneNode, "name" | "visible" | "color" | "locked">>,
 ): Scene {
   const node = scene.nodes[id];
   if (!node) throw new Error(`Node "${id}" does not exist`);
   return { ...scene, nodes: { ...scene.nodes, [id]: { ...node, ...changes } } };
+}
+
+/** Changes some of an object's surface values, keeping the others. */
+export function setMaterial(
+  scene: Scene,
+  id: string,
+  change: Partial<Material>,
+): Scene {
+  const node = scene.nodes[id];
+  if (!node) throw new Error(`Node "${id}" does not exist`);
+  return {
+    ...scene,
+    nodes: {
+      ...scene.nodes,
+      [id]: { ...node, material: { ...node.material, ...change } },
+    },
+  };
 }
 
 export function setTransform(

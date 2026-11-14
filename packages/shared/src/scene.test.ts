@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_MATERIAL,
   DEFAULT_METALNESS,
   DEFAULT_ROUGHNESS,
   SCENE_SCHEMA_VERSION,
@@ -47,29 +48,73 @@ describe("sceneNodeSchema locked flag", () => {
 });
 
 describe("sceneNodeSchema material values", () => {
-  it("new nodes get the default roughness and metalness", () => {
+  it("new nodes get the default surface", () => {
     const node = createNode("a", "cube");
-    expect(node.roughness).toBe(DEFAULT_ROUGHNESS);
-    expect(node.metalness).toBe(DEFAULT_METALNESS);
+    expect(node.material).toEqual(DEFAULT_MATERIAL);
+    expect(node.material.roughness).toBe(DEFAULT_ROUGHNESS);
+    expect(node.material.metalness).toBe(DEFAULT_METALNESS);
   });
 
-  it("a node saved before these fields existed loads with the defaults", () => {
-    const { roughness, metalness, ...oldNode } = createNode("a", "cube");
-    void roughness;
-    void metalness;
-    const parsed = sceneNodeSchema.parse(oldNode);
-    expect(parsed.roughness).toBe(DEFAULT_ROUGHNESS);
-    expect(parsed.metalness).toBe(DEFAULT_METALNESS);
+  it("a new plane is drawn from both sides, other shapes only from the front", () => {
+    expect(createNode("p", "plane").material.doubleSided).toBe(true);
+    expect(createNode("c", "cube").material.doubleSided).toBe(false);
   });
 
-  it("rejects values outside 0 to 1", () => {
-    const node = createNode("a", "cube");
-    expect(sceneNodeSchema.safeParse({ ...node, roughness: 1.5 }).success).toBe(
-      false,
-    );
+  it("a node saved with no material at all loads with the defaults", () => {
+    const { material, ...oldNode } = createNode("a", "cube");
+    void material;
+    expect(sceneNodeSchema.parse(oldNode).material).toEqual(DEFAULT_MATERIAL);
+  });
+
+  it("an older node with roughness and metalness on the node itself moves them into the material", () => {
+    const { material, ...rest } = createNode("a", "cube");
+    void material;
+    const parsed = sceneNodeSchema.parse({
+      ...rest,
+      roughness: 0.2,
+      metalness: 0.9,
+    });
+    expect(parsed.material).toEqual({
+      ...DEFAULT_MATERIAL,
+      roughness: 0.2,
+      metalness: 0.9,
+    });
+    expect("roughness" in parsed).toBe(false);
+  });
+
+  it("an older plane keeps being drawn from both sides", () => {
+    const { material, ...rest } = createNode("p", "plane");
+    void material;
     expect(
-      sceneNodeSchema.safeParse({ ...node, metalness: -0.1 }).success,
-    ).toBe(false);
+      sceneNodeSchema.parse({ ...rest, roughness: 0.5, metalness: 0 }).material
+        .doubleSided,
+    ).toBe(true);
+    expect(sceneNodeSchema.parse(rest).material.doubleSided).toBe(true);
+  });
+
+  it("a material with only some fields gets the rest from the defaults", () => {
+    const node = createNode("a", "cube");
+    const parsed = sceneNodeSchema.parse({
+      ...node,
+      material: { opacity: 0.5 },
+    });
+    expect(parsed.material).toEqual({ ...DEFAULT_MATERIAL, opacity: 0.5 });
+  });
+
+  it("rejects values outside their range", () => {
+    const node = createNode("a", "cube");
+    const bad = (change: object) =>
+      sceneNodeSchema.safeParse({
+        ...node,
+        material: { ...node.material, ...change },
+      }).success;
+    expect(bad({ roughness: 1.5 })).toBe(false);
+    expect(bad({ metalness: -0.1 })).toBe(false);
+    expect(bad({ opacity: 2 })).toBe(false);
+    expect(bad({ emissiveIntensity: 99 })).toBe(false);
+    expect(bad({ emissiveColor: "red" })).toBe(false);
+    expect(bad({ castShadow: "yes" })).toBe(false);
+    expect(bad({ opacity: 0.5, emissiveColor: "#ff8800" })).toBe(true);
   });
 });
 
