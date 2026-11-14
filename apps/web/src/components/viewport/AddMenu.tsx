@@ -10,6 +10,7 @@ import {
   type PlantPresetName,
   type PrimitiveKind,
 } from "@sceneroom/shared";
+import { usePlantLibraryStore } from "@/store/plantLibraryStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { Icon, KIND_LABELS, KindIcon } from "./icons";
 
@@ -48,6 +49,9 @@ export default function AddMenu() {
   const addPrimitive = useSceneStore((state) => state.addPrimitive);
   const addLight = useSceneStore((state) => state.addLight);
   const addPlant = useSceneStore((state) => state.addPlant);
+  const addCustomPlant = useSceneStore((state) => state.addCustomPlant);
+  const myPlants = usePlantLibraryStore((state) => state.items);
+  const removeMyPlant = usePlantLibraryStore((state) => state.remove);
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<TabId>("shapes");
   const kinds: readonly MenuKind[] =
@@ -187,11 +191,54 @@ export default function AddMenu() {
               )}
             </button>
           ))}
+          {tab === "plants" && myPlants.length > 0 && (
+            <>
+              <p className="mx-2.5 mt-1.5 mb-0.5 border-t border-ed-line-strong pt-2 text-[11px] font-semibold tracking-widest text-ed-text-3 uppercase">
+                My plants
+              </p>
+              {myPlants.map((item, i) => (
+                <div key={item.id} className="flex items-center">
+                  <button
+                    ref={(element) => {
+                      itemRefs.current[kinds.length + i] = element;
+                    }}
+                    type="button"
+                    role="menuitem"
+                    title={`Add a new "${item.name}" with its own seed`}
+                    onClick={() => {
+                      addCustomPlant(item);
+                      setOpen(false);
+                    }}
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2.5 py-2 text-left hover:bg-ed-accent/30 focus-visible:bg-ed-accent/30 focus-visible:outline-none"
+                  >
+                    <span
+                      className="grid size-8 shrink-0 place-items-center rounded-lg bg-ed-panel text-ed-text-2"
+                      style={{ color: item.plant.leafColor }}
+                    >
+                      <Icon name="tree" />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                      {item.name}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    title={`Forget "${item.name}" (plants already in scenes are not touched)`}
+                    aria-label={`Forget ${item.name}`}
+                    onClick={() => removeMyPlant(item.id)}
+                    className="grid size-8 shrink-0 place-items-center rounded-md text-ed-text-3 hover:bg-ed-field hover:text-ed-danger focus-visible:outline-2 focus-visible:outline-ed-accent"
+                  >
+                    <Icon name="trash" />
+                  </button>
+                </div>
+              ))}
+            </>
+          )}
           <p className="mx-1.5 mt-1.5 mb-1 border-t border-ed-line-strong pt-2 text-[11px] text-ed-text-3">
             {tab === "shapes"
               ? "New shapes appear in the middle of the scene and are selected."
               : tab === "plants"
-                ? "New plants grow in the middle of the scene. Change every number, or the seed, in the Inspector."
+                ? "New plants grow in the middle of the scene. Change every number, or the seed, in the Inspector, and save your own under My plants."
                 : "New lights start above the scene, aimed at the middle."}
           </p>
         </div>

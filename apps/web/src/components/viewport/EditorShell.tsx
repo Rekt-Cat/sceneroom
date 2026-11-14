@@ -4,6 +4,7 @@ import { useEffect, useState, type DragEvent } from "react";
 import { importFiles } from "@/assets/importFile";
 import { watchEditMode } from "@/meshEdit/startEditing";
 import { startPersistence } from "@/persistence/startPersistence";
+import { usePlantLibraryStore } from "@/store/plantLibraryStore";
 import { useLayoutStore } from "@/store/layoutStore";
 import { carriesAsset } from "./assetDrag";
 import BoxSelectOverlay from "./BoxSelectOverlay";
@@ -29,6 +30,9 @@ function carriesFiles(event: DragEvent | globalThis.DragEvent): boolean {
  */
 export default function EditorShell() {
   useEditorShortcuts();
+
+  // The plants this person saved (in this browser)
+  useEffect(() => usePlantLibraryStore.getState().hydrate(), []);
 
   // Edit mode ends by itself when its object is no longer the selected one (or is gone)
   useEffect(() => watchEditMode(), []);

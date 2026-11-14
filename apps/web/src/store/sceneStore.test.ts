@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { nextRedoLabel, nextUndoLabel } from "@sceneroom/shared";
+import {
+  createPlantNode,
+  createRandom,
+  nextRedoLabel,
+  nextUndoLabel,
+  varyPlant,
+} from "@sceneroom/shared";
 import { useSceneStore } from "./sceneStore";
 
 const get = () => useSceneStore.getState();
@@ -1390,5 +1396,48 @@ describe("plants", () => {
       (n) => n.kind === "plant" && n.id !== id,
     )!;
     expect(copy.plant).toEqual(plant(id).plant);
+  });
+});
+
+describe("my plants and randomise", () => {
+  const plant = (id: string) => get().scene.nodes[id]!;
+  const mine = {
+    id: "mine",
+    name: "Twisted oak",
+    barkColor: "#332211",
+    plant: (({ seed, ...rest }) => (void seed, rest))({
+      ...createPlantNode("x", "tree", 1).plant!,
+      height: 6.5,
+      droop: 0.3,
+      leafColor: "#aa5500",
+    }),
+  };
+
+  it("adds a saved plant with its numbers, name, trunk colour and a seed of its own, in one undo step", () => {
+    const a = get().addCustomPlant(mine);
+    const b = get().addCustomPlant(mine);
+    expect(plant(a)).toMatchObject({
+      kind: "plant",
+      name: "Twisted oak",
+      color: "#332211",
+      plant: { height: 6.5, droop: 0.3, leafColor: "#aa5500" },
+    });
+    expect(plant(b).name).toBe("Twisted oak (1)");
+    expect(plant(a).plant!.seed).not.toBe(plant(b).plant!.seed);
+    expect(get().selectedIds).toEqual([b]);
+    expect(nextUndoLabel(get().history)).toBe("Add Twisted oak");
+    get().undo();
+    expect(get().scene.nodes[b]).toBeUndefined();
+  });
+
+  it("randomising is one undo step that Undo takes back", () => {
+    const id = get().addPlant("tree");
+    const before = plant(id).plant!;
+    get().setNodePlant(id, varyPlant(before, createRandom(12)));
+    expect(plant(id).plant).not.toEqual(before);
+    expect(plant(id).plant!.levels).toBe(before.levels);
+    expect(plant(id).plant!.leafColor).toBe(before.leafColor);
+    get().undo();
+    expect(plant(id).plant).toEqual(before);
   });
 });

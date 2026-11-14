@@ -15,6 +15,7 @@ import {
   PLANT_PRESET_INFO,
   createLightNode,
   createPlantNode,
+  createPlantNodeFrom,
   createModifier,
   createModelNode,
   createNode,
@@ -65,6 +66,7 @@ import {
   type EnvironmentChange,
   type History,
   type LightChange,
+  type CustomPlant,
   type LightKind,
   type PlantChange,
   type PlantPresetName,
@@ -174,6 +176,8 @@ type SceneState = {
    * edited), as one undo step with the given label. Ignored for locked objects and objects that are not meshes.
    */
   replaceNodeMesh: (nodeId: string, info: AssetInfo, label: string) => void;
+  /** Adds a plant a person saved ("my plants"), with a new random seed, at the middle of the scene, and selects it. One undo step. Returns its id. */
+  addCustomPlant: (item: CustomPlant) => string;
   /** Adds a plant (tree, pine or bush) at the middle of the scene with a random-looking seed, and selects it. One undo step. Returns its id. */
   addPlant: (preset: PlantPresetName) => string;
   /** Changes some settings of a plant as one undo step. Ignored for locked objects and objects that are not plants. */
@@ -513,6 +517,19 @@ export const useSceneStore = create<SceneState>()((set) => ({
       }),
       selectedIds: [id],
       history: record(state, `Add ${preset}`),
+    }));
+    return id;
+  },
+  addCustomPlant: (item) => {
+    const id = crypto.randomUUID();
+    const seed = Math.floor(Math.random() * 100000);
+    set((state) => ({
+      scene: addNode(state.scene, {
+        ...createPlantNodeFrom(id, item, seed),
+        name: availableName(state.scene, item.name),
+      }),
+      selectedIds: [id],
+      history: record(state, `Add ${item.name}`),
     }));
     return id;
   },
