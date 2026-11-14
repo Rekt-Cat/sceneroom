@@ -2,7 +2,14 @@
 
 import { useEditStore } from "@/store/editStore";
 import { useSceneStore } from "@/store/sceneStore";
+import {
+  deleteSelectedPoints,
+  extrudeSelectedFaces,
+} from "@/meshEdit/editOperations";
 import { stopEditing } from "@/meshEdit/startEditing";
+
+const ACTION =
+  "rounded-md border border-ed-line-strong px-2 py-0.5 font-medium hover:bg-ed-field focus-visible:outline-2 focus-visible:outline-ed-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent";
 
 /** The strip at the top of the 3D view while editing points: what is going on and how to get out. */
 export default function EditModeBar() {
@@ -28,9 +35,28 @@ export default function EditModeBar() {
         selected
         {points > 0 ? ` · ${points.toLocaleString("en-US")} triangles` : ""}
       </span>
-      <span className="hidden text-ed-text-3 sm:inline">
-        Click a point · Shift adds · Ctrl-drag a box · A all · drag the arrows
+      <span className="hidden text-ed-text-3 lg:inline">
+        Click a point · Alt-click a face · Shift adds · Ctrl-drag a box · A all
+        · W E R
       </span>
+      <button
+        type="button"
+        onClick={() => void extrudeSelectedFaces()}
+        disabled={selected.length < 3}
+        title="Extrude: copy the selected faces and push them out (Shift + E). Select all the points of a face first."
+        className={ACTION}
+      >
+        Extrude
+      </button>
+      <button
+        type="button"
+        onClick={() => void deleteSelectedPoints()}
+        disabled={selected.length === 0}
+        title="Delete the selected points and the faces that use them (Delete)"
+        className={ACTION}
+      >
+        Delete
+      </button>
       <button
         type="button"
         onClick={stopEditing}

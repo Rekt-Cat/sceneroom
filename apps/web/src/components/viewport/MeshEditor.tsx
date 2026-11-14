@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import {
-  Vector3,
+  Matrix4,
+  Raycaster,
+  Vector2,
   type BufferAttribute,
   type BufferGeometry,
   type Group,
@@ -11,20 +13,25 @@ import {
 } from "three";
 import {
   allPoints,
+  expandToWelded,
+  flatFacePoints,
+  isEffectivelyLocked,
   nearestPoint,
-  selectionAfterClick,
+  selectionAfterBox,
+  selectionAfterWeldedClick,
   selectionCentroid,
+  weldGroups,
 } from "@sceneroom/shared";
 import { commitMeshPositions } from "@/meshEdit/commitMeshEdit";
 import { buildEditOverlay, type EditOverlay } from "@/meshEdit/editOverlay";
-import { copyPositions, moveSelectedLive } from "@/meshEdit/liveEdit";
+import { copyPositions, transformSelectedLive } from "@/meshEdit/liveEdit";
 import { projectPoints } from "@/meshEdit/projectPoints";
 import { useEditStore } from "@/store/editStore";
 import { useSceneStore } from "@/store/sceneStore";
 import Gizmo from "./Gizmo";
 import { markGizmoUsed, shouldIgnoreClick } from "./gizmoGuard";
 import { getMesh } from "./meshRegistry";
-import { SNAP } from "./snapSettings";
+import { SNAP, toRadians } from "./snapSettings";
 
 /** A click on a point counts when the pointer is within this many pixels of it. */
 const PICK_DISTANCE_PX = 12;
@@ -55,6 +62,10 @@ function EditSession({ nodeId }: { nodeId: string }) {
   const selected = useEditStore((state) => state.selected);
   const snapping = useSceneStore(
     (state) => state.snapEnabled !== state.snapKeyHeld,
+  );
+  // A locked object cannot be changed: no handle (it may have been locked while it was being edited)
+  const locked = useSceneStore((state) =>
+    isEffectivelyLocked(state.scene, nodeId),
   );
 
   // The mesh object on screen, and the geometry it has now. The geometry is replaced after every edit,
@@ -112,6 +123,11 @@ function EditSession({ nodeId }: { nodeId: string }) {
       down = null;
       if (!press || press.moved || shouldIgnoreClick() || !bound) return;
       const rect = canvas.getBoundingClientRect();
+      // Alt + click: select the whole flat face under the pointer (ready for Extrude)
+      if (event.altKey) {
+        selectFaceAt(event, rect);
+        return;
+      }
       const projected = projectPoints(
         bound.object,
         camera,
@@ -125,7 +141,49 @@ function EditSession({ nodeId }: { nodeId: string }) {
         PICK_DISTANCE_PX,
       );
       const edit = useEditStore.getState();
-      edit.setSelected(selectionAfterClick(edit.selected, hit, event.shiftKey));
+      // All the points on the spot that was hit are chosen together (a cube has three at each corner), so
+      // moving a corner never tears the surface open
+      const groups = weldGroups(
+        (bound.geometry.getAttribute("position") as BufferAttribute)
+          .array as Float32Array,
+      );
+      edit.setSelected(
+        selectionAfterWeldedClick(groups, edit.selected, hit, event.shiftKey),
+      );
+    }
+
+    /** Selects the flat face the pointer is over (Shift adds it to the selection). Empty space clears. */
+    function selectFaceAt(event: PointerEvent, rect: DOMRect) {
+      if (!bound) return;
+      const edit = useEditStore.getState();
+      const pointer = new Vector2(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -((event.clientY - rect.top) / rect.height) * 2 + 1,
+      );
+      const raycaster = new Raycaster();
+      raycaster.setFromCamera(pointer, camera);
+      const hit = raycaster
+        .intersectObject(bound.object, false)
+        .find((h) => h.object === bound.object && h.faceIndex != null);
+      if (!hit || hit.faceIndex == null) {
+        if (!event.shiftKey) edit.setSelected([]);
+        return;
+      }
+      const index = bound.geometry.index;
+      const positions = (
+        bound.geometry.getAttribute("position") as BufferAttribute
+      ).array as Float32Array;
+      if (!index) return;
+      const mesh = { positions, indices: Uint32Array.from(index.array) };
+      const groups = weldGroups(positions);
+      const face = flatFacePoints(mesh, hit.faceIndex, groups);
+      edit.setSelected(
+        selectionAfterBox(
+          edit.selected,
+          expandToWelded(groups, face),
+          event.shiftKey,
+        ),
+      );
     }
 
     window.addEventListener("pointerdown", onPointerDown, true);
@@ -138,34 +196,39 @@ function EditSession({ nodeId }: { nodeId: string }) {
     };
   }, [bound, camera, canvas]);
 
-  // ---- The move handle on the selected points ----
+  // ---- The handle on the selected points: move, turn or scale (W, E, R) ----
+  const mode = useSceneStore((state) => state.transformMode);
   const [pivot, setPivot] = useState<Group | null>(null);
-  useEffect(() => {
+
+  /** Puts the handle at the middle of the selected points, in a plain state (not turned or scaled). */
+  function placePivot() {
     if (!pivot || !bound) return;
     const middle = selectionCentroid(
       (bound.geometry.getAttribute("position") as BufferAttribute)
         .array as Float32Array,
-      selected,
+      useEditStore.getState().selected,
     );
     if (!middle) return;
     bound.object.updateWorldMatrix(true, false);
     pivot.position.set(...middle).applyMatrix4(bound.object.matrixWorld);
     pivot.rotation.set(0, 0, 0);
     pivot.scale.set(1, 1, 1);
-  }, [pivot, bound, selected]);
+  }
+  useEffect(placePivot, [pivot, bound, selected]);
 
   const dragRef = useRef<{
     start: Float32Array;
-    pivotStart: Vector3;
+    pivotInverse: Matrix4;
     selected: readonly number[];
   } | null>(null);
 
   function onDragStart() {
     if (!pivot || !bound) return;
     markGizmoUsed();
+    pivot.updateMatrixWorld();
     dragRef.current = {
       start: copyPositions(bound.geometry),
-      pivotStart: pivot.position.clone(),
+      pivotInverse: pivot.matrixWorld.clone().invert(),
       selected: useEditStore.getState().selected,
     };
   }
@@ -173,16 +236,26 @@ function EditSession({ nodeId }: { nodeId: string }) {
   function onDragMove() {
     const drag = dragRef.current;
     if (!pivot || !bound || !drag) return;
+    pivot.updateMatrixWorld();
     bound.object.updateWorldMatrix(true, false);
-    // How far the handle moved in the 3D view, turned into how far that is in the mesh's own space
-    // (the object may be turned, scaled or inside a parent)
-    const from = bound.object.worldToLocal(drag.pivotStart.clone());
-    const to = bound.object.worldToLocal(pivot.position.clone());
-    moveSelectedLive(bound.geometry, drag.start, drag.selected, [
-      to.x - from.x,
-      to.y - from.y,
-      to.z - from.z,
-    ]);
+    // How the handle changed in the 3D view (a move, a turn or a scale, around where it stood) ...
+    const change = new Matrix4().multiplyMatrices(
+      pivot.matrixWorld,
+      drag.pivotInverse,
+    );
+    // ... as a change in the mesh's own space (the object may be turned, scaled or inside a parent)
+    const world = bound.object.matrixWorld;
+    const local = new Matrix4()
+      .copy(world)
+      .invert()
+      .multiply(change)
+      .multiply(world);
+    transformSelectedLive(
+      bound.geometry,
+      drag.start,
+      drag.selected,
+      local.elements,
+    );
   }
 
   function onDragEnd() {
@@ -191,21 +264,27 @@ function EditSession({ nodeId }: { nodeId: string }) {
     dragRef.current = null;
     if (!drag || !bound) return;
     const count = drag.selected.length;
+    const verb =
+      mode === "rotate" ? "Rotate" : mode === "scale" ? "Scale" : "Move";
     void commitMeshPositions(
       nodeId,
       copyPositions(bound.geometry),
-      count === 1 ? "Move point" : `Move ${count} points`,
-    );
+      count === 1 ? `${verb} point` : `${verb} ${count} points`,
+    ).then(() => placePivot());
+    // Back to a plain handle, ready for the next drag
+    placePivot();
   }
 
   return (
     <>
       <group ref={setPivot} />
-      {pivot && selected.length > 0 && bound && (
+      {pivot && selected.length > 0 && bound && !locked && (
         <Gizmo
           object={pivot}
-          mode="translate"
+          mode={mode}
           translationSnap={snapping ? SNAP.translate : null}
+          rotationSnap={snapping ? toRadians(SNAP.rotateDegrees) : null}
+          scaleSnap={snapping ? SNAP.scale : null}
           onMouseDown={onDragStart}
           onObjectChange={onDragMove}
           onMouseUp={onDragEnd}
