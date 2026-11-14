@@ -77,7 +77,8 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 - [ ] Assets panel: thumbnails, place copies, rename, delete, source and licence note
 - [x] Autosave in the browser (IndexedDB): the scene and the imported files are saved after each change and restored on reload; unreadable data is backed up; a status in the top bar (branch `feature/autosave`, needs a browser check)
 - [x] Saving the scene as a file and opening it (`.sceneroom`, branch `feature/scene-file`, waiting for a browser check); scene versions and migrations are covered by the Zod defaults and the file version number
-- [ ] glTF (GLB) export; glTF with separate files, compressed models, then OBJ
+- [x] GLB export (`feature/glb-export`, waiting for a browser check, then trying the file in Blender or Unity)
+- [ ] glTF with separate files, compressed models, then OBJ
 - [ ] Design the editable-mesh data format and where big meshes are stored (see `ADVANCED-EDITING.md`, "The foundation"), so custom meshes can be saved and exported
 
 ### Phase 6: Docker, database, project backend
