@@ -366,6 +366,10 @@ Added from the Add menu's "Plants" tab. All the numbers are in `plantSchema` (`p
 | Forest copies   | `FOREST_DEFAULTS` in `PlantSection.tsx`       | `12` copies, radius `6`, space `1.5`, size mix `0.25` | The starting numbers of the Scatter copies controls (not saved).                                     |
 | Golden angle    | `GOLDEN_ANGLE` in `growBranches` (`plant.ts`) | `2.4` radians                                         | How branches are spread round their parent so they do not line up.                                   |
 
+| Randomise amount | `varyPlant` `amount` in `plant.ts` | `0.25` | How far each press moves the numbers: sizes are multiplied by a factor between 0.8 and 1.25 (x or divided by 1.25), other numbers shift by that fraction of a typical range. Every press varies the plant you started from (`createPlantRandomiser`), so it never drifts. Levels, sides, rings, leaf style and colours are never changed. |
+| Saved plants | `MAX_CUSTOM_PLANTS`, `CUSTOM_PLANT_NAME_MAX_LENGTH` in `plant.ts` | `24`, `40` characters | How many plants "Save as my plant" keeps (the oldest are dropped) and the longest name. |
+| Where they are kept | `PLANT_LIBRARY_KEY` in `store/plantLibraryStore.ts` | `sceneroom.plants.v1` | The browser storage key for the saved plants. |
+
 A default tree is about 3,200 triangles and takes 2 ms to grow; the largest the sliders allow is about 312,000 triangles and 28 ms.
 
 ## Locking objects

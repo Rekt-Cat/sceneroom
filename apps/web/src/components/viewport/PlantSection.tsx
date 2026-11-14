@@ -2,16 +2,21 @@
 
 import { useState } from "react";
 import {
+  CUSTOM_PLANT_NAME_MAX_LENGTH,
   DEFAULT_PLANT,
   LEAF_STYLES,
   PLANT_PRESET_INFO,
   PLANT_PRESET_NAMES,
+  createPlantRandomiser,
+  createRandom,
   scatterSpots,
   type LeafStyle,
   type PlantChange,
   type SceneNode,
 } from "@sceneroom/shared";
 import { bakePlantToMeshes } from "@/mesh/bakePlant";
+import { useImportStore } from "@/store/importStore";
+import { usePlantLibraryStore } from "@/store/plantLibraryStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { Choice } from "./EnvironmentPanel";
 import { Icon } from "./icons";
@@ -139,6 +144,9 @@ export default function PlantSection({
   const applyPlantPreset = useSceneStore((state) => state.applyPlantPreset);
   const setNodeColor = useSceneStore((state) => state.setNodeColor);
   const previewNodeColor = useSceneStore((state) => state.previewNodeColor);
+  // Remembers the plant the button started from, so pressing it many times gives variations of ONE plant
+  // instead of drifting (see createPlantRandomiser). A new one for each plant shown.
+  const [randomise] = useState(createPlantRandomiser);
   const plant = node.plant;
   if (!plant) return null;
 
@@ -207,6 +215,24 @@ export default function PlantSection({
           </button>
         </div>
 
+        <button
+          type="button"
+          disabled={disabled}
+          title="Change the numbers a little at random, and grow from a new seed. Every press varies the plant you started from, so pressing it again and again never drifts. One undo step."
+          onClick={() =>
+            commit(
+              randomise(
+                plant,
+                createRandom(Math.floor(Math.random() * 2 ** 31)),
+              ),
+            )
+          }
+          className="flex h-8 w-full items-center justify-center gap-2 rounded-md border border-ed-line-strong bg-ed-raised text-sm font-medium hover:brightness-110 focus-visible:outline-2 focus-visible:outline-ed-accent disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Icon name="redo" />
+          Randomise
+        </button>
+
         <p className={SUBTITLE}>Trunk</p>
         {SHAPE.map(slider)}
 
@@ -265,10 +291,64 @@ export default function PlantSection({
           More sides and rings make rounder branches, and more triangles.
         </p>
 
+        <SaveAsMyPlant node={node} />
         <Forest node={node} disabled={disabled} />
         <MakeMeshButton node={node} disabled={disabled} />
       </div>
     </section>
+  );
+}
+
+/**
+ * "Save as my plant": keeps this plant's numbers and trunk colour under a name, so it appears under "My plants"
+ * in the Add menu, one click to add again. Saved in this browser (not in the scene). Saving again under the
+ * same name replaces it.
+ */
+function SaveAsMyPlant({ node }: { node: SceneNode }) {
+  const save = usePlantLibraryStore((state) => state.save);
+  const [name, setName] = useState("");
+  const shown = name || node.name;
+  function submit() {
+    const item = save(shown, node);
+    useImportStore.getState().setMessage(
+      item
+        ? {
+            tone: "info",
+            text: `Saved "${item.name}" under My plants (Add menu, Plants tab).`,
+          }
+        : { tone: "error", text: "Give the plant a name to save it." },
+    );
+    if (item) setName("");
+  }
+  return (
+    <div className="space-y-2 border-t border-ed-line pt-3">
+      <p className={SUBTITLE}>My plants</p>
+      <div className="flex gap-1.5">
+        <input
+          value={name}
+          placeholder={node.name}
+          maxLength={CUSTOM_PLANT_NAME_MAX_LENGTH}
+          aria-label="Name for this plant"
+          onChange={(event) => setName(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") submit();
+          }}
+          className="h-8 min-w-0 flex-1 rounded-md border border-ed-line bg-ed-field px-2.5 text-sm outline-none placeholder:text-ed-text-3 focus:border-ed-accent"
+        />
+        <button
+          type="button"
+          title="Keep these numbers and the trunk colour as a plant you can add again (the seed is not kept: each new one grows differently)"
+          onClick={submit}
+          className="h-8 shrink-0 rounded-md border border-ed-line-strong bg-ed-raised px-3 text-sm font-medium hover:brightness-110 focus-visible:outline-2 focus-visible:outline-ed-accent"
+        >
+          Save
+        </button>
+      </div>
+      <p className="text-[11px] leading-relaxed text-ed-text-3">
+        Saves these numbers under a name. It then shows in the Add menu, under
+        Plants, in this browser. Each new one gets its own seed.
+      </p>
+    </div>
   );
 }
 

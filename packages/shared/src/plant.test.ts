@@ -478,3 +478,297 @@ describe("scattering a forest", () => {
     );
   });
 });
+
+import {
+  CUSTOM_PLANT_NAME_MAX_LENGTH,
+  MAX_CUSTOM_PLANTS,
+  addCustomPlant,
+  createPlantNodeFrom,
+  customPlantFrom,
+  parseCustomPlants,
+  removeCustomPlant,
+  varyPlant,
+} from "./plant";
+
+describe("varying a plant", () => {
+  it("the same random stream gives the same variation", () => {
+    expect(varyPlant(DEFAULT_PLANT, createRandom(5))).toEqual(
+      varyPlant(DEFAULT_PLANT, createRandom(5)),
+    );
+    expect(varyPlant(DEFAULT_PLANT, createRandom(5))).not.toEqual(
+      varyPlant(DEFAULT_PLANT, createRandom(6)),
+    );
+  });
+
+  it("moves the shape numbers and gives a new seed, but keeps levels, detail, leaf style and colour", () => {
+    const change = varyPlant(DEFAULT_PLANT, createRandom(3));
+    expect(change.height).not.toBe(DEFAULT_PLANT.height);
+    expect(change.seed).toBeDefined();
+    for (const kept of [
+      "levels",
+      "sides",
+      "rings",
+      "leafStyle",
+      "leafColor",
+    ] as const) {
+      expect(change[kept]).toBeUndefined();
+    }
+  });
+
+  it("stays within a quarter either way for sizes, and always inside the allowed ranges, even from the extremes", () => {
+    for (let seed = 0; seed < 200; seed++) {
+      const change = varyPlant(DEFAULT_PLANT, createRandom(seed));
+      // a quarter bigger (x 1.25) or a quarter smaller (divided by 1.25, which is x 0.8)
+      expect(change.height!).toBeGreaterThanOrEqual(
+        DEFAULT_PLANT.height / 1.25 - 1e-9,
+      );
+      expect(change.height!).toBeLessThanOrEqual(
+        DEFAULT_PLANT.height * 1.25 + 1e-9,
+      );
+    }
+    const extreme = {
+      ...DEFAULT_PLANT,
+      height: 30,
+      taper: 0.95,
+      droop: -1,
+      branches: 10,
+      leafDensity: 0,
+    };
+    for (let seed = 0; seed < 200; seed++) {
+      const varied = {
+        ...extreme,
+        ...varyPlant(extreme, createRandom(seed), 1),
+      };
+      expect(plantSchema.safeParse(varied).success).toBe(true);
+    }
+  });
+
+  it("an amount of 0 only changes the seed", () => {
+    const change = varyPlant(DEFAULT_PLANT, createRandom(9), 0);
+    expect(change.height).toBe(DEFAULT_PLANT.height);
+    expect(change.droop).toBe(DEFAULT_PLANT.droop);
+    expect(Object.keys(change)).toContain("seed");
+  });
+
+  it("a pine stays a pine: still taller than wide after many variations", () => {
+    for (let seed = 0; seed < 30; seed++) {
+      const varied = {
+        ...PLANT_PRESETS.pine,
+        ...varyPlant(PLANT_PRESETS.pine, createRandom(seed)),
+      };
+      const { min, max } = bounds(generatePlant(varied).bark.positions);
+      expect(max[1]! - min[1]!).toBeGreaterThan(
+        Math.max(max[0]! - min[0]!, max[2]! - min[2]!),
+      );
+    }
+  });
+
+  it("repeated variation still makes valid plants", () => {
+    let plant: PlantSettings = DEFAULT_PLANT;
+    const random = createRandom(1);
+    for (let i = 0; i < 50; i++) {
+      plant = { ...plant, ...varyPlant(plant, random) };
+      expect(plantSchema.safeParse(plant).success).toBe(true);
+    }
+  });
+});
+
+describe("plants a person saved", () => {
+  const node = () => ({
+    ...createPlantNode("p", "bush", 77),
+    color: "#112233",
+  });
+  const saved = (id: string, name: string) => customPlantFrom(id, name, node());
+
+  it("keeps the numbers and the trunk colour, but not the seed", () => {
+    const item = saved("a", "My bush");
+    expect(item).toMatchObject({
+      id: "a",
+      name: "My bush",
+      barkColor: "#112233",
+    });
+    expect(item.plant).toEqual(
+      (({ seed, ...rest }) => (void seed, rest))(PLANT_PRESETS.bush),
+    );
+    expect("seed" in item.plant).toBe(false);
+  });
+
+  it("the name is trimmed and cut to the allowed length; an empty name or a non-plant is refused", () => {
+    expect(saved("a", "  Oak  ").name).toBe("Oak");
+    expect(saved("a", "x".repeat(100)).name).toHaveLength(
+      CUSTOM_PLANT_NAME_MAX_LENGTH,
+    );
+    expect(() => saved("a", "   ")).toThrow();
+    expect(() => customPlantFrom("a", "x", createNode("c", "cube"))).toThrow(
+      "not a plant",
+    );
+  });
+
+  it("saving with a name already used replaces it, ignoring capitals", () => {
+    let list = addCustomPlant([], saved("1", "Oak"));
+    list = addCustomPlant(list, saved("2", "Pine"));
+    list = addCustomPlant(list, saved("3", "oak"));
+    expect(list.map((i) => i.id)).toEqual(["2", "3"]);
+  });
+
+  it("never holds more than the limit; the oldest are dropped", () => {
+    let list: ReturnType<typeof saved>[] = [];
+    for (let i = 0; i < MAX_CUSTOM_PLANTS + 5; i++)
+      list = addCustomPlant(list, saved(`id${i}`, `Plant ${i}`));
+    expect(list).toHaveLength(MAX_CUSTOM_PLANTS);
+    expect(list[0]!.id).toBe("id5");
+    expect(list.at(-1)!.id).toBe(`id${MAX_CUSTOM_PLANTS + 4}`);
+  });
+
+  it("does not change the list it was given, and removing leaves the others", () => {
+    const original = [saved("1", "Oak")];
+    addCustomPlant(original, saved("2", "Pine"));
+    expect(original).toHaveLength(1);
+    expect(
+      removeCustomPlant([saved("1", "Oak"), saved("2", "Pine")], "1").map(
+        (i) => i.id,
+      ),
+    ).toEqual(["2"]);
+    expect(removeCustomPlant(original, "nope")).toHaveLength(1);
+  });
+
+  it("reads a stored list, dropping what is damaged and keeping the rest", () => {
+    const good = saved("1", "Oak");
+    const list = parseCustomPlants([
+      good,
+      { id: "2", name: "", barkColor: "#112233", plant: good.plant }, // empty name
+      { ...good, id: "3", barkColor: "brown" }, // bad colour
+      { ...good, id: "4", plant: { ...good.plant, levels: 9 } }, // a number out of range
+      "nonsense",
+      null,
+      { ...good, id: "1", name: "Duplicate id" },
+      saved("5", "Pine"),
+    ]);
+    expect(list.map((i) => i.id)).toEqual(["1", "5"]);
+  });
+
+  it("anything that is not a list gives an empty list, and a list longer than the limit is cut", () => {
+    expect(parseCustomPlants(undefined)).toEqual([]);
+    expect(parseCustomPlants("hello")).toEqual([]);
+    expect(parseCustomPlants({ length: 3 })).toEqual([]);
+    const many = Array.from({ length: MAX_CUSTOM_PLANTS + 10 }, (_, i) =>
+      saved(`id${i}`, `Plant ${i}`),
+    );
+    expect(parseCustomPlants(many)).toHaveLength(MAX_CUSTOM_PLANTS);
+  });
+
+  it("a new plant from a saved one has its numbers, name and trunk colour and the seed it is given", () => {
+    const item = saved("a", "My bush");
+    const made = createPlantNodeFrom("n", item, 1234);
+    expect(made).toMatchObject({
+      id: "n",
+      kind: "plant",
+      name: "My bush",
+      color: "#112233",
+    });
+    expect(made.plant).toEqual({ ...PLANT_PRESETS.bush, seed: 1234 });
+    expect(sceneNodeSchema.safeParse(made).success).toBe(true);
+  });
+});
+
+import { createPlantRandomiser, samePlant } from "./plant";
+
+describe("the Randomise button does not drift", () => {
+  it("up and down balance out: the average size after many variations stays where it started", () => {
+    const random = createRandom(1);
+    let total = 0;
+    const presses = 4000;
+    for (let i = 0; i < presses; i++)
+      total += Math.log(
+        varyPlant(DEFAULT_PLANT, random).height! / DEFAULT_PLANT.height,
+      );
+    // the average of the logarithms (the size ratios) is about 0: no lean towards smaller or bigger
+    expect(Math.abs(total / presses)).toBeLessThan(0.01);
+  });
+
+  it("pressing it hundreds of times never heads towards the minimum (the reported problem)", () => {
+    const randomise = createPlantRandomiser();
+    const random = createRandom(42);
+    let plant: PlantSettings = DEFAULT_PLANT; // height 3
+    let lowest = Infinity;
+    let sum = 0;
+    const presses = 1000;
+    for (let i = 0; i < presses; i++) {
+      plant = { ...plant, ...randomise(plant, random) };
+      lowest = Math.min(lowest, plant.height);
+      sum += plant.height;
+    }
+    expect(lowest).toBeGreaterThan(DEFAULT_PLANT.height / 1.25 - 1e-9); // 2.4, nowhere near 0.4
+    expect(sum / presses).toBeGreaterThan(DEFAULT_PLANT.height * 0.95);
+    expect(sum / presses).toBeLessThan(DEFAULT_PLANT.height * 1.05);
+  });
+
+  it("every press is a variation of the plant it started from, not of the last result", () => {
+    const randomise = createPlantRandomiser();
+    const random = createRandom(7);
+    let plant: PlantSettings = { ...DEFAULT_PLANT, height: 10, droop: 0.2 };
+    for (let i = 0; i < 300; i++) {
+      plant = { ...plant, ...randomise(plant, random) };
+      expect(plant.height).toBeGreaterThanOrEqual(10 / 1.25 - 1e-9);
+      expect(plant.height).toBeLessThanOrEqual(10 * 1.25 + 1e-9);
+      expect(Math.abs(plant.droop - 0.2)).toBeLessThanOrEqual(0.25 + 1e-9);
+      expect(plant.levels).toBe(DEFAULT_PLANT.levels);
+    }
+  });
+
+  it("a number that is already at an end stays valid (held at the end, not pushed beyond)", () => {
+    const randomise = createPlantRandomiser();
+    const random = createRandom(3);
+    let plant: PlantSettings = {
+      ...DEFAULT_PLANT,
+      height: 0.2,
+      taper: 0.95,
+      leafDensity: 1,
+    };
+    for (let i = 0; i < 300; i++) {
+      plant = { ...plant, ...randomise(plant, random) };
+      expect(plantSchema.safeParse(plant).success).toBe(true);
+    }
+  });
+
+  it("starts from a new plant when you change something yourself", () => {
+    const randomise = createPlantRandomiser();
+    const random = createRandom(5);
+    let plant: PlantSettings = DEFAULT_PLANT;
+    plant = { ...plant, ...randomise(plant, random) };
+    // the person moves a slider: the plant is no longer what the button made
+    plant = { ...plant, height: 20 };
+    for (let i = 0; i < 100; i++) {
+      plant = { ...plant, ...randomise(plant, random) };
+      expect(plant.height).toBeGreaterThanOrEqual(20 / 1.25 - 1e-9);
+      expect(plant.height).toBeLessThanOrEqual(20 * 1.25 + 1e-9);
+    }
+  });
+
+  it("Undo (back to the plant before the button) makes that the new starting plant", () => {
+    const randomise = createPlantRandomiser();
+    const random = createRandom(9);
+    const first = { ...DEFAULT_PLANT, height: 8 };
+    const second = { ...first, ...randomise(first, random) };
+    // Undo: back to `first`, which is not what the button produced, so it becomes the start again
+    const third = { ...first, ...randomise(first, random) };
+    expect(third.height).toBeGreaterThanOrEqual(8 / 1.25 - 1e-9);
+    expect(third.height).toBeLessThanOrEqual(8 * 1.25 + 1e-9);
+    expect(samePlant(second, third)).toBe(false);
+  });
+
+  it("an amount of 0 leaves the shape alone but still changes the seed", () => {
+    const randomise = createPlantRandomiser();
+    const change = randomise(DEFAULT_PLANT, createRandom(1), 0);
+    expect(change.height).toBe(DEFAULT_PLANT.height);
+    expect(change.seed).toBeDefined();
+  });
+
+  it("two plants are the same only when every setting is", () => {
+    expect(samePlant(DEFAULT_PLANT, { ...DEFAULT_PLANT })).toBe(true);
+    expect(samePlant(DEFAULT_PLANT, { ...DEFAULT_PLANT, seed: 2 })).toBe(false);
+    expect(
+      samePlant(DEFAULT_PLANT, { ...DEFAULT_PLANT, leafColor: "#000000" }),
+    ).toBe(false);
+  });
+});
