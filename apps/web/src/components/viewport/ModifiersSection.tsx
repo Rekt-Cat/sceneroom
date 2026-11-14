@@ -23,6 +23,8 @@ import {
   type SceneNode,
 } from "@sceneroom/shared";
 import { bakeNodeToMesh } from "@/mesh/bakeMesh";
+import { startEditing, stopEditing } from "@/meshEdit/startEditing";
+import { useEditStore } from "@/store/editStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { Icon } from "./icons";
 import { ValueSlider } from "./InspectorFields";
@@ -156,6 +158,7 @@ export default function ModifiersSection({
       <h3 className={sectionTitle}>Shape</h3>
       <div className="space-y-2.5 px-4 pb-4">
         <BakeButton node={node} disabled={disabled} />
+        <EditPointsButton node={node} disabled={disabled} />
         {node.kind === "mesh" ? (
           <MeshInfo node={node} />
         ) : (
@@ -220,6 +223,40 @@ export default function ModifiersSection({
         </p>
       </div>
     </section>
+  );
+}
+
+/** "Edit points": enters edit mode (Tab). A shape is turned into a mesh first. */
+function EditPointsButton({
+  node,
+  disabled,
+}: {
+  node: SceneNode;
+  disabled: boolean;
+}) {
+  const [busy, setBusy] = useState(false);
+  const editing = useEditStore((state) => state.nodeId === node.id);
+  return (
+    <button
+      type="button"
+      disabled={disabled || busy}
+      title="Edit the points of this object one by one (Tab). A shape is turned into a mesh first."
+      onClick={() => {
+        if (editing) {
+          stopEditing();
+          return;
+        }
+        setBusy(true);
+        void startEditing(node.id).finally(() => setBusy(false));
+      }}
+      className="flex h-8 w-full items-center justify-center gap-2 rounded-md bg-ed-accent text-sm font-medium text-white hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ed-accent disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <Icon name="move" />
+      {editing ? "Leave edit mode" : "Edit points"}
+      <kbd className="rounded border border-white/30 px-1.5 font-mono text-[11px] leading-[17px]">
+        Tab
+      </kbd>
+    </button>
   );
 }
 

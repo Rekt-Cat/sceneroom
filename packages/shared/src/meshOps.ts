@@ -60,6 +60,27 @@ export function bakeToMesh(
   };
 }
 
+/**
+ * Makes an editable mesh object point to a NEW stored version of its mesh (after its points were edited),
+ * and records the new version in the scene. The old version stays in the scene's list, which is what lets
+ * Undo go back to it. Throws for an object that is not a mesh, or if `info` is not a mesh.
+ */
+export function replaceMesh(
+  scene: Scene,
+  nodeId: string,
+  info: AssetInfo,
+): Scene {
+  const node = scene.nodes[nodeId];
+  if (!node) throw new Error(`Node "${nodeId}" does not exist`);
+  if (node.kind !== "mesh") throw new Error(`Node "${nodeId}" is not a mesh`);
+  if (info.type !== "mesh") throw new Error("The stored data is not a mesh");
+  const withData = addAsset(scene, info);
+  return {
+    ...withData,
+    nodes: { ...withData.nodes, [nodeId]: { ...node, assetId: info.id } },
+  };
+}
+
 /** Meshes that no object uses are not worth keeping: the scene without their records (their data is dropped when saving). */
 export function pruneUnusedMeshAssets(scene: Scene): Scene {
   const used = new Set<string>();

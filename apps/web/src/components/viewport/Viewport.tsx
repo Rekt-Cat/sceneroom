@@ -5,12 +5,14 @@ import { Canvas } from "@react-three/fiber";
 import { Grid, OrbitControls, Stats } from "@react-three/drei";
 import { MOUSE, type DirectionalLight } from "three";
 import { sunPosition } from "@sceneroom/shared";
+import { useEditStore } from "@/store/editStore";
 import { useSceneStore } from "@/store/sceneStore";
 import AssetDropController from "./AssetDropController";
 import AssetPreview from "./AssetPreview";
 import BoxSelectController from "./BoxSelectController";
 import CameraModifierSwitch from "./CameraModifierSwitch";
 import ViewportContextMenuController from "./ViewportContextMenuController";
+import MeshEditor from "./MeshEditor";
 import SceneEnvironment from "./SceneEnvironment";
 import SceneNodes from "./SceneNodes";
 import { shouldIgnoreClick } from "./gizmoGuard";
@@ -81,7 +83,9 @@ export default function Viewport() {
       shadows="percentage"
       camera={{ position: [5, 4, 7], fov: 50 }}
       onPointerMissed={() => {
-        if (!shouldIgnoreClick()) select(null);
+        if (shouldIgnoreClick()) return;
+        // Editing points: clicking empty space only deselects points (the picking in MeshEditor does that)
+        if (!useEditStore.getState().nodeId) select(null);
       }}
     >
       {/* The background, reflections and fog, from the scene's environment settings */}
@@ -137,6 +141,8 @@ export default function Viewport() {
       <BoxSelectController />
       {/* An asset dragged from the Assets tab can be dropped on the ground */}
       <AssetDropController />
+      {/* Edit mode: the points of the mesh being edited */}
+      <MeshEditor />
       <AssetPreview />
       {/* A right-click on an object opens the menu */}
       <ViewportContextMenuController />

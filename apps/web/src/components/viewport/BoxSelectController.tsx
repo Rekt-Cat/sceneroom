@@ -5,9 +5,14 @@ import { useThree } from "@react-three/fiber";
 import {
   isEffectivelyLocked,
   isEffectivelyVisible,
+  pointsInRect,
   rectFromPoints,
   rectsOverlap,
+  selectionAfterBox,
 } from "@sceneroom/shared";
+import type { Mesh } from "three";
+import { projectPoints } from "@/meshEdit/projectPoints";
+import { useEditStore } from "@/store/editStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { useBoxSelectStore } from "./boxSelectStore";
 import { getMesh } from "./meshRegistry";
@@ -74,6 +79,28 @@ export default function BoxSelectController() {
         box.bottom - box.top >= MIN_BOX_SIZE_PX;
       finish();
       if (!bigEnough) return; // a plain click: the normal click handling takes over
+
+      // Editing points: the box selects points of the mesh being edited, not objects
+      const editing = useEditStore.getState();
+      if (editing.nodeId) {
+        const mesh = getMesh(editing.nodeId) as Mesh | undefined;
+        const position = mesh?.geometry?.getAttribute("position");
+        if (mesh && position) {
+          const inside = pointsInRect(
+            projectPoints(
+              mesh,
+              camera,
+              canvas.getBoundingClientRect(),
+              position.array,
+            ),
+            box,
+          );
+          editing.setSelected(
+            selectionAfterBox(editing.selected, inside, event.shiftKey),
+          );
+        }
+        return;
+      }
 
       const { scene, selectedIds, setSelection } = useSceneStore.getState();
       const hit = Object.values(scene.nodes)

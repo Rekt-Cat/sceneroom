@@ -32,7 +32,9 @@ import {
 } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
 import LightObject from "./LightObject";
-import { loadMeshData } from "@/assets/meshStorage";
+import { loadMeshData, peekMeshData } from "@/assets/meshStorage";
+import { useEditStore } from "@/store/editStore";
+import { PLACEHOLDER_FLAG } from "./MeshEditor";
 import { useEnvironmentTexture } from "./environmentTexture";
 import { buildMeshGeometry, buildShapeGeometry } from "./shapeGeometry";
 import ModelObject from "./ModelObject";
@@ -80,6 +82,8 @@ const PLACEHOLDER_GEOMETRY = (() => {
     new BufferAttribute(new Float32Array(9), 3),
   );
   geometry.setIndex([0, 1, 2]);
+  // Edit mode must not mistake it for the real mesh
+  geometry.userData[PLACEHOLDER_FLAG] = true;
   return geometry;
 })();
 
@@ -117,7 +121,10 @@ export function MeshGeometry({
 
   // Only the data that belongs to the current id (the old one may still be in state for a moment)
   const ready = data && data.id === assetId ? data : null;
-  const mesh = ready && "mesh" in ready ? ready.mesh : null;
+  // A mesh that is already in memory (just stored by an edit, or brought back by Undo or Redo) is shown in
+  // the same frame, so there is no moment with nothing drawn
+  const cached = assetId ? peekMeshData(assetId) : undefined;
+  const mesh = cached ?? (ready && "mesh" in ready ? ready.mesh : null);
   const geometry = useMemo(
     () => (mesh ? buildMeshGeometry(mesh, modifiers) : null),
     [mesh, modifiers],
@@ -188,6 +195,9 @@ function NodeMesh({
     // Only the nearest object under the pointer gets the click
     event.stopPropagation();
     if (shouldIgnoreClick()) return;
+    // Editing this object's points: a click on its surface is for picking points (MeshEditor), and Shift +
+    // click must not toggle the object out of the selection (that would end edit mode)
+    if (useEditStore.getState().nodeId === node.id) return;
     // Shift + click adds or removes this object; a plain click selects only it
     if (event.nativeEvent.shiftKey) toggleSelect(node.id);
     else select(node.id);
@@ -359,6 +369,8 @@ export default function SceneNodes() {
     [scene, clipboard],
   );
   const soleId = selectedIds.length === 1 ? (selectedIds[0] ?? null) : null;
+  // While the points of an object are being edited, its own move handle is not shown (the points have one)
+  const editingId = useEditStore((state) => state.nodeId);
 
   return (
     <>
@@ -372,9 +384,12 @@ export default function SceneNodes() {
           cutIds={cutIds}
         />
       ))}
-      {soleId && soleObject && !isEffectivelyLocked(scene, soleId) && (
-        <SelectionGizmo object={soleObject} nodeId={soleId} />
-      )}
+      {soleId &&
+        soleObject &&
+        soleId !== editingId &&
+        !isEffectivelyLocked(scene, soleId) && (
+          <SelectionGizmo object={soleObject} nodeId={soleId} />
+        )}
       {selectedIds.length > 1 && <MultiSelectionGizmo ids={selectedIds} />}
     </>
   );
