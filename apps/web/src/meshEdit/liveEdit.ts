@@ -1,5 +1,9 @@
 import type { BufferAttribute, BufferGeometry } from "three";
-import { translateSelected, type Vec3 } from "@sceneroom/shared";
+import {
+  transformSelected,
+  translateSelected,
+  type Vec3,
+} from "@sceneroom/shared";
 
 /**
  * Moves the selected points of a mesh geometry while a drag is going on: each is put at where it was when
@@ -18,6 +22,25 @@ export function moveSelectedLive(
   position.needsUpdate = true;
   geometry.computeVertexNormals();
   // Clicking and the selection box use these; they must match the new shape
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+}
+
+/**
+ * Like `moveSelectedLive`, for turning and scaling: the selected points are put through a 4x4 matrix (16
+ * numbers, column by column) measured from where they were when the drag began. The matrix holds the
+ * pivot: it is "move to the pivot, turn or scale, move back".
+ */
+export function transformSelectedLive(
+  geometry: BufferGeometry,
+  start: Float32Array,
+  selected: readonly number[],
+  matrix: ArrayLike<number>,
+): void {
+  const position = geometry.getAttribute("position") as BufferAttribute;
+  transformSelected(start, selected, matrix, position.array as Float32Array);
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
 }

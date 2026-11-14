@@ -4,6 +4,10 @@ import { useEffect } from "react";
 import { PRIMITIVE_KINDS, modeForKey } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
 import { SEARCH_INPUT_ID } from "./HierarchyPanel";
+import {
+  deleteSelectedPoints,
+  extrudeSelectedFaces,
+} from "@/meshEdit/editOperations";
 import { stopEditing, toggleEditMode } from "@/meshEdit/startEditing";
 import { saveSceneToFile } from "@/sceneFile/sceneFileActions";
 import { useEditStore } from "@/store/editStore";
@@ -119,6 +123,18 @@ export function useEditorShortcuts(): void {
         } else if (plain && event.key.toLowerCase() === "a") {
           event.preventDefault();
           selectAllPoints();
+        } else if (event.key === "Delete" || event.key === "Backspace") {
+          // Delete the selected POINTS (never the object being edited)
+          event.preventDefault();
+          void deleteSelectedPoints();
+        } else if (event.shiftKey && event.key.toLowerCase() === "e") {
+          event.preventDefault();
+          void extrudeSelectedFaces();
+        } else if (plain && modeForKey(event.key)) {
+          // W, E, R: move, turn or scale the selected points
+          store.setTransformMode(modeForKey(event.key)!);
+        } else if (plain && event.key.toLowerCase() === "x") {
+          store.toggleSnap();
         }
         return;
       }
