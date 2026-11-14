@@ -27,13 +27,9 @@ describe("parseSavedScene", () => {
   });
 
   it("fills in fields that did not exist when an older scene was saved", () => {
-    const { locked, roughness, metalness, assetId, ...old } = createNode(
-      "a",
-      "cube",
-    );
+    const { locked, material, assetId, ...old } = createNode("a", "cube");
     void locked;
-    void roughness;
-    void metalness;
+    void material;
     void assetId;
     const result = parseSavedScene({ version: 1, nodes: { a: old } });
     expect(result.ok).toBe(true);
@@ -41,7 +37,7 @@ describe("parseSavedScene", () => {
       expect(result.scene.nodes["a"]).toMatchObject({
         locked: false,
         assetId: null,
-        roughness: 0.6,
+        material: { roughness: 0.6, metalness: 0.1, castShadow: true },
       });
       expect(result.scene.assets).toEqual({});
     }
@@ -65,7 +61,15 @@ describe("parseSavedScene", () => {
   });
 
   it("refuses a node with a value outside what the app allows", () => {
-    const node = { ...createNode("a", "cube"), roughness: 9 };
+    const base = createNode("a", "cube");
+    const node = { ...base, material: { ...base.material, roughness: 9 } };
     expect(parseSavedScene({ version: 1, nodes: { a: node } }).ok).toBe(false);
+    // the same wrong value in the older, flat shape is refused too
+    const { material, ...flat } = base;
+    void material;
+    expect(
+      parseSavedScene({ version: 1, nodes: { a: { ...flat, roughness: 9 } } })
+        .ok,
+    ).toBe(false);
   });
 });

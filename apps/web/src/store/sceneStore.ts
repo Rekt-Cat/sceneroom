@@ -23,7 +23,9 @@ import {
   removeNodes,
   reparentNodes,
   resolveSelection,
+  materialChangeDiffers,
   sanitizeMaterialChange,
+  setMaterial,
   setAssetNote,
   setTransforms,
   toggleInSelection,
@@ -446,12 +448,9 @@ export const useSceneStore = create<SceneState>()((set) => ({
       const node = state.scene.nodes[id];
       if (!node || isEffectivelyLocked(state.scene, id)) return state;
       const clean = sanitizeMaterialChange(change);
-      const differs = (["roughness", "metalness"] as const).some(
-        (key) => clean[key] !== undefined && clean[key] !== node[key],
-      );
-      if (!differs) return state;
+      if (!materialChangeDiffers(node.material, clean)) return state;
       return {
-        scene: updateNode(state.scene, id, clean),
+        scene: setMaterial(state.scene, id, clean),
         history: record(state, "Material"),
       };
     }),
@@ -463,7 +462,7 @@ export const useSceneStore = create<SceneState>()((set) => ({
       }
       const clean = sanitizeMaterialChange(change);
       if (Object.keys(clean).length === 0) return state;
-      return { scene: updateNode(state.scene, id, clean) };
+      return { scene: setMaterial(state.scene, id, clean) };
     }),
   previewNodeColor: (id, color) =>
     set((state) => {

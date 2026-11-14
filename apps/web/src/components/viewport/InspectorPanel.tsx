@@ -1,5 +1,6 @@
 "use client";
 
+import SurfaceSection from "./SurfaceSection";
 import { useState } from "react";
 import {
   NODE_NAME_MAX_LENGTH,
@@ -213,6 +214,7 @@ function SingleObject({ node }: { node: SceneNode }) {
         ) : (
           <AppearanceSection node={node} disabled={locked} />
         )}
+        <SurfaceSection node={node} disabled={locked} />
       </div>
       <Actions ids={[node.id]} />
     </>

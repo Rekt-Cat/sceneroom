@@ -11,6 +11,7 @@ import {
   parseNumberInput,
   parseUnitInput,
   resetTransformGroup,
+  materialChangeDiffers,
   sanitizeMaterialChange,
 } from "./inspectorValues";
 import { sceneNodeSchema } from "./scene";
@@ -252,5 +253,49 @@ describe("editScaleProportionally (linked scale)", () => {
   it("with a zero scale on the edited axis, edits only that axis", () => {
     const flat = { ...box, scale: [0, 2, 2] as [number, number, number] };
     expect(editScaleProportionally(flat, 0, "3")?.scale).toEqual([3, 2, 2]);
+  });
+});
+
+describe("sanitizeMaterialChange: surface values", () => {
+  it("keeps opacity between 0 and 1 and the glow strength between 0 and its largest value", () => {
+    expect(
+      sanitizeMaterialChange({ opacity: 3, emissiveIntensity: 99 }),
+    ).toEqual({
+      opacity: 1,
+      emissiveIntensity: 5,
+    });
+    expect(
+      sanitizeMaterialChange({ opacity: -1, emissiveIntensity: -2 }),
+    ).toEqual({
+      opacity: 0,
+      emissiveIntensity: 0,
+    });
+  });
+
+  it("accepts a glow colour in any case, and refuses nonsense", () => {
+    expect(sanitizeMaterialChange({ emissiveColor: "#FF8800" })).toEqual({
+      emissiveColor: "#ff8800",
+    });
+    expect(sanitizeMaterialChange({ emissiveColor: "orange" })).toEqual({});
+  });
+
+  it("accepts only true or false for the switches", () => {
+    expect(
+      sanitizeMaterialChange({ doubleSided: true, castShadow: false }),
+    ).toEqual({ doubleSided: true, castShadow: false });
+    expect(
+      sanitizeMaterialChange({ flatShading: "yes" as unknown as boolean }),
+    ).toEqual({});
+  });
+});
+
+describe("materialChangeDiffers", () => {
+  const material = createNode("a", "cube").material;
+
+  it("is true only when a value really changes", () => {
+    expect(materialChangeDiffers(material, { opacity: 0.5 })).toBe(true);
+    expect(materialChangeDiffers(material, { opacity: 1 })).toBe(false);
+    expect(materialChangeDiffers(material, { castShadow: false })).toBe(true);
+    expect(materialChangeDiffers(material, {})).toBe(false);
   });
 });

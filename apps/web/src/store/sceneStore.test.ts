@@ -377,19 +377,19 @@ describe("material (roughness and metalness)", () => {
 
   it("changes the values and is one undo step", () => {
     get().setNodeMaterial("initial-cube", { roughness: 0.2, metalness: 0.9 });
-    expect(cube()).toMatchObject({ roughness: 0.2, metalness: 0.9 });
+    expect(cube().material).toMatchObject({ roughness: 0.2, metalness: 0.9 });
     expect(nextUndoLabel(get().history)).toBe("Material");
     get().undo();
-    expect(cube()).toMatchObject({ roughness: 0.6, metalness: 0.1 });
+    expect(cube().material).toMatchObject({ roughness: 0.6, metalness: 0.1 });
   });
 
   it("keeps values between 0 and 1 and ignores nonsense", () => {
     get().setNodeMaterial("initial-cube", { roughness: 5, metalness: -3 });
-    expect(cube()).toMatchObject({ roughness: 1, metalness: 0 });
+    expect(cube().material).toMatchObject({ roughness: 1, metalness: 0 });
     const steps = get().history.past.length;
     get().setNodeMaterial("initial-cube", { roughness: NaN });
     expect(get().history.past).toHaveLength(steps);
-    expect(cube().roughness).toBe(1);
+    expect(cube().material.roughness).toBe(1);
   });
 
   it("records nothing when the value does not change", () => {
@@ -404,15 +404,15 @@ describe("material (roughness and metalness)", () => {
     get().previewNodeMaterial("initial-cube", { roughness: 0.3 });
     expect(get().history.past).toHaveLength(0);
     get().endEdit(true);
-    expect(cube().roughness).toBe(0.3);
+    expect(cube().material.roughness).toBe(0.3);
     expect(get().history.past).toHaveLength(1);
     get().undo();
-    expect(cube().roughness).toBe(0.6);
+    expect(cube().material.roughness).toBe(0.6);
   });
 
   it("previews are ignored when no edit is in progress", () => {
     get().previewNodeMaterial("initial-cube", { roughness: 0.1 });
-    expect(cube().roughness).toBe(0.6);
+    expect(cube().material.roughness).toBe(0.6);
   });
 
   it("a locked object's material cannot be changed", () => {
@@ -421,7 +421,7 @@ describe("material (roughness and metalness)", () => {
     get().beginEdit("Material");
     get().previewNodeMaterial("initial-cube", { roughness: 0.1 });
     get().endEdit(true);
-    expect(cube().roughness).toBe(0.6);
+    expect(cube().material.roughness).toBe(0.6);
   });
 
   it("a duplicate has the same material", () => {
@@ -432,7 +432,7 @@ describe("material (roughness and metalness)", () => {
       (node) => node.id !== "initial-cube",
     );
     expect(copies).toHaveLength(1);
-    expect(copies[0]?.metalness).toBe(0.8);
+    expect(copies[0]?.material.metalness).toBe(0.8);
   });
 });
 
@@ -966,5 +966,55 @@ describe("the Assets panel actions", () => {
     get().undo();
     expect(Object.keys(get().scene.assets)).toEqual([info.id]);
     expect(Object.keys(get().scene.nodes)).toHaveLength(others + 2);
+  });
+});
+
+describe("surface values (glow, opacity, sides, shading, shadows)", () => {
+  const cube = () => get().scene.nodes["initial-cube"]!;
+
+  it("changes several values in one undo step and keeps the others", () => {
+    get().setNodeMaterial("initial-cube", {
+      emissiveColor: "#FF8800",
+      emissiveIntensity: 2,
+      opacity: 0.5,
+      flatShading: true,
+    });
+    expect(cube().material).toMatchObject({
+      emissiveColor: "#ff8800",
+      emissiveIntensity: 2,
+      opacity: 0.5,
+      flatShading: true,
+      roughness: 0.6,
+      castShadow: true,
+    });
+    expect(get().history.past).toHaveLength(1);
+    get().undo();
+    expect(cube().material.opacity).toBe(1);
+    expect(cube().material.flatShading).toBe(false);
+  });
+
+  it("the shadow switches turn off and back on", () => {
+    get().setNodeMaterial("initial-cube", { castShadow: false });
+    expect(cube().material.castShadow).toBe(false);
+    get().setNodeMaterial("initial-cube", { castShadow: true });
+    expect(cube().material.castShadow).toBe(true);
+    expect(get().history.past).toHaveLength(2);
+  });
+
+  it("a locked object's surface cannot be changed", () => {
+    get().setNodesLocked(["initial-cube"], true);
+    get().setNodeMaterial("initial-cube", { opacity: 0.2 });
+    expect(cube().material.opacity).toBe(1);
+  });
+
+  it("a copy has the same surface", () => {
+    get().setNodeMaterial("initial-cube", { opacity: 0.3, doubleSided: true });
+    get().select("initial-cube");
+    get().copySelected();
+    get().pasteCopies(null);
+    const copy = Object.values(get().scene.nodes).find(
+      (node) => node.id !== "initial-cube",
+    )!;
+    expect(copy.material).toMatchObject({ opacity: 0.3, doubleSided: true });
   });
 });

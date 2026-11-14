@@ -1,7 +1,15 @@
 "use client";
 
-import { Component, Suspense, use, useMemo, type ReactNode } from "react";
+import {
+  Component,
+  Suspense,
+  use,
+  useEffect,
+  useMemo,
+  type ReactNode,
+} from "react";
 import { Edges } from "@react-three/drei";
+import { Mesh } from "three";
 import { clone } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { modelOffset, modelSize, type AssetInfo } from "@sceneroom/shared";
 import { loadModelScene } from "@/assets/loadModel";
@@ -35,10 +43,26 @@ function SelectionBox({ size }: { size: Size }) {
 }
 
 /** Shows the model once its file is loaded. Waits (suspends) until then. */
-function LoadedModel({ info }: { info: AssetInfo }) {
+function LoadedModel({
+  info,
+  castShadow,
+  receiveShadow,
+}: {
+  info: AssetInfo;
+  castShadow: boolean;
+  receiveShadow: boolean;
+}) {
   const root = use(loadModelScene(info.id));
   // Each object gets its own copy (SkeletonUtils.clone also copies bones correctly for animated models)
   const copy = useMemo(() => clone(root), [root]);
+  // The shadow switches of the object apply to every part of the model
+  useEffect(() => {
+    copy.traverse((object) => {
+      if (!(object instanceof Mesh)) return;
+      object.castShadow = castShadow;
+      object.receiveShadow = receiveShadow;
+    });
+  }, [copy, castShadow, receiveShadow]);
   const [x, y, z] = modelOffset(info);
   return (
     <group position={[x, y, z]}>
@@ -76,9 +100,13 @@ export default function ModelObject({
   assetId,
   selected,
   cut,
+  castShadow,
+  receiveShadow,
 }: {
   assetId: string | null;
   selected: boolean;
+  castShadow: boolean;
+  receiveShadow: boolean;
   /** True if the object is marked as cut: a grey wireframe box is drawn over the model (a model's own materials are shared, so it cannot be faded). */
   cut: boolean;
 }) {
@@ -97,7 +125,11 @@ export default function ModelObject({
         fallback={<Placeholder size={size} failed />}
       >
         <Suspense fallback={<Placeholder size={size} failed={false} />}>
-          <LoadedModel info={info} />
+          <LoadedModel
+            info={info}
+            castShadow={castShadow}
+            receiveShadow={receiveShadow}
+          />
         </Suspense>
       </ModelErrorBoundary>
       {selected && <SelectionBox size={size} />}

@@ -210,6 +210,24 @@ Each slider has a small reset button that puts it back to the starting value abo
 
 Metal needs something to reflect. Until the environment step adds reflections, high metalness looks dark rather than shiny.
 
+## Surface and shading (glow, opacity, sides, shadows)
+
+All of these live in each object's `material` section (`materialSchema` in `packages/shared/src/scene.ts`) and have a reset button in the Inspector's "Surface" section.
+
+| What                   | Setting                                    | Our value                                               | What it does                                                                                                                                     |
+| ---------------------- | ------------------------------------------ | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Starting glow colour   | `DEFAULT_EMISSIVE_COLOR` in `scene.ts`     | `#000000`                                               | Black = no glow. Pick another colour and the object glows with it.                                                                               |
+| Starting glow strength | `DEFAULT_EMISSIVE_INTENSITY` in `scene.ts` | `1`                                                     | Multiplies the glow colour. Only matters once the glow colour is not black.                                                                      |
+| Strongest glow         | `MAX_EMISSIVE_INTENSITY` in `scene.ts`     | `5`                                                     | The right end of the Glow slider.                                                                                                                |
+| Starting opacity       | `DEFAULT_OPACITY` in `scene.ts`            | `1`                                                     | 1 = solid, 0 = invisible, in between = see-through. A see-through object stops hiding what is behind it from the depth buffer (no `depthWrite`). |
+| Starting switches      | `DEFAULT_MATERIAL` in `scene.ts`           | cast on, receive on, double-sided off, flat shading off | A new plane starts double-sided (`createNode` in `sceneOps.ts`).                                                                                 |
+| Shadow sharpness       | `SHADOW_MAP_SIZE` in `Viewport.tsx`        | `2048`                                                  | Pixels of the shadow picture per side. Higher is sharper and slower.                                                                             |
+| Shadow area            | `SHADOW_AREA` in `Viewport.tsx`            | `15` units                                              | Objects further than this from the middle get no shadow (the light sees a square this wide).                                                     |
+| Shadow darkness        | `SHADOW_OPACITY` in `Viewport.tsx`         | `0.35`                                                  | How dark shadows are on the ground, 0 to 1.                                                                                                      |
+| Ground size            | `GROUND_SIZE` in `Viewport.tsx`            | `200` units                                             | The invisible floor that catches shadows.                                                                                                        |
+
+Not here yet: Reflection strength (needs the environment step) and the angle limit for smooth shading.
+
 ## Locking objects
 
 | What               | Setting                                                                                              | Our value | What it does                                                                                                                                          |

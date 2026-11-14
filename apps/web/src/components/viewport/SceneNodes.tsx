@@ -70,6 +70,8 @@ function NodeMesh({
   const select = useSceneStore((state) => state.select);
   const toggleSelect = useSceneStore((state) => state.toggleSelect);
   const { position, rotation, scale } = node.transform;
+  const material = node.material;
+  const seeThrough = cut || material.opacity < 1;
 
   // Must keep the same identity between renders: React calls a changed ref callback again every render
   const nodeId = node.id;
@@ -107,7 +109,13 @@ function NodeMesh({
         scale={scale}
         onClick={interactive ? handleClick : undefined}
       >
-        <ModelObject assetId={node.assetId} selected={selected} cut={cut} />
+        <ModelObject
+          assetId={node.assetId}
+          selected={selected}
+          cut={cut}
+          castShadow={material.castShadow}
+          receiveShadow={material.receiveShadow}
+        />
         {children}
       </group>
     );
@@ -127,19 +135,27 @@ function NodeMesh({
       position={position}
       rotation={rotation}
       scale={scale}
+      castShadow={material.castShadow}
+      receiveShadow={material.receiveShadow}
       onClick={handleClick}
     >
       <Geometry kind={node.kind} />
-      {/* A plane has no thickness; by default its back face is not drawn, so it vanishes from behind */}
       <meshStandardMaterial
+        // A new material when the shading, the side or solid / see-through changes: three.js builds its
+        // shader for these (a solid material is compiled to ignore opacity completely)
+        key={`${material.flatShading}-${material.doubleSided}-${seeThrough}`}
         color={node.color}
-        roughness={node.roughness}
-        metalness={node.metalness}
-        // A cut object is drawn faded until it is pasted
-        transparent={cut}
-        opacity={cut ? 0.4 : 1}
-        depthWrite={!cut}
-        side={node.kind === "plane" ? DoubleSide : FrontSide}
+        roughness={material.roughness}
+        metalness={material.metalness}
+        emissive={material.emissiveColor}
+        emissiveIntensity={material.emissiveIntensity}
+        flatShading={material.flatShading}
+        // A cut object is drawn faded until it is pasted; a see-through one does not hide what is behind it
+        transparent={seeThrough}
+        opacity={cut ? Math.min(0.4, material.opacity) : material.opacity}
+        depthWrite={!seeThrough}
+        // A plane has no thickness, so it needs both sides to be seen from behind
+        side={material.doubleSided ? DoubleSide : FrontSide}
       />
       {selected && (
         <Outlines color={OUTLINE_COLOR} thickness={OUTLINE_THICKNESS} />

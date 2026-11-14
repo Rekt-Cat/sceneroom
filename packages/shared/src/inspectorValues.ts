@@ -1,4 +1,5 @@
-import type { Transform } from "./scene";
+import { normalizeHexColor } from "./color";
+import { MAX_EMISSIVE_INTENSITY, type Material, type Transform } from "./scene";
 
 /** Which part of a transform a field edits. */
 export type TransformGroup = "position" | "rotation" | "scale";
@@ -77,22 +78,56 @@ export function parseUnitInput(text: string): number | null {
   return value !== null && value >= 0 && value <= 1 ? value : null;
 }
 
-/** How the surface of an object looks, besides its colour. Both values are 0 to 1. */
-export type MaterialChange = { roughness?: number; metalness?: number };
+/** A change to some surface values of an object (see `Material`). */
+export type MaterialChange = Partial<Material>;
+
+const UNIT_KEYS = ["roughness", "metalness", "opacity"] as const;
+const FLAG_KEYS = [
+  "doubleSided",
+  "flatShading",
+  "castShadow",
+  "receiveShadow",
+] as const;
 
 /**
- * Cleans up a material change: values that are not finite numbers are dropped, the rest are kept
- * between 0 and 1. Returns an empty object if nothing usable is left.
+ * Cleans up a material change: numbers that are not finite are dropped, the rest are kept inside
+ * their range (0 to 1, and 0 to the strongest glow for the glow strength); a glow colour must be a
+ * valid hex code (any case, "#RGB" too) and is stored as "#rrggbb"; the switches must be true or
+ * false. Anything else is dropped. Returns an empty object if nothing usable is left.
  */
 export function sanitizeMaterialChange(change: MaterialChange): MaterialChange {
   const clean: MaterialChange = {};
-  for (const key of ["roughness", "metalness"] as const) {
+  for (const key of UNIT_KEYS) {
     const value = change[key];
     if (typeof value === "number" && Number.isFinite(value)) {
       clean[key] = Math.min(1, Math.max(0, value));
     }
   }
+  const glow = change.emissiveIntensity;
+  if (typeof glow === "number" && Number.isFinite(glow)) {
+    clean.emissiveIntensity = Math.min(
+      MAX_EMISSIVE_INTENSITY,
+      Math.max(0, glow),
+    );
+  }
+  if (typeof change.emissiveColor === "string") {
+    const color = normalizeHexColor(change.emissiveColor);
+    if (color !== null) clean.emissiveColor = color;
+  }
+  for (const key of FLAG_KEYS) {
+    if (typeof change[key] === "boolean") clean[key] = change[key];
+  }
   return clean;
+}
+
+/** True if applying the (cleaned) change would alter at least one value of the material. */
+export function materialChangeDiffers(
+  material: Material,
+  change: MaterialChange,
+): boolean {
+  return (Object.keys(change) as (keyof Material)[]).some(
+    (key) => change[key] !== undefined && change[key] !== material[key],
+  );
 }
 
 /**
