@@ -11,6 +11,10 @@ import { localTransformUnder } from "./worldTransform";
 export function moveToParent(
   ids: readonly string[],
   parentId: string | null,
+  /** The name of the undo step. Defaults to "Move into <parent>" or "Move to top level". */
+  label?: string,
+  /** Where among the new parent's children: before this object, or at the end if null. Left out: keep the place if the parent stays, else the end. */
+  beforeId?: string | null,
 ): boolean {
   const { scene, reparentNodes } = useSceneStore.getState();
   const movable = movableSelection(scene, ids, parentId);
@@ -23,17 +27,22 @@ export function moveToParent(
   for (const id of movable) {
     const object = getMesh(id);
     if (!object) return false;
+    // Staying in the same parent (only changing the place): the transform does not change, so keep it as it is
+    const sameParent = scene.nodes[id]?.parentId === parentId;
     moves.push({
       id,
       parentId,
-      transform: localTransformUnder(object, parentObject),
+      transform: sameParent
+        ? scene.nodes[id]!.transform
+        : localTransformUnder(object, parentObject),
+      beforeId,
     });
   }
 
   const parentName = parentId ? scene.nodes[parentId]?.name : undefined;
   reparentNodes(
     moves,
-    parentName ? `Move into ${parentName}` : "Move to top level",
+    label ?? (parentName ? `Move into ${parentName}` : "Move to top level"),
   );
   return true;
 }

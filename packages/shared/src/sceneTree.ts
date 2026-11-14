@@ -1,4 +1,5 @@
 import type { Scene, SceneNode } from "./scene";
+import { groupChildren } from "./siblingOrder";
 
 /** A node together with the nodes directly below it. */
 export type TreeNode = {
@@ -17,27 +18,16 @@ export type TreeRow = {
 };
 
 /**
- * Rebuilds the parent/child tree from the flat node map. Nodes keep the order they have in the
- * scene. A node whose parent does not exist is shown at the top level, so nothing disappears.
+ * Rebuilds the parent/child tree from the flat node map. Siblings are in their `order` (and, where the
+ * order is the same, in the order they were created). A node whose parent does not exist is shown at the top level, so nothing disappears.
  */
 export function buildSceneTree(scene: Scene): TreeNode[] {
-  const nodes = Object.values(scene.nodes);
-  const childrenOf = new Map<string | null, SceneNode[]>();
-  for (const node of nodes) {
-    const key =
-      node.parentId !== null && scene.nodes[node.parentId]
-        ? node.parentId
-        : null;
-    const siblings = childrenOf.get(key) ?? [];
-    siblings.push(node);
-    childrenOf.set(key, siblings);
-  }
-
+  const groups = groupChildren(scene);
   const build = (node: SceneNode): TreeNode => ({
     node,
-    children: (childrenOf.get(node.id) ?? []).map(build),
+    children: (groups.get(node.id) ?? []).map(build),
   });
-  return (childrenOf.get(null) ?? []).map(build);
+  return (groups.get(null) ?? []).map(build);
 }
 
 /**

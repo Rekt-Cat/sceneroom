@@ -15,3 +15,8 @@ export function registerMesh(id: string, object: Object3D | null): void {
 export function getMesh(id: string): Object3D | undefined {
   return meshes.get(id);
 }
+
+/** Every object currently on screen that stands for a scene node (for picking with the mouse). */
+export function getRegisteredObjects(): Object3D[] {
+  return [...meshes.values()];
+}

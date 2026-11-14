@@ -36,3 +36,20 @@ export function topLevelSelection(
     return true;
   });
 }
+
+/**
+ * The ids from `anchorId` to `targetId` in list order, both included, whichever comes first (what
+ * Shift + click does in a list). `orderedIds` is the rows as they appear on screen. With no anchor, or an
+ * anchor that is not in the list, it is just the target. An unknown target gives nothing.
+ */
+export function rangeBetween(
+  orderedIds: readonly string[],
+  anchorId: string | null,
+  targetId: string,
+): string[] {
+  const to = orderedIds.indexOf(targetId);
+  if (to === -1) return [];
+  const from = anchorId === null ? -1 : orderedIds.indexOf(anchorId);
+  if (from === -1) return [targetId];
+  return orderedIds.slice(Math.min(from, to), Math.max(from, to) + 1);
+}

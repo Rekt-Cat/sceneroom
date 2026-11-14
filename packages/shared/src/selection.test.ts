@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createEmptyScene } from "./scene";
 import { addNode, createNode, removeNode } from "./sceneOps";
 import {
+  rangeBetween,
   resolveSelection,
   toggleInSelection,
   topLevelSelection,
@@ -62,5 +63,35 @@ describe("topLevelSelection", () => {
 
   it("keeps a child whose parent is not selected", () => {
     expect(topLevelSelection(scene, ["b", "d"])).toEqual(["b", "d"]);
+  });
+});
+
+describe("rangeBetween", () => {
+  const rows = ["a", "b", "c", "d", "e"];
+
+  it("gives everything from the anchor to the target, both included", () => {
+    expect(rangeBetween(rows, "b", "d")).toEqual(["b", "c", "d"]);
+  });
+
+  it("works the same when the target is above the anchor", () => {
+    expect(rangeBetween(rows, "d", "b")).toEqual(["b", "c", "d"]);
+  });
+
+  it("anchor and target the same row gives just that row", () => {
+    expect(rangeBetween(rows, "c", "c")).toEqual(["c"]);
+  });
+
+  it("with no anchor, or an anchor that is not in the list, it is just the target", () => {
+    expect(rangeBetween(rows, null, "c")).toEqual(["c"]);
+    expect(rangeBetween(rows, "gone", "c")).toEqual(["c"]);
+  });
+
+  it("an unknown target gives nothing, and the list is not changed", () => {
+    expect(rangeBetween(rows, "a", "gone")).toEqual([]);
+    expect(rows).toEqual(["a", "b", "c", "d", "e"]);
+  });
+
+  it("covers the whole list from the first to the last row", () => {
+    expect(rangeBetween(rows, "a", "e")).toEqual(rows);
   });
 });

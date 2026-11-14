@@ -10,6 +10,7 @@ import {
 import { useLayoutStore } from "@/store/layoutStore";
 import { useSceneStore } from "@/store/sceneStore";
 import PanelResizer from "./PanelResizer";
+import { OBJECT_NAME_INPUT_ID } from "./domIds";
 import {
   AppearanceSection,
   ModelSection,
@@ -150,6 +151,7 @@ function SingleObject({ node }: { node: SceneNode }) {
           <input
             value={draft}
             maxLength={NODE_NAME_MAX_LENGTH}
+            id={OBJECT_NAME_INPUT_ID}
             aria-label="Object name"
             disabled={locked}
             onChange={(event) => setDraft(event.target.value)}
