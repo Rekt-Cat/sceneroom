@@ -11,10 +11,17 @@ import {
 } from "react";
 import {
   MAX_SCENE_NAME_LENGTH,
+  SCENE_FILE_EXTENSION,
   SCENE_TEMPLATES,
   SCENE_TEMPLATE_INFO,
 } from "@sceneroom/shared";
 import { useImportStore } from "@/store/importStore";
+import { exportProjectToGlb, exportSceneToGlb } from "@/export/exportGlb";
+import {
+  importScenesFromFile,
+  saveSceneToFile,
+} from "@/sceneFile/sceneFileActions";
+import { closePrefabScene } from "@/store/libraryActions";
 import { sceneObjectCount, useProjectStore } from "@/store/projectStore";
 import { Icon } from "./icons";
 
@@ -183,26 +190,35 @@ function SceneTab({
   id,
   name,
   active,
+  prefabId,
 }: {
   index: number;
   count: number;
   id: string;
   name: string;
   active: boolean;
+  /** Set for a scene that edits a prefab. */
+  prefabId?: string;
 }) {
   const switchScene = useProjectStore((s) => s.switchScene);
   const [renaming, setRenaming] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const wrapper = useRef<HTMLDivElement>(null);
 
-  const entries: MenuEntry[] = [
-    { label: "Rename", onSelect: () => setRenaming(true) },
-    {
-      label: "Duplicate",
-      onSelect: () =>
-        tellProblem(useProjectStore.getState().duplicateScene(id)),
-    },
-    { separator: true },
+  /** Closes the tab: finishes a prefab, or deletes a scene after asking. The last scene stays. */
+  function closeTab() {
+    if (prefabId) return tellProblem(closePrefabScene(id));
+    if (count <= 1) {
+      return tellProblem(
+        "A project needs at least one scene, so the last one cannot be closed.",
+      );
+    }
+    if (confirmDelete(name, sceneObjectCount(id))) {
+      tellProblem(useProjectStore.getState().deleteScene(id));
+    }
+  }
+
+  const move: MenuEntry[] = [
     {
       label: "Move left",
       disabled: index === 0,
@@ -213,19 +229,52 @@ function SceneTab({
       disabled: index === count - 1,
       onSelect: () => useProjectStore.getState().moveScene(id, index + 1),
     },
-    { separator: true },
-    {
-      label: "Delete scene",
-      danger: true,
-      disabled: count <= 1,
-      help: count <= 1 ? "A project needs one scene" : undefined,
-      onSelect: () => {
-        if (confirmDelete(name, sceneObjectCount(id))) {
-          tellProblem(useProjectStore.getState().deleteScene(id));
-        }
-      },
-    },
   ];
+  // A scene that edits a prefab can only be finished (its look follows the prefab, so it is not renamed,
+  // copied, saved or exported on its own)
+  const entries: MenuEntry[] = prefabId
+    ? [
+        {
+          label: "Done editing prefab",
+          help: "Apply the last change and close this tab",
+          onSelect: () => tellProblem(closePrefabScene(id)),
+        },
+        { separator: true },
+        ...move,
+      ]
+    : [
+        { label: "Rename", onSelect: () => setRenaming(true) },
+        {
+          label: "Duplicate",
+          onSelect: () =>
+            tellProblem(useProjectStore.getState().duplicateScene(id)),
+        },
+        { separator: true },
+        ...move,
+        { separator: true },
+        {
+          label: "Save this scene as a file",
+          help: "Only this scene, with its models",
+          onSelect: () => void saveSceneToFile(id),
+        },
+        {
+          label: "Export this scene (GLB)",
+          onSelect: () => void exportSceneToGlb(id),
+        },
+        {
+          label: "Export every scene (GLB)",
+          help: "One file per scene",
+          onSelect: () => void exportProjectToGlb(),
+        },
+        { separator: true },
+        {
+          label: "Delete scene",
+          danger: true,
+          disabled: count <= 1,
+          help: count <= 1 ? "A project needs one scene" : undefined,
+          onSelect: closeTab,
+        },
+      ];
 
   if (renaming) {
     return (
@@ -248,12 +297,23 @@ function SceneTab({
         role="tab"
         aria-selected={active}
         title={
-          active
-            ? `${name}: double-click to rename, right-click for more`
-            : `Open the scene "${name}"`
+          prefabId
+            ? `${name}: you are editing a prefab. Changes show in every copy. Middle-click, or right-click for Done editing.`
+            : active
+              ? `${name}: double-click to rename, middle-click to close, right-click for more`
+              : `Open the scene "${name}"`
         }
         onClick={() => switchScene(id)}
-        onDoubleClick={() => setRenaming(true)}
+        onDoubleClick={() => !prefabId && setRenaming(true)}
+        // Middle mouse button (the scroll wheel pressed) closes the tab, as in a browser
+        onMouseDown={(event) => {
+          if (event.button === 1) event.preventDefault(); // no auto-scroll cursor
+        }}
+        onAuxClick={(event) => {
+          if (event.button !== 1) return;
+          event.preventDefault();
+          closeTab();
+        }}
         onContextMenu={(event) => {
           event.preventDefault();
           setMenuOpen(true);
@@ -262,8 +322,9 @@ function SceneTab({
           active
             ? "bg-ed-raised text-ed-text"
             : "text-ed-text-3 hover:bg-ed-raised/60 hover:text-ed-text"
-        }`}
+        } ${prefabId ? "border border-ed-accent/60 text-ed-accent" : ""}`}
       >
+        {prefabId && <span aria-hidden="true">◆ </span>}
         {name}
       </button>
       {active && (
@@ -272,7 +333,7 @@ function SceneTab({
           aria-label={`More for the scene ${name}`}
           aria-haspopup="menu"
           aria-expanded={menuOpen}
-          title="Rename, duplicate, move or delete this scene"
+          title="Rename, duplicate, move or delete this scene (middle-click a tab to close it)"
           onClick={() => setMenuOpen((open) => !open)}
           className="ml-0.5 grid size-6 place-items-center rounded text-ed-text-3 hover:bg-ed-raised hover:text-ed-text focus-visible:outline-2 focus-visible:outline-ed-accent"
         >
@@ -294,11 +355,23 @@ function SceneTab({
 function NewSceneButton() {
   const [open, setOpen] = useState(false);
   const wrapper = useRef<HTMLDivElement>(null);
-  const entries: MenuEntry[] = SCENE_TEMPLATES.map((template) => ({
-    label: SCENE_TEMPLATE_INFO[template].label,
-    help: SCENE_TEMPLATE_INFO[template].help,
-    onSelect: () => tellProblem(useProjectStore.getState().addScene(template)),
-  }));
+  const fileInput = useRef<HTMLInputElement>(null);
+  const busy = useImportStore((state) => state.busy);
+  const entries: MenuEntry[] = [
+    ...SCENE_TEMPLATES.map((template): MenuEntry => ({
+      label: SCENE_TEMPLATE_INFO[template].label,
+      help: SCENE_TEMPLATE_INFO[template].help,
+      onSelect: () =>
+        tellProblem(useProjectStore.getState().addScene(template)),
+    })),
+    { separator: true },
+    {
+      label: "Add scenes from a file…",
+      help: "Adds the scenes of a .sceneroom file; nothing is replaced",
+      disabled: busy,
+      onSelect: () => fileInput.current?.click(),
+    },
+  ];
   return (
     <div ref={wrapper} className="shrink-0">
       <button
@@ -320,6 +393,18 @@ function NewSceneButton() {
           onClose={() => setOpen(false)}
         />
       )}
+      <input
+        ref={fileInput}
+        type="file"
+        accept={SCENE_FILE_EXTENSION}
+        className="hidden"
+        aria-label="Choose a file whose scenes are added to this project"
+        onChange={(event) => {
+          const [file] = Array.from(event.target.files ?? []);
+          event.target.value = "";
+          if (file) void importScenesFromFile(file);
+        }}
+      />
     </div>
   );
 }
@@ -354,6 +439,7 @@ export default function SceneTabs(): ReactNode {
             id={scene.id}
             name={scene.name}
             active={scene.id === activeSceneId}
+            prefabId={scene.prefabId}
           />
         ))}
       </div>

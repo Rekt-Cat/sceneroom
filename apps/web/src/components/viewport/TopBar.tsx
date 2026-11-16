@@ -9,8 +9,8 @@ import {
 } from "@sceneroom/shared";
 import { exportSceneToGlb } from "@/export/exportGlb";
 import {
-  openSceneFromFile,
-  saveSceneToFile,
+  openProjectFromFile,
+  saveProjectToFile,
 } from "@/sceneFile/sceneFileActions";
 import { useImportStore } from "@/store/importStore";
 import {
@@ -116,7 +116,7 @@ function FileButtons() {
         type="button"
         disabled={busy}
         onClick={() => inputRef.current?.click()}
-        title="Open a scene file (.sceneroom), or drop one onto the 3D view"
+        title="Open a project file (.sceneroom), or drop one onto the 3D view. To add its scenes to this project instead, use + next to the scene tabs."
         className={FILE_BUTTON}
       >
         <Icon name="open" />
@@ -125,8 +125,8 @@ function FileButtons() {
       <button
         type="button"
         disabled={busy}
-        onClick={() => void saveSceneToFile()}
-        title="Save the scene as a file you can keep and send (Ctrl or Cmd + S)"
+        onClick={() => void saveProjectToFile()}
+        title="Save the whole project (all its scenes and models) as a file you can keep and send (Ctrl or Cmd + S)"
         className={FILE_BUTTON}
       >
         <Icon name="save" />
@@ -136,7 +136,7 @@ function FileButtons() {
         type="button"
         disabled={busy}
         onClick={() => void exportSceneToGlb()}
-        title="Export the scene as a .glb file for other programs (Unity, Blender, web viewers)"
+        title="Export the open scene as a .glb file for other programs (Unity, Blender, web viewers). Export every scene: the ⋯ menu on a scene tab."
         className={FILE_BUTTON}
       >
         <Icon name="export" />
@@ -147,12 +147,12 @@ function FileButtons() {
         type="file"
         accept={SCENE_FILE_EXTENSION}
         className="hidden"
-        aria-label="Choose a scene file to open"
+        aria-label="Choose a project file to open"
         onChange={(event) => {
           const [file] = Array.from(event.target.files ?? []);
           // Empty the box, so choosing the same file again still counts as a change
           event.target.value = "";
-          if (file) void openSceneFromFile(file);
+          if (file) void openProjectFromFile(file);
         }}
       />
     </div>

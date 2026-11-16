@@ -38,6 +38,11 @@ import {
   normalizeNodeName,
   plantChangeDiffers,
   pasteFromClipboard,
+  placePrefab,
+  rebuildAsInstance,
+  syncPrefabInstances,
+  unlinkPrefab,
+  unlinkPrefabInstance,
   recordChange,
   redoStep,
   removeAsset,
@@ -78,6 +83,7 @@ import {
   type CharacterChange,
   type CharacterPresetName,
   type CustomPlant,
+  type Prefab,
   type LightKind,
   type PlantChange,
   type PlantPresetName,
@@ -156,6 +162,24 @@ type SceneState = {
    * the scene, and selects it. One undo step. Returns the new object's id, or null if the file is unknown.
    */
   placeAsset: (assetId: string, at?: [number, number, number]) => string | null;
+  /**
+   * Places an imported model given its record (which may come from another scene of the project: the record is
+   * added to this scene first). One undo step. Returns the new object's id.
+   */
+  placeModel: (info: AssetInfo, at?: [number, number, number]) => string;
+  /** Places a linked instance of a prefab and selects it. One undo step. Returns the new object's id. */
+  placePrefabInstance: (
+    prefab: Prefab,
+    at?: [number, number, number],
+  ) => string;
+  /** Turns the object a prefab was just made from into a linked copy of it, in place. One undo step. */
+  convertToPrefabInstance: (nodeId: string, prefab: Prefab) => void;
+  /** Rebuilds every instance of the prefab in this scene from it. One undo step. */
+  syncPrefab: (prefab: Prefab) => void;
+  /** Turns a prefab copy into an ordinary object. One undo step. */
+  unlinkPrefabNode: (nodeId: string) => void;
+  /** Frees every object of this scene that is linked to the prefab (when the prefab is deleted). One undo step. */
+  unlinkPrefabEverywhere: (prefabId: string) => void;
   /** Adds a modifier (bend, twist, taper) to the end of an object's list. One undo step. Ignored for locked objects and objects that cannot have modifiers. */
   addModifier: (nodeId: string, type: ModifierType) => void;
   /** Removes a modifier. One undo step. */
@@ -775,13 +799,16 @@ export const useSceneStore = create<SceneState>()((set) => ({
       if (Object.keys(clean).length === 0) return state;
       return { scene: setLight(state.scene, id, clean) };
     }),
-  placeAsset: (assetId, at) => {
+  placeAsset: (assetId, at): string | null => {
     const info = useSceneStore.getState().scene.assets[assetId];
     if (!info) return null;
+    return useSceneStore.getState().placeModel(info, at);
+  },
+  placeModel: (info, at) => {
     const id = crypto.randomUUID();
     set((state) => ({
       scene: addNode(
-        state.scene,
+        addAsset(state.scene, info),
         placedAt(
           createModelNode(
             id,
@@ -797,6 +824,55 @@ export const useSceneStore = create<SceneState>()((set) => ({
     }));
     return id;
   },
+  placePrefabInstance: (prefab, at) => {
+    const id = crypto.randomUUID();
+    const top = prefab.nodes[0]!.transform.position;
+    set((state) => ({
+      scene: placePrefab(state.scene, prefab, id, () => crypto.randomUUID(), {
+        // Dropped on the ground: the spot decides where, the prefab keeps its own height
+        position: at ? [at[0], top[1], at[2]] : [0, top[1], 0],
+      }),
+      selectedIds: [id],
+      history: record(state, `Place ${prefab.name}`),
+    }));
+    return id;
+  },
+  convertToPrefabInstance: (nodeId, prefab) =>
+    set((state) => {
+      if (!state.scene.nodes[nodeId]) return state;
+      const scene = rebuildAsInstance(state.scene, nodeId, prefab, () =>
+        crypto.randomUUID(),
+      );
+      return {
+        scene,
+        selectedIds: resolveSelection(scene, state.selectedIds),
+        history: record(state, "Make prefab"),
+      };
+    }),
+  syncPrefab: (prefab) =>
+    set((state) => {
+      const scene = syncPrefabInstances(state.scene, prefab, () =>
+        crypto.randomUUID(),
+      );
+      if (scene === state.scene) return state;
+      return {
+        scene,
+        selectedIds: resolveSelection(scene, state.selectedIds),
+        history: record(state, "Update prefab copies"),
+      };
+    }),
+  unlinkPrefabEverywhere: (prefabId) =>
+    set((state) => {
+      const scene = unlinkPrefab(state.scene, prefabId);
+      if (scene === state.scene) return state;
+      return { scene, history: record(state, "Delete prefab") };
+    }),
+  unlinkPrefabNode: (nodeId) =>
+    set((state) => {
+      const scene = unlinkPrefabInstance(state.scene, nodeId);
+      if (scene === state.scene) return state;
+      return { scene, history: record(state, "Unlink prefab") };
+    }),
   renameAsset: (assetId, name) =>
     set((state) => {
       const scene = renameAsset(state.scene, assetId, name);

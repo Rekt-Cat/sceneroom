@@ -32,3 +32,4 @@ export * from "./persistence";
 export * from "./clipboard";
 export * from "./siblingOrder";
 export * from "./project";
+export * from "./prefab";

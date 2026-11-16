@@ -1,23 +1,32 @@
 # The SceneRoom file (`.sceneroom`)
 
-A scene and the model files it uses, in one file you can keep, send and open again. Written by Save (Ctrl or Cmd + S)
-and read by Open (or by dropping the file on the 3D view). Code: `packages/shared/src/sceneFile.ts` (pure, tested) and
+A project (all its scenes) and the model and mesh files they use, in one file you can keep, send and open again.
+Written by Save (Ctrl or Cmd + S, the whole project) or "Save this scene as a file" (one scene, in the scene tab's menu),
+and read by Open (replaces the project) or "Add scenes from a file" (the `+` menu next to the scene tabs; adds the scenes
+and replaces nothing). Dropping a file on the 3D view is Open. Code: `packages/shared/src/sceneFile.ts` (pure, tested) and
 `apps/web/src/sceneFile/sceneFileActions.ts` (reading and writing in the browser).
 
 ## Layout
 
 All numbers are little-endian, like a GLB file.
 
-| Bytes            | What                                                                                                      |
-| ---------------- | --------------------------------------------------------------------------------------------------------- |
-| 0 to 3           | The letters `SCNR`                                                                                        |
-| 4 to 7           | Version of this layout (whole number, now `1`)                                                            |
-| 8 to 11          | `N`: the length of the header in bytes                                                                    |
-| 12 to 12 + N     | The header: JSON text (UTF-8) `{ "scene": <the scene>, "assets": [{ "id": "...", "bytes": 1234 }, ...] }` |
-| after the header | The model files, one after another, in the order of the `assets` list, each exactly `bytes` long          |
+| Bytes            | What                                                                                                          |
+| ---------------- | ------------------------------------------------------------------------------------------------------------- |
+| 0 to 3           | The letters `SCNR`                                                                                            |
+| 4 to 7           | Version of this layout (whole number, now `2`)                                                                |
+| 8 to 11          | `N`: the length of the header in bytes                                                                        |
+| 12 to 12 + N     | The header: JSON text (UTF-8) `{ "project": <the project>, "assets": [{ "id": "...", "bytes": 1234 }, ...] }` |
+| after the header | The model files, one after another, in the order of the `assets` list, each exactly `bytes` long              |
 
-- `scene` is the same data the browser autosaves (`sceneSchema` in `scene.ts`): objects, modifiers, lights, environment,
-  and the list of imported files with their names and notes.
+- `project` is the same data the browser autosaves (`projectSchema` in `project.ts`): the project name, which scene is
+  open, and every scene (`id`, `name` and the scene itself: objects, modifiers, lights, environment, and the list of
+  imported files with their names and notes).
+- A scene that edits a prefab has `prefabId` (the prefab it shows); ordinary scenes do not.
+- `project.prefabs` holds the project's prefabs (reusable objects with their inside and the records of their files). A project without it loads with none. Files that only a prefab uses are in the `assets` list too.
+- **A file used by several scenes is stored once.** The `assets` list holds each file id one time, however many scenes
+  mention it.
+- **Version 1** (before projects) had `{ "scene": ..., "assets": ... }` with one scene. It still opens: it becomes a project
+  with one scene called "Scene 1". Files are always written as version 2.
 - A model file is stored under its id, which is the SHA-256 of its contents. Opening checks that each file really has that
   id, so a changed file is refused.
 - The model files are not inside the JSON because as text they would be a third bigger and slow to read.
@@ -50,7 +59,10 @@ number is finite, that no triangle uses a point that does not exist, and the fin
   after the end, a model file listed twice: each is refused with a plain message. Nothing is changed in the editor.
 - Model files the scene does not mention are ignored. Model files the scene mentions but the file does not contain are
   allowed: those models show as red boxes.
-- Opening asks before replacing a scene that is open (it cannot be undone), then clears the undo history.
+- Opening asks before replacing a project that has anything in it (any scene; it cannot be undone), then clears every
+  undo history. "Add scenes from a file" asks nothing: the scenes get new ids and, if a name is taken, "Name (2)"; it
+  is refused (and nothing is stored) if the project would pass 50 scenes.
+- A scene that is not valid is named by its place in the file ("scenes.1.scene.nodes.a"), so the damaged scene can be found.
 
 ## Changing the format later
 

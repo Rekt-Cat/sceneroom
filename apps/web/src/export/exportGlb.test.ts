@@ -312,6 +312,9 @@ describe("exporting the scene as a GLB", () => {
 
   it("names the file after the date", () => {
     expect(glbFileName(new Date(2026, 10, 4))).toBe("scene-2026-11-04.glb");
+    expect(glbFileName(new Date(2026, 10, 4), "Town (2)")).toBe(
+      "town-2-2026-11-04.glb",
+    );
   });
 });
 

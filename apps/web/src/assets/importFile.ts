@@ -1,7 +1,7 @@
 import { useImportStore } from "@/store/importStore";
 import {
   isSceneFileName,
-  openSceneFromFile,
+  openProjectFromFile,
 } from "@/sceneFile/sceneFileActions";
 import { useSceneStore } from "@/store/sceneStore";
 import { ImportError, importGlbFile } from "./loadModel";
@@ -19,7 +19,7 @@ export async function importFiles(files: readonly File[]): Promise<void> {
   if (!file) return;
   // A SceneRoom file is a whole scene: open it instead of importing a model
   if (isSceneFileName(file.name)) {
-    await openSceneFromFile(file);
+    await openProjectFromFile(file);
     return;
   }
   setBusy(true);

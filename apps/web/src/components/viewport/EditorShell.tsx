@@ -4,6 +4,7 @@ import { useEffect, useState, type DragEvent } from "react";
 import { importFiles } from "@/assets/importFile";
 import { watchEditMode } from "@/meshEdit/startEditing";
 import { startPersistence } from "@/persistence/startPersistence";
+import { startPrefabEditing } from "@/store/prefabEditing";
 import { usePlantLibraryStore } from "@/store/plantLibraryStore";
 import { useLayoutStore } from "@/store/layoutStore";
 import { carriesAsset } from "./assetDrag";
@@ -36,6 +37,9 @@ export default function EditorShell() {
 
   // Edit mode ends by itself when its object is no longer the selected one (or is gone)
   useEffect(() => watchEditMode(), []);
+
+  // Keep the copies of a prefab in step while it is being edited
+  useEffect(() => startPrefabEditing(), []);
 
   // Restore the scene saved last time, then save every change (see startPersistence)
   useEffect(() => startPersistence(), []);

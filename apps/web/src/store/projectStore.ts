@@ -2,6 +2,7 @@ import { create } from "zustand";
 import {
   SCENE_TEMPLATE_INFO,
   addProjectScene,
+  addProjectScenes,
   availableSceneName,
   createHistory,
   createTemplateScene,
@@ -10,14 +11,17 @@ import {
   renameProjectScene,
   whyCannotAddScene,
   DEFAULT_PROJECT_NAME,
+  type Prefab,
   type Project,
+  type ProjectScene,
   type SceneTemplateName,
 } from "@sceneroom/shared";
 import { useEditStore } from "./editStore";
 import { useSceneStore, type ParkedScene } from "./sceneStore";
 
 /** The name and id of a scene, as shown on its tab. */
-export type SceneTab = { id: string; name: string };
+/** `prefabId` is set for a scene that exists to edit that prefab. */
+export type SceneTab = { id: string; name: string; prefabId?: string };
 
 /**
  * The project: which scenes there are, in what order, and which one is open. The OPEN scene lives in
@@ -32,10 +36,26 @@ type ProjectState = {
   activeSceneId: string;
   /** Every scene except the open one. */
   parked: Record<string, ParkedScene>;
+  /** The project's prefabs, by id (shown in the Assets tab, usable in every scene). */
+  prefabs: Record<string, Prefab>;
   /** Opens another scene. */
   switchScene: (id: string) => void;
   /** Adds a scene made from a template and opens it. Returns an error sentence, or null if it worked. */
   addScene: (template: SceneTemplateName) => string | null;
+  /**
+   * Adds scenes that came from a file (new ids, unique names) and opens the first. The prefabs they use come
+   * along (a prefab the project already has is kept as it is). Returns an error sentence, or null.
+   */
+  addScenes: (
+    scenes: readonly ProjectScene[],
+    prefabs?: Readonly<Record<string, Prefab>>,
+  ) => string | null;
+  /** Adds a scene that edits a prefab (its contents are the prefab) and opens it. Returns an error sentence, or null. */
+  addPrefabScene: (
+    prefabId: string,
+    name: string,
+    scene: ProjectScene["scene"],
+  ) => string | null;
   /** Copies a scene (and opens the copy). Returns an error sentence, or null. */
   duplicateScene: (id: string) => string | null;
   /** Returns an error sentence if the name is empty or already used, otherwise null. */
@@ -48,6 +68,11 @@ type ProjectState = {
   loadProject: (project: Project) => void;
 };
 
+/** The part of a project scene that a tab shows. */
+function tabOf({ id, name, prefabId }: ProjectScene): SceneTab {
+  return prefabId ? { id, name, prefabId } : { id, name };
+}
+
 /** Where the open scene's data is, as one parked-scene record. */
 function liveScene(): ParkedScene {
   const { scene, selectedIds, history } = useSceneStore.getState();
@@ -56,16 +81,19 @@ function liveScene(): ParkedScene {
 
 /** The whole project as plain data (for saving): every scene's contents, the open one read from the scene store. */
 export function getProject(): Project {
-  const { name, scenes, activeSceneId, parked } = useProjectStore.getState();
+  const { name, scenes, activeSceneId, parked, prefabs } =
+    useProjectStore.getState();
   const live = liveScene();
   return {
     version: 1,
     name,
+    prefabs,
     activeSceneId,
     scenes: scenes.map((tab) => ({
       id: tab.id,
       name: tab.name,
       scene: (tab.id === activeSceneId ? live : parked[tab.id]!).scene,
+      ...(tab.prefabId ? { prefabId: tab.prefabId } : {}),
     })),
   };
 }
@@ -109,9 +137,10 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
       Object.entries(all).filter(([id]) => id !== next.activeSceneId),
     );
     set({
-      scenes: next.scenes.map(({ id, name }) => ({ id, name })),
+      scenes: next.scenes.map(tabOf),
       activeSceneId: next.activeSceneId,
       parked,
+      prefabs: next.prefabs,
     });
   }
 
@@ -120,6 +149,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
     scenes: [{ id: "scene-1", name: "Scene 1" }],
     activeSceneId: "scene-1",
     parked: {},
+    prefabs: {},
 
     switchScene: (id) => {
       const state = get();
@@ -144,6 +174,39 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
       );
       apply({
         ...addProjectScene(project, { id, name, scene }),
+        activeSceneId: id,
+      });
+      return null;
+    },
+
+    addScenes: (scenes, prefabs = {}) => {
+      if (scenes.length === 0) return null;
+      try {
+        const current = getProject();
+        const { project, addedIds } = addProjectScenes(current, scenes, () =>
+          crypto.randomUUID(),
+        );
+        apply({
+          ...project,
+          // A prefab the project already has wins (the same id means the same prefab)
+          prefabs: { ...prefabs, ...current.prefabs },
+          activeSceneId: addedIds[0]!,
+        });
+        return null;
+      } catch (error) {
+        return error instanceof Error
+          ? error.message
+          : "The scenes could not be added.";
+      }
+    },
+
+    addPrefabScene: (prefabId, name, scene) => {
+      const project = getProject();
+      const blocked = whyCannotAddScene(project);
+      if (blocked) return blocked;
+      const id = crypto.randomUUID();
+      apply({
+        ...addProjectScene(project, { id, name, scene, prefabId }),
         activeSceneId: id,
       });
       return null;
@@ -209,9 +272,10 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
       }
       set({
         name: project.name,
-        scenes: project.scenes.map(({ id, name }) => ({ id, name })),
+        scenes: project.scenes.map(tabOf),
         activeSceneId: project.activeSceneId,
         parked,
+        prefabs: project.prefabs,
       });
     },
   };

@@ -1,6 +1,7 @@
 import { setAssetStorage } from "@/assets/assetStorage";
 import { useImportStore } from "@/store/importStore";
 import { usePersistenceStore } from "@/store/persistenceStore";
+import { applyAllPrefabScenes } from "@/store/libraryActions";
 import { getProject, useProjectStore } from "@/store/projectStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { IndexedDbAssetStorage } from "./assetStorageIdb";
@@ -54,6 +55,8 @@ export function startPersistence(): () => void {
       if (stopped) return;
       if (result.status === "loaded") {
         useProjectStore.getState().loadProject(result.project);
+        // A prefab scene whose last change was not applied before the page closed is applied now
+        applyAllPrefabScenes();
       } else if (result.status === "invalid") {
         tell({
           tone: "error",

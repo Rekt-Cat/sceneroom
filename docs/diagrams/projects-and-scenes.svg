@@ -1,11 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" width="960" height="560" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" width="960" height="640" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
   <title id="t">Projects and scenes: how a project with several scenes is kept and saved</title>
   <desc id="d">The project store lists the scenes. The open scene lives in the scene store and everything that edits a scene works on it. The other scenes are parked with their own selection and undo history. Switching swaps them. Autosave writes the whole project to the browser storage as one record.</desc>
   <defs>
     <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker>
   </defs>
-  <rect width="960" height="560" fill="#f2f5f6"/>
-  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">Projects and scenes (Phase 5b, step 1)</text>
+  <rect width="960" height="640" fill="#f2f5f6"/>
+  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">Projects and scenes (Phase 5b, steps 1 and 2)</text>
   <text x="32" y="60" font-size="13" fill="#55656f">One project, many scenes. Only the open scene is "live"; the others wait, each with its own undo history.</text>
 
   <!-- top bar -->
@@ -77,6 +77,20 @@
   <text x="846" y="326" font-size="12" fill="#55656f">save</text>
   <path d="M700 470 H420 V384" stroke="#13202a" stroke-width="2" stroke-dasharray="6 4" fill="none" marker-end="url(#a)"/>
   <text x="560" y="462" font-size="12" text-anchor="middle" fill="#55656f">on page load: loadProject(), undo starts empty</text>
+
+  <!-- file -->
+  <rect x="420" y="410" width="240" height="110" rx="12" fill="#fff" stroke="#0a6c8a" stroke-width="2"/>
+  <text x="436" y="436" font-size="14" font-weight="700" fill="#13202a">.sceneroom file (version 2)</text>
+  <text x="436" y="458" font-size="12.5" fill="#13202a">header: project (every scene)</text>
+  <text x="436" y="476" font-size="12.5" fill="#13202a">then each model / mesh file ONCE</text>
+  <text x="436" y="494" font-size="12" fill="#55656f">Open replaces · Add scenes adds ·</text>
+  <text x="436" y="510" font-size="12" fill="#55656f">old one-scene files still open</text>
+
+  <!-- library -->
+  <rect x="32" y="540" width="896" height="84" rx="12" fill="#fff" stroke="#8a5a00" stroke-width="2"/>
+  <text x="48" y="566" font-size="14" font-weight="700" fill="#13202a">Assets tab = the project library (the same in every scene)</text>
+  <text x="48" y="588" font-size="12.5" fill="#13202a">Models: the union of every scene's records; placing one adds its record to the open scene.</text>
+  <text x="48" y="606" font-size="12.5" fill="#13202a">Prefabs: placed copies are linked (inside locked). Double-click one to open it as its own scene (tab ◆); each change rebuilds every copy.</text>
 
   <!-- rules -->
   <rect x="32" y="410" width="360" height="110" rx="12" fill="#fff" stroke="#c4d0d6" stroke-width="2"/>

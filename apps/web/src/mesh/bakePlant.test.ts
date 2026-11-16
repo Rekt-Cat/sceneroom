@@ -5,8 +5,8 @@ import { clearMeshCache, loadMeshData } from "@/assets/meshStorage";
 import { useImportStore } from "@/store/importStore";
 import { useSceneStore } from "@/store/sceneStore";
 import {
-  buildSceneFile,
-  openSceneFromFile,
+  buildProjectFile,
+  openProjectFromFile,
 } from "@/sceneFile/sceneFileActions";
 import { bakePlantToMeshes } from "./bakePlant";
 
@@ -108,9 +108,9 @@ describe("plants in saved files", () => {
       { x: -3, z: 2, turn: 1.5, size: 0.9, seed: 6 },
     ]);
     const scene = get().scene;
-    const { bytes } = await buildSceneFile();
+    const { bytes } = await buildProjectFile();
     get().loadScene(createEmptyScene());
-    await openSceneFromFile(
+    await openProjectFromFile(
       new File([bytes.slice().buffer], "forest.sceneroom"),
       () => true,
     );
@@ -123,12 +123,12 @@ describe("plants in saved files", () => {
   it("a plant baked into meshes is saved with its mesh data", async () => {
     await bakePlantToMeshes(treeId);
     const scene = get().scene;
-    const { bytes, missing } = await buildSceneFile();
+    const { bytes, missing } = await buildProjectFile();
     expect(missing).toEqual([]);
     get().loadScene(createEmptyScene());
     setAssetStorage(new MemoryAssetStorage());
     clearMeshCache();
-    await openSceneFromFile(
+    await openProjectFromFile(
       new File([bytes.slice().buffer], "tree.sceneroom"),
       () => true,
     );

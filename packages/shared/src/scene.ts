@@ -334,6 +334,17 @@ export const lightSchema = z.object({
 
 export type LightSettings = z.infer<typeof lightSchema>;
 
+/**
+ * Links an object to a prefab (a reusable object kept in the project's Assets). The object is an instance: its
+ * inside follows the prefab, and only its place, turn and size, name and visibility are its own. Only the top
+ * object of an instance carries the link; the objects inside it are managed (locked).
+ */
+export const prefabLinkSchema = z.object({
+  id: z.string().min(1),
+});
+
+export type PrefabLink = z.infer<typeof prefabLinkSchema>;
+
 export const sceneNodeObjectSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).max(NODE_NAME_MAX_LENGTH),
@@ -370,6 +381,8 @@ export const sceneNodeObjectSchema = z.object({
    * megabytes. null for the built-in shapes and lights.
    */
   assetId: z.string().min(1).nullable().default(null),
+  /** Set on the top object of a prefab instance (see prefabLinkSchema). null for everything else. Older scenes load with null. */
+  prefab: prefabLinkSchema.nullable().default(null),
   /**
    * The place among the objects that share this parent: smaller numbers come first, and objects with
    * the same number keep the order they were created in. Old scenes without it load as 0 for every

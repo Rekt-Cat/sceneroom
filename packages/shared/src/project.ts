@@ -8,6 +8,7 @@ import {
 import { addNode, createNode } from "./sceneOps";
 import { createCharacterNode } from "./character";
 import { setEnvironment } from "./environment";
+import { MAX_PREFABS, prefabSchema, type Prefab } from "./prefab";
 
 /**
  * A project is the unit people work on: a name and several scenes (one for NPCs, one for buildings,
@@ -24,6 +25,11 @@ export const projectSceneSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).max(MAX_SCENE_NAME_LENGTH),
   scene: sceneSchema,
+  /**
+   * Set for a scene that exists to edit a prefab: its contents are the prefab, and changes to it reach every
+   * copy of the prefab. Absent for an ordinary scene.
+   */
+  prefabId: z.string().min(1).optional(),
 });
 
 export const projectSchema = z
@@ -32,7 +38,18 @@ export const projectSchema = z
     name: z.string().min(1).max(MAX_SCENE_NAME_LENGTH),
     activeSceneId: z.string().min(1),
     scenes: z.array(projectSceneSchema).min(1).max(MAX_PROJECT_SCENES),
+    /** The project's prefabs, by id (reusable objects shown in the Assets tab). Older projects load with none. */
+    prefabs: z.record(z.string(), prefabSchema).default({}),
   })
+  .refine((project) => Object.keys(project.prefabs).length <= MAX_PREFABS, {
+    message: `a project can have at most ${MAX_PREFABS} prefabs`,
+    path: ["prefabs"],
+  })
+  .refine(
+    (project) =>
+      Object.entries(project.prefabs).every(([key, p]) => key === p.id),
+    { message: "a prefab is stored under the wrong id", path: ["prefabs"] },
+  )
   .refine(
     (project) => project.scenes.some((s) => s.id === project.activeSceneId),
     {
@@ -63,6 +80,7 @@ export function createProject(
     name: DEFAULT_PROJECT_NAME,
     activeSceneId: sceneId,
     scenes: [{ id: sceneId, name: sceneName, scene }],
+    prefabs: {},
   };
 }
 
@@ -282,4 +300,42 @@ export function createTemplateScene(
         },
       );
   }
+}
+
+/**
+ * Adds scenes that came from somewhere else (a file) after the others. They get new ids (so they can never
+ * clash with the scenes already here) and unique names. Throws if the project would get too many scenes.
+ * Returns the project and the ids of the new scenes, in order.
+ */
+export function addProjectScenes(
+  project: Project,
+  incoming: readonly ProjectScene[],
+  newId: () => string,
+): { project: Project; addedIds: string[] } {
+  if (project.scenes.length + incoming.length > MAX_PROJECT_SCENES) {
+    throw new Error(
+      `A project can have at most ${MAX_PROJECT_SCENES} scenes; this one has ${project.scenes.length} and ${incoming.length} more were given.`,
+    );
+  }
+  let next = project;
+  const addedIds: string[] = [];
+  for (const scene of incoming) {
+    const id = newId();
+    next = addProjectScene(next, { ...scene, id });
+    addedIds.push(id);
+  }
+  return { project: next, addedIds };
+}
+
+/** The prefabs that objects in this scene are linked to (as copies), by id. */
+export function prefabsUsedByScene(
+  project: Pick<Project, "prefabs">,
+  scene: Scene,
+): Record<string, Prefab> {
+  const used: Record<string, Prefab> = {};
+  for (const node of Object.values(scene.nodes)) {
+    const prefab = node.prefab ? project.prefabs[node.prefab.id] : undefined;
+    if (prefab) used[prefab.id] = prefab;
+  }
+  return used;
 }

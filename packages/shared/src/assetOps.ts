@@ -1,6 +1,7 @@
 import {
   ASSET_NOTE_MAX_LENGTH,
   NODE_NAME_MAX_LENGTH,
+  type AssetInfo,
   type Scene,
 } from "./scene";
 import { removeNodes } from "./sceneOps";
@@ -75,4 +76,35 @@ export function removeAsset(
     Object.entries(withoutNodes.assets).filter(([id]) => id !== assetId),
   );
   return { scene: { ...withoutNodes, assets }, removedNodeIds };
+}
+
+/**
+ * The imported models of the whole project: the union of what its scenes know, each file once. A scene that
+ * has a record for a file is the one whose name and note are shown; earlier scenes in `scenes` win (pass the
+ * open scene first).
+ */
+export function collectProjectModels(scenes: readonly Scene[]): AssetInfo[] {
+  const byId = new Map<string, AssetInfo>();
+  for (const scene of scenes) {
+    for (const info of Object.values(scene.assets)) {
+      if (info.type === "model" && !byId.has(info.id)) byId.set(info.id, info);
+    }
+  }
+  return [...byId.values()];
+}
+
+/** How many objects show each file across all scenes, and in how many scenes. */
+export function projectAssetUsage(
+  scenes: readonly Scene[],
+): Record<string, { objects: number; scenes: number }> {
+  const usage: Record<string, { objects: number; scenes: number }> = {};
+  for (const scene of scenes) {
+    const counts = assetUsageCounts(scene);
+    for (const [id, objects] of Object.entries(counts)) {
+      const entry = (usage[id] ??= { objects: 0, scenes: 0 });
+      entry.objects += objects;
+      entry.scenes += 1;
+    }
+  }
+  return usage;
 }
