@@ -1,5 +1,9 @@
 import { create } from "zustand";
-import type { ExtrudeOptions, ShapeMesh } from "@sceneroom/shared";
+import type {
+  ExtrudeOptions,
+  LoopCutOptions,
+  ShapeMesh,
+} from "@sceneroom/shared";
 
 /** What a click picks in edit mode: a point, an edge or a face. */
 export type SelectMode = "point" | "edge" | "face";
@@ -21,6 +25,17 @@ export type ExtrudeSession = {
 };
 
 /**
+ * The last loop cut, kept so its settings can be changed afterwards (the panel that appears after a cut), like
+ * `ExtrudeSession`. `edge` is the edge that was pointed at, as the first point of each of its ends in `before`.
+ */
+export type LoopCutSession = {
+  before: ShapeMesh;
+  edge: readonly [number, number];
+  options: LoopCutOptions;
+  pastLength: number;
+};
+
+/**
  * Edit mode: working on the individual points of one editable mesh. While it is on, `nodeId` is the
  * mesh being edited and `selected` are the numbers of its selected points. Edges and faces are selected
  * through their points (selecting both ends of an edge selects the edge), so every tool works on points.
@@ -34,6 +49,12 @@ type EditState = {
    * work from it, so each shows the loop or ring of that edge. Null when no edge was clicked.
    */
   anchorEdge: readonly [number, number] | null;
+  /** True while the Loop cut tool is on: hovering shows where a cut would go, a click cuts. */
+  loopCutMode: boolean;
+  setLoopCutMode: (on: boolean) => void;
+  /** The loop cut whose settings can still be changed, or null. */
+  loopCut: LoopCutSession | null;
+  setLoopCut: (session: LoopCutSession | null) => void;
   /** The extrusion whose settings can still be changed, or null. */
   extrude: ExtrudeSession | null;
   setExtrude: (session: ExtrudeSession | null) => void;
@@ -63,6 +84,10 @@ export const useEditStore = create<EditState>()((set) => ({
   setXray: (xray) => set({ xray }),
   extrude: null,
   setExtrude: (extrude) => set({ extrude }),
+  loopCutMode: false,
+  setLoopCutMode: (loopCutMode) => set({ loopCutMode }),
+  loopCut: null,
+  setLoopCut: (loopCut) => set({ loopCut }),
   setAnchorEdge: (anchorEdge) => set({ anchorEdge }),
   enter: (nodeId) =>
     set({
@@ -70,6 +95,8 @@ export const useEditStore = create<EditState>()((set) => ({
       selected: [],
       anchorEdge: null,
       extrude: null,
+      loopCut: null,
+      loopCutMode: false,
     }),
   exit: () =>
     set({
@@ -77,6 +104,8 @@ export const useEditStore = create<EditState>()((set) => ({
       selected: [],
       anchorEdge: null,
       extrude: null,
+      loopCut: null,
+      loopCutMode: false,
     }),
   setSelected: (selected) => set({ selected }),
   // Points that were selected stay selected: they are the same selection seen as edges or faces

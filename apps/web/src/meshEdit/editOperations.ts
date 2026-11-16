@@ -1,5 +1,12 @@
 import {
   DEFAULT_EXTRUDE_OPTIONS,
+  DEFAULT_LOOP_CUT_OPTIONS,
+  buildTopology,
+  edgeBetween,
+  loopCut,
+  sanitizeLoopCutOptions,
+  type LoopCutOptions,
+  type Topology,
   deletePoints,
   sanitizeExtrudeOptions,
   type ExtrudeOptions,
@@ -12,7 +19,11 @@ import {
   type ShapeMesh,
 } from "@sceneroom/shared";
 import { loadMeshData } from "@/assets/meshStorage";
-import { useEditStore, type ExtrudeSession } from "@/store/editStore";
+import {
+  useEditStore,
+  type ExtrudeSession,
+  type LoopCutSession,
+} from "@/store/editStore";
 import { useImportStore } from "@/store/importStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { buildMeshGeometry } from "@/components/viewport/shapeGeometry";
@@ -269,4 +280,138 @@ export async function changeExtrude(change: ExtrudeChange): Promise<boolean> {
   }
   if (!previewExtrude(change)) return false;
   return commitExtrude();
+}
+
+// ---- Loop cut ----
+
+/** Where the point numbers of an edge are, to find it again in a topology: the first point of each end. */
+type EdgePoints = readonly [number, number];
+
+/** The edge with these end points in the topology of a mesh, or -1. */
+function findEdge(topology: Topology, edge: EdgePoints): number {
+  const a = topology.vertexOf[edge[0]];
+  const b = topology.vertexOf[edge[1]];
+  return a === undefined || b === undefined ? -1 : edgeBetween(topology, a, b);
+}
+
+/**
+ * Cuts the strip of squares across an edge: a new ring of edges goes through it (see `loopCut`). The new points
+ * are selected. A panel then offers the number of cuts and a slide until something else is done. Returns false,
+ * saying why in the bar over the 3D view, if the cut cannot be made.
+ */
+export async function startLoopCut(edge: EdgePoints): Promise<boolean> {
+  const edited = await editedMesh();
+  if (!edited) return false;
+  const topology = buildTopology(edited.mesh);
+  const found = findEdge(topology, edge);
+  const result =
+    found === -1
+      ? ({ ok: false, reason: "That edge is no longer there." } as const)
+      : loopCut(edited.mesh, topology, found, DEFAULT_LOOP_CUT_OPTIONS);
+  if (!result.ok) {
+    say(result.reason);
+    return false;
+  }
+  if (!(await commitMesh(edited.nodeId, result.mesh, "Loop cut"))) return false;
+  selectCap(result);
+  const edit = useEditStore.getState();
+  edit.setLoopCutMode(false);
+  edit.setLoopCut({
+    before: edited.mesh,
+    edge,
+    options: DEFAULT_LOOP_CUT_OPTIONS,
+    pastLength: useSceneStore.getState().history.past.length,
+  });
+  edit.setExtrude(null);
+  return true;
+}
+
+/** The result of the loop cut with its settings, or why not. */
+function cutWith(session: LoopCutSession, options: LoopCutOptions) {
+  const topology = buildTopology(session.before);
+  const edge = findEdge(topology, session.edge);
+  if (edge === -1) {
+    return { ok: false, reason: "That edge is no longer there." } as const;
+  }
+  return loopCut(session.before, topology, edge, options);
+}
+
+/** Shows the loop cut with changed settings right away, without storing it (a slider being dragged). */
+export function previewLoopCut(change: Partial<LoopCutOptions>): boolean {
+  const edit = useEditStore.getState();
+  const session = edit.loopCut;
+  if (!session || !edit.nodeId) return false;
+  if (useSceneStore.getState().history.past.length !== session.pastLength) {
+    return false;
+  }
+  const options = sanitizeLoopCutOptions({ ...session.options, ...change });
+  const result = cutWith(session, options);
+  if (!result.ok) return false;
+  showOnScreen(edit.nodeId, result.mesh);
+  selectCap(result);
+  edit.setLoopCut({ ...session, options });
+  return true;
+}
+
+let cutCommitting = false;
+let cutCommitAgain = false;
+
+/** Stores the loop cut with the settings it has now, in place of the one made before (still ONE undo step). */
+export async function commitLoopCut(): Promise<boolean> {
+  if (cutCommitting) {
+    cutCommitAgain = true;
+    return false;
+  }
+  cutCommitting = true;
+  try {
+    let ok = true;
+    do {
+      cutCommitAgain = false;
+      ok = await storeLoopCut();
+    } while (cutCommitAgain);
+    return ok;
+  } finally {
+    cutCommitting = false;
+  }
+}
+
+async function storeLoopCut(): Promise<boolean> {
+  const edit = useEditStore.getState();
+  const session = edit.loopCut;
+  if (!session || !edit.nodeId) return false;
+  if (useSceneStore.getState().history.past.length !== session.pastLength) {
+    restoreOriginal(edit.nodeId);
+    edit.setLoopCut(null);
+    say(
+      "The cut's settings can only be changed right after cutting. Undo, or cut again.",
+    );
+    return false;
+  }
+  const result = cutWith(session, session.options);
+  if (!result.ok) {
+    say(result.reason);
+    return false;
+  }
+  if (!(await commitMesh(edit.nodeId, result.mesh, "Loop cut", true))) {
+    restoreOriginal(edit.nodeId);
+    return false;
+  }
+  selectCap(result);
+  live.original = null;
+  return true;
+}
+
+/** Changes the settings of the last loop cut and stores the result at once (for typed values and resets). */
+export async function changeLoopCut(
+  change: Partial<LoopCutOptions>,
+): Promise<boolean> {
+  const edit = useEditStore.getState();
+  if (!edit.loopCut) return false;
+  if (
+    useSceneStore.getState().history.past.length !== edit.loopCut.pastLength
+  ) {
+    return commitLoopCut();
+  }
+  if (!previewLoopCut(change)) return false;
+  return commitLoopCut();
 }

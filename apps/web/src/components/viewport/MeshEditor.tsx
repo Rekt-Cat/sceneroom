@@ -18,6 +18,7 @@ import {
   isEffectivelyLocked,
   edgeVertices,
   buildTopology,
+  loopCutPreview,
   pointsNear,
   selectionAfterBox,
   selectionAfterEdgeClick,
@@ -28,11 +29,12 @@ import {
 } from "@sceneroom/shared";
 import { commitMeshPositions } from "@/meshEdit/commitMeshEdit";
 import { buildEditOverlay, type EditOverlay } from "@/meshEdit/editOverlay";
-import { topologyOfGeometry } from "@/meshEdit/geometryTopology";
+import { editMeshOf, topologyOfGeometry } from "@/meshEdit/geometryTopology";
 import { copyPositions, transformSelectedLive } from "@/meshEdit/liveEdit";
 import { projectPoints } from "@/meshEdit/projectPoints";
 import { pushSurfaceBack } from "@/meshEdit/surfaceOffset";
 import { pickEdge } from "@/meshEdit/pickEdge";
+import { startLoopCut } from "@/meshEdit/editOperations";
 import { visibleSpots } from "@/meshEdit/visibility";
 import { useEditStore } from "@/store/editStore";
 import { useSceneStore } from "@/store/sceneStore";
@@ -122,6 +124,46 @@ function EditSession({ nodeId }: { nodeId: string }) {
     return pushSurfaceBack(bound.object);
   }, [xray, bound]);
 
+  // ---- Loop cut tool: moving over an edge shows where the cut would go (green) ----
+  const loopCutMode = useEditStore((state) => state.loopCutMode);
+  useEffect(() => {
+    const overlay = overlayRef.current;
+    if (!bound || !loopCutMode || !overlay) return;
+    const mesh = editMeshOf(bound.geometry);
+    const topology = mesh ? buildTopology(mesh) : null;
+    if (!mesh || !topology) return;
+    let last = -2;
+
+    function onMove(event: PointerEvent) {
+      if (!bound || !mesh || !topology || event.target !== canvas) return;
+      const edge = pickEdge(
+        topology,
+        projectPoints(
+          bound.object,
+          camera,
+          canvas.getBoundingClientRect(),
+          mesh.positions,
+        ),
+        event.clientX,
+        event.clientY,
+        PICK_DISTANCE_PX,
+        useEditStore.getState().xray,
+        bound.object,
+        camera,
+      );
+      if (edge === last) return;
+      last = edge;
+      overlay?.setCutPreview(
+        edge < 0 ? null : loopCutPreview(mesh, topology, edge),
+      );
+    }
+    window.addEventListener("pointermove", onMove);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      overlay.setCutPreview(null);
+    };
+  }, [loopCutMode, bound, camera, canvas]);
+
   // ---- Picking: click a point (Shift adds or removes) ----
   useEffect(() => {
     if (!bound) return;
@@ -148,6 +190,11 @@ function EditSession({ nodeId }: { nodeId: string }) {
       if (!press || press.moved || shouldIgnoreClick() || !bound) return;
       const rect = canvas.getBoundingClientRect();
       const mode = useEditStore.getState().selectMode;
+      // The Loop cut tool: a click on an edge cuts the strip of squares across it
+      if (useEditStore.getState().loopCutMode) {
+        cutAt(event, rect);
+        return;
+      }
       if (mode === "edge") {
         selectEdgeAt(event, rect);
         return;
@@ -202,6 +249,34 @@ function EditSession({ nodeId }: { nodeId: string }) {
       edit.setSelected(
         selectionAfterWeldedClick(groups, edit.selected, hit, event.shiftKey),
       );
+    }
+
+    /** Loop cut tool: cuts across the edge under the pointer (nothing happens if none is there). */
+    function cutAt(event: PointerEvent, rect: DOMRect) {
+      if (!bound) return;
+      const topology = topologyOfGeometry(bound.geometry);
+      if (!topology) return;
+      const edge = pickEdge(
+        topology,
+        projectPoints(
+          bound.object,
+          camera,
+          rect,
+          (bound.geometry.getAttribute("position") as BufferAttribute).array,
+        ),
+        event.clientX,
+        event.clientY,
+        PICK_DISTANCE_PX,
+        useEditStore.getState().xray,
+        bound.object,
+        camera,
+      );
+      if (edge < 0) return;
+      const [a, b] = edgeVertices(topology, edge);
+      void startLoopCut([
+        topology.vertexPoints[a]![0]!,
+        topology.vertexPoints[b]![0]!,
+      ]);
     }
 
     /**

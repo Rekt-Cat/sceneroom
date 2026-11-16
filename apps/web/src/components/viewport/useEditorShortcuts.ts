@@ -137,7 +137,10 @@ export function useEditorShortcuts(): void {
         const plain = !event.ctrlKey && !event.metaKey && !event.altKey;
         if (event.key === "Escape") {
           event.preventDefault();
-          stopEditing();
+          // Escape first cancels the Loop cut tool; with it off, it leaves edit mode
+          const edit = useEditStore.getState();
+          if (edit.loopCutMode) edit.setLoopCutMode(false);
+          else stopEditing();
         } else if (plain && event.key.toLowerCase() === "a") {
           event.preventDefault();
           selectAllPoints();
@@ -163,6 +166,11 @@ export function useEditorShortcuts(): void {
           event.preventDefault();
           const edit = useEditStore.getState();
           edit.setXray(!edit.xray);
+        } else if (plain && event.key.toLowerCase() === "c") {
+          // C: the Loop cut tool on or off
+          event.preventDefault();
+          const edit = useEditStore.getState();
+          edit.setLoopCutMode(!edit.loopCutMode);
         } else if (plain && selectModeForKey(event.key)) {
           // 1, 2, 3: pick points, edges or faces
           useEditStore.getState().setSelectMode(selectModeForKey(event.key)!);

@@ -36,3 +36,4 @@ export * from "./prefab";
 export * from "./topology";
 export * from "./framing";
 export * from "./fly";
+export * from "./loopCut";

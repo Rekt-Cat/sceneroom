@@ -13,9 +13,14 @@ import { useEditStore } from "@/store/editStore";
 import { useImportStore } from "@/store/importStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { commitMesh } from "./commitMeshEdit";
+import { buildTopology } from "@sceneroom/shared";
 import {
   changeExtrude,
+  changeLoopCut,
   commitExtrude,
+  commitLoopCut,
+  previewLoopCut,
+  startLoopCut,
   deleteSelectedPoints,
   previewExtrude,
   extrudeSelectedFaces,
@@ -336,5 +341,72 @@ describe("changing the settings of the extrusion just made", () => {
     await extrudeFront();
     get().addPrimitive("cone");
     expect(previewExtrude({ scale: 0.5 })).toBe(false);
+  });
+});
+
+describe("loop cut on a cube", () => {
+  /** The first edge of the cube as the first point of each end (what the viewport passes when an edge is clicked). */
+  async function anEdge(): Promise<[number, number]> {
+    const t = buildTopology(await mesh());
+    return [t.vertexPoints[t.edges[0]!]![0]!, t.vertexPoints[t.edges[1]!]![0]!];
+  }
+  const triangleCount = async () => (await mesh()).indices.length / 3;
+
+  it("cuts a ring round the cube: 4 squares split, so 8 more triangles, as one undo step", async () => {
+    const before = await triangleCount();
+    const stepsBefore = get().history.past.length;
+    expect(await startLoopCut(await anEdge())).toBe(true);
+    expect(await triangleCount()).toBe(before + 8);
+    expect(get().history.past.length).toBe(stepsBefore + 1);
+    expect(get().history.past.at(-1)?.label).toBe("Loop cut");
+    // the new points are selected (8 spots, 2 points each where two sides meet)
+    expect(useEditStore.getState().selected.length).toBeGreaterThanOrEqual(8);
+    expect(useEditStore.getState().loopCutMode).toBe(false);
+    get().undo();
+    expect(await triangleCount()).toBe(before);
+  });
+
+  it("the cut works on a plain cube, with no Segments needed", async () => {
+    expect((await mesh()).positions.length / 3).toBe(24);
+    expect(await startLoopCut(await anEdge())).toBe(true);
+    // the cube still closes: every edge of the result has two faces
+    const t = buildTopology(await mesh());
+    expect(t.edgeFaces.every((faces) => faces.length === 2)).toBe(true);
+  });
+
+  it("a new number of cuts replaces the cut in place (still one undo step)", async () => {
+    await startLoopCut(await anEdge());
+    const steps = get().history.past.length;
+    const before = (await triangleCount()) - 8;
+    expect(await changeLoopCut({ cuts: 3 })).toBe(true);
+    expect(get().history.past.length).toBe(steps);
+    expect(await triangleCount()).toBe(before + 4 * 2 * 3);
+    expect(useEditStore.getState().loopCut!.options.cuts).toBe(3);
+  });
+
+  it("dragging a setting only previews it; letting go stores it once", async () => {
+    await startLoopCut(await anEdge());
+    const asset = node("a").assetId;
+    for (const cuts of [2, 3, 4]) expect(previewLoopCut({ cuts })).toBe(true);
+    expect(node("a").assetId).toBe(asset);
+    expect(await commitLoopCut()).toBe(true);
+    expect(node("a").assetId).not.toBe(asset);
+    expect(useEditStore.getState().loopCut!.options.cuts).toBe(4);
+  });
+
+  it("is refused, saying why, once something else was done", async () => {
+    await startLoopCut(await anEdge());
+    get().addPrimitive("cone");
+    expect(previewLoopCut({ cuts: 2 })).toBe(false);
+    expect(await changeLoopCut({ cuts: 2 })).toBe(false);
+    expect(message()).toContain("right after cutting");
+    expect(useEditStore.getState().loopCut).toBeNull();
+  });
+
+  it("says why when there is no strip of squares to cut", async () => {
+    // a mesh of one triangle: make the cube's mesh a triangle by deleting almost everything is awkward, so
+    // ask for an edge that is not there
+    expect(await startLoopCut([9999, 9998])).toBe(false);
+    expect(message()).toContain("no longer there");
   });
 });

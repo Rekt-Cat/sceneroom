@@ -30,6 +30,8 @@ export type EditOverlay = {
   setMode: (mode: SelectMode) => void;
   /** X-ray on: lines and dots show through the mesh. Off: parts behind a face are hidden by it. */
   setXray: (xray: boolean) => void;
+  /** Shows (or, with null, hides) the lines a loop cut would make: pairs of spots (x, y, z, x, y, z, ...) in the mesh's space. */
+  setCutPreview: (lines: Float32Array | null) => void;
   /** Frees what the overlay made (the points it shares with the mesh are the mesh's own). */
   dispose: () => void;
 };
@@ -126,7 +128,21 @@ export function buildEditOverlay(geometry: BufferGeometry): EditOverlay {
   selectedDots.frustumCulled = false;
 
   // The order matters to the tests: all edges, all points, then the selected edges and points
-  group.add(lines, points, selectedLines, selectedDots);
+  // The lines a loop cut would draw (green), set while the Loop cut tool hovers over an edge
+  const cutGeometry = new BufferGeometry();
+  cutGeometry.setAttribute("position", new Float32BufferAttribute([], 3));
+  const cutMaterial = new LineBasicMaterial({
+    color: 0x58e07a,
+    depthTest: false,
+    transparent: true,
+  });
+  const cutLines = new LineSegments(cutGeometry, cutMaterial);
+  cutLines.raycast = hitNothing;
+  cutLines.renderOrder = 14;
+  cutLines.frustumCulled = false;
+  cutLines.visible = false;
+
+  group.add(lines, points, selectedLines, selectedDots, cutLines);
 
   const setSelected = (selected: readonly number[]) => {
     const color = pointGeometry.getAttribute("color") as BufferAttribute;
@@ -164,6 +180,19 @@ export function buildEditOverlay(geometry: BufferGeometry): EditOverlay {
   };
   setMode("point");
 
+  const setCutPreview = (positions: Float32Array | null) => {
+    if (!positions || positions.length === 0) {
+      cutLines.visible = false;
+      return;
+    }
+    cutGeometry.setAttribute(
+      "position",
+      new Float32BufferAttribute(positions, 3),
+    );
+    cutGeometry.computeBoundingSphere();
+    cutLines.visible = true;
+  };
+
   const setXray = (xray: boolean) => {
     // Without x-ray the overlay is hidden by the mesh in front of it (the mesh is pushed back a little by the
     // editor so lines lying on its surface are not hidden by it)
@@ -183,12 +212,15 @@ export function buildEditOverlay(geometry: BufferGeometry): EditOverlay {
     setSelected,
     setMode,
     setXray,
+    setCutPreview,
     dispose: () => {
       group.removeFromParent();
       pointGeometry.dispose();
       lineGeometry.dispose();
       selectedLineGeometry.dispose();
       selectedDotGeometry.dispose();
+      cutGeometry.dispose();
+      cutMaterial.dispose();
       pointMaterial.dispose();
       lineMaterial.dispose();
       selectedLineMaterial.dispose();

@@ -8,6 +8,7 @@ import {
 } from "@/meshEdit/editOperations";
 import { selectLoopOrRing } from "@/meshEdit/selectionTools";
 import ExtrudePanel from "./ExtrudePanel";
+import LoopCutPanel from "./LoopCutPanel";
 import { stopEditing } from "@/meshEdit/startEditing";
 
 const ACTION =
@@ -54,6 +55,8 @@ export default function EditModeBar() {
   const setSelectMode = useEditStore((state) => state.setSelectMode);
   const xray = useEditStore((state) => state.xray);
   const setXray = useEditStore((state) => state.setXray);
+  const loopCutMode = useEditStore((state) => state.loopCutMode);
+  const setLoopCutMode = useEditStore((state) => state.setLoopCutMode);
   const node = useSceneStore((state) =>
     nodeId ? state.scene.nodes[nodeId] : undefined,
   );
@@ -171,6 +174,19 @@ export default function EditModeBar() {
           <span className="text-ed-text-3">Change</span>
           <button
             type="button"
+            aria-pressed={loopCutMode}
+            onClick={() => setLoopCutMode(!loopCutMode)}
+            title="Loop cut: add a new ring of edges. Move over an edge to see where the cut goes (green), then click (C). Esc cancels."
+            className={`rounded-md border px-2.5 py-1 font-medium focus-visible:outline-2 focus-visible:outline-ed-accent ${
+              loopCutMode
+                ? "border-ed-select/60 bg-ed-select/25 text-ed-select"
+                : "border-ed-line-strong hover:bg-ed-field"
+            }`}
+          >
+            Loop cut
+          </button>
+          <button
+            type="button"
             onClick={() => void extrudeSelectedFaces()}
             disabled={selected.length < 3}
             title="Extrude: copy the selected faces and push them out (Shift + E). Select a face first."
@@ -190,7 +206,12 @@ export default function EditModeBar() {
         </div>
       </div>
 
-      <p className="max-w-[44rem] text-ed-text-3">{HINTS[selectMode]}</p>
+      <p className="max-w-[44rem] text-ed-text-3">
+        {loopCutMode
+          ? "Loop cut: move over an edge. A green line shows where the new ring of edges will go, all the way across the strip of squares. Click to cut. Esc cancels."
+          : HINTS[selectMode]}
+      </p>
+      <LoopCutPanel />
       <ExtrudePanel />
     </div>
   );

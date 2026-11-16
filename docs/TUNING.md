@@ -480,6 +480,16 @@ Files: `apps/web/src/components/viewport/InspectorFields.tsx` (rows, steps, colo
 | Twist range       | `MAX_EXTRUDE_TWIST_DEGREES` in `meshEdit.ts`                          | -360 to 360 | How far the new face can be turned.                                        |
 | Distance range    | `MIN_EXTRUDE_DISTANCE`, `MAX_EXTRUDE_DISTANCE` in `editOperations.ts` | 0.01 to 50  | Closest and furthest an extrusion can go.                                  |
 
+## Loop cut
+
+| What           | Where                                                   | Our value        | What it does                                                                                     |
+| -------------- | ------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------ |
+| Most cuts      | `MAX_LOOP_CUTS` in `packages/shared/src/loopCut.ts`     | 10               | Most new loops one cut can add.                                                                  |
+| Slide limit    | `SLIDE_LIMIT` in `loopCut.ts`                           | 0.9              | How far (as a fraction of the gap) the loops can slide; below 1 so a loop never sits on an edge. |
+| Tool key       | `useEditorShortcuts.ts`                                 | C                | Turns the Loop cut tool on and off (Esc cancels).                                                |
+| Preview colour | `cutMaterial` in `apps/web/src/meshEdit/editOverlay.ts` | green `0x58e07a` | The colour of the line that shows where a cut would go.                                          |
+| Click distance | `PICK_DISTANCE_PX` in `MeshEditor.tsx`                  | 12 px            | How close the pointer must be to an edge to pick it (same as edge mode).                         |
+
 ## Zoom to an object (double-click in the scene list, F)
 
 | What                      | Where                                                                     | Our value | What it does                                                                                                |
