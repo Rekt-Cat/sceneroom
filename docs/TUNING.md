@@ -452,6 +452,16 @@ Files: `apps/web/src/components/viewport/InspectorFields.tsx` (rows, steps, colo
 | The loading message           | `apps/web/src/components/viewport/ViewportLoader.tsx` | The text inside `loading: () => ...`.                                                                                  |
 | Tab title and description     | `apps/web/src/app/layout.tsx`                         | The `metadata` object.                                                                                                 |
 
+## Flying the camera (hold right-click, W A S D Q E)
+
+| What                      | Where                                                                          | Our value   | What it does                                                                           |
+| ------------------------- | ------------------------------------------------------------------------------ | ----------- | -------------------------------------------------------------------------------------- |
+| Slowest and fastest speed | `FLY_MIN_SPEED`, `FLY_MAX_SPEED` in `packages/shared/src/fly.ts`               | 2 and 60    | Units per second.                                                                      |
+| Speed per distance        | `FLY_SPEED_PER_DISTANCE` in `fly.ts`                                           | 0.9         | Speed is this times the distance to what is looked at (slow close up, quick far away). |
+| Fast key factor           | `FLY_FAST_FACTOR` in `fly.ts`                                                  | 3           | How much faster with Ctrl or Cmd held.                                                 |
+| Turn-on-the-spot distance | `LOOK_AROUND_DISTANCE` in `apps/web/src/components/viewport/FlyController.tsx` | 0.05        | While flying, the point the camera turns round is this far in front of it.             |
+| The keys                  | `FLY_KEY_CODES` in `fly.ts`                                                    | W A S D Q E | Forward, left, back, right, down, up. Add or change a `KeyX: "direction"` line.        |
+
 ## Zoom to an object (double-click in the scene list, F)
 
 | What                      | Where                                                                     | Our value | What it does                                                                                                |

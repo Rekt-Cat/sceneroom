@@ -51,6 +51,12 @@ export function useEditorShortcuts(): void {
       }
       if (isTypingTarget(event.target)) return;
 
+      // Holding the right mouse button in the 3D view: W A S D Q E fly the camera (see FlyController), so they
+      // must not do their usual jobs
+      if (useViewStore.getState().flying && /^Key[WASDQE]$/.test(event.code)) {
+        return;
+      }
+
       const store = useSceneStore.getState();
 
       // Tab enters edit mode for the selected shape or mesh, and leaves it again
