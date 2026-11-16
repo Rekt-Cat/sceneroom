@@ -17,6 +17,7 @@ import AddMenu from "./AddMenu";
 import ImportButton from "./ImportButton";
 import PanelResizer from "./PanelResizer";
 import AssetsPanel from "./AssetsPanel";
+import { useViewStore } from "@/store/viewStore";
 import { useLibrary } from "./useLibrary";
 import {
   ROOT_DROP_ID,
@@ -410,6 +411,9 @@ function HierarchyRow({
           type="button"
           aria-pressed={selected}
           onPointerDown={(event) => onPressNode(event, node.id, node.name)}
+          // Double-click: the 3D view zooms to this object
+          onDoubleClick={() => useViewStore.getState().requestFocus([node.id])}
+          title="Click to select. Double-click to zoom to it in the 3D view."
           onClick={(event) => {
             if (justDragged.current) return;
             onSelectRow(node.id, {

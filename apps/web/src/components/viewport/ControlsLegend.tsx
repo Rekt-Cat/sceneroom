@@ -4,6 +4,7 @@ const CONTROLS: [string, string][] = [
   ["Right-drag", "Orbit"],
   ["Scroll", "Zoom"],
   ["Ctrl/Cmd-drag", "Select box"],
+  ["F", "Zoom to selection"],
   ["Right-click", "Menu"],
 ];
 

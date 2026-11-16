@@ -1,70 +1,172 @@
 "use client";
 
-import { useEditStore } from "@/store/editStore";
+import { useEditStore, type SelectMode } from "@/store/editStore";
 import { useSceneStore } from "@/store/sceneStore";
 import {
   deleteSelectedPoints,
   extrudeSelectedFaces,
 } from "@/meshEdit/editOperations";
+import { growSelectionTo } from "@/meshEdit/selectionTools";
 import { stopEditing } from "@/meshEdit/startEditing";
 
 const ACTION =
-  "rounded-md border border-ed-line-strong px-2 py-0.5 font-medium hover:bg-ed-field focus-visible:outline-2 focus-visible:outline-ed-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent";
+  "rounded-md border border-ed-line-strong px-2.5 py-1 font-medium hover:bg-ed-field focus-visible:outline-2 focus-visible:outline-ed-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent";
 
-/** The strip at the top of the 3D view while editing points: what is going on and how to get out. */
+const MODES: { mode: SelectMode; label: string; key: string; help: string }[] =
+  [
+    {
+      mode: "point",
+      label: "Points",
+      key: "1",
+      help: "Click a corner point. Alt-click selects a whole flat face.",
+    },
+    {
+      mode: "edge",
+      label: "Edges",
+      key: "2",
+      help: "Click an edge (a line between two points). Alt-click selects its whole loop.",
+    },
+    {
+      mode: "face",
+      label: "Faces",
+      key: "3",
+      help: "Click a face (a flat surface). A square made of two triangles is one face.",
+    },
+  ];
+
+/** What to do next, in plain words, for the mode that is on. */
+const HINTS: Record<SelectMode, string> = {
+  point:
+    "Click a point to select it. Shift adds more. Ctrl-drag draws a box. Alt-click selects a whole flat face. Then move it with W, turn with E, scale with R.",
+  edge: "Click an edge to select it. Press Loop to select the whole belt of edges round the shape (Alt-click does the same in one go), or Ring for the parallel edges across a strip. Shift adds more.",
+  face: "Click a face to select it. Shift adds more. Alt-click selects the whole flat area. Press Extrude to push the selected faces out.",
+};
+
+/**
+ * The panel at the top of the 3D view while editing points: what is being edited, what a click selects,
+ * the tools that grow a selection, and what to do next in plain words.
+ */
 export default function EditModeBar() {
   const nodeId = useEditStore((state) => state.nodeId);
   const selected = useEditStore((state) => state.selected);
+  const selectMode = useEditStore((state) => state.selectMode);
+  const setSelectMode = useEditStore((state) => state.setSelectMode);
   const node = useSceneStore((state) =>
     nodeId ? state.scene.nodes[nodeId] : undefined,
   );
-  const points = useSceneStore((state) => {
+  const triangles = useSceneStore((state) => {
     if (!node?.assetId) return 0;
     const info = state.scene.assets[node.assetId];
     return info ? info.triangles : 0;
   });
   if (!nodeId || !node) return null;
+
+  /** Loop and Ring work on edges, so pressing them switches to edge mode (and says what to do if nothing is selected). */
+  function grow(pick: "loop" | "ring") {
+    setSelectMode("edge");
+    growSelectionTo(pick);
+  }
+
   return (
     <div
-      role="status"
-      className="absolute top-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-ed-select/50 bg-ed-raised/95 px-3 py-1.5 text-xs shadow-lg shadow-black/40"
+      role="region"
+      aria-label="Edit mode"
+      className="flex w-max max-w-full flex-col gap-2 rounded-lg border border-ed-select/50 bg-ed-raised/95 px-3 py-2 text-xs shadow-lg shadow-black/40"
     >
-      <span className="font-semibold text-ed-select">Edit mode</span>
-      <span className="text-ed-text-2">
-        {node.name} · {selected.length} point{selected.length === 1 ? "" : "s"}{" "}
-        selected
-        {points > 0 ? ` · ${points.toLocaleString("en-US")} triangles` : ""}
-      </span>
-      <span className="hidden text-ed-text-3 lg:inline">
-        Click a point · Alt-click a face · Shift adds · Ctrl-drag a box · A all
-        · W E R
-      </span>
-      <button
-        type="button"
-        onClick={() => void extrudeSelectedFaces()}
-        disabled={selected.length < 3}
-        title="Extrude: copy the selected faces and push them out (Shift + E). Select all the points of a face first."
-        className={ACTION}
-      >
-        Extrude
-      </button>
-      <button
-        type="button"
-        onClick={() => void deleteSelectedPoints()}
-        disabled={selected.length === 0}
-        title="Delete the selected points and the faces that use them (Delete)"
-        className={ACTION}
-      >
-        Delete
-      </button>
-      <button
-        type="button"
-        onClick={stopEditing}
-        title="Leave edit mode (Tab or Escape)"
-        className="rounded-md border border-ed-line-strong px-2 py-0.5 font-medium hover:bg-ed-field focus-visible:outline-2 focus-visible:outline-ed-accent"
-      >
-        Done
-      </button>
+      <div className="flex items-center gap-3">
+        <span className="font-semibold text-ed-select">Edit mode</span>
+        <span className="text-ed-text-2">
+          {node.name} · {selected.length} point
+          {selected.length === 1 ? "" : "s"} selected
+          {triangles > 0
+            ? ` · ${triangles.toLocaleString("en-US")} triangles`
+            : ""}
+        </span>
+        <span className="flex-1" />
+        <button
+          type="button"
+          onClick={stopEditing}
+          title="Leave edit mode (Tab or Escape)"
+          className={ACTION}
+        >
+          Done
+        </button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="flex items-center gap-2">
+          <span className="text-ed-text-3">Select</span>
+          <div
+            role="group"
+            aria-label="What a click selects"
+            className="flex overflow-hidden rounded-md border border-ed-line-strong"
+          >
+            {MODES.map(({ mode, label, key, help }) => (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={selectMode === mode}
+                title={`${help} (press ${key})`}
+                onClick={() => setSelectMode(mode)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 font-medium focus-visible:outline-2 focus-visible:outline-ed-accent ${
+                  selectMode === mode
+                    ? "bg-ed-select/25 text-ed-select"
+                    : "hover:bg-ed-field"
+                }`}
+              >
+                {label}
+                <kbd className="rounded bg-ed-field px-1 font-mono text-[10px] text-ed-text-3">
+                  {key}
+                </kbd>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-ed-text-3">Grow</span>
+          <button
+            type="button"
+            onClick={() => grow("loop")}
+            title="Select the whole loop through the selected edge: the belt of edges that runs round the shape (Alt-click an edge does the same). Select an edge first."
+            className={ACTION}
+          >
+            Loop
+          </button>
+          <button
+            type="button"
+            onClick={() => grow("ring")}
+            title="Select the ring through the selected edge: the parallel edges across the same strip, like the rungs of a ladder. Select an edge first."
+            className={ACTION}
+          >
+            Ring
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-ed-text-3">Change</span>
+          <button
+            type="button"
+            onClick={() => void extrudeSelectedFaces()}
+            disabled={selected.length < 3}
+            title="Extrude: copy the selected faces and push them out (Shift + E). Select a face first."
+            className={ACTION}
+          >
+            Extrude
+          </button>
+          <button
+            type="button"
+            onClick={() => void deleteSelectedPoints()}
+            disabled={selected.length === 0}
+            title="Delete the selected points and the faces that use them (Delete)"
+            className={ACTION}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+
+      <p className="max-w-[44rem] text-ed-text-3">{HINTS[selectMode]}</p>
     </div>
   );
 }

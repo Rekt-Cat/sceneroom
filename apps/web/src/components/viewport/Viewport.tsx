@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { Canvas } from "@react-three/fiber";
+import FocusController from "./FocusController";
 import { Grid, OrbitControls, Stats } from "@react-three/drei";
 import { MOUSE, type DirectionalLight } from "three";
 import { sunPosition } from "@sceneroom/shared";
@@ -135,6 +136,8 @@ export default function Viewport() {
         mouseButtons={{ LEFT: MOUSE.PAN, RIGHT: MOUSE.ROTATE }}
       />
 
+      {/* Double-click in the scene list, or F: the camera glides to the object */}
+      <FocusController />
       {/* Lets Shift switch pan/rotate in the middle of a camera drag */}
       <CameraModifierSwitch />
       {/* Ctrl/Cmd + left-drag draws a selection box */}

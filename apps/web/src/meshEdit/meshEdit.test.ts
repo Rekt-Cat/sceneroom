@@ -309,6 +309,39 @@ describe("the overlay of points and lines", () => {
     expect(colors()).toEqual(plain);
   });
 
+  it("draws the selected edges (both ends selected) in the selection colour, and the selected points as their own dots", () => {
+    const overlay = buildEditOverlay(square());
+    const [, , selectedLines, selectedDots] = overlay.group
+      .children as unknown as {
+      geometry: BufferGeometry;
+    }[];
+    expect(selectedLines!.geometry.index!.count).toBe(0);
+    overlay.setSelected([0, 1]);
+    // the edge between points 0 and 1 is selected
+    expect(Array.from(selectedLines!.geometry.index!.array)).toEqual([0, 1]);
+    expect(Array.from(selectedDots!.geometry.index!.array).sort()).toEqual([
+      0, 1,
+    ]);
+    // two points with no edge between them select no edge (1 and 3 are opposite corners of the square)
+    overlay.setSelected([1, 3]);
+    expect(selectedLines!.geometry.index!.count).toBe(0);
+    expect(selectedDots!.geometry.index!.count).toBe(2);
+    overlay.setSelected([]);
+    expect(selectedDots!.geometry.index!.count).toBe(0);
+  });
+
+  it("shows a dot on every point in point mode, and only the selected ones in edge and face mode", () => {
+    const overlay = buildEditOverlay(square());
+    const points = overlay.group.children[1]!;
+    expect(points.visible).toBe(true);
+    overlay.setMode("edge");
+    expect(points.visible).toBe(false);
+    overlay.setMode("face");
+    expect(points.visible).toBe(false);
+    overlay.setMode("point");
+    expect(points.visible).toBe(true);
+  });
+
   it("takes no clicks and is not hit by the pointer", () => {
     const overlay = buildEditOverlay(square());
     for (const child of overlay.group.children) {

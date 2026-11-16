@@ -63,8 +63,11 @@ async function run(
   ) {
     return false;
   }
-  // The points were numbered again: only now is the new selection right
-  useEditStore.getState().setSelected(result.selected);
+  // The points were numbered again: only now is the new selection right. Points on the same spot move
+  // together (an extrusion's cap and the tops of its walls are separate points on one spot), or dragging the
+  // new face would leave its walls behind and tear the surface.
+  const groups = weldGroups(result.mesh.positions);
+  useEditStore.getState().setSelected(expandToWelded(groups, result.selected));
   return true;
 }
 

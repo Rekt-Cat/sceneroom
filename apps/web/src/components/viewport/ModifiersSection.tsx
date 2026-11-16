@@ -269,7 +269,7 @@ function MeshInfo({ node }: { node: SceneNode }) {
     <div className="space-y-1.5">
       <p className="text-[11px] leading-relaxed text-ed-text-3">
         {info
-          ? `Editable mesh: ${info.triangles.toLocaleString("en-US")} triangles. Modifiers below are applied on top of it without changing it.`
+          ? `Editable mesh: ${info.triangles.toLocaleString("en-US")} triangles. Modifiers below are applied on top of it without changing it. The Segments slider is gone because the cuts are now real points and lines: set Segments on a plain shape before pressing Tab, or undo to get the slider back.`
           : "The record of this mesh is missing, so it cannot be shown."}
       </p>
       {info?.note && (

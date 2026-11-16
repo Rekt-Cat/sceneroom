@@ -10,7 +10,8 @@ import {
 } from "@/meshEdit/editOperations";
 import { stopEditing, toggleEditMode } from "@/meshEdit/startEditing";
 import { saveProjectToFile } from "@/sceneFile/sceneFileActions";
-import { useEditStore } from "@/store/editStore";
+import { useEditStore, type SelectMode } from "@/store/editStore";
+import { useViewStore } from "@/store/viewStore";
 import { pasteClipboard } from "./clipboardActions";
 import { selectAllPoints } from "./MeshEditor";
 
@@ -30,6 +31,17 @@ function isTypingTarget(target: EventTarget | null): boolean {
  * 1 to 5 add a shape, "/" focuses the search box, L locks or unlocks the selection,
  * and holding Shift flips snapping while it is held.
  */
+/** The selection mode a number key chooses in edit mode: 1 points, 2 edges, 3 faces. */
+function selectModeForKey(key: string): SelectMode | null {
+  return key === "1"
+    ? "point"
+    : key === "2"
+      ? "edge"
+      : key === "3"
+        ? "face"
+        : null;
+}
+
 export function useEditorShortcuts(): void {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -135,6 +147,9 @@ export function useEditorShortcuts(): void {
           store.setTransformMode(modeForKey(event.key)!);
         } else if (plain && event.key.toLowerCase() === "x") {
           store.toggleSnap();
+        } else if (plain && selectModeForKey(event.key)) {
+          // 1, 2, 3: pick points, edges or faces
+          useEditStore.getState().setSelectMode(selectModeForKey(event.key)!);
         }
         return;
       }
@@ -162,6 +177,12 @@ export function useEditorShortcuts(): void {
         : undefined;
       if (kind) {
         store.addPrimitive(kind);
+        return;
+      }
+      // F: zoom to the selected objects (as in Blender, Maya and Unity)
+      if (event.key.toLowerCase() === "f" && store.selectedIds.length > 0) {
+        event.preventDefault();
+        useViewStore.getState().requestFocus(store.selectedIds);
         return;
       }
       // "/" jumps to the search box

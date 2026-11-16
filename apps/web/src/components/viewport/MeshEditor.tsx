@@ -13,17 +13,22 @@ import {
 } from "three";
 import {
   allPoints,
+  buildTopology,
   expandToWelded,
   flatFacePoints,
   isEffectivelyLocked,
+  nearestEdge,
   nearestPoint,
   selectionAfterBox,
+  selectionAfterEdgeClick,
+  selectionAfterFaceClick,
   selectionAfterWeldedClick,
   selectionCentroid,
   weldGroups,
 } from "@sceneroom/shared";
 import { commitMeshPositions } from "@/meshEdit/commitMeshEdit";
 import { buildEditOverlay, type EditOverlay } from "@/meshEdit/editOverlay";
+import { topologyOfGeometry } from "@/meshEdit/geometryTopology";
 import { copyPositions, transformSelectedLive } from "@/meshEdit/liveEdit";
 import { projectPoints } from "@/meshEdit/projectPoints";
 import { useEditStore } from "@/store/editStore";
@@ -60,6 +65,7 @@ function EditSession({ nodeId }: { nodeId: string }) {
   const camera = useThree((state) => state.camera);
   const canvas = useThree((state) => state.gl.domElement);
   const selected = useEditStore((state) => state.selected);
+  const selectMode = useEditStore((state) => state.selectMode);
   const snapping = useSceneStore(
     (state) => state.snapEnabled !== state.snapKeyHeld,
   );
@@ -97,6 +103,9 @@ function EditSession({ nodeId }: { nodeId: string }) {
   useEffect(() => {
     overlayRef.current?.setSelected(selected);
   }, [selected, bound]);
+  useEffect(() => {
+    overlayRef.current?.setMode(selectMode);
+  }, [selectMode, bound]);
 
   // ---- Picking: click a point (Shift adds or removes) ----
   useEffect(() => {
@@ -123,6 +132,15 @@ function EditSession({ nodeId }: { nodeId: string }) {
       down = null;
       if (!press || press.moved || shouldIgnoreClick() || !bound) return;
       const rect = canvas.getBoundingClientRect();
+      const mode = useEditStore.getState().selectMode;
+      if (mode === "edge") {
+        selectEdgeAt(event, rect);
+        return;
+      }
+      if (mode === "face" && !event.altKey) {
+        selectQuadAt(event, rect);
+        return;
+      }
       // Alt + click: select the whole flat face under the pointer (ready for Extrude)
       if (event.altKey) {
         selectFaceAt(event, rect);
@@ -149,6 +167,65 @@ function EditSession({ nodeId }: { nodeId: string }) {
       );
       edit.setSelected(
         selectionAfterWeldedClick(groups, edit.selected, hit, event.shiftKey),
+      );
+    }
+
+    /**
+     * Edge mode: selects the edge nearest to the pointer. Alt + click selects the whole loop through it (the
+     * ring of edges round the shape). Shift adds. Empty space clears.
+     */
+    function selectEdgeAt(event: PointerEvent, rect: DOMRect) {
+      if (!bound) return;
+      const topology = topologyOfGeometry(bound.geometry);
+      if (!topology) return;
+      const edit = useEditStore.getState();
+      const projected = projectPoints(
+        bound.object,
+        camera,
+        rect,
+        (bound.geometry.getAttribute("position") as BufferAttribute).array,
+      );
+      const edge = nearestEdge(
+        topology,
+        projected,
+        event.clientX,
+        event.clientY,
+        PICK_DISTANCE_PX,
+      );
+      edit.setSelected(
+        selectionAfterEdgeClick(
+          topology,
+          edit.selected,
+          edge,
+          event.shiftKey,
+          event.altKey ? "loop" : "edge",
+        ),
+      );
+    }
+
+    /** Face mode: selects the face (a quad, where the mesh has quads) the pointer is over. Shift adds. */
+    function selectQuadAt(event: PointerEvent, rect: DOMRect) {
+      if (!bound) return;
+      const edit = useEditStore.getState();
+      const pointer = new Vector2(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -((event.clientY - rect.top) / rect.height) * 2 + 1,
+      );
+      const raycaster = new Raycaster();
+      raycaster.setFromCamera(pointer, camera);
+      const hit = raycaster
+        .intersectObject(bound.object, false)
+        .find((h) => h.object === bound.object && h.faceIndex != null);
+      const topology = hit ? topologyOfGeometry(bound.geometry) : null;
+      const face =
+        hit && topology ? (topology.triangleFace[hit.faceIndex!] ?? -1) : -1;
+      edit.setSelected(
+        selectionAfterFaceClick(
+          topology ?? buildEmpty(),
+          edit.selected,
+          face,
+          event.shiftKey,
+        ),
       );
     }
 
@@ -303,4 +380,12 @@ export function selectAllPoints(): void {
     : undefined;
   const count = geometry?.getAttribute("position")?.count ?? 0;
   useEditStore.getState().setSelected(allPoints(count));
+}
+
+/** A topology with nothing in it (for a click that hit nothing, where no mesh needs to be read). */
+function buildEmpty() {
+  return buildTopology({
+    positions: new Float32Array(0),
+    indices: new Uint32Array(0),
+  });
 }

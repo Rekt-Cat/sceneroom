@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" width="960" height="600" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
+  <title id="t">Topology and edge loops: how a click becomes a loop</title>
+  <desc id="d">The mesh is a plain list of points and triangles. A topology is worked out from it: points on one spot become a vertex, flat neighbouring triangles join into quads, the sides of the faces are the edges. A click picks the nearest edge on the screen; the loop walks straight on at four-quad vertices, the ring walks across quads. The result is a list of points that all the tools already understand.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker>
+  </defs>
+  <rect width="960" height="600" fill="#f2f5f6"/>
+  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">Topology and edge loops (Phase 13, steps 3 and 4)</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">The mesh stays a plain list. The structure is worked out when needed, so every tool keeps working on points.</text>
+
+  <!-- stored mesh -->
+  <rect x="32" y="90" width="210" height="130" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="48" y="116" font-size="14" font-weight="700" fill="#13202a">Stored mesh</text>
+  <text x="48" y="140" font-size="12.5" fill="#13202a">points (x, y, z)</text>
+  <text x="48" y="158" font-size="12.5" fill="#13202a">triangles (3 point numbers)</text>
+  <text x="48" y="184" font-size="12" fill="#55656f">a cube has 24 points, 12</text>
+  <text x="48" y="200" font-size="12" fill="#55656f">triangles; never changes shape</text>
+
+  <path d="M242 155 H292" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <text x="267" y="146" font-size="11" text-anchor="middle" fill="#55656f">buildTopology</text>
+
+  <!-- steps -->
+  <rect x="292" y="90" width="636" height="130" rx="12" fill="#e9eef0" stroke="#0a6c8a" stroke-width="2"/>
+  <text x="308" y="116" font-size="14" font-weight="700" fill="#13202a">Derived topology (never saved)</text>
+  <text x="308" y="140" font-size="12.5" fill="#13202a">1. Vertex = all points on one spot (3 per cube corner become 1)</text>
+  <text x="308" y="158" font-size="12.5" fill="#13202a">2. Face = a quad when two flat triangles share their LONGEST side (the diagonal), else a triangle</text>
+  <text x="308" y="176" font-size="12.5" fill="#13202a">3. Edge = a side of a face (a quad's diagonal is not an edge)</text>
+  <text x="308" y="200" font-size="12" fill="#55656f">cube: 8 vertices, 6 quads, 12 edges · each edge knows its faces, each vertex its edges</text>
+
+  <!-- drawing of a grid with a loop and a ring -->
+  <rect x="32" y="250" width="440" height="320" rx="12" fill="#fff" stroke="#c4d0d6" stroke-width="2"/>
+  <text x="48" y="276" font-size="14" font-weight="700" fill="#13202a">Loop and ring on a grid of quads</text>
+  <g stroke="#c4d0d6" stroke-width="2" fill="none">
+    <path d="M90 310H370M90 360H370M90 410H370M90 460H370M90 510H370"/>
+    <path d="M90 310V510M160 310V510M230 310V510M300 310V510M370 310V510"/>
+  </g>
+  <!-- loop: straight on through vertices (a horizontal row) -->
+  <path d="M90 410H370" stroke="#e08a00" stroke-width="5" fill="none"/>
+  <text x="378" y="415" font-size="12.5" font-weight="700" fill="#e08a00">loop</text>
+  <!-- ring: parallel edges across quads (one column of horizontal edges) -->
+  <g stroke="#0a6c8a" stroke-width="5"><path d="M160 310H230"/><path d="M160 360H230"/><path d="M160 410H230"/><path d="M160 460H230"/><path d="M160 510H230"/></g>
+  <text x="240" y="300" font-size="12.5" font-weight="700" fill="#0a6c8a">ring</text>
+  <text x="48" y="540" font-size="12" fill="#55656f">Loop: straight on at each 4-quad vertex.</text>
+  <text x="48" y="558" font-size="12" fill="#55656f">Ring: from edge to the edge across the quad. A loop cut goes across a ring.</text>
+
+  <!-- click flow -->
+  <rect x="500" y="250" width="428" height="320" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="516" y="276" font-size="14" font-weight="700" fill="#13202a">What a click does</text>
+  <text x="516" y="304" font-size="12.5" fill="#13202a">Points (1): nearest point, welded points together</text>
+  <text x="516" y="324" font-size="12.5" fill="#13202a">Edges (2): nearest edge within 12 px</text>
+  <text x="528" y="342" font-size="12" fill="#55656f">Alt + click = its loop · Loop / Ring buttons grow it</text>
+  <text x="516" y="364" font-size="12.5" fill="#13202a">Faces (3): the face under the pointer (a quad is one)</text>
+  <text x="528" y="382" font-size="12" fill="#55656f">Alt + click = the whole flat area</text>
+  <path d="M722 400 V430" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="516" y="436" width="396" height="48" rx="8" fill="#e0f2e8" stroke="#1c7a4b" stroke-width="2"/>
+  <text x="530" y="458" font-size="13" font-weight="700" fill="#13202a">The result is a list of POINTS</text>
+  <text x="530" y="476" font-size="12" fill="#13202a">an edge = its two ends, a face = its corners, a loop = every point on it</text>
+  <text x="516" y="512" font-size="12.5" fill="#13202a">So move, turn, scale, delete and extrude work unchanged.</text>
+  <text x="516" y="532" font-size="12" fill="#55656f">Edges with both ends selected are drawn in the selection colour.</text>
+  <text x="516" y="552" font-size="12" fill="#55656f">Loops stop at triangles, poles (not 4 edges) and seams.</text>
+</svg>

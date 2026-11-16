@@ -55,10 +55,17 @@ describe("extruding a face of a cube", () => {
     );
     // the selection is now the new cap, sitting further out than the old side (z = 0.5)
     const selected = useEditStore.getState().selected;
-    expect(selected.length).toBe(4);
     for (const point of selected) {
       expect(after.positions[point * 3 + 2]).toBeGreaterThan(0.5);
     }
+    // ... and it holds EVERY point that sits there: the cap's own 4 and the 8 tops of the walls, so dragging
+    // the new face takes its walls with it instead of tearing them off
+    const outside: number[] = [];
+    for (let i = 0; i < after.positions.length / 3; i++) {
+      if (after.positions[i * 3 + 2]! > 0.5) outside.push(i);
+    }
+    expect(selected.length).toBe(12);
+    expect([...selected].sort((a, b) => a - b)).toEqual(outside);
     // the scene records the new triangle count and keeps the notes
     const info = get().scene.assets[node("a").assetId!]!;
     expect(info.triangles).toBe(after.indices.length / 3);
