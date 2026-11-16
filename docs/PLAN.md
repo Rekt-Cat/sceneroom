@@ -137,11 +137,14 @@ The structure above, built without a server. Done first because it decides how s
 - [x] Step 1 (`feature/modifiers`, waiting for a browser check): segment counts on primitives; modifier stack in the Inspector with Bend, Twist, Taper
 - [x] Step 2 (`feature/modifiers-2`, waiting for a browser check): Stretch, Noise, Mirror, Array. Left for the editable-mesh step: Subdivide
 - [x] Step 3: Apply (bake the modifiers into an editable mesh), done with the editable-mesh foundation
+- [ ] **Step 4: Subdivide (smooth) and Solidify modifiers.** *Subdivision surface smoothing*: a rough low-poly shape is smoothed into a curved one (Catmull-Clark), with a single "Smoothness" slider (0 to 3) and a "keep sharp" option for marked edges. Beginner view: one slider and a before/after toggle; no cage or crease jargon unless opened under "Advanced". Needs the topology layer (Phase 13, step 3). *Solidify* gives a flat surface thickness. Both stay non-destructive until Apply
 
 ### Phase 12: Environment-building tools
 
 - [ ] Boolean (union / subtract / intersect); scatter / instancing; terrain (heightmap); splines / tubes; align, distribute, snapping; groups and prefabs
 - [x] **Plant generator**, step 1 (`feature/plants`, waiting for a browser check): trees, pines and bushes from settings and a seed, scatter copies as a forest, Make mesh, GLB export. Also done (`feature/my-plants`): Save as my plant (a list in the browser, in the Add menu) and Randomise. Not done: leaves facing along branches, seasons or wind, other kinds (palm, cactus), level of detail for big forests, growing along a drawn curve, prefabs that travel with a scene
+- [ ] **Boolean cleanup** (after Boolean): after a union / subtract, offer one button, "Tidy up", that merges nearly-equal points, removes tiny faces and fills holes, and report what it did in plain words. Pairs with the open-edge warning already shown on export
+- [ ] **Recipes (a simple node system for generators).** The plant and character generators are fixed programs; a recipe lets a user combine small steps (make shape, repeat, scatter, vary, bend) into their own generator and save it in the project library. Beginner view: a short list of steps you add and reorder, each with plain-word settings and a preview (like the modifier stack). Advanced view: the same steps drawn as connected boxes for people who want branching. Built on the modifier and scatter code, so no new engine; a recipe is saved as data, validated with Zod
 - [ ] **Prefabs** are the **components** of Phase 5b (linked instances shared between scenes); this item only adds the extras: variants of a component, nested components, and overrides beyond the transform
 
 ### Phase 13: Edit mode (modelling)
@@ -155,6 +158,9 @@ The structure above, built without a server. Done first because it decides how s
 - [ ] **Step 7: selection power tools.** Select visible points only (not through the mesh), select more / less, select similar, invert, hide and show points, select by loop / ring / boundary, selection sets
 - [ ] **Step 8: UVs and seams** (basic unwrap, seam marking, a checker view) and **difference-based undo** for big meshes (shared with sculpting)
 
+- [ ] **Step 9: retopology helpers.** Draw a clean new mesh over a dense one (a sculpt or a scan): a "Retopo" mode where points and quads snap to the surface of the high-poly object (shown see-through), click to place points, a strip tool that lays quad rows along a drag, and a Shrinkwrap modifier that pulls a rough mesh onto a target. Also an automatic "Simplify to N faces" (quick, for non-animated objects). Beginner view: pick the dense object, press Retopo, click points, a live face count; the snapping and the see-through target are set up for them
+- [ ] **Step 10: texture baking and painting.** Needs UVs (step 8). *Painting*: brush colours straight onto the surface (colour, roughness, metalness) with a layer list, undo per stroke; saved as ordinary texture images in the asset pool. *Baking*: copy the detail of a dense object onto a low-poly one as a normal map, plus ambient occlusion and colour maps, in a background worker with a progress bar. Beginner view: one "Bake detail" button with sensible defaults (size 1024, low to high object chosen from a list); options such as ray distance and cage hidden under "Advanced"
+
 ### Phase 14: Sculpting
 
 - [ ] Brushes (draw, smooth, grab, inflate, pinch, flatten, crease, mask); symmetry; remesh or dynamic topology; vertex-colour painting; BVH picking and Web Workers; per-stroke undo
@@ -167,6 +173,8 @@ The structure above, built without a server. Done first because it decides how s
 ### Phase 16: Usability and professional workflow (runs alongside every phase)
 
 The track that makes SceneRoom both friendly and professional-grade. Not one block of work: each item is done when the part of the app it touches is ready, and every new tool must meet the checklist in `DECISIONS.md`.
+
+**Rule for every tool in this plan (beginner first, no clutter):** a tool shows at most three controls at first (a main button, one or two sliders), uses plain words with the professional name in brackets ("Smooth (subdivide)"), puts the rest under an "Advanced" fold that remembers whether it was open, has a before/after preview or a live count where it helps, a reset button on every value, one short hint line, and appears only in the mode where it makes sense (no toolbar of 80 icons). Panels show only what the current selection can use. Checked on every tool with a quick test: can a new user get a good result without reading anything?
 
 **Friendly (learn it in minutes)**
 
