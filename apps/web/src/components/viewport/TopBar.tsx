@@ -19,6 +19,7 @@ import {
 } from "@/store/persistenceStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { Icon, type IconName } from "./icons";
+import SceneTabs from "./SceneTabs";
 
 const historyButton =
   "grid size-[30px] place-items-center rounded-md text-ed-text-2 transition-colors hover:bg-ed-raised hover:text-ed-text focus-visible:outline-2 focus-visible:outline-ed-accent disabled:cursor-not-allowed disabled:text-ed-text-3 disabled:opacity-50 disabled:hover:bg-transparent";
@@ -158,7 +159,7 @@ function FileButtons() {
   );
 }
 
-/** Bar across the top of the editor: logo, Undo and Redo, and the scene name (plain text for now). */
+/** Bar across the top of the editor: logo, Undo and Redo, the project and its scene tabs. */
 export default function TopBar() {
   const undoLabel = useSceneStore((state) => nextUndoLabel(state.history));
   const redoLabel = useSceneStore((state) => nextRedoLabel(state.history));
@@ -191,7 +192,7 @@ export default function TopBar() {
       <span className="h-5 w-px bg-ed-line-strong" aria-hidden="true" />
       <FileButtons />
       <span className="h-5 w-px bg-ed-line-strong" aria-hidden="true" />
-      <span className="text-sm text-ed-text-3">Untitled scene</span>
+      <SceneTabs />
       <SaveStatus />
     </header>
   );

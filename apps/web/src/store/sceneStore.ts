@@ -99,6 +99,13 @@ const DUPLICATE_OFFSET: [number, number, number] = [1, 0, 0];
 /** What one undo step restores: the scene and what was selected. */
 export type Snapshot = { scene: Scene; selectedIds: string[] };
 
+/** Everything that belongs to one scene of the project while it is open: contents, selection, undo history. */
+export type ParkedScene = {
+  scene: Scene;
+  selectedIds: string[];
+  history: History<Snapshot>;
+};
+
 /**
  * The single source of truth for the scene. The store only holds state and calls the
  * pure functions from @sceneroom/shared; it contains no scene logic of its own.
@@ -284,6 +291,11 @@ type SceneState = {
   renameNode: (id: string, name: string) => string | null;
   /** Replaces the whole scene (for example with the one saved in the browser). Clears the selection and the undo history. */
   loadScene: (scene: Scene) => void;
+  /**
+   * Shows another scene of the project: its scene, selection and its own undo history. Used when switching
+   * scenes. A cut waiting in the clipboard becomes a copy (the cut object stays in its own scene).
+   */
+  restoreScene: (parked: ParkedScene) => void;
   /** Starts an edit made of many small updates. Pair with endEdit. */
   beginEdit: (label: string) => void;
   /** Changes a node's transform while an edit is in progress, without recording undo steps. */
@@ -1018,6 +1030,17 @@ export const useSceneStore = create<SceneState>()((set) => ({
       history: createHistory<Snapshot>(),
       pendingEdit: null,
     }),
+  restoreScene: (parked) =>
+    set((state) => ({
+      scene: parked.scene,
+      selectedIds: parked.selectedIds,
+      history: parked.history,
+      pendingEdit: null,
+      clipboard:
+        state.clipboard?.mode === "cut"
+          ? { ...state.clipboard, mode: "copy" }
+          : state.clipboard,
+    })),
   beginEdit: (label) =>
     set((state) => ({
       pendingEdit: {

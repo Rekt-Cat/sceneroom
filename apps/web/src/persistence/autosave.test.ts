@@ -30,7 +30,7 @@ function setup(options: { failNext?: () => boolean } = {}) {
   let resolveSave: (() => void) | null = null;
   let holdSaves = false;
   const autosave = createAutosave({
-    getScene: () => current,
+    getData: () => current,
     save: async (scene) => {
       if (options.failNext?.()) throw new Error("disk full");
       if (holdSaves)
