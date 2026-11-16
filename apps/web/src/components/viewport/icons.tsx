@@ -36,6 +36,13 @@ const PATHS = {
       <path d="M8 1.800v6.300M2.500 5 8 8.100 13.500 5M8 8.100v6.100M5.200 3.400 8 5.100l2.800-1.700" />
     </>
   ),
+  // a character: a person
+  character: (
+    <>
+      <circle cx="8" cy="3.600" r="2" />
+      <path d="M8 6v4.500M4.500 7.500 8 6l3.500 1.500M8 10.500 5.500 14.500M8 10.500l2.500 4" />
+    </>
+  ),
   // plants: a tree, a pine and a bush
   plant: (
     <>
@@ -197,6 +204,7 @@ export const KIND_LABELS: Record<NodeKind, string> = {
   cone: "Cone",
   mesh: "Mesh",
   plant: "Plant",
+  character: "Character",
   directional: "Directional light",
   point: "Point light",
   spot: "Spot light",

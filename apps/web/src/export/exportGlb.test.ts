@@ -6,6 +6,10 @@ import {
   createEmptyScene,
   createLightNode,
   createModelNode,
+  CHARACTER_BONES,
+  DEFAULT_CHARACTER,
+  POSE_PRESETS,
+  createCharacterNode,
   createModifier,
   createNode,
   createPlantNode,
@@ -436,5 +440,80 @@ describe("exporting a plant", () => {
     const pine = named(gltf, "Pine")!;
     expect(pine.translation).toEqual([3, 0, 4]);
     expect(pine.scale).toEqual([1.5, 1.5, 1.5]);
+  });
+});
+
+describe("exporting a character", () => {
+  it("is exported as a bone hierarchy with the body parts on the bones", async () => {
+    let scene = createEmptyScene();
+    scene = addNode(scene, {
+      ...createCharacterNode("c", "person"),
+      name: "Hero",
+    });
+    const { gltf, report } = await exportOf(scene);
+    expect(report.objects).toBe(1);
+    // a node for every bone, nested like the skeleton
+    for (const bone of CHARACTER_BONES)
+      expect(named(gltf, bone), bone).toBeDefined();
+    const hips = named(gltf, "hips")!;
+    const spine = named(gltf, "spine")!;
+    expect(hips.children).toContain(gltf.nodes.indexOf(spine));
+    const hand = named(gltf, "hand.L")!;
+    expect(named(gltf, "foreArm.L")!.children).toContain(
+      gltf.nodes.indexOf(hand),
+    );
+    // the parts hang on their bones, each with its own colour
+    const shirt = named(gltf, "spine shirt")!;
+    expect(spine.children).toContain(gltf.nodes.indexOf(shirt));
+    const color = (n: { mesh?: number }) => {
+      const primitive = gltf.meshes[n.mesh!]!.primitives[0] as unknown as {
+        material: number;
+      };
+      return (
+        gltf.materials[primitive.material] as {
+          pbrMetallicRoughness: { baseColorFactor: number[] };
+        }
+      ).pbrMetallicRoughness.baseColorFactor;
+    };
+    expect(color(shirt)[2]!).toBeGreaterThan(color(shirt)[0]!); // a blue shirt
+    expect(color(named(gltf, "neck skin")!)[0]!).toBeGreaterThan(
+      color(named(gltf, "neck skin")!)[2]!,
+    ); // warm skin
+  });
+
+  it("the pose is in the bones' turns, and the body is on the ground", async () => {
+    let scene = createEmptyScene();
+    scene = addNode(scene, {
+      ...createCharacterNode("c", "person"),
+      character: { ...DEFAULT_CHARACTER, pose: POSE_PRESETS.sit },
+    });
+    const { gltf } = await exportOf(scene);
+    // the thighs are turned (a quaternion) and the hips are lower than a standing body's
+    expect(named(gltf, "upperLeg.L")!.rotation).toBeDefined();
+    const sittingHips = named(gltf, "hips")!.translation![1]!;
+    let standing = createEmptyScene();
+    standing = addNode(standing, createCharacterNode("c", "person"));
+    const { gltf: gltf2 } = await exportOf(standing);
+    expect(sittingHips).toBeLessThan(named(gltf2, "hips")!.translation![1]!);
+    // an unposed bone has no turn
+    expect(named(gltf2, "upperLeg.L")!.rotation).toBeUndefined();
+  });
+
+  it("a bald character has no hair mesh, and a character keeps its place in the scene", async () => {
+    let scene = createEmptyScene();
+    scene = addNode(scene, {
+      ...createCharacterNode("c", "stocky"),
+      name: "Bruiser",
+      transform: {
+        position: [3, 0, 4],
+        rotation: [0, 0, 0],
+        scale: [1.2, 1.2, 1.2],
+      },
+    });
+    const { gltf } = await exportOf(scene);
+    expect(named(gltf, "head hair")).toBeUndefined(); // the stocky kind is bald
+    const root = named(gltf, "Bruiser")!;
+    expect(root.translation).toEqual([3, 0, 4]);
+    expect(root.scale).toEqual([1.2, 1.2, 1.2]);
   });
 });

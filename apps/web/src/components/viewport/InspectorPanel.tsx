@@ -2,6 +2,7 @@
 
 import EnvironmentPanel from "./EnvironmentPanel";
 import ModifiersSection from "./ModifiersSection";
+import CharacterSection from "./CharacterSection";
 import LightSection from "./LightSection";
 import PlantSection from "./PlantSection";
 import SurfaceSection from "./SurfaceSection";
@@ -209,6 +210,11 @@ function SingleObject({ node }: { node: SceneNode }) {
         <TransformSection node={node} disabled={locked} />
         {node.light ? (
           <LightSection node={node} disabled={locked} />
+        ) : node.character ? (
+          <>
+            <CharacterSection node={node} disabled={locked} />
+            <SurfaceSection node={node} disabled={locked} />
+          </>
         ) : node.plant ? (
           <>
             <PlantSection node={node} disabled={locked} />

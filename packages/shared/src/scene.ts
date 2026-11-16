@@ -52,6 +52,7 @@ export const NODE_KINDS = [
   "model",
   "mesh",
   "plant",
+  "character",
 ] as const;
 
 const vec3Schema = z.tuple([z.number(), z.number(), z.number()]);
@@ -250,6 +251,73 @@ export type PlantSettings = z.infer<typeof plantSchema>;
 /** The settings of a new plant (a tree). */
 export const DEFAULT_PLANT: PlantSettings = plantSchema.parse({});
 
+/**
+ * The bones of a character, from the hips outwards (a parent always comes before its children). ".L" is the
+ * character's left side, which is the +x side when it faces +z.
+ */
+export const CHARACTER_BONES = [
+  "hips",
+  "spine",
+  "neck",
+  "head",
+  "upperArm.L",
+  "foreArm.L",
+  "hand.L",
+  "upperArm.R",
+  "foreArm.R",
+  "hand.R",
+  "upperLeg.L",
+  "lowerLeg.L",
+  "foot.L",
+  "upperLeg.R",
+  "lowerLeg.R",
+  "foot.R",
+] as const;
+export type CharacterBone = (typeof CHARACTER_BONES)[number];
+
+export const HAIR_STYLES = ["bald", "short", "long"] as const;
+export type HairStyle = (typeof HAIR_STYLES)[number];
+
+/**
+ * The settings of a "character" object (a person, an NPC): proportions, hair, clothes, colours and a pose.
+ * The body is built from these numbers; nothing of the shape itself is stored. The pose gives, for each bone
+ * that is not at rest, three angles in degrees: swing (forwards and back), out (sideways) and twist.
+ */
+export const characterSchema = z.object({
+  /** How tall the character is, in units. */
+  height: z.number().min(0.3).max(3).default(1.7),
+  /** Slim (0) to stocky (1). */
+  build: z.number().min(0).max(1).default(0.4),
+  /** How big the head is compared with the body (1 = normal, a child has a bigger one). */
+  headSize: z.number().min(0.6).max(1.6).default(1),
+  /** How long the legs are, as a fraction of the height. */
+  legRatio: z.number().min(0.35).max(0.6).default(0.47),
+  /** How long the arms are compared with normal. */
+  armScale: z.number().min(0.7).max(1.3).default(1),
+  hair: z.enum(HAIR_STYLES).default("short"),
+  longSleeves: z.boolean().default(false),
+  longPants: z.boolean().default(true),
+  skinColor: hexColorSchema.default("#e0ac84"),
+  hairColor: hexColorSchema.default("#3b2a1e"),
+  shirtColor: hexColorSchema.default("#3d6fb6"),
+  pantsColor: hexColorSchema.default("#3a3f4b"),
+  shoesColor: hexColorSchema.default("#2a2522"),
+  /** The angles of the bones that are not at rest: [swing, out, twist] in degrees. */
+  pose: z
+    .partialRecord(
+      z.enum(CHARACTER_BONES),
+      z.tuple([z.number(), z.number(), z.number()]),
+    )
+    .default({}),
+  /** Keep the lowest point of the body on the ground, whatever the pose (a sitting character lowers its hips). */
+  onGround: z.boolean().default(true),
+});
+
+export type CharacterSettings = z.infer<typeof characterSchema>;
+
+/** The settings of a new character (a person standing at rest). */
+export const DEFAULT_CHARACTER: CharacterSettings = characterSchema.parse({});
+
 /** The settings of a light object. Which ones matter depends on the kind (see `lights.ts`). */
 export const lightSchema = z.object({
   color: hexColorSchema.default("#ffffff"),
@@ -288,6 +356,8 @@ export const sceneNodeObjectSchema = z.object({
   segments: z.number().int().min(1).max(MAX_SEGMENTS).default(1),
   /** The shape changes (bend, twist, taper), applied in order. Older scenes load with none. */
   modifiers: z.array(modifierSchema).max(MAX_MODIFIERS).default([]),
+  /** Only for "character" objects: how the character looks and is posed. null for every other object. Older scenes load with null. */
+  character: characterSchema.nullable().default(null),
   /** Only for "plant" objects: how the plant grows. null for every other object. Older scenes load with null. */
   plant: plantSchema.nullable().default(null),
   /** Only for the light kinds: how the light shines. null for every other object. Older scenes load with null. */

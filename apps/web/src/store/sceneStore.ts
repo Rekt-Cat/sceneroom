@@ -4,6 +4,9 @@ import {
   addAsset,
   addNode,
   availableName,
+  CHARACTER_PRESETS,
+  CHARACTER_PRESET_INFO,
+  bakeCharacterToMeshes,
   bakePlantToMeshes,
   bakeToMesh,
   createEmptyScene,
@@ -13,6 +16,8 @@ import {
   addModifier,
   PLANT_PRESETS,
   PLANT_PRESET_INFO,
+  characterChangeDiffers,
+  createCharacterNode,
   createLightNode,
   createPlantNode,
   createPlantNodeFrom,
@@ -44,14 +49,17 @@ import {
   materialChangeDiffers,
   sanitizeEnvironmentChange,
   sanitizeModifierChange,
+  sanitizeCharacterChange,
   sanitizeLightChange,
   sanitizePlantChange,
+  scatterCharacters,
   scatterPlants,
   sanitizeMaterialChange,
   setEnvironment,
   setModifier,
   setSegments,
   supportsModifiers,
+  setCharacter,
   setLight,
   setPlant,
   setMaterial,
@@ -66,6 +74,9 @@ import {
   type EnvironmentChange,
   type History,
   type LightChange,
+  type BakedPiece,
+  type CharacterChange,
+  type CharacterPresetName,
   type CustomPlant,
   type LightKind,
   type PlantChange,
@@ -176,6 +187,18 @@ type SceneState = {
    * edited), as one undo step with the given label. Ignored for locked objects and objects that are not meshes.
    */
   replaceNodeMesh: (nodeId: string, info: AssetInfo, label: string) => void;
+  /** Adds a character (person, child, stocky or tall) at the middle of the scene, standing at rest, and selects it. One undo step. Returns its id. */
+  addCharacter: (preset: CharacterPresetName) => string;
+  /** Changes some settings of a character (including its whole pose) as one undo step. Ignored for locked objects and objects that are not characters. */
+  setNodeCharacter: (id: string, change: CharacterChange) => void;
+  /** Like setNodeCharacter but without an undo step; only while an edit is in progress (dragging a slider). */
+  previewNodeCharacter: (id: string, change: CharacterChange) => void;
+  /** Gives a character the proportions, clothes and colours of a kind, keeping its pose. One undo step. */
+  applyCharacterPreset: (id: string, preset: CharacterPresetName) => void;
+  /** Adds a crowd: a copy of a character at each spot, each with its own look, selects them and returns their ids. One undo step. */
+  scatterCharacter: (id: string, spots: readonly Scatter[]) => string[];
+  /** Turns a character into editable meshes, one per colour (see `bakeCharacterToMeshes`). One undo step. Ignored for locked objects and objects that are not characters. */
+  bakeCharacterNode: (id: string, pieces: readonly BakedPiece[]) => void;
   /** Adds a plant a person saved ("my plants"), with a new random seed, at the middle of the scene, and selects it. One undo step. Returns its id. */
   addCustomPlant: (item: CustomPlant) => string;
   /** Adds a plant (tree, pine or bush) at the middle of the scene with a random-looking seed, and selects it. One undo step. Returns its id. */
@@ -520,6 +543,91 @@ export const useSceneStore = create<SceneState>()((set) => ({
     }));
     return id;
   },
+  addCharacter: (preset) => {
+    const id = crypto.randomUUID();
+    set((state) => ({
+      scene: addNode(state.scene, {
+        ...createCharacterNode(id, preset),
+        name: availableName(state.scene, CHARACTER_PRESET_INFO[preset].label),
+      }),
+      selectedIds: [id],
+      history: record(state, `Add ${preset}`),
+    }));
+    return id;
+  },
+  setNodeCharacter: (id, change) =>
+    set((state) => {
+      const node = state.scene.nodes[id];
+      if (!node?.character || isEffectivelyLocked(state.scene, id))
+        return state;
+      const clean = sanitizeCharacterChange(change);
+      if (!characterChangeDiffers(node.character, clean)) return state;
+      return {
+        scene: setCharacter(state.scene, id, clean),
+        history: record(state, "Character"),
+      };
+    }),
+  previewNodeCharacter: (id, change) =>
+    set((state) => {
+      const node = state.scene.nodes[id];
+      if (
+        !state.pendingEdit ||
+        !node?.character ||
+        isEffectivelyLocked(state.scene, id)
+      ) {
+        return state;
+      }
+      const clean = sanitizeCharacterChange(change);
+      if (Object.keys(clean).length === 0) return state;
+      return { scene: setCharacter(state.scene, id, clean) };
+    }),
+  applyCharacterPreset: (id, preset) =>
+    set((state) => {
+      const node = state.scene.nodes[id];
+      if (!node?.character || isEffectivelyLocked(state.scene, id))
+        return state;
+      return {
+        scene: setCharacter(state.scene, id, {
+          ...CHARACTER_PRESETS[preset],
+          pose: node.character.pose,
+          onGround: node.character.onGround,
+        }),
+        history: record(state, `Make it a ${preset}`),
+      };
+    }),
+  scatterCharacter: (id, spots) => {
+    let ids: string[] = [];
+    set((state) => {
+      const node = state.scene.nodes[id];
+      if (
+        !node?.character ||
+        isEffectivelyLocked(state.scene, id) ||
+        spots.length === 0
+      ) {
+        return state;
+      }
+      const result = scatterCharacters(state.scene, id, spots, () =>
+        crypto.randomUUID(),
+      );
+      ids = result.ids;
+      return {
+        scene: result.scene,
+        selectedIds: result.ids,
+        history: record(state, `Add a crowd of ${result.ids.length}`),
+      };
+    });
+    return ids;
+  },
+  bakeCharacterNode: (id, pieces) =>
+    set((state) => {
+      const node = state.scene.nodes[id];
+      if (!node?.character || isEffectivelyLocked(state.scene, id))
+        return state;
+      return {
+        scene: bakeCharacterToMeshes(state.scene, id, pieces),
+        history: record(state, "Make mesh"),
+      };
+    }),
   addCustomPlant: (item) => {
     const id = crypto.randomUUID();
     const seed = Math.floor(Math.random() * 100000);
