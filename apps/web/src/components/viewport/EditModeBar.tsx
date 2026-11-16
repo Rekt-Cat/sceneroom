@@ -6,7 +6,7 @@ import {
   deleteSelectedPoints,
   extrudeSelectedFaces,
 } from "@/meshEdit/editOperations";
-import { growSelectionTo } from "@/meshEdit/selectionTools";
+import { selectLoopOrRing } from "@/meshEdit/selectionTools";
 import { stopEditing } from "@/meshEdit/startEditing";
 
 const ACTION =
@@ -38,7 +38,7 @@ const MODES: { mode: SelectMode; label: string; key: string; help: string }[] =
 const HINTS: Record<SelectMode, string> = {
   point:
     "Click a point to select it. Shift adds more. Ctrl-drag draws a box. Alt-click selects a whole flat face. Then move it with W, turn with E, scale with R.",
-  edge: "Click an edge to select it. Press Loop to select the whole belt of edges round the shape (Alt-click does the same in one go), or Ring for the parallel edges across a strip. Shift adds more.",
+  edge: "Click an edge to select it. Then press Loop for the whole belt of edges round the shape (Alt-click does the same in one go), or Ring for the parallel edges across a strip. Both work from the edge you clicked, so you can press one and then the other to compare. Shift adds more.",
   face: "Click a face to select it. Shift adds more. Alt-click selects the whole flat area. Press Extrude to push the selected faces out.",
 };
 
@@ -51,6 +51,8 @@ export default function EditModeBar() {
   const selected = useEditStore((state) => state.selected);
   const selectMode = useEditStore((state) => state.selectMode);
   const setSelectMode = useEditStore((state) => state.setSelectMode);
+  const xray = useEditStore((state) => state.xray);
+  const setXray = useEditStore((state) => state.setXray);
   const node = useSceneStore((state) =>
     nodeId ? state.scene.nodes[nodeId] : undefined,
   );
@@ -64,7 +66,7 @@ export default function EditModeBar() {
   /** Loop and Ring work on edges, so pressing them switches to edge mode (and says what to do if nothing is selected). */
   function grow(pick: "loop" | "ring") {
     setSelectMode("edge");
-    growSelectionTo(pick);
+    selectLoopOrRing(pick);
   }
 
   return (
@@ -124,11 +126,32 @@ export default function EditModeBar() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-ed-text-3">Grow</span>
+          <span className="text-ed-text-3">View</span>
+          <button
+            type="button"
+            aria-pressed={xray}
+            onClick={() => setXray(!xray)}
+            title={
+              xray
+                ? "X-ray is ON: lines and points on the far side show through the solid, and can be picked. Press to hide them (Alt + Z)."
+                : "X-ray is off: lines and points on faces the camera cannot see are hidden, and cannot be picked. Press to see through the solid (Alt + Z)."
+            }
+            className={`rounded-md border px-2.5 py-1 font-medium focus-visible:outline-2 focus-visible:outline-ed-accent ${
+              xray
+                ? "border-ed-select/60 bg-ed-select/25 text-ed-select"
+                : "border-ed-line-strong hover:bg-ed-field"
+            }`}
+          >
+            X-ray
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-ed-text-3">Edge</span>
           <button
             type="button"
             onClick={() => grow("loop")}
-            title="Select the whole loop through the selected edge: the belt of edges that runs round the shape (Alt-click an edge does the same). Select an edge first."
+            title="Select the whole loop through the edge you clicked: the belt of edges that runs round the shape (Alt-click an edge does the same). Click an edge first."
             className={ACTION}
           >
             Loop
@@ -136,7 +159,7 @@ export default function EditModeBar() {
           <button
             type="button"
             onClick={() => grow("ring")}
-            title="Select the ring through the selected edge: the parallel edges across the same strip, like the rungs of a ladder. Select an edge first."
+            title="Select the ring through the edge you clicked: the parallel edges across the same strip, like the rungs of a ladder. Click an edge first."
             className={ACTION}
           >
             Ring

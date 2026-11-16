@@ -6,6 +6,7 @@ import {
   meshEdges,
   nearestPoint,
   pointsInRect,
+  pointsNear,
   selectionAfterBox,
   selectionAfterClick,
   selectionCentroid,
@@ -686,5 +687,18 @@ describe("selecting a whole face", () => {
     // the cap sits half a unit above the old +z side
     for (const point of result.selected)
       expect(result.mesh.positions[point * 3 + 2]).toBeCloseTo(1);
+  });
+});
+
+describe("pointsNear", () => {
+  const projected = Float32Array.from([0, 0, 10, 0, 3, 4, NaN, NaN, 100, 100]);
+  it("lists the points within the distance, nearest first, ties by number", () => {
+    expect(pointsNear(projected, 0, 0, 20)).toEqual([0, 2, 1]);
+    expect(pointsNear(projected, 5, 0, 5)).toEqual([2, 0, 1]);
+  });
+  it("leaves out points that cannot be shown, and far ones", () => {
+    expect(pointsNear(projected, 100, 100, 5)).toEqual([4]);
+    expect(pointsNear(projected, 0, 0, 1)).toEqual([0]);
+    expect(pointsNear(new Float32Array(0), 0, 0, 5)).toEqual([]);
   });
 });

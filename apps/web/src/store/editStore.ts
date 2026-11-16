@@ -12,6 +12,18 @@ export type SelectMode = "point" | "edge" | "face";
 type EditState = {
   nodeId: string | null;
   selected: readonly number[];
+  /**
+   * The edge that was clicked last, as the first point of each of its two ends. The Loop and Ring buttons
+   * work from it, so each shows the loop or ring of that edge. Null when no edge was clicked.
+   */
+  anchorEdge: readonly [number, number] | null;
+  setAnchorEdge: (anchor: readonly [number, number] | null) => void;
+  /**
+   * X-ray: draw the lines and points of ALL faces, also those the camera cannot see (and let them be picked).
+   * Off (the start): only what is on faces facing the camera.
+   */
+  xray: boolean;
+  setXray: (xray: boolean) => void;
   /** What a click picks (keys 1, 2, 3). Kept between edit sessions. */
   selectMode: SelectMode;
   /** Starts editing this object's points. The caller has checked that it is an editable mesh. */
@@ -26,8 +38,22 @@ export const useEditStore = create<EditState>()((set) => ({
   nodeId: null,
   selected: [],
   selectMode: "point",
-  enter: (nodeId) => set({ nodeId, selected: [] }),
-  exit: () => set({ nodeId: null, selected: [] }),
+  anchorEdge: null,
+  xray: false,
+  setXray: (xray) => set({ xray }),
+  setAnchorEdge: (anchorEdge) => set({ anchorEdge }),
+  enter: (nodeId) =>
+    set({
+      nodeId,
+      selected: [],
+      anchorEdge: null,
+    }),
+  exit: () =>
+    set({
+      nodeId: null,
+      selected: [],
+      anchorEdge: null,
+    }),
   setSelected: (selected) => set({ selected }),
   // Points that were selected stay selected: they are the same selection seen as edges or faces
   setSelectMode: (selectMode) => set({ selectMode }),

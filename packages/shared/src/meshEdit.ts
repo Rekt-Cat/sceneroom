@@ -63,6 +63,29 @@ export function nearestPoint(
   return best;
 }
 
+/**
+ * Every point within `maxDistance` pixels of a spot on the screen, nearest first (ties: the lower number). A
+ * point that cannot be shown (NaN) is never included. Used to pick the nearest point that can also be SEEN:
+ * the nearest ones are tried in turn.
+ */
+export function pointsNear(
+  projected: Float32Array,
+  x: number,
+  y: number,
+  maxDistance: number,
+): number[] {
+  const near: { point: number; distance: number }[] = [];
+  for (let i = 0; i * 2 + 1 < projected.length; i++) {
+    const distance = Math.hypot(
+      projected[i * 2]! - x,
+      projected[i * 2 + 1]! - y,
+    );
+    if (distance <= maxDistance) near.push({ point: i, distance });
+  }
+  near.sort((a, b) => a.distance - b.distance || a.point - b.point);
+  return near.map((n) => n.point);
+}
+
 /** The numbers of the points whose screen position is inside the rectangle (edges included). */
 export function pointsInRect(projected: Float32Array, rect: Rect): number[] {
   const inside: number[] = [];

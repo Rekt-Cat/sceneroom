@@ -399,6 +399,35 @@ export function edgeLoop(topology: Topology, start: number): EdgeRun {
   };
 }
 
+/**
+ * Why a loop cannot grow past an edge, in plain words, or null if it can. Looks at the two ends of the edge:
+ * a loop passes through a point only where four edges meet and all the faces round it are squares.
+ */
+export function whyLoopStops(topology: Topology, edge: number): string | null {
+  if (edge < 0 || edge >= edgeCount(topology)) return null;
+  if (edgeLoop(topology, edge).edges.length > 1) return null;
+  const reasons: string[] = [];
+  for (const vertex of edgeVertices(topology, edge)) {
+    const edges = topology.vertexEdges[vertex]!;
+    const hasTriangle = edges.some((e) =>
+      topology.edgeFaces[e]!.some(
+        (f) => topology.faces[f]!.vertices.length === 3,
+      ),
+    );
+    if (hasTriangle) {
+      reasons.push("a triangle is next to it (loops run through squares)");
+    } else if (edges.length !== 4) {
+      reasons.push(
+        `${edges.length} edges meet at one end of it (a loop needs exactly 4, as in the middle of a side; a cube's corner has 3)`,
+      );
+    }
+  }
+  if (reasons.length === 0) {
+    return "its neighbours do not line up into a straight run";
+  }
+  return [...new Set(reasons)].join(", and ");
+}
+
 /** The edge of a quad that shares no vertex with `edge` (across from it), or -1 if the face is not a quad. */
 function oppositeInQuad(
   topology: Topology,
@@ -508,6 +537,33 @@ export function nearestEdge(
   return best;
 }
 
+/** Every edge within `maxDistance` pixels of a spot on the screen, nearest first (ties: the lower number). Edges that cannot be shown (NaN) are left out. */
+export function edgesNear(
+  topology: Topology,
+  projected: Float32Array,
+  x: number,
+  y: number,
+  maxDistance: number,
+): number[] {
+  const near: { edge: number; distance: number }[] = [];
+  for (let e = 0; e < edgeCount(topology); e++) {
+    const [a, b] = edgeVertices(topology, e);
+    const pa = topology.vertexPoints[a]![0]!;
+    const pb = topology.vertexPoints[b]![0]!;
+    const distance = distanceToSegment(
+      x,
+      y,
+      projected[pa * 2]!,
+      projected[pa * 2 + 1]!,
+      projected[pb * 2]!,
+      projected[pb * 2 + 1]!,
+    );
+    if (distance <= maxDistance) near.push({ edge: e, distance });
+  }
+  near.sort((a, b) => a.distance - b.distance || a.edge - b.edge);
+  return near.map((n) => n.edge);
+}
+
 /** The edges that have both their ends inside a screen rectangle (for a box selection in edge mode). */
 export function edgesInRect(
   topology: Topology,
@@ -599,19 +655,47 @@ function combine(
 }
 
 /**
- * Grows what is selected along its loops or rings: every selected edge brings the loop (or ring) through it.
- * Gives the new selection (the old points stay selected), or null if no edge is selected.
+ * What the Loop and Ring buttons select. They work from ONE edge, the one that was clicked last (`anchor`, as
+ * the first point of each of its two ends), so pressing Loop and then Ring shows the loop and the ring of the
+ * same edge instead of piling one on the other (the ring of every edge of a loop is the whole surface). If
+ * the anchor is no longer selected (the selection was changed another way), a single selected edge is used.
+ * The result REPLACES the selection.
  */
-export function growSelection(
+export type LoopOrRing =
+  | { ok: true; points: number[]; edge: number; edges: number[] }
+  | { ok: false; reason: string };
+
+export function loopOrRingSelection(
   topology: Topology,
   selected: readonly number[],
+  anchor: readonly [number, number] | null,
   pick: "loop" | "ring",
-): number[] | null {
-  const edges = selectedEdges(topology, selected);
-  if (edges.length === 0) return null;
-  const grown = new Set(edges);
-  for (const edge of edges) {
-    for (const e of pickedEdges(topology, edge, pick)) grown.add(e);
+): LoopOrRing {
+  const chosen = new Set(selected);
+  let edge = -1;
+  if (anchor && chosen.has(anchor[0]) && chosen.has(anchor[1])) {
+    const a = topology.vertexOf[anchor[0]];
+    const b = topology.vertexOf[anchor[1]];
+    if (a !== undefined && b !== undefined) edge = edgeBetween(topology, a, b);
   }
-  return [...new Set([...selected, ...edgePoints(topology, [...grown])])];
+  if (edge === -1) {
+    const edges = selectedEdges(topology, selected);
+    if (edges.length === 0) {
+      return {
+        ok: false,
+        reason:
+          "Select an edge first: press 2 for edge mode, then click an edge.",
+      };
+    }
+    if (edges.length > 1) {
+      return {
+        ok: false,
+        reason:
+          "Several edges are selected. Click one edge, then press Loop or Ring (the loop or ring of every edge at once would be the whole surface).",
+      };
+    }
+    edge = edges[0]!;
+  }
+  const edges = pickedEdges(topology, edge, pick);
+  return { ok: true, points: edgePoints(topology, edges), edge, edges };
 }

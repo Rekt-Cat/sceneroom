@@ -7,9 +7,11 @@ import {
   edgePoints,
   edgeRing,
   edgesInRect,
+  edgesNear,
   edgeVertices,
   facePoints,
-  growSelection,
+  loopOrRingSelection,
+  whyLoopStops,
   nearestEdge,
   pickedEdges,
   selectionAfterEdgeClick,
@@ -503,18 +505,46 @@ describe("what a click selects", () => {
     ]);
   });
 
-  it("growing a selected edge to its loop or ring keeps what was selected", () => {
-    const start = selectionAfterEdgeClick(t, [], belt, false);
-    expect(growSelection(t, start, "loop")!.sort((a, b) => a - b)).toEqual([
-      4, 5, 6, 7,
-    ]);
-    expect(growSelection(t, start, "ring")!).toHaveLength(8);
+  it("Loop and Ring replace the selection with the loop or ring of the clicked edge", () => {
+    const clicked = selectionAfterEdgeClick(t, [], belt, false);
+    const [pa, pb] = [clicked[0]!, clicked[1]!];
+    const loop = loopOrRingSelection(t, clicked, [pa, pb], "loop");
+    expect(loop.ok && loop.points.sort((a, b) => a - b)).toEqual([4, 5, 6, 7]);
+    // then Ring from the same edge: just that edge's ring, not the ring of every edge of the loop
+    const ring = loopOrRingSelection(
+      t,
+      loop.ok ? loop.points : [],
+      [pa, pb],
+      "ring",
+    );
+    expect(ring.ok && ring.points).toHaveLength(8);
+    expect(ring.ok && ring.edge).toBe(belt);
   });
 
-  it("growing does nothing (null) when no edge is selected", () => {
-    expect(growSelection(t, [], "loop")).toBeNull();
-    // two points that are not joined by an edge are not an edge
-    expect(growSelection(t, [0, 5], "loop")).toBeNull();
+  it("works from the single selected edge when there is no anchor", () => {
+    const clicked = selectionAfterEdgeClick(t, [], belt, false);
+    const result = loopOrRingSelection(t, clicked, null, "loop");
+    expect(result.ok && result.edges).toHaveLength(3);
+  });
+
+  it("ignores an anchor that is no longer selected", () => {
+    const clicked = selectionAfterEdgeClick(t, [], belt, false);
+    // the anchor is another edge's points, not selected: falls back to the one selected edge
+    const result = loopOrRingSelection(t, clicked, [0, 1], "loop");
+    expect(result.ok && result.edge).toBe(belt);
+  });
+
+  it("says what to do when no edge is selected, or several are and none is the clicked one", () => {
+    expect(loopOrRingSelection(t, [], null, "loop")).toMatchObject({
+      ok: false,
+    });
+    expect(loopOrRingSelection(t, [0, 5], null, "loop")).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("Select an edge first"),
+    });
+    const severalEdges = selectionAfterEdgeClick(t, [], belt, false, "loop");
+    const result = loopOrRingSelection(t, severalEdges, null, "ring");
+    expect(!result.ok && result.reason).toContain("Several edges");
   });
 });
 
@@ -588,5 +618,53 @@ describe("a mesh that has been pulled about keeps its squares", () => {
     expect(loop.length).toBeGreaterThan(1);
     expect(ring.length).toBeGreaterThan(1);
     expect(new Set(loop)).not.toEqual(new Set(ring));
+  });
+});
+
+describe("why a loop stops", () => {
+  it("says a cube corner has 3 edges", () => {
+    const t = buildTopology(box(1));
+    expect(whyLoopStops(t, 0)).toContain("3 edges meet");
+    expect(whyLoopStops(t, 0)).toContain("cube's corner");
+  });
+
+  it("is null when the loop can grow, or the edge does not exist", () => {
+    const t = buildTopology(box(4));
+    const middle = Array.from({ length: edgeCount(t) }, (_, e) => e).find(
+      (e) => edgeLoop(t, e).edges.length > 1,
+    )!;
+    expect(whyLoopStops(t, middle)).toBeNull();
+    expect(whyLoopStops(t, -1)).toBeNull();
+    expect(whyLoopStops(t, 9999)).toBeNull();
+  });
+
+  it("mentions triangles when one is next to the edge", () => {
+    // three triangles round a middle point: two in a row become a quad, the third stays a triangle
+    const t = buildTopology({
+      positions: Float32Array.from([0, 0, 0, 1, 0, 0, 0, 1, 0, -1, -1, 0]),
+      indices: Uint32Array.from([0, 1, 2, 0, 2, 3, 0, 3, 1]),
+    });
+    const inner = edgeBetween(t, 0, 1);
+    expect(inner).toBeGreaterThanOrEqual(0);
+    expect(whyLoopStops(t, inner)).toContain("triangle");
+  });
+});
+
+describe("the edges near a spot, nearest first", () => {
+  const t = buildTopology(plane(2));
+  const projected = (() => {
+    const out = new Float32Array(9 * 2);
+    for (let p = 0; p < 9; p++) {
+      out[p * 2] = (p % 3) * 100;
+      out[p * 2 + 1] = Math.floor(p / 3) * 100;
+    }
+    return out;
+  })();
+
+  it("lists the edges in the order of their distance", () => {
+    const near = edgesNear(t, projected, 50, 10, 120);
+    expect(near[0]).toBe(edgeBetween(t, 0, 1));
+    expect(near.length).toBeGreaterThan(2);
+    expect(edgesNear(t, projected, 50, 40, 10)).toEqual([]);
   });
 });

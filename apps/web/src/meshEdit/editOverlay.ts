@@ -28,6 +28,8 @@ export type EditOverlay = {
   setSelected: (selected: readonly number[]) => void;
   /** In point mode every point has a dot; in edge and face mode only the selected ones do. */
   setMode: (mode: SelectMode) => void;
+  /** X-ray on: lines and dots show through the mesh. Off: parts behind a face are hidden by it. */
+  setXray: (xray: boolean) => void;
   /** Frees what the overlay made (the points it shares with the mesh are the mesh's own). */
   dispose: () => void;
 };
@@ -162,10 +164,25 @@ export function buildEditOverlay(geometry: BufferGeometry): EditOverlay {
   };
   setMode("point");
 
+  const setXray = (xray: boolean) => {
+    // Without x-ray the overlay is hidden by the mesh in front of it (the mesh is pushed back a little by the
+    // editor so lines lying on its surface are not hidden by it)
+    for (const material of [
+      lineMaterial,
+      pointMaterial,
+      selectedLineMaterial,
+      selectedDotMaterial,
+    ]) {
+      material.depthTest = !xray;
+    }
+  };
+  setXray(false);
+
   return {
     group,
     setSelected,
     setMode,
+    setXray,
     dispose: () => {
       group.removeFromParent();
       pointGeometry.dispose();

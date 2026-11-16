@@ -13,12 +13,12 @@ import {
 } from "three";
 import {
   allPoints,
-  buildTopology,
   expandToWelded,
   flatFacePoints,
   isEffectivelyLocked,
-  nearestEdge,
-  nearestPoint,
+  edgeVertices,
+  buildTopology,
+  pointsNear,
   selectionAfterBox,
   selectionAfterEdgeClick,
   selectionAfterFaceClick,
@@ -31,6 +31,9 @@ import { buildEditOverlay, type EditOverlay } from "@/meshEdit/editOverlay";
 import { topologyOfGeometry } from "@/meshEdit/geometryTopology";
 import { copyPositions, transformSelectedLive } from "@/meshEdit/liveEdit";
 import { projectPoints } from "@/meshEdit/projectPoints";
+import { pushSurfaceBack } from "@/meshEdit/surfaceOffset";
+import { pickEdge } from "@/meshEdit/pickEdge";
+import { visibleSpots } from "@/meshEdit/visibility";
 import { useEditStore } from "@/store/editStore";
 import { useSceneStore } from "@/store/sceneStore";
 import Gizmo from "./Gizmo";
@@ -40,6 +43,9 @@ import { SNAP, toRadians } from "./snapSettings";
 
 /** A click on a point counts when the pointer is within this many pixels of it. */
 const PICK_DISTANCE_PX = 12;
+
+/** How many of the nearest points or edges are tested for being hidden (the ones further down the list are never reached in practice). */
+const MAX_CANDIDATES = 40;
 
 /** A press that moves less than this (in pixels) is a click, not the start of a camera drag or a box. */
 const CLICK_MOVE_LIMIT_PX = 4;
@@ -66,6 +72,7 @@ function EditSession({ nodeId }: { nodeId: string }) {
   const canvas = useThree((state) => state.gl.domElement);
   const selected = useEditStore((state) => state.selected);
   const selectMode = useEditStore((state) => state.selectMode);
+  const xray = useEditStore((state) => state.xray);
   const snapping = useSceneStore(
     (state) => state.snapEnabled !== state.snapKeyHeld,
   );
@@ -106,6 +113,14 @@ function EditSession({ nodeId }: { nodeId: string }) {
   useEffect(() => {
     overlayRef.current?.setMode(selectMode);
   }, [selectMode, bound]);
+
+  // Without X-ray the lines and dots on the far side are hidden by the mesh itself. The mesh is pushed back a
+  // little in the depth buffer so the lines lying on its surface are not hidden by it too.
+  useEffect(() => {
+    overlayRef.current?.setXray(xray);
+    if (!bound || xray) return;
+    return pushSurfaceBack(bound.object);
+  }, [xray, bound]);
 
   // ---- Picking: click a point (Shift adds or removes) ----
   useEffect(() => {
@@ -152,13 +167,32 @@ function EditSession({ nodeId }: { nodeId: string }) {
         rect,
         (bound.geometry.getAttribute("position") as BufferAttribute).array,
       );
-      const hit = nearestPoint(
+      const edit = useEditStore.getState();
+      const positions = (
+        bound.geometry.getAttribute("position") as BufferAttribute
+      ).array as Float32Array;
+      // The nearest point under the pointer; without X-ray the nearest one that can be SEEN
+      const near = pointsNear(
         projected,
         event.clientX,
         event.clientY,
         PICK_DISTANCE_PX,
-      );
-      const edit = useEditStore.getState();
+      ).slice(0, MAX_CANDIDATES);
+      const seen = edit.xray
+        ? near.map(() => true)
+        : visibleSpots(
+            near.map(
+              (p) =>
+                [
+                  positions[p * 3]!,
+                  positions[p * 3 + 1]!,
+                  positions[p * 3 + 2]!,
+                ] as const,
+            ),
+            bound.object,
+            camera,
+          );
+      const hit = near.find((_, i) => seen[i]) ?? -1;
       // All the points on the spot that was hit are chosen together (a cube has three at each corner), so
       // moving a corner never tears the surface open
       const groups = weldGroups(
@@ -185,12 +219,16 @@ function EditSession({ nodeId }: { nodeId: string }) {
         rect,
         (bound.geometry.getAttribute("position") as BufferAttribute).array,
       );
-      const edge = nearestEdge(
+      // The nearest edge under the pointer; without X-ray the nearest one whose middle can be SEEN
+      const edge = pickEdge(
         topology,
         projected,
         event.clientX,
         event.clientY,
         PICK_DISTANCE_PX,
+        edit.xray,
+        bound.object,
+        camera,
       );
       edit.setSelected(
         selectionAfterEdgeClick(
@@ -201,6 +239,16 @@ function EditSession({ nodeId }: { nodeId: string }) {
           event.altKey ? "loop" : "edge",
         ),
       );
+      // The clicked edge is what the Loop and Ring buttons work from
+      if (edge >= 0) {
+        const [a, b] = edgeVertices(topology, edge);
+        edit.setAnchorEdge([
+          topology.vertexPoints[a]![0]!,
+          topology.vertexPoints[b]![0]!,
+        ]);
+      } else if (!event.shiftKey) {
+        edit.setAnchorEdge(null);
+      }
     }
 
     /** Face mode: selects the face (a quad, where the mesh has quads) the pointer is over. Shift adds. */

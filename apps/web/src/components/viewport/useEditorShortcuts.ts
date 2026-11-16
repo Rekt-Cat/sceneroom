@@ -153,6 +153,16 @@ export function useEditorShortcuts(): void {
           store.setTransformMode(modeForKey(event.key)!);
         } else if (plain && event.key.toLowerCase() === "x") {
           store.toggleSnap();
+        } else if (
+          event.altKey &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          event.code === "KeyZ"
+        ) {
+          // Alt + Z: X-ray, see (and pick) the points on the far side too
+          event.preventDefault();
+          const edit = useEditStore.getState();
+          edit.setXray(!edit.xray);
         } else if (plain && selectModeForKey(event.key)) {
           // 1, 2, 3: pick points, edges or faces
           useEditStore.getState().setSelectMode(selectModeForKey(event.key)!);

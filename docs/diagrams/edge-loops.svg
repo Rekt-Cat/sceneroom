@@ -48,7 +48,7 @@
   <text x="516" y="276" font-size="14" font-weight="700" fill="#13202a">What a click does</text>
   <text x="516" y="304" font-size="12.5" fill="#13202a">Points (1): nearest point, welded points together</text>
   <text x="516" y="324" font-size="12.5" fill="#13202a">Edges (2): nearest edge within 12 px</text>
-  <text x="528" y="342" font-size="12" fill="#55656f">Alt + click = its loop · Loop / Ring buttons grow it</text>
+  <text x="528" y="342" font-size="12" fill="#55656f">Alt + click = its loop · Loop / Ring buttons use the clicked edge</text>
   <text x="516" y="364" font-size="12.5" fill="#13202a">Faces (3): the face under the pointer (a quad is one)</text>
   <text x="528" y="382" font-size="12" fill="#55656f">Alt + click = the whole flat area</text>
   <path d="M722 400 V430" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>

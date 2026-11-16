@@ -462,6 +462,14 @@ Files: `apps/web/src/components/viewport/InspectorFields.tsx` (rows, steps, colo
 | Turn-on-the-spot distance | `LOOK_AROUND_DISTANCE` in `apps/web/src/components/viewport/FlyController.tsx` | 0.05        | While flying, the point the camera turns round is this far in front of it.             |
 | The keys                  | `FLY_KEY_CODES` in `fly.ts`                                                    | W A S D Q E | Forward, left, back, right, down, up. Add or change a `KeyX: "direction"` line.        |
 
+## X-ray (edit mode)
+
+| What                    | Where                                                                        | Our value | What it does                                                                                     |
+| ----------------------- | ---------------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------ |
+| X-ray                   | `xray` in `editStore.ts`; Alt + Z                                            | off       | Off: lines, points and picking only on faces the camera can see. On: see through (the old look). |
+| Hidden-point test limit | `MAX_POINTS_TO_TEST_FOR_VISIBILITY` in `apps/web/src/meshEdit/visibility.ts` | 4000      | A box with more points than this takes everything inside it (the test would be too slow).        |
+| Nearest points tried    | `MAX_CANDIDATES` in `MeshEditor.tsx`                                         | 40        | How many of the points (or edges) nearest the pointer are tested for being hidden.               |
+
 ## Zoom to an object (double-click in the scene list, F)
 
 | What                      | Where                                                                     | Our value | What it does                                                                                                |
