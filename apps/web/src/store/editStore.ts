@@ -1,7 +1,24 @@
 import { create } from "zustand";
+import type { ExtrudeOptions, ShapeMesh } from "@sceneroom/shared";
 
 /** What a click picks in edit mode: a point, an edge or a face. */
 export type SelectMode = "point" | "edge" | "face";
+
+/**
+ * The last Extrude, kept so its settings can be changed afterwards (the panel that appears after Extrude).
+ * `before` is the mesh as it was before the extrusion and `selectedBefore` the points that were extruded; a
+ * change of settings does the extrusion again from those. It ends when anything else is done (`pastLength` is how
+ * long the undo history was just after the extrusion).
+ */
+export type ExtrudeSession = {
+  before: ShapeMesh;
+  selectedBefore: readonly number[];
+  /** How far the extrusion goes, and the distance it started with (for its reset button). */
+  distance: number;
+  defaultDistance: number;
+  options: ExtrudeOptions;
+  pastLength: number;
+};
 
 /**
  * Edit mode: working on the individual points of one editable mesh. While it is on, `nodeId` is the
@@ -17,6 +34,9 @@ type EditState = {
    * work from it, so each shows the loop or ring of that edge. Null when no edge was clicked.
    */
   anchorEdge: readonly [number, number] | null;
+  /** The extrusion whose settings can still be changed, or null. */
+  extrude: ExtrudeSession | null;
+  setExtrude: (session: ExtrudeSession | null) => void;
   setAnchorEdge: (anchor: readonly [number, number] | null) => void;
   /**
    * X-ray: draw the lines and points of ALL faces, also those the camera cannot see (and let them be picked).
@@ -41,18 +61,22 @@ export const useEditStore = create<EditState>()((set) => ({
   anchorEdge: null,
   xray: false,
   setXray: (xray) => set({ xray }),
+  extrude: null,
+  setExtrude: (extrude) => set({ extrude }),
   setAnchorEdge: (anchorEdge) => set({ anchorEdge }),
   enter: (nodeId) =>
     set({
       nodeId,
       selected: [],
       anchorEdge: null,
+      extrude: null,
     }),
   exit: () =>
     set({
       nodeId: null,
       selected: [],
       anchorEdge: null,
+      extrude: null,
     }),
   setSelected: (selected) => set({ selected }),
   // Points that were selected stay selected: they are the same selection seen as edges or faces

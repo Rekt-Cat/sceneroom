@@ -470,6 +470,16 @@ Files: `apps/web/src/components/viewport/InspectorFields.tsx` (rows, steps, colo
 | Hidden-point test limit | `MAX_POINTS_TO_TEST_FOR_VISIBILITY` in `apps/web/src/meshEdit/visibility.ts` | 4000      | A box with more points than this takes everything inside it (the test would be too slow).        |
 | Nearest points tried    | `MAX_CANDIDATES` in `MeshEditor.tsx`                                         | 40        | How many of the points (or edges) nearest the pointer are tested for being hidden.               |
 
+## Extrude settings (edit mode)
+
+| What              | Where                                                                 | Our value   | What it does                                                               |
+| ----------------- | --------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------- |
+| Starting distance | `EXTRUDE_FRACTION` in `packages/shared/src/meshEdit.ts`               | 0.25        | A new extrusion pushes out this fraction of the size of what is extruded.  |
+| Divisions range   | `MAX_EXTRUDE_DIVISIONS` in `packages/shared/src/meshEdit.ts`          | 1 to 12     | Most bands an extrusion can be cut into.                                   |
+| Scale range       | `MIN_EXTRUDE_SCALE`, `MAX_EXTRUDE_SCALE` in `meshEdit.ts`             | 5% to 400%  | How small or big the new face can be. Not 0: the walls would have no size. |
+| Twist range       | `MAX_EXTRUDE_TWIST_DEGREES` in `meshEdit.ts`                          | -360 to 360 | How far the new face can be turned.                                        |
+| Distance range    | `MIN_EXTRUDE_DISTANCE`, `MAX_EXTRUDE_DISTANCE` in `editOperations.ts` | 0.01 to 50  | Closest and furthest an extrusion can go.                                  |
+
 ## Zoom to an object (double-click in the scene list, F)
 
 | What                      | Where                                                                     | Our value | What it does                                                                                                |

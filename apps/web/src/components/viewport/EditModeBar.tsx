@@ -7,6 +7,7 @@ import {
   extrudeSelectedFaces,
 } from "@/meshEdit/editOperations";
 import { selectLoopOrRing } from "@/meshEdit/selectionTools";
+import ExtrudePanel from "./ExtrudePanel";
 import { stopEditing } from "@/meshEdit/startEditing";
 
 const ACTION =
@@ -190,6 +191,7 @@ export default function EditModeBar() {
       </div>
 
       <p className="max-w-[44rem] text-ed-text-3">{HINTS[selectMode]}</p>
+      <ExtrudePanel />
     </div>
   );
 }

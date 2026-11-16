@@ -387,11 +387,66 @@ export function faceDirection(
   return length < 1e-12 ? null : [x / length, y / length, z / length];
 }
 
+/** The settings of an extrusion beyond how far it goes. */
+export type ExtrudeOptions = {
+  /** How many pieces the extruded part is cut into along its length (1 = one wall). */
+  divisions: number;
+  /** The size of the new face compared with the old one: 1 = the same, 0.5 = half as wide, 2 = twice as wide. */
+  scale: number;
+  /** How far the new face is turned round its direction, in degrees. */
+  twistDegrees: number;
+};
+
+export const DEFAULT_EXTRUDE_OPTIONS: ExtrudeOptions = {
+  divisions: 1,
+  scale: 1,
+  twistDegrees: 0,
+};
+
+export const MAX_EXTRUDE_DIVISIONS = 12;
+/** The smallest scale: a face cannot be squeezed to nothing (the walls would have no area). */
+export const MIN_EXTRUDE_SCALE = 0.05;
+export const MAX_EXTRUDE_SCALE = 4;
+export const MAX_EXTRUDE_TWIST_DEGREES = 360;
+
+/** The options made safe: whole divisions in range, scale and twist within their limits, bad numbers replaced by the defaults. */
+export function sanitizeExtrudeOptions(
+  options: Partial<ExtrudeOptions>,
+): ExtrudeOptions {
+  const number = (value: unknown, fallback: number) =>
+    typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  const clamp = (value: number, low: number, high: number) =>
+    Math.min(high, Math.max(low, value));
+  return {
+    divisions: clamp(
+      Math.round(number(options.divisions, DEFAULT_EXTRUDE_OPTIONS.divisions)),
+      1,
+      MAX_EXTRUDE_DIVISIONS,
+    ),
+    scale: clamp(
+      number(options.scale, DEFAULT_EXTRUDE_OPTIONS.scale),
+      MIN_EXTRUDE_SCALE,
+      MAX_EXTRUDE_SCALE,
+    ),
+    twistDegrees: clamp(
+      number(options.twistDegrees, DEFAULT_EXTRUDE_OPTIONS.twistDegrees),
+      -MAX_EXTRUDE_TWIST_DEGREES,
+      MAX_EXTRUDE_TWIST_DEGREES,
+    ),
+  };
+}
+
 /**
  * Extrudes the selected faces: the faces are copied and pushed `distance` along their average direction,
  * and a wall joins the old edge of the group of faces to the new one. A face is a triangle whose three points
  * are all selected, so select all the points of a face (or a group of faces) first. The walls get their own
  * points so they have sharp edges. Points on the same spot count as one when finding the edge of the group.
+ *
+ * `options` shapes the result like the Extrude settings of a modelling program: the wall can be cut into
+ * several `divisions`, the new face can be `scale`d (smaller makes a tapering stalk, bigger a flare) and
+ * turned (`twistDegrees`). Scale and twist happen round the middle of the faces, in the plane they face, and
+ * grow step by step along the divisions. With the defaults (1, 1, 0) it is a plain straight extrusion.
+ *
  * Returns the new mesh and the selection: the points of the new cap, ready to be moved further.
  */
 export function extrudeFaces(
@@ -399,6 +454,7 @@ export function extrudeFaces(
   selected: readonly number[],
   distance: number,
   groups: WeldGroups,
+  options: Partial<ExtrudeOptions> = {},
 ): EditResult {
   const faces = selectedFaces(mesh, selected);
   if (faces.length === 0) {
@@ -408,12 +464,51 @@ export function extrudeFaces(
         "Select all the points of at least one face first (a Ctrl-drag box around it does it).",
     };
   }
+  const { divisions, scale, twistDegrees } = sanitizeExtrudeOptions(options);
   const direction = faceDirection(mesh, faces) ?? [0, 1, 0];
-  const push: Vec3 = [
-    direction[0] * distance,
-    direction[1] * distance,
-    direction[2] * distance,
-  ];
+
+  // The middle of the faces: scale and twist happen round it
+  const used = new Set<number>();
+  for (const face of faces) {
+    for (let k = 0; k < 3; k++) used.add(mesh.indices[face * 3 + k]!);
+  }
+  const middle = selectionCentroid(mesh.positions, [...used]) ?? [0, 0, 0];
+
+  /** Where a point of the faces is after `step` of `divisions` steps of the extrusion. */
+  const ringPosition = (point: number, step: number): Vec3 => {
+    const t = step / divisions;
+    // The point, relative to the middle, split into the part along the direction and the part across it
+    const rx = mesh.positions[point * 3]! - middle[0];
+    const ry = mesh.positions[point * 3 + 1]! - middle[1];
+    const rz = mesh.positions[point * 3 + 2]! - middle[2];
+    const along = rx * direction[0] + ry * direction[1] + rz * direction[2];
+    let px = rx - along * direction[0];
+    let py = ry - along * direction[1];
+    let pz = rz - along * direction[2];
+    // Scale across the direction (1 at the start, `scale` at the end)
+    const s = 1 + (scale - 1) * t;
+    px *= s;
+    py *= s;
+    pz *= s;
+    // Turn round the direction (Rodrigues: v cos + (n x v) sin + n (n . v)(1 - cos), and n . v is 0 here)
+    const angle = (twistDegrees * t * Math.PI) / 180;
+    if (angle !== 0) {
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const cx = direction[1] * pz - direction[2] * py;
+      const cy = direction[2] * px - direction[0] * pz;
+      const cz = direction[0] * py - direction[1] * px;
+      px = px * cos + cx * sin;
+      py = py * cos + cy * sin;
+      pz = pz * cos + cz * sin;
+    }
+    const push = distance * t;
+    return [
+      middle[0] + along * direction[0] + px + direction[0] * push,
+      middle[1] + along * direction[1] + py + direction[1] * push,
+      middle[2] + along * direction[2] + pz + direction[2] * push,
+    ];
+  };
 
   const positions: number[] = Array.from(mesh.positions);
   const indices: number[] = [];
@@ -429,7 +524,7 @@ export function extrudeFaces(
     );
   }
 
-  // The cap: a copy of every point the faces use, pushed out; the faces now use the copies
+  // The cap: a copy of every point the faces use, at the end of the extrusion; the faces now use the copies
   const copyOf = new Map<number, number>();
   const capPoints: number[] = [];
   const copy = (point: number) => {
@@ -438,11 +533,7 @@ export function extrudeFaces(
       made = positions.length / 3;
       copyOf.set(point, made);
       capPoints.push(made);
-      positions.push(
-        mesh.positions[point * 3]! + push[0],
-        mesh.positions[point * 3 + 1]! + push[1],
-        mesh.positions[point * 3 + 2]! + push[2],
-      );
+      positions.push(...ringPosition(point, divisions));
     }
     return made;
   };
@@ -471,14 +562,11 @@ export function extrudeFaces(
       uses.set(edgeKey(a, b), (uses.get(edgeKey(a, b)) ?? 0) + 1);
     }
   }
-  // A wall on each edge of the group, with its own four points, facing outwards from the group
-  const wallPoint = (source: number, pushed: boolean) => {
+  // Walls on each edge of the group, one band per division, each with its own four points so the bands
+  // have sharp edges, facing outwards from the group
+  const wallPoint = (source: number, step: number) => {
     const id = positions.length / 3;
-    positions.push(
-      mesh.positions[source * 3]! + (pushed ? push[0] : 0),
-      mesh.positions[source * 3 + 1]! + (pushed ? push[1] : 0),
-      mesh.positions[source * 3 + 2]! + (pushed ? push[2] : 0),
-    );
+    positions.push(...ringPosition(source, step));
     return id;
   };
   for (const face of faces) {
@@ -486,12 +574,14 @@ export function extrudeFaces(
       const a = mesh.indices[face * 3 + k]!;
       const b = mesh.indices[face * 3 + ((k + 1) % 3)]!;
       if (uses.get(edgeKey(a, b)) !== 1) continue;
-      const a0 = wallPoint(a, false);
-      const b0 = wallPoint(b, false);
-      const b1 = wallPoint(b, true);
-      const a1 = wallPoint(a, true);
-      // Two triangles per wall, wound so the wall faces away from the group (see the notes in the tests)
-      indices.push(a0, b0, b1, a0, b1, a1);
+      for (let step = 1; step <= divisions; step++) {
+        const a0 = wallPoint(a, step - 1);
+        const b0 = wallPoint(b, step - 1);
+        const b1 = wallPoint(b, step);
+        const a1 = wallPoint(a, step);
+        // Two triangles per band, wound so the wall faces away from the group (see the notes in the tests)
+        indices.push(a0, b0, b1, a0, b1, a1);
+      }
     }
   }
 

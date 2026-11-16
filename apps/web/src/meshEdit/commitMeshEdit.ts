@@ -12,6 +12,8 @@ export async function commitMesh(
   nodeId: string,
   mesh: ShapeMesh,
   label: string,
+  /** True: no new undo step, the mesh takes the place of the one the last step made. */
+  amend = false,
 ): Promise<boolean> {
   const { scene } = useSceneStore.getState();
   const node = scene.nodes[nodeId];
@@ -28,7 +30,7 @@ export async function commitMesh(
       stored.bytes,
       old.note,
     );
-    useSceneStore.getState().replaceNodeMesh(nodeId, info, label);
+    useSceneStore.getState().replaceNodeMesh(nodeId, info, label, amend);
     return true;
   } catch (error) {
     console.error("Storing the edited mesh failed:", error);
