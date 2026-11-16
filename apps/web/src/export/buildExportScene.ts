@@ -13,8 +13,17 @@ import {
 } from "three";
 import { clone } from "three/examples/jsm/utils/SkeletonUtils.js";
 import {
+  BONE_PARENT,
+  CHARACTER_BONES,
+  boneRotation,
+  buildParts,
   buildSceneTree,
   generatePlant,
+  groundLift,
+  proportions,
+  restOffsets,
+  roleColor,
+  type CharacterBone,
   modelOffset,
   type Scene,
   type ShapeMesh,
@@ -134,6 +143,10 @@ function createObject(
     return node.plant ? plantObject(node) : null;
   }
 
+  if (node.kind === "character") {
+    return node.character ? characterObject(node) : null;
+  }
+
   if (node.kind === "model") {
     const info = node.assetId ? scene.assets[node.assetId] : undefined;
     const loaded = node.assetId ? getModel(node.assetId) : undefined;
@@ -177,6 +190,50 @@ function createObject(
   // Marked so only what was made here is freed afterwards (a model's own parts are shared with the screen)
   mesh.userData["exportOwned"] = true;
   return mesh;
+}
+
+/**
+ * A character as a skeleton: a group for each bone (named like the bone, at its joint, turned by the pose),
+ * each holding the meshes of the body parts attached to it. Other programs see a real bone hierarchy, so a
+ * rotation of "upperArm.L" turns the arm. The pose is in the bones' turns; the body is lowered or raised onto
+ * the ground like on screen.
+ */
+function characterObject(node: SceneNode): Object3D {
+  const character = node.character!;
+  const parts = buildParts(character);
+  const offsets = restOffsets(proportions(character));
+  const lift = groundLift(character, parts);
+  const root = new Group();
+  const groups = {} as Record<CharacterBone, Group>;
+  for (const bone of CHARACTER_BONES) {
+    const group = new Group();
+    group.name = bone;
+    const [x, y, z] = offsets[bone];
+    group.position.set(x, bone === "hips" ? y + lift : y, z);
+    group.rotation.set(...boneRotation(bone, character.pose[bone]));
+    const parent = BONE_PARENT[bone];
+    (parent ? groups[parent] : root).add(group);
+    groups[bone] = group;
+  }
+  for (const part of parts) {
+    const mesh = new Mesh(
+      finish(buildMeshGeometry(part.mesh, []), node),
+      new MeshStandardMaterial({
+        color: roleColor(character, part.role),
+        roughness: node.material.roughness,
+        metalness: node.material.metalness,
+        emissive: new Color(node.material.emissiveColor),
+        emissiveIntensity: node.material.emissiveIntensity,
+        opacity: node.material.opacity,
+        transparent: node.material.opacity < 1,
+        side: node.material.doubleSided ? DoubleSide : FrontSide,
+      }),
+    );
+    mesh.name = `${part.bone} ${part.role}`;
+    mesh.userData["exportOwned"] = true;
+    groups[part.bone].add(mesh);
+  }
+  return root;
 }
 
 /** A plant: its wood and its leaves as two meshes (each with its own colour) in one object. */

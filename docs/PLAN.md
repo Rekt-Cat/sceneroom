@@ -128,7 +128,8 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 
 ### Phase 15: Characters and creatures
 
-- [ ] Base meshes; skeleton and weights (auto-weights, painting); posing and IK; morph targets; reference images; character export (GLB with skeleton)
+- [x] Step 1 (`feature/characters`, waiting for a browser check): a posable humanoid skeleton with a low-poly body, four kinds and six poses, randomise look, crowds, skeleton view, Make mesh, GLB export with a bone hierarchy
+- [ ] Next: skinned meshes and weights (smooth bending); animation (timeline, walk cycles); inverse kinematics; click a bone in the view; morph targets and faces; clothes; save my characters; a base mesh to sculpt from; reference images
 
 ## Milestones
 

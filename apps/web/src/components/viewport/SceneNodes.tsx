@@ -13,6 +13,7 @@ import { BufferAttribute, BufferGeometry, Mesh, type Object3D } from "three";
 import {
   buildSceneTree,
   cutNodeIds,
+  DEFAULT_CHARACTER,
   DEFAULT_LIGHTS,
   DEFAULT_PLANT,
   LIGHT_KINDS,
@@ -29,6 +30,7 @@ import LightObject from "./LightObject";
 import { loadMeshData, peekMeshData } from "@/assets/meshStorage";
 import { useEditStore } from "@/store/editStore";
 import { PLACEHOLDER_FLAG } from "./MeshEditor";
+import CharacterObject from "./CharacterObject";
 import PlantObject from "./PlantObject";
 import SurfaceMaterial from "./SurfaceMaterial";
 import { buildMeshGeometry, buildShapeGeometry } from "./shapeGeometry";
@@ -210,6 +212,31 @@ function NodeMesh({
           // A light object always has its settings; the default only guards against damaged data
           light={node.light ?? DEFAULT_LIGHTS[node.kind]}
           selected={selected}
+        />
+        {children}
+      </group>
+    );
+  }
+
+  // A character: a group holding its skeleton of bones with the body parts on them. Like a model, it only
+  // takes clicks when it can be edited.
+  if (node.kind === "character") {
+    return (
+      <group
+        ref={setMesh}
+        userData={{ nodeId: node.id }}
+        visible={node.visible}
+        position={position}
+        rotation={rotation}
+        scale={scale}
+        onClick={interactive ? handleClick : undefined}
+      >
+        <CharacterObject
+          // A character object always has its settings; the default only guards against damaged data
+          character={node.character ?? DEFAULT_CHARACTER}
+          material={material}
+          selected={selected}
+          cut={cut}
         />
         {children}
       </group>

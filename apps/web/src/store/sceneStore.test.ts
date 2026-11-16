@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  POSE_PRESETS,
   createPlantNode,
   createRandom,
   nextRedoLabel,
@@ -1439,5 +1440,133 @@ describe("my plants and randomise", () => {
     expect(plant(id).plant!.leafColor).toBe(before.leafColor);
     get().undo();
     expect(plant(id).plant).toEqual(before);
+  });
+});
+
+describe("characters", () => {
+  const person = (id: string) => get().scene.nodes[id]!;
+
+  it("adds a character of a kind, standing at rest, selects it, in one undo step", () => {
+    const id = get().addCharacter("child");
+    expect(person(id)).toMatchObject({
+      kind: "character",
+      name: "Child",
+      character: { height: 1.1, pose: {} },
+    });
+    expect(get().selectedIds).toEqual([id]);
+    expect(nextUndoLabel(get().history)).toBe("Add child");
+    get().undo();
+    expect(get().scene.nodes[id]).toBeUndefined();
+  });
+
+  it("each new character gets a free name", () => {
+    get().addCharacter("person");
+    const b = get().addCharacter("person");
+    expect(person(b).name).toBe("Person (1)");
+  });
+
+  it("changes settings, cleaned to their range, as one undo step; nothing for no change", () => {
+    const id = get().addCharacter("person");
+    get().setNodeCharacter(id, {
+      height: 99,
+      hair: "long",
+      skinColor: "#ABCDEF",
+    });
+    expect(person(id).character).toMatchObject({
+      height: 3,
+      hair: "long",
+      skinColor: "#abcdef",
+    });
+    const steps = get().history.past.length;
+    get().setNodeCharacter(id, { height: 3 });
+    get().setNodeCharacter("initial-cube", { height: 1 });
+    expect(get().history.past).toHaveLength(steps);
+    get().undo();
+    expect(person(id).character!.height).toBe(1.7);
+  });
+
+  it("a pose is cleaned to the joint limits and is one undo step; dragging a slider is many previews and one step", () => {
+    const id = get().addCharacter("person");
+    get().setNodeCharacter(id, {
+      pose: { "lowerLeg.L": [-40, 5, 0], "upperArm.R": [10, 90, 0] },
+    });
+    expect(person(id).character!.pose).toEqual({ "upperArm.R": [10, 90, 0] }); // a knee cannot bend backwards
+    const steps = get().history.past.length;
+    get().beginEdit("Pose");
+    get().previewNodeCharacter(id, { pose: { "upperArm.R": [10, 100, 0] } });
+    get().previewNodeCharacter(id, { pose: { "upperArm.R": [10, 110, 0] } });
+    expect(get().history.past).toHaveLength(steps);
+    get().endEdit(true);
+    expect(person(id).character!.pose["upperArm.R"]).toEqual([10, 110, 0]);
+    expect(get().history.past).toHaveLength(steps + 1);
+  });
+
+  it("a kind button changes the look but keeps the pose", () => {
+    const id = get().addCharacter("person");
+    get().setNodeCharacter(id, { pose: { head: [20, 0, 0] }, onGround: false });
+    get().applyCharacterPreset(id, "stocky");
+    expect(person(id).character).toMatchObject({
+      height: 1.75,
+      build: 0.95,
+      hair: "bald",
+      pose: { head: [20, 0, 0] },
+      onGround: false,
+    });
+  });
+
+  it("a locked character cannot be changed", () => {
+    const id = get().addCharacter("person");
+    get().setNodesLocked([id], true);
+    get().setNodeCharacter(id, { height: 2 });
+    get().applyCharacterPreset(id, "tall");
+    expect(
+      get().scatterCharacter(id, [{ x: 1, z: 1, turn: 0, size: 1, seed: 5 }]),
+    ).toEqual([]);
+    expect(person(id).character!.height).toBe(1.7);
+  });
+
+  it("a crowd adds a copy at each spot with its own look and the same pose, in one undo step", () => {
+    const id = get().addCharacter("person");
+    get().setNodeCharacter(id, { pose: { "upperArm.R": [0, 120, 0] } });
+    const spots = [
+      { x: 2, z: 0, turn: 1, size: 1.05, seed: 11 },
+      { x: -2, z: 3, turn: 2, size: 0.95, seed: 12 },
+      { x: 4, z: -3, turn: 3, size: 1, seed: 13 },
+    ];
+    const ids = get().scatterCharacter(id, spots);
+    expect(ids).toHaveLength(3);
+    expect(get().selectedIds).toEqual(ids);
+    expect(person(ids[0]!).character!.pose).toEqual({
+      "upperArm.R": [0, 120, 0],
+    });
+    expect(person(ids[0]!).transform.position).toEqual([2, 0, 0]);
+    expect(nextUndoLabel(get().history)).toBe("Add a crowd of 3");
+    get().undo();
+    expect(
+      Object.values(get().scene.nodes).filter((n) => n.kind === "character"),
+    ).toHaveLength(1);
+  });
+
+  it("nothing is added for no spots, or for an object that is not a character", () => {
+    const id = get().addCharacter("person");
+    const steps = get().history.past.length;
+    expect(get().scatterCharacter(id, [])).toEqual([]);
+    expect(
+      get().scatterCharacter("initial-cube", [
+        { x: 1, z: 1, turn: 0, size: 1, seed: 1 },
+      ]),
+    ).toEqual([]);
+    expect(get().history.past).toHaveLength(steps);
+  });
+
+  it("duplicating a character keeps everything", () => {
+    const id = get().addCharacter("tall");
+    get().setNodeCharacter(id, { pose: POSE_PRESETS.walk });
+    get().select(id);
+    get().duplicateSelected();
+    const copy = Object.values(get().scene.nodes).find(
+      (n) => n.kind === "character" && n.id !== id,
+    )!;
+    expect(copy.character).toEqual(person(id).character);
   });
 });

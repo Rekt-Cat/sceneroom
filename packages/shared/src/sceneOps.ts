@@ -41,6 +41,7 @@ export function createNode(id: string, kind: PrimitiveKind): SceneNode {
     assetId: null,
     light: null,
     plant: null,
+    character: null,
     segments: 1,
     modifiers: [],
     order: 0,

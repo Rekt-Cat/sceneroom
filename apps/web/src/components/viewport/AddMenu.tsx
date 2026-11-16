@@ -2,10 +2,13 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import {
+  CHARACTER_PRESET_INFO,
+  CHARACTER_PRESET_NAMES,
   LIGHT_KINDS,
   PLANT_PRESET_INFO,
   PLANT_PRESET_NAMES,
   PRIMITIVE_KINDS,
+  type CharacterPresetName,
   type LightKind,
   type PlantPresetName,
   type PrimitiveKind,
@@ -15,7 +18,8 @@ import { useSceneStore } from "@/store/sceneStore";
 import { Icon, KIND_LABELS, KindIcon } from "./icons";
 
 /** Everything the menu can add. */
-type MenuKind = PrimitiveKind | LightKind | PlantPresetName;
+type MenuKind =
+  PrimitiveKind | LightKind | PlantPresetName | CharacterPresetName;
 
 const KIND_HINTS: Record<MenuKind, string> = {
   cube: "Box, 1 × 1 × 1",
@@ -29,16 +33,25 @@ const KIND_HINTS: Record<MenuKind, string> = {
   tree: PLANT_PRESET_INFO.tree.hint,
   pine: PLANT_PRESET_INFO.pine.hint,
   bush: PLANT_PRESET_INFO.bush.hint,
+  person: CHARACTER_PRESET_INFO.person.hint,
+  child: CHARACTER_PRESET_INFO.child.hint,
+  stocky: CHARACTER_PRESET_INFO.stocky.hint,
+  tall: CHARACTER_PRESET_INFO.tall.hint,
 };
 
 function isPlantPreset(kind: MenuKind): kind is PlantPresetName {
   return (PLANT_PRESET_NAMES as readonly string[]).includes(kind);
 }
 
+function isCharacterPreset(kind: MenuKind): kind is CharacterPresetName {
+  return (CHARACTER_PRESET_NAMES as readonly string[]).includes(kind);
+}
+
 /** The tabs of the menu, and what each one lists. */
 const TABS = [
   { id: "shapes", label: "Shapes", kinds: PRIMITIVE_KINDS },
   { id: "plants", label: "Plants", kinds: PLANT_PRESET_NAMES },
+  { id: "characters", label: "People", kinds: CHARACTER_PRESET_NAMES },
   { id: "lights", label: "Lights", kinds: LIGHT_KINDS },
 ] as const;
 
@@ -50,6 +63,7 @@ export default function AddMenu() {
   const addLight = useSceneStore((state) => state.addLight);
   const addPlant = useSceneStore((state) => state.addPlant);
   const addCustomPlant = useSceneStore((state) => state.addCustomPlant);
+  const addCharacter = useSceneStore((state) => state.addCharacter);
   const myPlants = usePlantLibraryStore((state) => state.items);
   const removeMyPlant = usePlantLibraryStore((state) => state.remove);
   const [open, setOpen] = useState(false);
@@ -103,6 +117,8 @@ export default function AddMenu() {
       addLight(kind as LightKind);
     } else if ((PLANT_PRESET_NAMES as readonly string[]).includes(kind)) {
       addPlant(kind as PlantPresetName);
+    } else if ((CHARACTER_PRESET_NAMES as readonly string[]).includes(kind)) {
+      addCharacter(kind as CharacterPresetName);
     } else {
       addPrimitive(kind as PrimitiveKind);
     }
@@ -168,7 +184,9 @@ export default function AddMenu() {
               className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left hover:bg-ed-accent/30 focus-visible:bg-ed-accent/30 focus-visible:outline-none"
             >
               <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-ed-panel text-ed-text-2">
-                {isPlantPreset(kind) ? (
+                {isCharacterPreset(kind) ? (
+                  <Icon name="character" />
+                ) : isPlantPreset(kind) ? (
                   <Icon name={kind} />
                 ) : (
                   <KindIcon kind={kind} />
@@ -176,9 +194,11 @@ export default function AddMenu() {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium">
-                  {isPlantPreset(kind)
-                    ? PLANT_PRESET_INFO[kind].label
-                    : KIND_LABELS[kind]}
+                  {isCharacterPreset(kind)
+                    ? CHARACTER_PRESET_INFO[kind].label
+                    : isPlantPreset(kind)
+                      ? PLANT_PRESET_INFO[kind].label
+                      : KIND_LABELS[kind]}
                 </span>
                 <span className="block truncate text-xs text-ed-text-3">
                   {KIND_HINTS[kind]}
@@ -239,7 +259,9 @@ export default function AddMenu() {
               ? "New shapes appear in the middle of the scene and are selected."
               : tab === "plants"
                 ? "New plants grow in the middle of the scene. Change every number, or the seed, in the Inspector, and save your own under My plants."
-                : "New lights start above the scene, aimed at the middle."}
+                : tab === "characters"
+                  ? "New people stand in the middle of the scene. Pose them, dress them, or make a crowd in the Inspector."
+                  : "New lights start above the scene, aimed at the middle."}
           </p>
         </div>
       )}
