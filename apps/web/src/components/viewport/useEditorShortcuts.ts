@@ -6,6 +6,8 @@ import { useSceneStore } from "@/store/sceneStore";
 import { SEARCH_INPUT_ID } from "./HierarchyPanel";
 import {
   deleteSelectedPoints,
+  CREASE_SHARP,
+  creaseSelectedEdges,
   extrudeSelectedFaces,
   insetSelectedFaces,
 } from "@/meshEdit/editOperations";
@@ -167,11 +169,25 @@ export function useEditorShortcuts(): void {
           event.preventDefault();
           const edit = useEditStore.getState();
           edit.setXray(!edit.xray);
+        } else if (
+          event.shiftKey &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          !event.altKey &&
+          event.key.toLowerCase() === "c"
+        ) {
+          // Shift + C: crease the selected edges (sharp)
+          event.preventDefault();
+          void creaseSelectedEdges(CREASE_SHARP);
         } else if (plain && event.key.toLowerCase() === "i") {
           // I: inset the selected faces
           event.preventDefault();
           void insetSelectedFaces();
-        } else if (plain && event.key.toLowerCase() === "c") {
+        } else if (
+          plain &&
+          !event.shiftKey &&
+          event.key.toLowerCase() === "c"
+        ) {
           // C: the Loop cut tool on or off
           event.preventDefault();
           const edit = useEditStore.getState();

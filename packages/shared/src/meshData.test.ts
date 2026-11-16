@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   MAX_MESH_POINTS,
   MESH_FORMAT_VERSION,
+  MESH_FORMAT_VERSION_CREASES,
   checkMesh,
   decodeMeshData,
   encodeMeshData,
@@ -119,7 +120,11 @@ describe("mesh data: refusing bad meshes and bad bytes", () => {
       return result.ok ? "" : result.reason;
     };
     const newer = encodeMeshData(square());
-    new DataView(newer.buffer).setUint32(4, MESH_FORMAT_VERSION + 1, true);
+    new DataView(newer.buffer).setUint32(
+      4,
+      MESH_FORMAT_VERSION_CREASES + 1,
+      true,
+    );
     expect(reason(newer)).toContain("version");
 
     const cut = encodeMeshData(square()).slice(0, 40);
@@ -143,5 +148,85 @@ describe("mesh data: refusing bad meshes and bad bytes", () => {
     const notFinite = encodeMeshData(square());
     new DataView(notFinite.buffer).setFloat32(16, NaN, true);
     expect(reason(notFinite)).toContain("not finite");
+  });
+});
+
+describe("edge creases in mesh data", () => {
+  const withCreases = (creases: { a: number; b: number; value: number }[]) => ({
+    ...square(),
+    creases,
+  });
+
+  it("a mesh without creases is stored exactly as before (version 1, same size, same fingerprint)", () => {
+    const bytes = encodeMeshData(square());
+    expect(new DataView(bytes.buffer).getUint32(4, true)).toBe(
+      MESH_FORMAT_VERSION,
+    );
+    expect(bytes.length).toBe(16 + 4 * 12 + 6 * 4);
+    // an empty list is the same as none
+    expect(Array.from(encodeMeshData(withCreases([])))).toEqual(
+      Array.from(bytes),
+    );
+  });
+
+  it("creases are stored in version 2 and come back (values to 1/255)", () => {
+    const mesh = withCreases([
+      { a: 0, b: 1, value: 1 },
+      { a: 2, b: 3, value: 0.5 },
+    ]);
+    const bytes = encodeMeshData(mesh);
+    expect(new DataView(bytes.buffer).getUint32(4, true)).toBe(
+      MESH_FORMAT_VERSION_CREASES,
+    );
+    const back = decodeMeshData(bytes);
+    expect(back.ok).toBe(true);
+    if (!back.ok) return;
+    expect(back.mesh.creases).toHaveLength(2);
+    expect(back.mesh.creases![0]).toEqual({ a: 0, b: 1, value: 1 });
+    expect(back.mesh.creases![1]!.a).toBe(2);
+    expect(back.mesh.creases![1]!.value).toBeCloseTo(0.5, 2);
+    expect(Array.from(back.mesh.positions)).toEqual(
+      Array.from(square().positions),
+    );
+  });
+
+  it("different creases make different bytes (so a different stored mesh and an undo step)", () => {
+    const one = encodeMeshData(withCreases([{ a: 0, b: 1, value: 1 }]));
+    const other = encodeMeshData(withCreases([{ a: 0, b: 1, value: 0.5 }]));
+    const none = encodeMeshData(square());
+    expect(Array.from(one)).not.toEqual(Array.from(other));
+    expect(Array.from(one)).not.toEqual(Array.from(none));
+  });
+
+  it("refuses to store a crease on a point that does not exist, on itself, or with a value out of range", () => {
+    expect(() =>
+      encodeMeshData(withCreases([{ a: 0, b: 99, value: 1 }])),
+    ).toThrow(/does not exist/);
+    expect(() =>
+      encodeMeshData(withCreases([{ a: 1, b: 1, value: 1 }])),
+    ).toThrow(/itself/);
+    expect(() =>
+      encodeMeshData(withCreases([{ a: 0, b: 1, value: 2 }])),
+    ).toThrow(/between 0 and 1/);
+  });
+
+  it("a stored mesh with damaged creases is refused", () => {
+    const bytes = encodeMeshData(withCreases([{ a: 0, b: 1, value: 1 }]));
+    const reason = (b: Uint8Array) => {
+      const r = decodeMeshData(b);
+      return r.ok ? "" : r.reason;
+    };
+    expect(reason(bytes.slice(0, bytes.length - 2))).toContain(
+      "size does not match",
+    );
+    // a crease on a point that is not there
+    const broken = Uint8Array.from(bytes);
+    const creaseStart = 20 + 4 * 12 + 6 * 4;
+    new DataView(broken.buffer).setUint32(creaseStart, 50, true);
+    expect(reason(broken)).toContain("does not exist");
+    // a header that claims millions of creases
+    const lying = Uint8Array.from(bytes);
+    new DataView(lying.buffer).setUint32(16, 0xffffff, true);
+    expect(reason(lying)).toContain("bigger than the allowed size");
   });
 });

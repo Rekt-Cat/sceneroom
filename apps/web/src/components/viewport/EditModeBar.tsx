@@ -3,6 +3,9 @@
 import { useEditStore, type SelectMode } from "@/store/editStore";
 import { useSceneStore } from "@/store/sceneStore";
 import {
+  CREASE_SHARP,
+  CREASE_SOFT,
+  creaseSelectedEdges,
   deleteSelectedPoints,
   extrudeSelectedFaces,
   insetSelectedFaces,
@@ -168,6 +171,37 @@ export default function EditModeBar() {
             className={ACTION}
           >
             Ring
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-ed-text-3">Crease</span>
+          <button
+            type="button"
+            onClick={() => void creaseSelectedEdges(CREASE_SHARP)}
+            disabled={selected.length < 2}
+            title="Crease: mark the selected edges as sharp, so the Smooth modifier keeps them crisp instead of rounding them (Shift + C). Creased edges are drawn in pink. Select edges first: press 2, click an edge, or Alt-click a loop."
+            className={ACTION}
+          >
+            Sharp
+          </button>
+          <button
+            type="button"
+            onClick={() => void creaseSelectedEdges(CREASE_SOFT)}
+            disabled={selected.length < 2}
+            title="A softer crease: crisp at first, then rounding off as the shape is smoothed more."
+            className={ACTION}
+          >
+            Soft
+          </button>
+          <button
+            type="button"
+            onClick={() => void creaseSelectedEdges(0)}
+            disabled={selected.length < 2}
+            title="Remove the crease from the selected edges"
+            className={ACTION}
+          >
+            Clear
           </button>
         </div>
 

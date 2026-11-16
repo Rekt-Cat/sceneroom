@@ -1,5 +1,6 @@
 import type { EditMesh } from "./meshEdit";
-import { edgeRing, edgeVertices, type Topology } from "./topology";
+import { edgeCreaseValues, type Crease } from "./creases";
+import { edgeBetween, edgeRing, edgeVertices, type Topology } from "./topology";
 
 /**
  * Loop cut: add new rings of edges across a strip of squares. You point at an edge; the ring of parallel edges
@@ -219,6 +220,21 @@ export function loopCut(
   };
 
   const inStrip = new Set(planned.cells.map((c) => c.face));
+  // The edges the cut crosses (the rungs of the strip)
+  const crossed = new Set<number>();
+  for (const cell of planned.cells) {
+    for (const [from, to] of [
+      [cell.a1, cell.b1],
+      [cell.a2, cell.b2],
+    ] as const) {
+      const e = edgeBetween(
+        topology,
+        topology.vertexOf[from]!,
+        topology.vertexOf[to]!,
+      );
+      if (e !== -1) crossed.add(e);
+    }
+  }
   const indices: number[] = [];
   for (let t = 0; t * 3 < mesh.indices.length; t++) {
     const face = topology.triangleFace[t]!;
@@ -256,11 +272,54 @@ export function loopCut(
 
   const selected: number[] = [];
   for (const id of made.values()) selected.push(id);
+
+  // A creased edge that the cut crosses is now in pieces (end, new points, end): every piece keeps the crease
+  let creases = mesh.creases;
+  if (creases && creases.length > 0) {
+    const sharp = edgeCreaseValues(topology, creases);
+    const extra: Crease[] = [];
+    const seen = new Set<string>();
+    for (const cell of planned.cells) {
+      for (const [from, to] of [
+        [cell.a1, cell.b1],
+        [cell.a2, cell.b2],
+      ] as const) {
+        const edge = edgeBetween(
+          topology,
+          topology.vertexOf[from]!,
+          topology.vertexOf[to]!,
+        );
+        const value = edge === -1 ? 0 : sharp[edge]!;
+        const key = `${from}-${to}`;
+        if (value <= 0 || seen.has(key)) continue;
+        seen.add(key);
+        const chain = [
+          from,
+          ...ts.map((_, k) => made.get(`${from}-${to}-${k}`)!),
+          to,
+        ];
+        for (let k = 0; k + 1 < chain.length; k++) {
+          extra.push({ a: chain[k]!, b: chain[k + 1]!, value });
+        }
+      }
+    }
+    // The old crease on a crossed edge no longer joins two neighbours; the pieces replace it
+    creases = [
+      ...creases.filter((c) => {
+        const a = topology.vertexOf[c.a]!;
+        const b = topology.vertexOf[c.b]!;
+        const e = edgeBetween(topology, a, b);
+        return !(e !== -1 && crossed.has(e));
+      }),
+      ...extra,
+    ];
+  }
   return {
     ok: true,
     mesh: {
       positions: Float32Array.from(positions),
       indices: Uint32Array.from(indices),
+      creases,
     },
     selected,
   };

@@ -37,3 +37,5 @@ export * from "./topology";
 export * from "./framing";
 export * from "./fly";
 export * from "./loopCut";
+export * from "./subdivide";
+export * from "./creases";

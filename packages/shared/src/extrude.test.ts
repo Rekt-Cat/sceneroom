@@ -327,3 +327,15 @@ describe("pushing in and insetting", () => {
     ).toBe(true);
   });
 });
+
+describe("extrude and delete keep creases", () => {
+  it("an extrusion keeps the creases of the old edges, on the same points", () => {
+    const mesh = { ...cube(), creases: [{ a: 0, b: 1, value: 0.8 }] };
+    const groups = weldGroups(mesh.positions);
+    const selected = expandToWelded(groups, flatFacePoints(mesh, 0, groups));
+    const result = extrudeFaces(mesh, selected, 1, groups);
+    expect(result.ok && result.mesh.creases).toEqual([
+      { a: 0, b: 1, value: 0.8 },
+    ]);
+  });
+});

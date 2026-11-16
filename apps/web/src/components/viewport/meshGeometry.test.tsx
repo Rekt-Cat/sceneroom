@@ -295,7 +295,7 @@ describe("editing the points of a mesh", () => {
     overlay.dispose();
     const next = buildEditOverlay(geometry());
     block().add(next.group);
-    expect(next.group.children).toHaveLength(5);
+    expect(next.group.children).toHaveLength(7);
     expect(problems(scene)).toEqual([]);
   });
 });

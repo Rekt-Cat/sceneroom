@@ -1,4 +1,5 @@
 import type { ShapeMesh } from "./modifiers";
+import { remapCreases } from "./creases";
 import type { Rect } from "./screenRect";
 import type { Vec3 } from "./index";
 
@@ -330,11 +331,16 @@ export function deletePoints(
     }
     return next;
   });
+  // The old number of each point to its new one (-1 for a deleted point), for the creases
+  const renumberTable = new Int32Array(mesh.positions.length / 3).fill(-1);
+  for (const [old, next] of renumber) renumberTable[old] = next;
   return {
     ok: true,
     mesh: {
       positions: Float32Array.from(positions),
       indices: Uint32Array.from(indices),
+      // Points are renumbered; creases follow them, and those on deleted points go
+      creases: remapCreases(mesh.creases, renumberTable),
     },
     selected: [],
   };
@@ -603,6 +609,8 @@ export function extrudeFaces(
     mesh: {
       positions: Float32Array.from(positions),
       indices: Uint32Array.from(indices),
+      // The old points keep their numbers, so the creases on the old edges are still right
+      creases: mesh.creases,
     },
     selected: capPoints,
   };

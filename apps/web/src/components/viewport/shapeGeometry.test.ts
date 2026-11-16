@@ -103,4 +103,46 @@ describe("buildShapeGeometry", () => {
     );
     expect(shaken.getAttribute("uv")).toBeDefined();
   });
+
+  it("Smooth rounds a cube into a closed blob with normals and no cracks (26 points, 48 triangles)", () => {
+    const smooth = buildShapeGeometry("cube", 1, [
+      createModifier("s", "subdivide"),
+    ]);
+    expect(smooth.getAttribute("position").count).toBe(26);
+    expect(smooth.index!.count / 3).toBe(48);
+    expect(smooth.getAttribute("normal").count).toBe(26);
+    // the corners are pulled in: no point is as far out as a corner of the cube (0.87)
+    const position = smooth.getAttribute("position");
+    let farthest = 0;
+    for (let p = 0; p < position.count; p++) {
+      farthest = Math.max(
+        farthest,
+        Math.hypot(position.getX(p), position.getY(p), position.getZ(p)),
+      );
+    }
+    expect(farthest).toBeLessThan(Math.hypot(0.5, 0.5, 0.5));
+  });
+
+  it("Smooth works on a cylinder and a sphere too, and more levels make more triangles", () => {
+    for (const kind of ["cylinder", "sphere", "cone", "plane"] as const) {
+      const one = buildShapeGeometry(kind, 1, [
+        createModifier("s", "subdivide"),
+      ]);
+      const two = buildShapeGeometry(kind, 1, [
+        { ...createModifier("s", "subdivide"), levels: 2 } as Modifier,
+      ]);
+      expect(one.index!.count).toBeGreaterThan(0);
+      expect(two.index!.count).toBeGreaterThan(one.index!.count);
+      expect(Number.isFinite(two.getAttribute("position").getX(0))).toBe(true);
+    }
+  });
+
+  it("Smooth after Bend keeps both: the bent shape is smoothed", () => {
+    const bent = buildShapeGeometry("cube", 4, [
+      createModifier("b", "bend"),
+      createModifier("s", "subdivide"),
+    ]);
+    const plain = buildShapeGeometry("cube", 4, [createModifier("b", "bend")]);
+    expect(bent.index!.count).toBeGreaterThan(plain.index!.count);
+  });
 });

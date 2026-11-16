@@ -55,7 +55,12 @@ export async function commitMeshPositions(
   if (!node?.assetId) return false;
   try {
     const before = await loadMeshData(node.assetId);
-    return commitMesh(nodeId, { positions, indices: before.indices }, label);
+    // The points moved, the triangles and the creases did not
+    return commitMesh(
+      nodeId,
+      { positions, indices: before.indices, creases: before.creases },
+      label,
+    );
   } catch (error) {
     console.error("Reading the mesh failed:", error);
     useImportStore.getState().setMessage({

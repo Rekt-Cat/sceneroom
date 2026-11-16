@@ -709,3 +709,35 @@ describe("pointsNear", () => {
     expect(pointsNear(new Float32Array(0), 0, 0, 5)).toEqual([]);
   });
 });
+
+describe("deleting points keeps the creases that are left", () => {
+  it("renumbers a crease with its points and drops one on a deleted point", () => {
+    // a strip of two squares: points 0..5, triangles (0,1,4)(0,4,3)(1,2,5)(1,5,4)
+    const mesh = {
+      positions: Float32Array.from([
+        0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 1, 0, 1, 1, 0, 2, 1, 0,
+      ]),
+      indices: Uint32Array.from([0, 1, 4, 0, 4, 3, 1, 2, 5, 1, 5, 4]),
+      creases: [
+        { a: 1, b: 2, value: 1 },
+        { a: 0, b: 1, value: 0.5 },
+      ],
+    };
+    // delete point 0 (and the left square): the points 1..5 become 0..3 (point 3 is gone too: only 1, 2, 4, 5 are used)
+    const result = deletePoints(mesh, [0]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.mesh.creases).toHaveLength(1);
+    const c = result.mesh.creases![0]!;
+    expect(c.value).toBe(1);
+    // the crease still joins the two points that were 1 and 2
+    const at = (p: number) => [
+      result.mesh.positions[p * 3],
+      result.mesh.positions[p * 3 + 1],
+    ];
+    expect([at(c.a), at(c.b)]).toEqual([
+      [1, 0],
+      [2, 0],
+    ]);
+  });
+});

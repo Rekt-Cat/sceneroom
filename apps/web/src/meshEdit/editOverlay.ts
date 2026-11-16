@@ -8,7 +8,7 @@ import {
   Points,
   PointsMaterial,
 } from "three";
-import { meshEdges } from "@sceneroom/shared";
+import { meshEdges, type Crease } from "@sceneroom/shared";
 import type { SelectMode } from "@/store/editStore";
 
 /** The size of a point dot, in screen pixels. */
@@ -30,6 +30,8 @@ export type EditOverlay = {
   setMode: (mode: SelectMode) => void;
   /** X-ray on: lines and dots show through the mesh. Off: parts behind a face are hidden by it. */
   setXray: (xray: boolean) => void;
+  /** Draws the creased edges (sharp ones in strong pink, softer ones paler); pass the mesh's creases. */
+  setCreases: (creases: readonly Crease[] | undefined) => void;
   /** Shows (or, with null, hides) the lines a loop cut would make: pairs of spots (x, y, z, x, y, z, ...) in the mesh's space. */
   setCutPreview: (lines: Float32Array | null) => void;
   /** Frees what the overlay made (the points it shares with the mesh are the mesh's own). */
@@ -142,7 +144,34 @@ export function buildEditOverlay(geometry: BufferGeometry): EditOverlay {
   cutLines.frustumCulled = false;
   cutLines.visible = false;
 
-  group.add(lines, points, selectedLines, selectedDots, cutLines);
+  // The creased edges: sharp ones strong pink, semi-sharp ones paler, each drawn over the plain lines
+  const makeCreaseLines = (color: number, order: number) => {
+    const geometry = new BufferGeometry();
+    geometry.setAttribute("position", position);
+    geometry.setIndex(new BufferAttribute(new Uint32Array(0), 1));
+    const material = new LineBasicMaterial({
+      color,
+      depthTest: false,
+      transparent: true,
+    });
+    const object = new LineSegments(geometry, material);
+    object.raycast = hitNothing;
+    object.renderOrder = order;
+    object.frustumCulled = false;
+    return { geometry, material, object };
+  };
+  const softCrease = makeCreaseLines(0xf3a6cf, 12);
+  const sharpCrease = makeCreaseLines(0xff3d9a, 12);
+
+  group.add(
+    lines,
+    points,
+    selectedLines,
+    selectedDots,
+    cutLines,
+    softCrease.object,
+    sharpCrease.object,
+  );
 
   const setSelected = (selected: readonly number[]) => {
     const color = pointGeometry.getAttribute("color") as BufferAttribute;
@@ -180,6 +209,21 @@ export function buildEditOverlay(geometry: BufferGeometry): EditOverlay {
   };
   setMode("point");
 
+  const setCreases = (creases: readonly Crease[] | undefined) => {
+    const soft: number[] = [];
+    const sharp: number[] = [];
+    for (const crease of creases ?? []) {
+      if (crease.a >= position.count || crease.b >= position.count) continue;
+      (crease.value >= 0.99 ? sharp : soft).push(crease.a, crease.b);
+    }
+    softCrease.geometry.setIndex(
+      new BufferAttribute(Uint32Array.from(soft), 1),
+    );
+    sharpCrease.geometry.setIndex(
+      new BufferAttribute(Uint32Array.from(sharp), 1),
+    );
+  };
+
   const setCutPreview = (positions: Float32Array | null) => {
     if (!positions || positions.length === 0) {
       cutLines.visible = false;
@@ -213,6 +257,7 @@ export function buildEditOverlay(geometry: BufferGeometry): EditOverlay {
     setMode,
     setXray,
     setCutPreview,
+    setCreases,
     dispose: () => {
       group.removeFromParent();
       pointGeometry.dispose();
@@ -221,6 +266,10 @@ export function buildEditOverlay(geometry: BufferGeometry): EditOverlay {
       selectedDotGeometry.dispose();
       cutGeometry.dispose();
       cutMaterial.dispose();
+      softCrease.geometry.dispose();
+      softCrease.material.dispose();
+      sharpCrease.geometry.dispose();
+      sharpCrease.material.dispose();
       pointMaterial.dispose();
       lineMaterial.dispose();
       selectedLineMaterial.dispose();

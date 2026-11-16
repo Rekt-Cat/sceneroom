@@ -13,10 +13,14 @@ import { useEditStore } from "@/store/editStore";
 import { useImportStore } from "@/store/importStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { commitMesh } from "./commitMeshEdit";
-import { buildTopology } from "@sceneroom/shared";
+import { buildTopology, createModifier } from "@sceneroom/shared";
+import { buildMeshGeometry } from "@/components/viewport/shapeGeometry";
 import {
+  CREASE_SHARP,
+  CREASE_SOFT,
   changeExtrude,
   changeLoopCut,
+  creaseSelectedEdges,
   commitExtrude,
   commitLoopCut,
   previewLoopCut,
@@ -476,5 +480,106 @@ describe("inset and pushing in", () => {
     useEditStore.getState().setSelected([]);
     expect(await insetSelectedFaces()).toBe(false);
     expect(message()).toContain("Select all the points of at least one face");
+  });
+});
+
+describe("edge creases", () => {
+  /** Selects an edge of the cube by its two end points (what clicking it does). */
+  async function selectAnEdge(): Promise<[number, number]> {
+    const t = buildTopology(await mesh());
+    const [a, b] = [t.vertexPoints[t.edges[0]!]!, t.vertexPoints[t.edges[1]!]!];
+    useEditStore.getState().setSelected([...a, ...b]);
+    return [a[0]!, b[0]!];
+  }
+
+  it("marks the selected edge as sharp: stored with the mesh, one undo step, and Undo takes it away", async () => {
+    await selectAnEdge();
+    const steps = get().history.past.length;
+    expect(await creaseSelectedEdges(CREASE_SHARP)).toBe(true);
+    expect(get().history.past.length).toBe(steps + 1);
+    expect(get().history.past.at(-1)?.label).toBe("Crease edges");
+    const m = await mesh();
+    expect(m.creases).toHaveLength(1);
+    expect(m.creases![0]!.value).toBe(1);
+    get().undo();
+    expect((await mesh()).creases).toBeUndefined();
+  });
+
+  it("a softer value, then clearing", async () => {
+    await selectAnEdge();
+    await creaseSelectedEdges(CREASE_SOFT);
+    expect((await mesh()).creases![0]!.value).toBeCloseTo(0.5, 2);
+    expect(get().history.past.at(-1)?.label).toBe("Soften crease");
+    await creaseSelectedEdges(0);
+    expect((await mesh()).creases).toBeUndefined();
+    expect(get().history.past.at(-1)?.label).toBe("Clear crease");
+  });
+
+  it("doing the same again changes nothing and adds no undo step", async () => {
+    await selectAnEdge();
+    await creaseSelectedEdges(CREASE_SHARP);
+    const steps = get().history.past.length;
+    expect(await creaseSelectedEdges(CREASE_SHARP)).toBe(true);
+    expect(get().history.past.length).toBe(steps);
+  });
+
+  it("says what to do when no edge is selected", async () => {
+    useEditStore.getState().setSelected([]);
+    expect(await creaseSelectedEdges(CREASE_SHARP)).toBe(false);
+    expect(message()).toContain("Select an edge first");
+  });
+
+  it("creases survive moving a point", async () => {
+    await selectAnEdge();
+    await creaseSelectedEdges(CREASE_SHARP);
+    // moving a point keeps the crease (the triangles and creases are carried along)
+    const m0 = await mesh();
+    const moved = Float32Array.from(m0.positions);
+    moved[0] = moved[0]! + 0.1;
+    const { commitMeshPositions } = await import("./commitMeshEdit");
+    await commitMeshPositions("a", moved, "Move point");
+    expect((await mesh()).creases).toHaveLength(1);
+  });
+
+  it("with every edge creased, Smooth keeps the cube's corners; without creases it rounds them", async () => {
+    const all = Array.from(
+      { length: (await mesh()).positions.length / 3 },
+      (_, i) => i,
+    );
+    useEditStore.getState().setSelected(all);
+    expect(await creaseSelectedEdges(CREASE_SHARP)).toBe(true);
+    expect((await mesh()).creases).toHaveLength(12);
+
+    const farthest = (g: ReturnType<typeof buildMeshGeometry>) => {
+      const p = g.getAttribute("position");
+      let far = 0;
+      for (let i = 0; i < p.count; i++)
+        far = Math.max(far, Math.hypot(p.getX(i), p.getY(i), p.getZ(i)));
+      return far;
+    };
+    const smooth = [createModifier("s", "subdivide")];
+    const creased = buildMeshGeometry(await mesh(), smooth);
+    expect(farthest(creased)).toBeCloseTo(Math.hypot(0.5, 0.5, 0.5), 4);
+
+    get().undo(); // takes the creases away again
+    const soft = buildMeshGeometry(await mesh(), smooth);
+    expect(farthest(soft)).toBeLessThan(0.6);
+  });
+
+  it("a loop cut across a creased edge keeps the crease on both halves, and the extrusion keeps it too", async () => {
+    await selectAnEdge();
+    await creaseSelectedEdges(CREASE_SHARP);
+    const t0 = buildTopology(await mesh());
+    const creaseA = (await mesh()).creases![0]!;
+    // cut across the strip that contains the creased edge as a rung: the edge is split into two
+    const edge = [t0.vertexOf[creaseA.a]!, t0.vertexOf[creaseA.b]!] as const;
+    const ring = [
+      t0.vertexPoints[edge[0]]![0]!,
+      t0.vertexPoints[edge[1]]![0]!,
+    ] as [number, number];
+    expect(await startLoopCut(ring)).toBe(true);
+    const m = await mesh();
+    expect(m.creases!.length).toBeGreaterThanOrEqual(2);
+    expect(m.creases!.every((c) => c.value === 1)).toBe(true);
   });
 });

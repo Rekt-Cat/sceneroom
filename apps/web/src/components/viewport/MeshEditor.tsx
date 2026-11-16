@@ -115,6 +115,11 @@ function EditSession({ nodeId }: { nodeId: string }) {
   useEffect(() => {
     overlayRef.current?.setMode(selectMode);
   }, [selectMode, bound]);
+  // The creased edges of the mesh (drawn in pink)
+  useEffect(() => {
+    if (!bound) return;
+    overlayRef.current?.setCreases(editMeshOf(bound.geometry)?.creases);
+  }, [bound]);
 
   // Without X-ray the lines and dots on the far side are hidden by the mesh itself. The mesh is pushed back a
   // little in the depth buffer so the lines lying on its surface are not hidden by it too.

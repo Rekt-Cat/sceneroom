@@ -480,6 +480,23 @@ Files: `apps/web/src/components/viewport/InspectorFields.tsx` (rows, steps, colo
 | Twist range       | `MAX_EXTRUDE_TWIST_DEGREES` in `meshEdit.ts`                          | -360 to 360 | How far the new face can be turned.                                        |
 | Distance range    | `MIN_EXTRUDE_DISTANCE`, `MAX_EXTRUDE_DISTANCE` in `editOperations.ts` | 0.01 to 50  | Closest and furthest an extrusion can go.                                  |
 
+## Edge creases
+
+| What                       | Where                                                                      | Our value                   | What it does                                                                |
+| -------------------------- | -------------------------------------------------------------------------- | --------------------------- | --------------------------------------------------------------------------- |
+| Sharp and Soft values      | `CREASE_SHARP`, `CREASE_SOFT` in `apps/web/src/meshEdit/editOperations.ts` | 100% and 50%                | What the Sharp and Soft buttons set.                                        |
+| Levels a full crease lasts | `FULL_SHARPNESS_LEVELS` in `packages/shared/src/creases.ts`                | 3 (the most Smooth levels)  | A value of 1 stays sharp through all levels; 0.5 for about one and a half.  |
+| Most creases               | `MAX_CREASES` in `creases.ts`                                              | 200 000                     | A mesh with more creases is refused when stored.                            |
+| Key                        | `useEditorShortcuts.ts`                                                    | Shift + C                   | Creases the selected edges (sharp).                                         |
+| Colours                    | `softCrease`, `sharpCrease` in `apps/web/src/meshEdit/editOverlay.ts`      | pink `0xf3a6cf`, `0xff3d9a` | The colour of creased edges in edit mode (pale for soft, strong for sharp). |
+
+## Smooth (subdivision modifier)
+
+| What        | Where                                                       | Our value | What it does                                                                        |
+| ----------- | ----------------------------------------------------------- | --------- | ----------------------------------------------------------------------------------- |
+| Most levels | `MAX_SUBDIVIDE_LEVELS` in `packages/shared/src/scene.ts`    | 3         | Each level makes about four times the faces (3 levels = about 64 times).            |
+| Point limit | `MAX_DEFORMED_POINTS` in `packages/shared/src/modifiers.ts` | 400 000   | A level that would pass this many points is skipped (shared with Mirror and Array). |
+
 ## Inset (edit mode)
 
 | What          | Where                                                              | Our value | What it does                                                                          |

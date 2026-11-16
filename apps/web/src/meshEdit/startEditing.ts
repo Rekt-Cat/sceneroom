@@ -71,6 +71,18 @@ export function watchEditMode(): () => void {
     const node = state.scene.nodes[edit.nodeId];
     const stillSelected =
       state.selectedIds.length === 1 && state.selectedIds[0] === edit.nodeId;
-    if (!node || node.kind !== "mesh" || !stillSelected) edit.exit();
+    if (!node || node.kind !== "mesh" || !stillSelected) {
+      edit.exit();
+      return;
+    }
+    // A modifier (Smooth, Bend ...) was switched on while editing: the shape on the screen is no longer the
+    // stored points, so editing them would be wrong. Say so and end edit mode (Make mesh bakes it in).
+    if (node.modifiers.some((modifier) => modifier.enabled)) {
+      edit.exit();
+      useImportStore.getState().setMessage({
+        tone: "info",
+        text: `Edit mode ended: "${node.name}" now has a modifier on it, so the shape you see is not its stored points. Press Make mesh to bake the modifier in, then edit the points again.`,
+      });
+    }
   });
 }

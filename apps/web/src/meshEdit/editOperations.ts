@@ -1,6 +1,9 @@
 import {
   DEFAULT_EXTRUDE_OPTIONS,
   DEFAULT_LOOP_CUT_OPTIONS,
+  sameCreases,
+  selectedEdges,
+  setCreases,
   buildTopology,
   edgeBetween,
   loopCut,
@@ -442,4 +445,37 @@ export async function changeLoopCut(
   }
   if (!previewLoopCut(change)) return false;
   return commitLoopCut();
+}
+
+// ---- Edge creases ----
+
+/** The crease values the buttons set: fully sharp, and a softer one that rounds off after the first level of smoothing. */
+export const CREASE_SHARP = 1;
+export const CREASE_SOFT = 0.5;
+
+/**
+ * Marks the selected edges as creased (`value` 0 to 1; 0 clears), so the Smooth modifier keeps them crisp. An edge
+ * is selected when both its ends are (click an edge, Alt-click a loop, or select a face for all its sides).
+ * One undo step. Says why in the bar over the 3D view if no edge is selected.
+ */
+export async function creaseSelectedEdges(value: number): Promise<boolean> {
+  const edited = await editedMesh();
+  if (!edited) return false;
+  const topology = buildTopology(edited.mesh);
+  const edges = selectedEdges(topology, edited.selected);
+  if (edges.length === 0) {
+    say(
+      "Select an edge first: press 2 for edge mode, then click an edge (Alt-click selects a whole loop).",
+    );
+    return false;
+  }
+  const creases = setCreases(edited.mesh, topology, edges, value);
+  if (sameCreases(creases, edited.mesh.creases)) return true; // nothing changes
+  const label =
+    value <= 0 ? "Clear crease" : value >= 1 ? "Crease edges" : "Soften crease";
+  return commitMesh(
+    edited.nodeId,
+    { ...edited.mesh, creases: creases.length > 0 ? creases : undefined },
+    label,
+  );
 }

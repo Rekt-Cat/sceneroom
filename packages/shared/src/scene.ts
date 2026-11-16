@@ -117,6 +117,7 @@ export const MAX_STRETCH = 5;
 export const MIN_ARRAY_COUNT = 2;
 export const MAX_ARRAY_COUNT = 20;
 export const MAX_ARRAY_SPACING = 5;
+export const MAX_SUBDIVIDE_LEVELS = 3;
 
 const modifierBase = {
   id: z.string().min(1),
@@ -134,6 +135,7 @@ const modifierBase = {
  * - stretch: makes the shape longer or shorter along the axis
  * - noise: pushes points around in a smooth, bumpy pattern (the axis does not matter)
  * - mirror: adds a reflected copy on the other side of the middle of the object
+ * - subdivide: smooths the shape (every face is cut up and rounded off; the axis does not matter)
  * - array: repeats the shape along the axis
  */
 export const modifierSchema = z.discriminatedUnion("type", [
@@ -183,6 +185,12 @@ export const modifierSchema = z.discriminatedUnion("type", [
       .min(-MAX_MIRROR_OFFSET)
       .max(MAX_MIRROR_OFFSET)
       .default(0.5),
+  }),
+  z.object({
+    ...modifierBase,
+    type: z.literal("subdivide"),
+    /** How many times every face is cut up and smoothed (each level makes about four times as many faces). */
+    levels: z.number().int().min(1).max(MAX_SUBDIVIDE_LEVELS).default(1),
   }),
   z.object({
     ...modifierBase,

@@ -9,6 +9,7 @@ import {
 } from "three";
 import {
   deformMesh,
+  type Crease,
   type Modifier,
   type PrimitiveKind,
   type ShapeMesh,
@@ -64,8 +65,13 @@ export function buildMeshGeometry(
   geometry.computeVertexNormals();
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
+  // The creases ride along: the modifiers read them (Smooth), and edit mode draws them
+  if (mesh.creases) geometry.userData[CREASES_KEY] = mesh.creases;
   return withModifiers(geometry, modifiers);
 }
+
+/** Where a geometry keeps the creases of the mesh it was made from. */
+export const CREASES_KEY = "creases";
 
 /** The points and triangles of a geometry, copied out (to store as a mesh). */
 export function geometryToMesh(geometry: BufferGeometry): ShapeMesh {
@@ -97,9 +103,15 @@ function withModifiers(
     ? Uint32Array.from(index.array)
     : Uint32Array.from({ length: before }, (_, i) => i);
   const result = deformMesh(
-    { positions: position.array as Float32Array, indices },
+    {
+      positions: position.array as Float32Array,
+      indices,
+      creases: geometry.userData[CREASES_KEY] as readonly Crease[] | undefined,
+    },
     modifiers,
   );
+  // After the modifiers the creases (if any survive) belong to the new points; the editor only edits unmodified meshes
+  delete geometry.userData[CREASES_KEY];
   geometry.setAttribute("position", new BufferAttribute(result.positions, 3));
   geometry.setIndex(new BufferAttribute(result.indices, 1));
   // The pieces of the old index (used for several materials) no longer line up

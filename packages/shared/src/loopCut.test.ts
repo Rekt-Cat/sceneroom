@@ -6,6 +6,7 @@ import {
   cutPositions,
   edgeBetween,
   edgeCount,
+  edgeCreaseValues,
   edgeLoop,
   loopCut,
   loopCutPreview,
@@ -274,5 +275,47 @@ describe("the preview", () => {
       indices: Uint32Array.from([0, 1, 2]),
     };
     expect(loopCutPreview(mesh, buildTopology(mesh), 0)).toBeNull();
+  });
+});
+
+describe("loop cut and creases", () => {
+  it("a creased edge that the cut crosses keeps its crease in both pieces; the old whole crease is replaced", () => {
+    const mesh = plane(3);
+    const topology = buildTopology(mesh);
+    const edge = edgeBetween(topology, 5, 6); // a rung of the strip the cut crosses
+    const crossedEdge = edgeBetween(topology, 6, 7); // an edge the cut does NOT cross (neighbouring column)
+    const creased: EditMesh = {
+      ...mesh,
+      creases: [
+        { a: 5, b: 6, value: 1 },
+        { a: 6, b: 7, value: 0.5 },
+      ],
+    };
+    expect(crossedEdge).toBeGreaterThanOrEqual(0);
+    const result = loopCut(creased, topology, edge);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const after = buildTopology(result.mesh);
+    const values = edgeCreaseValues(after, result.mesh.creases);
+    // the cut splits edge 5-6 (and the parallel ones of its strip): each half is creased 1
+    const halves = values.filter((v) => Math.abs(v - 1) < 1e-9);
+    expect(halves).toHaveLength(2);
+    // the edge it does not cross keeps its crease
+    expect(values.filter((v) => Math.abs(v - 0.5) < 1e-9)).toHaveLength(1);
+    // no crease names a point that does not exist
+    expect(
+      result.mesh.creases!.every(
+        (c) =>
+          c.a < result.mesh.positions.length / 3 &&
+          c.b < result.mesh.positions.length / 3,
+      ),
+    ).toBe(true);
+  });
+
+  it("a mesh without creases still gives a result without them", () => {
+    const mesh = plane(2);
+    const topology = buildTopology(mesh);
+    const result = loopCut(mesh, topology, edgeBetween(topology, 1, 2));
+    expect(result.ok && result.mesh.creases).toBeUndefined();
   });
 });

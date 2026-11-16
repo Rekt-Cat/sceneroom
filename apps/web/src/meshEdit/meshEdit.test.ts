@@ -166,6 +166,42 @@ describe("edit mode ends by itself", () => {
     }
   });
 
+  it("when a modifier is switched on while editing, saying why (the shape shown is not the stored points)", async () => {
+    const stop = watchEditMode();
+    try {
+      await startEditing("a");
+      expect(useEditStore.getState().nodeId).toBe("a");
+      get().addModifier("a", "subdivide");
+      expect(useEditStore.getState().nodeId).toBeNull();
+      const message = useImportStore.getState().message;
+      expect(message?.text).toContain("Make mesh");
+      expect(message?.text).toContain("modifier");
+      // the object itself is untouched and still selected, so nothing seems to vanish
+      expect(get().selectedIds).toEqual(["a"]);
+      expect(node("a").modifiers).toHaveLength(1);
+    } finally {
+      stop();
+    }
+  });
+
+  it("a switched-off modifier does not end it", async () => {
+    const stop = watchEditMode();
+    try {
+      await startEditing("a");
+      get().addModifier("a", "subdivide");
+      useImportStore.setState({ message: null });
+      // (edit mode ended above; start it again with the modifier off)
+      const id = node("a").modifiers[0]!.id;
+      get().setModifier("a", id, { enabled: false });
+      await startEditing("a");
+      expect(useEditStore.getState().nodeId).toBe("a");
+      get().setModifier("a", id, { enabled: false });
+      expect(useEditStore.getState().nodeId).toBe("a");
+    } finally {
+      stop();
+    }
+  });
+
   it("but not for changes that keep the same object selected (an edit and its Undo)", async () => {
     const stop = watchEditMode();
     try {

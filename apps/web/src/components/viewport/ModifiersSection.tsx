@@ -5,6 +5,7 @@ import {
   MAX_ARRAY_COUNT,
   MAX_ARRAY_SPACING,
   MAX_MIRROR_OFFSET,
+  MAX_SUBDIVIDE_LEVELS,
   MAX_MODIFIERS,
   MAX_SEGMENTS,
   MAX_STRETCH,
@@ -56,6 +57,7 @@ type SliderSpec = {
     | "scale"
     | "seed"
     | "count"
+    | "levels"
     | "spacing";
   label: string;
   min: number;
@@ -112,6 +114,16 @@ const SLIDERS: Record<ModifierType, readonly SliderSpec[]> = {
       max: MAX_MIRROR_OFFSET,
       step: 0.01,
       decimals: 2,
+    },
+  ],
+  subdivide: [
+    {
+      key: "levels",
+      label: "Smoothness",
+      min: 1,
+      max: MAX_SUBDIVIDE_LEVELS,
+      step: 1,
+      decimals: 0,
     },
   ],
   array: [
