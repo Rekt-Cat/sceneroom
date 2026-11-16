@@ -67,6 +67,9 @@ A list of non-destructive deformers on an object, editable in the Inspector, eac
 
 - Select **points, edges, faces**; move, rotate, scale them with our existing gizmo.
 - **Extrude, inset, bevel, loop cut, knife, merge, delete, bridge, fill hole.**
+- **Edge loops and loop cut.** An **edge loop** is a ring of connected edges that runs all the way round a shape (a belt around a waist, a ring on a finger). You select one with one click, scale it to thin a waist or move it up a leg, and you need a few of them around every joint so it bends cleanly. **Loop cut** adds a new loop where you point, by slicing the shape like a sausage. The matching **edge ring** is the set of parallel edges across the same strip.
+  How we will build it: a loop is found by walking from an edge across the quad it borders to the edge opposite, and on to the next quad, until it comes back to the start or reaches a triangle or a point where more than four edges meet (a "pole"), where it stops. That means loops live on QUADS. Our meshes are stored as triangles, so a topology layer (below) first welds points on the same spot, builds the edges with their neighbours, and pairs coplanar triangles that share a diagonal into quads. The mesh itself stays a plain list of points and triangles; the topology is derived and rebuilt after each edit, which keeps storage, undo, saving and export unchanged. A loop cut then adds one new ring of points along the strip and re-triangulates it as quads. Where a cut meets something that is not all quads it stops and says so.
+- **Topology layer.** Welded points, edges with the triangles on each side, quads. Everything that needs "what is next to what" uses it: edge loops, bevel, inset, bridge, mirror editing, subdivision, soft selection, UV seams.
 - **Soft selection** (move a point and nearby points follow, fading out).
 - **Mirror editing** (work on one half of a character, the other half follows).
 - Basic **UV unwrap** and seam marking, so textures can be applied.
@@ -136,7 +139,7 @@ Before choosing any of these, read the official docs and check the real latest v
 
 - A **BVH** library for fast picking on dense meshes (for example `three-mesh-bvh`).
 - A **boolean / CSG** library for three.js (for example `three-bvh-csg`).
-- Whether to write our own **half-edge mesh** structure for Edit mode or use an existing one.
+- Whether to write our own **half-edge mesh** structure for Edit mode or use an existing one. Current plan: a derived topology layer (welded points, edges, quads) over the plain triangle list, written by hand and tested, rebuilt after each edit; a full half-edge structure only if that proves too slow on big meshes.
 - Existing **open-source sculpting** code to learn from (for example SculptGL; check its licence before copying anything).
 - How **Yjs** handles large binary data, for the collaboration design.
 - **Skeletons and skinning** in three.js and in GLB export.
