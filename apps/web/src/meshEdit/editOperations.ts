@@ -103,33 +103,56 @@ export function deleteSelectedPoints(): Promise<boolean> {
 /** How the extrusion settings are changed: any of them. */
 export type ExtrudeChange = Partial<ExtrudeOptions> & { distance?: number };
 
-/** The farthest an extrusion can go (and the nearest: it cannot be zero, the walls would have no size). */
-export const MIN_EXTRUDE_DISTANCE = 0.01;
+/** The farthest an extrusion can go, out (positive) or in (negative). */
 export const MAX_EXTRUDE_DISTANCE = 50;
+
+/** How much smaller the new face of an inset starts (75 percent of the size), and how it starts. */
+export const INSET_START_OPTIONS: ExtrudeOptions = {
+  ...DEFAULT_EXTRUDE_OPTIONS,
+  scale: 0.75,
+};
 
 /**
  * Extrudes the selected faces: copies them, pushes the copy out, and joins it with walls (Shift + E). A panel
  * then offers the settings (distance, divisions, scale, twist) until something else is done.
  */
-export async function extrudeSelectedFaces(): Promise<boolean> {
+export function extrudeSelectedFaces(): Promise<boolean> {
+  return startExtrusion("extrude");
+}
+
+/**
+ * Insets the selected faces: a smaller copy of them is made in the same place, joined to the old edge by a flat
+ * ring of faces. The new face can then be pushed out or in (the Depth setting) or made bigger or smaller (the
+ * Thickness setting). Select all the points of a face first (Faces mode: click it).
+ */
+export function insetSelectedFaces(): Promise<boolean> {
+  return startExtrusion("inset");
+}
+
+async function startExtrusion(kind: ExtrudeSession["kind"]): Promise<boolean> {
   const edited = await editedMesh();
   if (!edited) return false;
   const groups = weldGroups(edited.mesh.positions);
   const all = expandToWelded(groups, edited.selected);
-  const distance = extrudeDistance(edited.mesh, all);
-  const result = extrudeFaces(edited.mesh, all, distance, groups);
+  const distance = kind === "inset" ? 0 : extrudeDistance(edited.mesh, all);
+  const options =
+    kind === "inset" ? INSET_START_OPTIONS : DEFAULT_EXTRUDE_OPTIONS;
+  const result = extrudeFaces(edited.mesh, all, distance, groups, options);
   if (!result.ok) {
     say(result.reason);
     return false;
   }
-  if (!(await commitMesh(edited.nodeId, result.mesh, "Extrude"))) return false;
+  const label = kind === "inset" ? "Inset" : "Extrude";
+  if (!(await commitMesh(edited.nodeId, result.mesh, label))) return false;
   selectCap(result);
   useEditStore.getState().setExtrude({
+    kind,
     before: edited.mesh,
     selectedBefore: all,
     distance,
     defaultDistance: distance,
-    options: DEFAULT_EXTRUDE_OPTIONS,
+    options,
+    defaultOptions: options,
     pastLength: useSceneStore.getState().history.past.length,
   });
   return true;
@@ -165,7 +188,7 @@ function paramsFor(session: ExtrudeSession, change: ExtrudeChange) {
     options: sanitizeExtrudeOptions({ ...session.options, ...change }),
     distance: Math.min(
       MAX_EXTRUDE_DISTANCE,
-      Math.max(MIN_EXTRUDE_DISTANCE, change.distance ?? session.distance),
+      Math.max(-MAX_EXTRUDE_DISTANCE, change.distance ?? session.distance),
     ),
   };
 }
@@ -251,7 +274,12 @@ async function storeExtrusion(): Promise<boolean> {
     return false;
   }
   // Take the place of the extrusion made before: the same undo step, no new one
-  const stored = await commitMesh(edit.nodeId, result.mesh, "Extrude", true);
+  const stored = await commitMesh(
+    edit.nodeId,
+    result.mesh,
+    session.kind === "inset" ? "Inset" : "Extrude",
+    true,
+  );
   if (!stored) {
     restoreOriginal(edit.nodeId);
     return false;

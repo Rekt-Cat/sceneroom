@@ -5,6 +5,7 @@ import { useSceneStore } from "@/store/sceneStore";
 import {
   deleteSelectedPoints,
   extrudeSelectedFaces,
+  insetSelectedFaces,
 } from "@/meshEdit/editOperations";
 import { selectLoopOrRing } from "@/meshEdit/selectionTools";
 import ExtrudePanel from "./ExtrudePanel";
@@ -41,7 +42,7 @@ const HINTS: Record<SelectMode, string> = {
   point:
     "Click a point to select it. Shift adds more. Ctrl-drag draws a box. Alt-click selects a whole flat face. Then move it with W, turn with E, scale with R.",
   edge: "Click an edge to select it. Then press Loop for the whole belt of edges round the shape (Alt-click does the same in one go), or Ring for the parallel edges across a strip. Both work from the edge you clicked, so you can press one and then the other to compare. Shift adds more.",
-  face: "Click a face to select it. Shift adds more. Alt-click selects the whole flat area. Press Extrude to push the selected faces out.",
+  face: "Click a face to select it. Shift adds more. Alt-click selects the whole flat area. Press Extrude to push the selected faces out (or in, with a negative distance), or Inset to make a smaller face inside them.",
 };
 
 /**
@@ -184,6 +185,15 @@ export default function EditModeBar() {
             }`}
           >
             Loop cut
+          </button>
+          <button
+            type="button"
+            onClick={() => void insetSelectedFaces()}
+            disabled={selected.length < 3}
+            title="Inset: make a smaller copy of the selected faces inside them, with a border round it (I). Then push it out or in. Select a face first."
+            className={ACTION}
+          >
+            Inset
           </button>
           <button
             type="button"

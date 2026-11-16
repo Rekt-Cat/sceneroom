@@ -7,6 +7,7 @@ import { SEARCH_INPUT_ID } from "./HierarchyPanel";
 import {
   deleteSelectedPoints,
   extrudeSelectedFaces,
+  insetSelectedFaces,
 } from "@/meshEdit/editOperations";
 import { stopEditing, toggleEditMode } from "@/meshEdit/startEditing";
 import { saveProjectToFile } from "@/sceneFile/sceneFileActions";
@@ -166,6 +167,10 @@ export function useEditorShortcuts(): void {
           event.preventDefault();
           const edit = useEditStore.getState();
           edit.setXray(!edit.xray);
+        } else if (plain && event.key.toLowerCase() === "i") {
+          // I: inset the selected faces
+          event.preventDefault();
+          void insetSelectedFaces();
         } else if (plain && event.key.toLowerCase() === "c") {
           // C: the Loop cut tool on or off
           event.preventDefault();

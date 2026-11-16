@@ -497,15 +497,22 @@ describe("extruding faces", () => {
     expect(untouched.length).toBe(2);
   });
 
-  it("a different distance changes how far the copy goes, and a distance of 0 still makes valid geometry", () => {
+  it("a different distance changes how far the copy goes", () => {
     const mesh = quad();
     const groups = weldGroups(mesh.positions);
     const far = extrudeFaces(mesh, [0, 1, 2, 3], 3, groups);
-    const flat = extrudeFaces(mesh, [0, 1, 2, 3], 0, groups);
     expect(far.ok && far.mesh.positions[far.selected[0]! * 3 + 2]).toBeCloseTo(
       3,
     );
-    expect(flat.ok && flat.mesh.indices.length / 3).toBe(10);
+  });
+
+  it("a distance of 0 changes nothing, so it is refused; with a smaller scale it is an inset and valid", () => {
+    const mesh = quad();
+    const groups = weldGroups(mesh.positions);
+    const flat = extrudeFaces(mesh, [0, 1, 2, 3], 0, groups);
+    expect(flat.ok).toBe(false);
+    const inset = extrudeFaces(mesh, [0, 1, 2, 3], 0, groups, { scale: 0.5 });
+    expect(inset.ok && inset.mesh.indices.length / 3).toBe(10);
   });
 
   it("every triangle uses points that exist", () => {

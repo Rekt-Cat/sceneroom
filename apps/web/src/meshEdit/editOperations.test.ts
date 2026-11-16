@@ -24,6 +24,7 @@ import {
   deleteSelectedPoints,
   previewExtrude,
   extrudeSelectedFaces,
+  insetSelectedFaces,
 } from "./editOperations";
 import { startEditing } from "./startEditing";
 
@@ -408,5 +409,72 @@ describe("loop cut on a cube", () => {
     // ask for an edge that is not there
     expect(await startLoopCut([9999, 9998])).toBe(false);
     expect(message()).toContain("no longer there");
+  });
+});
+
+describe("inset and pushing in", () => {
+  async function insetFront() {
+    useEditStore.getState().setSelected(await sideSelection(8));
+    expect(await insetSelectedFaces()).toBe(true);
+  }
+  const heights = async () => {
+    const m = await mesh();
+    return useEditStore.getState().selected.map((p) => m.positions[p * 3 + 2]!);
+  };
+
+  it("an inset makes a smaller face in the same place, as one undo step labelled Inset", async () => {
+    const before = (await mesh()).indices.length / 3;
+    const steps = get().history.past.length;
+    await insetFront();
+    expect((await mesh()).indices.length / 3).toBe(before + 8);
+    expect(get().history.past.length).toBe(steps + 1);
+    expect(get().history.past.at(-1)?.label).toBe("Inset");
+    const session = useEditStore.getState().extrude!;
+    expect(session.kind).toBe("inset");
+    expect(session.distance).toBe(0);
+    expect(session.options.scale).toBe(0.75);
+    // the new face is level with the old one (z = 0.5) and smaller (the cube side is 1 wide)
+    for (const h of await heights()) expect(h).toBeCloseTo(0.5, 5);
+    const m = await mesh();
+    const widths = useEditStore
+      .getState()
+      .selected.map((p) => Math.abs(m.positions[p * 3]!));
+    expect(Math.max(...widths)).toBeCloseTo(0.375, 4);
+  });
+
+  it("the Depth setting pushes the inset face out or in, and the Face size setting changes the border", async () => {
+    await insetFront();
+    await changeExtrude({ distance: 0.3 });
+    for (const h of await heights()) expect(h).toBeCloseTo(0.8, 4);
+    await changeExtrude({ distance: -0.2 });
+    for (const h of await heights()) expect(h).toBeCloseTo(0.3, 4);
+    await changeExtrude({ scale: 0.5 });
+    const m = await mesh();
+    const widths = useEditStore
+      .getState()
+      .selected.map((p) => Math.abs(m.positions[p * 3]!));
+    expect(Math.max(...widths)).toBeCloseTo(0.25, 4);
+    // the label of the amended step stays Inset
+    expect(get().history.past.at(-1)?.label).toBe("Inset");
+  });
+
+  it("an extrusion can be pushed IN with a negative distance", async () => {
+    useEditStore.getState().setSelected(await sideSelection(8));
+    await extrudeSelectedFaces();
+    await changeExtrude({ distance: -0.3 });
+    for (const h of await heights()) expect(h).toBeCloseTo(0.2, 4);
+  });
+
+  it("the reset values of an inset are its starting values, not the extrude ones", async () => {
+    await insetFront();
+    const session = useEditStore.getState().extrude!;
+    expect(session.defaultDistance).toBe(0);
+    expect(session.defaultOptions.scale).toBe(0.75);
+  });
+
+  it("refuses with a reason when no face is selected", async () => {
+    useEditStore.getState().setSelected([]);
+    expect(await insetSelectedFaces()).toBe(false);
+    expect(message()).toContain("Select all the points of at least one face");
   });
 });

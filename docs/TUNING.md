@@ -480,6 +480,14 @@ Files: `apps/web/src/components/viewport/InspectorFields.tsx` (rows, steps, colo
 | Twist range       | `MAX_EXTRUDE_TWIST_DEGREES` in `meshEdit.ts`                          | -360 to 360 | How far the new face can be turned.                                        |
 | Distance range    | `MIN_EXTRUDE_DISTANCE`, `MAX_EXTRUDE_DISTANCE` in `editOperations.ts` | 0.01 to 50  | Closest and furthest an extrusion can go.                                  |
 
+## Inset (edit mode)
+
+| What          | Where                                                              | Our value | What it does                                                                          |
+| ------------- | ------------------------------------------------------------------ | --------- | ------------------------------------------------------------------------------------- |
+| Starting size | `INSET_START_OPTIONS` in `apps/web/src/meshEdit/editOperations.ts` | 75%       | How big the new face is when an inset starts (smaller = a wider border).              |
+| Key           | `useEditorShortcuts.ts`                                            | I         | Insets the selected faces.                                                            |
+| Depth range   | `MAX_EXTRUDE_DISTANCE` in `editOperations.ts`                      | -50 to 50 | How far the new face can be pushed out (positive) or in (negative); also for Extrude. |
+
 ## Loop cut
 
 | What           | Where                                                   | Our value        | What it does                                                                                     |

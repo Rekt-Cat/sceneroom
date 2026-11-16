@@ -254,3 +254,76 @@ describe("sanitizing the options", () => {
     expect(sanitizeExtrudeOptions({})).toEqual(DEFAULT_EXTRUDE_OPTIONS);
   });
 });
+
+describe("pushing in and insetting", () => {
+  const normalOf = (m: EditMesh, t: number) => {
+    const [a, b, c] = [
+      m.indices[t * 3]!,
+      m.indices[t * 3 + 1]!,
+      m.indices[t * 3 + 2]!,
+    ];
+    const u = [x(m, b) - x(m, a), y(m, b) - y(m, a), z(m, b) - z(m, a)];
+    const v = [x(m, c) - x(m, a), y(m, c) - y(m, a), z(m, c) - z(m, a)];
+    return [
+      u[1]! * v[2]! - u[2]! * v[1]!,
+      u[2]! * v[0]! - u[0]! * v[2]!,
+      u[0]! * v[1]! - u[1]! * v[0]!,
+    ];
+  };
+
+  it("a negative distance pushes the face IN: the cap lies below the old face, and the walls face the middle", () => {
+    const { result } = run(undefined, -0.3);
+    for (const p of result.selected)
+      expect(z(result.mesh, p)).toBeCloseTo(0.2, 5);
+    // the wall triangles are the last 8: each faces towards the axis (x, y) of the recess, not away from it
+    const m = result.mesh;
+    for (let t = m.indices.length / 3 - 8; t < m.indices.length / 3; t++) {
+      const n = normalOf(m, t);
+      const [a, b, c] = [
+        m.indices[t * 3]!,
+        m.indices[t * 3 + 1]!,
+        m.indices[t * 3 + 2]!,
+      ];
+      const cx = (x(m, a) + x(m, b) + x(m, c)) / 3;
+      const cy = (y(m, a) + y(m, b) + y(m, c)) / 3;
+      expect(n[0]! * cx + n[1]! * cy).toBeLessThan(1e-9);
+    }
+  });
+
+  it("an inset (distance 0, a smaller scale) keeps the new face level with the old one and leaves a flat ring", () => {
+    const { before, result } = run({ scale: 0.5 }, 0);
+    expect(result.mesh.indices.length / 3).toBe(before.indices.length / 3 + 8);
+    for (const p of result.selected) {
+      expect(z(result.mesh, p)).toBeCloseTo(0.5, 5);
+      expect(Math.abs(x(result.mesh, p))).toBeCloseTo(0.25, 5);
+    }
+    // every new triangle faces the same way as the front face (+z), the ring included
+    const m = result.mesh;
+    for (let t = m.indices.length / 3 - 8; t < m.indices.length / 3; t++) {
+      expect(normalOf(m, t)[2]!).toBeGreaterThan(0);
+    }
+  });
+
+  it("an inset can then be pushed in or out", () => {
+    const out = run({ scale: 0.5 }, 0.4).result;
+    for (const p of out.selected) expect(z(out.mesh, p)).toBeCloseTo(0.9, 5);
+    const inward = run({ scale: 0.5 }, -0.2).result;
+    for (const p of inward.selected)
+      expect(z(inward.mesh, p)).toBeCloseTo(0.3, 5);
+  });
+
+  it("refuses when nothing would change", () => {
+    const mesh = cube();
+    const { groups, selected } = frontFace(mesh);
+    const result = extrudeFaces(mesh, selected, 0, groups, {
+      scale: 1,
+      twistDegrees: 0,
+    });
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.reason).toContain("Nothing would change");
+    // a twist alone is a change
+    expect(
+      extrudeFaces(mesh, selected, 0, groups, { twistDegrees: 30 }).ok,
+    ).toBe(true);
+  });
+});

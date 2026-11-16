@@ -437,7 +437,8 @@ export function sanitizeExtrudeOptions(
 }
 
 /**
- * Extrudes the selected faces: the faces are copied and pushed `distance` along their average direction,
+ * Extrudes the selected faces: the faces are copied and pushed `distance` along their average direction (a
+ * negative distance pushes them IN, into a recess; with a distance of 0 and a smaller scale it is an INSET),
  * and a wall joins the old edge of the group of faces to the new one. A face is a triangle whose three points
  * are all selected, so select all the points of a face (or a group of faces) first. The walls get their own
  * points so they have sharp edges. Points on the same spot count as one when finding the edge of the group.
@@ -465,6 +466,18 @@ export function extrudeFaces(
     };
   }
   const { divisions, scale, twistDegrees } = sanitizeExtrudeOptions(options);
+  // With no distance, no scale change and no twist the walls would have no size at all
+  if (
+    Math.abs(distance) < 1e-9 &&
+    Math.abs(scale - 1) < 1e-9 &&
+    Math.abs(twistDegrees) < 1e-9
+  ) {
+    return {
+      ok: false,
+      reason:
+        "Nothing would change: give it a depth, or make the scale smaller or bigger than 100%.",
+    };
+  }
   const direction = faceDirection(mesh, faces) ?? [0, 1, 0];
 
   // The middle of the faces: scale and twist happen round it
