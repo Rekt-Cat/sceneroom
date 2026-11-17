@@ -40,3 +40,4 @@ export * from "./loopCut";
 export * from "./subdivide";
 export * from "./creases";
 export * from "./views";
+export * from "./bevel";

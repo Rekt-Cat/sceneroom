@@ -1,5 +1,6 @@
 "use client";
 
+import EditTools from "./EditModeBar";
 import { useState } from "react";
 import {
   MAX_ARRAY_COUNT,
@@ -171,6 +172,7 @@ export default function ModifiersSection({
       <div className="space-y-2.5 px-4 pb-4">
         <BakeButton node={node} disabled={disabled} />
         <EditPointsButton node={node} disabled={disabled} />
+        <EditTools />
         {node.kind === "mesh" ? (
           <MeshInfo node={node} />
         ) : (

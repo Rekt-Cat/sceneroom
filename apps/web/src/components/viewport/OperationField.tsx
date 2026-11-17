@@ -35,9 +35,11 @@ export default function OperationField({
   onCommit: (value?: number) => void;
 }) {
   const shown = show ?? ((v: number) => v);
+  // Small steps (a bevel on a fine mesh) need more digits, or the box would show 0
+  const decimals = Math.min(5, Math.max(2, Math.ceil(-Math.log10(step)) + 1));
   return (
     <label
-      className="grid grid-cols-[5.5rem_1fr_4.5rem_auto] items-center gap-2"
+      className="grid grid-cols-[4.5rem_1fr_4.25rem_auto] items-center gap-2"
       title={hint}
     >
       <span className="text-ed-text-2">{label}</span>
@@ -61,7 +63,7 @@ export default function OperationField({
           min={min}
           max={max}
           step={step}
-          value={Number(shown(value).toFixed(2))}
+          value={Number(shown(value).toFixed(decimals))}
           aria-label={`${label} value`}
           onChange={(event) => {
             const typed = Number(event.target.value);

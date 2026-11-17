@@ -40,6 +40,21 @@ export type LoopCutSession = {
 };
 
 /**
+ * The last bevel, kept so its width and segments can be changed afterwards (like `LoopCutSession`). `edges` are
+ * the bevelled edges as the first point of each of their ends in `before`.
+ */
+export type BevelSession = {
+  before: ShapeMesh;
+  edges: readonly (readonly [number, number])[];
+  width: number;
+  defaultWidth: number;
+  /** The widest bevel that is safe for these edges. */
+  maxWidth: number;
+  segments: number;
+  pastLength: number;
+};
+
+/**
  * Edit mode: working on the individual points of one editable mesh. While it is on, `nodeId` is the
  * mesh being edited and `selected` are the numbers of its selected points. Edges and faces are selected
  * through their points (selecting both ends of an edge selects the edge), so every tool works on points.
@@ -59,6 +74,9 @@ type EditState = {
   /** The loop cut whose settings can still be changed, or null. */
   loopCut: LoopCutSession | null;
   setLoopCut: (session: LoopCutSession | null) => void;
+  /** The bevel whose settings can still be changed, or null. */
+  bevel: BevelSession | null;
+  setBevel: (session: BevelSession | null) => void;
   /** The extrusion whose settings can still be changed, or null. */
   extrude: ExtrudeSession | null;
   setExtrude: (session: ExtrudeSession | null) => void;
@@ -90,6 +108,8 @@ export const useEditStore = create<EditState>()((set) => ({
   setExtrude: (extrude) => set({ extrude }),
   loopCutMode: false,
   setLoopCutMode: (loopCutMode) => set({ loopCutMode }),
+  bevel: null,
+  setBevel: (bevel) => set({ bevel }),
   loopCut: null,
   setLoopCut: (loopCut) => set({ loopCut }),
   setAnchorEdge: (anchorEdge) => set({ anchorEdge }),
@@ -100,6 +120,7 @@ export const useEditStore = create<EditState>()((set) => ({
       anchorEdge: null,
       extrude: null,
       loopCut: null,
+      bevel: null,
       loopCutMode: false,
     }),
   exit: () =>
@@ -109,6 +130,7 @@ export const useEditStore = create<EditState>()((set) => ({
       anchorEdge: null,
       extrude: null,
       loopCut: null,
+      bevel: null,
       loopCutMode: false,
     }),
   setSelected: (selected) => set({ selected }),

@@ -834,3 +834,11 @@ The design from 2026-11-16 (above) was built on `feature/four-view`; not yet tri
 - **The way back.** A drop-down in the top-left of the big view (shown only for a side view, Perspective first) and the same Space gesture: hold and let go over the Perspective tile. A note beside it says "Pinned: zoom only".
 - **The drop-downs are made of plain buttons, not the browser's <select>** (found in the first browser check). The four views are used while Space is HELD, and a real <select> reads the repeating Space key as "choose the highlighted item and close", so it kept closing and picking whatever was under the pointer. The buttons ignore Space (the editor takes the key and cancels its default action), open a small list on click, close on a choice, an outside click or Escape, and look the same in the tiles and in the big view.
 - **Not done:** the tile choices are not remembered between sessions (they live in the view store, not the project), the flat views draw the selection's gizmo and the grid like any scene object, and a selection that changes while a side view is big does not reframe it (pick the view again to reframe).
+
+## Bevel (edit mode, B)
+
+- **Pure function over the topology layer** (`packages/shared/src/bevel.ts`): `bevelEdges(mesh, topology, edges, width, segments)`. Each corner of a bevelled edge is cut back along the faces; a strip joins the two cut lines (a quadratic curve with its control at the old corner, so more segments give a round profile); where bevelled edges meet, the gap is filled (a triangle, or a fan for rounded corners).
+- **Refused honestly:** edges on the border of a surface (they need a face on each side) and corners on a border. The message says why.
+- **Width is limited** to 45 percent of the shortest edge at the touched corners, so two ends can never cross. The first width is a quarter of that limit.
+- **Same live panel as loop cut:** preview while dragging, one amended commit on release, one undo step. The new strip is selected so it can be scaled or moved.
+- **Not done:** bevelling single points, a profile shape control, and bevels that stop part-way across a quad strip.

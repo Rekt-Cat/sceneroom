@@ -7,6 +7,9 @@ import {
   buildTopology,
   edgeBetween,
   loopCut,
+  bevelEdges,
+  maxBevelWidth,
+  edgeVertices,
   sanitizeLoopCutOptions,
   type LoopCutOptions,
   type Topology,
@@ -24,6 +27,7 @@ import {
 import { loadMeshData } from "@/assets/meshStorage";
 import {
   useEditStore,
+  type BevelSession,
   type ExtrudeSession,
   type LoopCutSession,
 } from "@/store/editStore";
@@ -478,4 +482,157 @@ export async function creaseSelectedEdges(value: number): Promise<boolean> {
     { ...edited.mesh, creases: creases.length > 0 ? creases : undefined },
     label,
   );
+}
+
+// ---- Bevel ----
+
+/** The bevel width the first try uses, as a fraction of the widest safe width. */
+export const BEVEL_START_FRACTION = 0.25;
+export const BEVEL_MAX_SEGMENTS = 8;
+
+/** The result of the bevel with its settings, or why not. */
+function bevelWith(session: BevelSession, width: number, segments: number) {
+  const topology = buildTopology(session.before);
+  const edges = session.edges.map((edge) => findEdge(topology, edge));
+  if (edges.includes(-1)) {
+    return { ok: false, reason: "Those edges are no longer there." } as const;
+  }
+  return bevelEdges(session.before, topology, edges, width, segments);
+}
+
+/**
+ * Bevels the selected edges: each is replaced by a narrow strip so the corner catches the light. A panel then
+ * offers the width and the number of segments (more is rounder) until something else is done. Says why in the
+ * bar over the 3D view if it cannot be done.
+ */
+export async function bevelSelectedEdges(): Promise<boolean> {
+  const edited = await editedMesh();
+  if (!edited) return false;
+  const topology = buildTopology(edited.mesh);
+  const edges = selectedEdges(topology, edited.selected);
+  if (edges.length === 0) {
+    say(
+      "Select an edge first: press 2 for edge mode, then click an edge (Alt-click selects a whole loop).",
+    );
+    return false;
+  }
+  const maxWidth = maxBevelWidth(edited.mesh, topology, edges);
+  const width = maxWidth * BEVEL_START_FRACTION;
+  const result = bevelEdges(edited.mesh, topology, edges, width, 1);
+  if (!result.ok) {
+    say(result.reason);
+    return false;
+  }
+  if (!(await commitMesh(edited.nodeId, result.mesh, "Bevel"))) return false;
+  selectCap(result);
+  const edit = useEditStore.getState();
+  edit.setExtrude(null);
+  edit.setLoopCut(null);
+  edit.setBevel({
+    before: edited.mesh,
+    edges: edges.map((e) => {
+      const [a, b] = edgeVertices(topology, e);
+      return [
+        topology.vertexPoints[a]![0]!,
+        topology.vertexPoints[b]![0]!,
+      ] as const;
+    }),
+    width: result.width,
+    defaultWidth: result.width,
+    maxWidth,
+    segments: 1,
+    pastLength: useSceneStore.getState().history.past.length,
+  });
+  return true;
+}
+
+export type BevelChange = { width?: number; segments?: number };
+
+function bevelParams(session: BevelSession, change: BevelChange) {
+  return {
+    width: Math.min(
+      session.maxWidth,
+      Math.max(session.maxWidth * 0.01, change.width ?? session.width),
+    ),
+    segments: Math.min(
+      BEVEL_MAX_SEGMENTS,
+      Math.max(1, Math.round(change.segments ?? session.segments)),
+    ),
+  };
+}
+
+/** Shows the bevel with changed settings right away, without storing it (a slider being dragged). */
+export function previewBevel(change: BevelChange): boolean {
+  const edit = useEditStore.getState();
+  const session = edit.bevel;
+  if (!session || !edit.nodeId) return false;
+  if (useSceneStore.getState().history.past.length !== session.pastLength) {
+    return false;
+  }
+  const { width, segments } = bevelParams(session, change);
+  const result = bevelWith(session, width, segments);
+  if (!result.ok) return false;
+  showOnScreen(edit.nodeId, result.mesh);
+  selectCap(result);
+  edit.setBevel({ ...session, width, segments });
+  return true;
+}
+
+let bevelCommitting = false;
+let bevelCommitAgain = false;
+
+/** Stores the bevel with the settings it has now, in place of the one made before (still ONE undo step). */
+export async function commitBevel(): Promise<boolean> {
+  if (bevelCommitting) {
+    bevelCommitAgain = true;
+    return false;
+  }
+  bevelCommitting = true;
+  try {
+    let ok = true;
+    do {
+      bevelCommitAgain = false;
+      ok = await storeBevel();
+    } while (bevelCommitAgain);
+    return ok;
+  } finally {
+    bevelCommitting = false;
+  }
+}
+
+async function storeBevel(): Promise<boolean> {
+  const edit = useEditStore.getState();
+  const session = edit.bevel;
+  if (!session || !edit.nodeId) return false;
+  if (useSceneStore.getState().history.past.length !== session.pastLength) {
+    restoreOriginal(edit.nodeId);
+    edit.setBevel(null);
+    say(
+      "The bevel's settings can only be changed right after bevelling. Undo, or bevel again.",
+    );
+    return false;
+  }
+  const result = bevelWith(session, session.width, session.segments);
+  if (!result.ok) {
+    say(result.reason);
+    return false;
+  }
+  if (!(await commitMesh(edit.nodeId, result.mesh, "Bevel", true))) {
+    restoreOriginal(edit.nodeId);
+    return false;
+  }
+  selectCap(result);
+  live.original = null;
+  return true;
+}
+
+/** Changes the settings of the last bevel and stores the result at once (for typed values and resets). */
+export async function changeBevel(change: BevelChange): Promise<boolean> {
+  const edit = useEditStore.getState();
+  if (!edit.bevel) return false;
+  if (useSceneStore.getState().history.past.length !== edit.bevel.pastLength) {
+    return commitBevel();
+  }
+  if (!previewBevel(change)) return false;
+  return commitBevel();
 }

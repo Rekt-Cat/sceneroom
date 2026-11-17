@@ -9,6 +9,7 @@ import {
   CREASE_SHARP,
   creaseSelectedEdges,
   extrudeSelectedFaces,
+  bevelSelectedEdges,
   insetSelectedFaces,
 } from "@/meshEdit/editOperations";
 import { stopEditing, toggleEditMode } from "@/meshEdit/startEditing";
@@ -179,6 +180,10 @@ export function useEditorShortcuts(): void {
           // Shift + C: crease the selected edges (sharp)
           event.preventDefault();
           void creaseSelectedEdges(CREASE_SHARP);
+        } else if (plain && event.key.toLowerCase() === "b") {
+          // B: bevel the selected edges
+          event.preventDefault();
+          void bevelSelectedEdges();
         } else if (plain && event.key.toLowerCase() === "i") {
           // I: inset the selected faces
           event.preventDefault();

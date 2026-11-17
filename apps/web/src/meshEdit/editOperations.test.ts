@@ -20,6 +20,10 @@ import {
   CREASE_SOFT,
   changeExtrude,
   changeLoopCut,
+  bevelSelectedEdges,
+  changeBevel,
+  commitBevel,
+  previewBevel,
   creaseSelectedEdges,
   commitExtrude,
   commitLoopCut,
@@ -581,5 +585,52 @@ describe("edge creases", () => {
     const m = await mesh();
     expect(m.creases!.length).toBeGreaterThanOrEqual(2);
     expect(m.creases!.every((c) => c.value === 1)).toBe(true);
+  });
+});
+
+describe("bevel", () => {
+  async function selectAnEdge() {
+    const t = buildTopology(await mesh());
+    const [a, b] = [t.vertexPoints[t.edges[0]!]!, t.vertexPoints[t.edges[1]!]!];
+    useEditStore.getState().setSelected([...a, ...b]);
+  }
+  const closed = async () =>
+    buildTopology(await mesh()).edgeFaces.every((f) => f.length === 2);
+
+  it("bevels the selected edge as one undo step and keeps the cube closed", async () => {
+    await selectAnEdge();
+    const steps = get().history.past.length;
+    expect(await bevelSelectedEdges()).toBe(true);
+    expect(get().history.past.length).toBe(steps + 1);
+    expect(get().history.past.at(-1)?.label).toBe("Bevel");
+    expect(await closed()).toBe(true);
+    get().undo();
+    expect((await mesh()).indices.length / 3).toBe(12);
+  });
+
+  it("changing segments replaces the bevel in place", async () => {
+    await selectAnEdge();
+    await bevelSelectedEdges();
+    const steps = get().history.past.length;
+    expect(await changeBevel({ segments: 4 })).toBe(true);
+    expect(get().history.past.length).toBe(steps);
+    expect(useEditStore.getState().bevel!.segments).toBe(4);
+    expect(await closed()).toBe(true);
+  });
+
+  it("dragging previews; letting go stores once", async () => {
+    await selectAnEdge();
+    await bevelSelectedEdges();
+    const asset = node("a").assetId;
+    for (const w of [0.02, 0.05, 0.08])
+      expect(previewBevel({ width: w })).toBe(true);
+    expect(node("a").assetId).toBe(asset);
+    expect(await commitBevel()).toBe(true);
+    expect(node("a").assetId).not.toBe(asset);
+  });
+
+  it("asks for an edge when nothing is selected", async () => {
+    expect(await bevelSelectedEdges()).toBe(false);
+    expect(message()).toContain("Select an edge");
   });
 });

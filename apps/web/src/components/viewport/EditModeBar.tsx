@@ -8,10 +8,12 @@ import {
   creaseSelectedEdges,
   deleteSelectedPoints,
   extrudeSelectedFaces,
+  bevelSelectedEdges,
   insetSelectedFaces,
 } from "@/meshEdit/editOperations";
 import { selectLoopOrRing } from "@/meshEdit/selectionTools";
 import ExtrudePanel from "./ExtrudePanel";
+import BevelPanel from "./BevelPanel";
 import LoopCutPanel from "./LoopCutPanel";
 import { stopEditing } from "@/meshEdit/startEditing";
 
@@ -52,7 +54,7 @@ const HINTS: Record<SelectMode, string> = {
  * The panel at the top of the 3D view while editing points: what is being edited, what a click selects,
  * the tools that grow a selection, and what to do next in plain words.
  */
-export default function EditModeBar() {
+export default function EditTools() {
   const nodeId = useEditStore((state) => state.nodeId);
   const selected = useEditStore((state) => state.selected);
   const selectMode = useEditStore((state) => state.selectMode);
@@ -64,11 +66,11 @@ export default function EditModeBar() {
   const node = useSceneStore((state) =>
     nodeId ? state.scene.nodes[nodeId] : undefined,
   );
-  const triangles = useSceneStore((state) => {
-    if (!node?.assetId) return 0;
-    const info = state.scene.assets[node.assetId];
-    return info ? info.triangles : 0;
-  });
+  // A settings panel is open until something else is done (the undo history grew)
+  const pastLength = useSceneStore((state) => state.history.past.length);
+  const session = useEditStore(
+    (state) => state.loopCut ?? state.bevel ?? state.extrude,
+  );
   if (!nodeId || !node) return null;
 
   /** Loop and Ring work on edges, so pressing them switches to edge mode (and says what to do if nothing is selected). */
@@ -81,30 +83,10 @@ export default function EditModeBar() {
     <div
       role="region"
       aria-label="Edit mode"
-      className="flex w-max max-w-full flex-col gap-2 rounded-lg border border-ed-select/50 bg-ed-raised/95 px-3 py-2 text-xs shadow-lg shadow-black/40"
+      className="flex flex-col gap-2 rounded-md border border-ed-select/40 bg-ed-field/30 p-2.5 text-xs"
     >
-      <div className="flex items-center gap-3">
-        <span className="font-semibold text-ed-select">Edit mode</span>
-        <span className="text-ed-text-2">
-          {node.name} · {selected.length} point
-          {selected.length === 1 ? "" : "s"} selected
-          {triangles > 0
-            ? ` · ${triangles.toLocaleString("en-US")} triangles`
-            : ""}
-        </span>
-        <span className="flex-1" />
-        <button
-          type="button"
-          onClick={stopEditing}
-          title="Leave edit mode (Tab or Escape)"
-          className={ACTION}
-        >
-          Done
-        </button>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-ed-text-3">Select</span>
           <div
             role="group"
@@ -133,7 +115,7 @@ export default function EditModeBar() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-ed-text-3">View</span>
           <button
             type="button"
@@ -154,7 +136,7 @@ export default function EditModeBar() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-ed-text-3">Edge</span>
           <button
             type="button"
@@ -174,7 +156,7 @@ export default function EditModeBar() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-ed-text-3">Crease</span>
           <button
             type="button"
@@ -205,7 +187,7 @@ export default function EditModeBar() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-ed-text-3">Change</span>
           <button
             type="button"
@@ -219,6 +201,15 @@ export default function EditModeBar() {
             }`}
           >
             Loop cut
+          </button>
+          <button
+            type="button"
+            onClick={() => void bevelSelectedEdges()}
+            disabled={selected.length < 2}
+            title="Bevel: round off or chamfer the selected edges so they catch the light (B). Select an edge first."
+            className={ACTION}
+          >
+            Bevel
           </button>
           <button
             type="button"
@@ -250,13 +241,52 @@ export default function EditModeBar() {
         </div>
       </div>
 
-      <p className="max-w-[44rem] text-ed-text-3">
-        {loopCutMode
-          ? "Loop cut: move over an edge. A green line shows where the new ring of edges will go, all the way across the strip of squares. Click to cut. Esc cancels."
-          : HINTS[selectMode]}
-      </p>
-      <LoopCutPanel />
-      <ExtrudePanel />
+      {/* The settings of the last operation take the place of the hint, in a narrow column, so the bar stays small */}
+      {session && session.pastLength === pastLength ? (
+        <div>
+          <LoopCutPanel />
+          <BevelPanel />
+          <ExtrudePanel />
+        </div>
+      ) : (
+        <p className="text-[11px] leading-relaxed text-ed-text-3">
+          {loopCutMode
+            ? "Loop cut: move over an edge. A green line shows where the new ring of edges will go, all the way across the strip of squares. Click to cut. Esc cancels."
+            : HINTS[selectMode]}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The one-line note over the 3D view while editing: what is being edited and how many points are selected.
+ * The tools themselves are in the right-hand panel (`EditTools`), so they do not cover the scene.
+ */
+export function EditStatus() {
+  const nodeId = useEditStore((state) => state.nodeId);
+  const count = useEditStore((state) => state.selected.length);
+  const name = useSceneStore((state) =>
+    nodeId ? state.scene.nodes[nodeId]?.name : undefined,
+  );
+  if (!nodeId || name === undefined) return null;
+  return (
+    <div
+      role="status"
+      className="flex items-center gap-3 rounded-lg border border-ed-select/50 bg-ed-raised/95 px-3 py-1.5 text-xs shadow-lg shadow-black/40"
+    >
+      <span className="font-semibold text-ed-select">Edit mode</span>
+      <span className="text-ed-text-2">
+        {name} · {count} point{count === 1 ? "" : "s"} selected
+      </span>
+      <button
+        type="button"
+        onClick={stopEditing}
+        title="Leave edit mode (Tab or Escape)"
+        className={ACTION}
+      >
+        Done
+      </button>
     </div>
   );
 }

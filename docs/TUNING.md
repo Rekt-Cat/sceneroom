@@ -527,6 +527,15 @@ Files: `apps/web/src/components/viewport/InspectorFields.tsx` (rows, steps, colo
 | Preview colour | `cutMaterial` in `apps/web/src/meshEdit/editOverlay.ts` | green `0x58e07a` | The colour of the line that shows where a cut would go.                                          |
 | Click distance | `PICK_DISTANCE_PX` in `MeshEditor.tsx`                  | 12 px            | How close the pointer must be to an edge to pick it (same as edge mode).                         |
 
+## Bevel
+
+| What          | Where                                                               | Our value | What it does                                                                          |
+| ------------- | ------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------- |
+| Most segments | `MAX_BEVEL_SEGMENTS` in `packages/shared/src/bevel.ts`              | 8         | Most flat pieces in a bevel's profile (1 is a chamfer, more is rounder).              |
+| Longest reach | `MAX_REACH` in `bevel.ts`                                           | 0.45      | A bevel may reach at most this fraction of an edge's length, so two ends never cross. |
+| First width   | `BEVEL_START_FRACTION` in `apps/web/src/meshEdit/editOperations.ts` | 0.25      | The width a new bevel starts with, as a fraction of the longest safe width.           |
+| Tool key      | `useEditorShortcuts.ts`                                             | B         | Bevels the selected edges.                                                            |
+
 ## Zoom to an object (double-click in the scene list, F)
 
 | What                      | Where                                                                     | Our value | What it does                                                                                                |
