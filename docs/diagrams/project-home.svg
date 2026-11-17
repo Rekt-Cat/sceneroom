@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" width="960" height="620" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
+  <title id="t">Project home screen: from the list of projects to the editor and back</title>
+  <desc id="d">The address / shows the home screen, which lists project cards read from the browser's IndexedDB index. Opening a card goes to /p/id, where the editor loads that project and autosaves into its record. Leaving through the logo saves, takes a picture of the 3D view and returns to the home screen. Sharing with invite links is planned for the online phases.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker>
+  </defs>
+  <rect width="960" height="620" fill="#f2f5f6"/>
+  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">Project home screen (Phase 5c, local part)</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Many projects in the browser. Invites and "Shared with you" come with the backend (Phases 6 to 8).</text>
+
+  <!-- home -->
+  <rect x="32" y="90" width="270" height="230" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="48" y="116" font-size="15" font-weight="700" fill="#13202a">/  Home screen</text>
+  <rect x="48" y="132" width="78" height="52" rx="6" fill="#5667e8"/>
+  <text x="87" y="163" font-size="11" text-anchor="middle" fill="#fff">+ New</text>
+  <rect x="136" y="132" width="78" height="52" rx="6" fill="#e9eef0" stroke="#c4d0d6"/>
+  <text x="175" y="163" font-size="11" text-anchor="middle" fill="#13202a">picture</text>
+  <rect x="224" y="132" width="62" height="52" rx="6" fill="#e9eef0" stroke="#c4d0d6"/>
+  <text x="255" y="163" font-size="11" text-anchor="middle" fill="#13202a">TO</text>
+  <text x="48" y="212" font-size="12" fill="#13202a">card: picture, name, edited 2 h ago, scenes</text>
+  <text x="48" y="232" font-size="12" fill="#13202a">menu: Rename, Duplicate, Export file,</text>
+  <text x="48" y="248" font-size="12" fill="#13202a">  Delete (asks), Share (disabled for now)</text>
+  <text x="48" y="270" font-size="12" fill="#13202a">Open file: a .sceneroom file becomes a NEW project</text>
+  <text x="48" y="290" font-size="12" fill="#55656f">search and sort appear from 5 projects</text>
+
+  <!-- editor -->
+  <rect x="658" y="90" width="270" height="230" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="674" y="116" font-size="15" font-weight="700" fill="#13202a">/p/[projectId]  The editor</text>
+  <text x="674" y="144" font-size="12" fill="#13202a">startPersistence(projectId) loads that</text>
+  <text x="674" y="160" font-size="12" fill="#13202a">project, then autosaves each change</text>
+  <text x="674" y="176" font-size="12" fill="#13202a">after 0.5 s into its own record.</text>
+  <text x="674" y="204" font-size="12" fill="#13202a">Unknown id: "This project was not</text>
+  <text x="674" y="220" font-size="12" fill="#13202a">found" and nothing is saved.</text>
+  <text x="674" y="248" font-size="12" fill="#13202a">A picture of the 3D view is taken 4 s</text>
+  <text x="674" y="264" font-size="12" fill="#13202a">after opening, after saves (at most every</text>
+  <text x="674" y="280" font-size="12" fill="#13202a">30 s), and when leaving.</text>
+
+  <path d="M302 150 H658" stroke="#13202a" stroke-width="2.4" fill="none" marker-end="url(#a)"/>
+  <text x="480" y="140" font-size="12" text-anchor="middle" fill="#13202a">click a card (or + New / Open file)</text>
+  <path d="M658 260 H302" stroke="#13202a" stroke-width="2.4" fill="none" marker-end="url(#a)"/>
+  <text x="480" y="252" font-size="12" text-anchor="middle" fill="#13202a">logo: save, take the picture, go back</text>
+
+  <!-- storage -->
+  <rect x="32" y="352" width="620" height="236" rx="12" fill="#e0f2e8" stroke="#1c7a4b" stroke-width="2.2"/>
+  <text x="48" y="378" font-size="15" font-weight="700" fill="#13202a">Browser storage (IndexedDB)  IndexedDbProjectLibrary</text>
+  <text x="48" y="404" font-size="12.5" fill="#13202a">"project-index"  the cards: id, name, created, last edit, scenes   (read by the home screen)</text>
+  <text x="48" y="424" font-size="12.5" fill="#13202a">"project:&lt;id&gt;"  one record per project: every scene, the prefabs</text>
+  <text x="48" y="444" font-size="12.5" fill="#13202a">"thumb:&lt;id&gt;"  a small JPEG (480 x 270) of the scene</text>
+  <text x="48" y="464" font-size="12.5" fill="#13202a">"assets"  model and mesh files, stored ONCE by fingerprint, shared by every project</text>
+  <text x="48" y="494" font-size="12.5" fill="#13202a">First run: the one old project becomes the first card; the old record stays as a backup.</text>
+  <text x="48" y="514" font-size="12.5" fill="#13202a">The index repairs itself against the records (an interrupted save loses nothing); a broken index is rebuilt.</text>
+  <text x="48" y="534" font-size="12.5" fill="#13202a">An unreadable project is copied to "unreadable-project:&lt;id&gt;" and saving is turned off for it.</text>
+  <text x="48" y="560" font-size="12" fill="#55656f">Code: persistence/projectLibrary.ts, packages/shared/src/projectIndex.ts, components/home/</text>
+
+  <!-- online later -->
+  <rect x="676" y="352" width="252" height="236" rx="12" fill="#fff" stroke="#c4d0d6" stroke-width="2" stroke-dasharray="7 5"/>
+  <text x="692" y="378" font-size="15" font-weight="700" fill="#55656f">Later (online)</text>
+  <text x="692" y="404" font-size="12" fill="#55656f">Share: a role + optional expiry;</text>
+  <text x="692" y="420" font-size="12" fill="#55656f">the server makes a random token,</text>
+  <text x="692" y="436" font-size="12" fill="#55656f">stores only its hash, shows the</text>
+  <text x="692" y="452" font-size="12" fill="#55656f">link once; revocable.</text>
+  <text x="692" y="478" font-size="12" fill="#55656f">"Shared with you", avatars, who</text>
+  <text x="692" y="494" font-size="12" fill="#55656f">is online. Private by default.</text>
+  <text x="692" y="520" font-size="12" fill="#55656f">Thumbnails in object storage,</text>
+  <text x="692" y="536" font-size="12" fill="#55656f">browser copy as a cache.</text>
+  <text x="692" y="562" font-size="12" fill="#55656f">The server decides every permission.</text>
+  <path d="M652 470 H676" stroke="#c4d0d6" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+</svg>

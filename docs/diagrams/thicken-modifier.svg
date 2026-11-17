@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" width="960" height="620" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
+  <title id="t">Thicken (Solidify) modifier: how a surface gets thickness</title>
+  <desc id="d">The surface is copied and moved against its normals by the thickness (a share of the object size), turned inside out, and joined to the original along every open edge with a wall that has its own points. Corners are pushed further so the wall is evenly thick. A plane becomes a slab, an open shape a shell, a closed shape a hollow.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker>
+  </defs>
+  <rect width="960" height="620" fill="#f2f5f6"/>
+  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">Thicken (Solidify) modifier (Phase 13, step 4a)</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">A normal modifier: non-destructive, reorderable, can be switched off, and Make mesh bakes it in.</text>
+
+  <rect x="32" y="84" width="290" height="190" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="48" y="110" font-size="14" font-weight="700" fill="#13202a">1. The surface</text>
+  <path d="M70 200 H280" stroke="#13202a" stroke-width="4"/>
+  <path d="M110 200 V170 M175 200 V170 M240 200 V170" stroke="#0a6c8a" stroke-width="2" marker-end="url(#a)"/>
+  <text x="48" y="236" font-size="12" fill="#55656f">normals (the way it faces)</text>
+  <text x="48" y="254" font-size="12" fill="#55656f">points on one spot count as one</text>
+
+  <path d="M322 180 H362" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+
+  <rect x="362" y="84" width="290" height="190" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="378" y="110" font-size="14" font-weight="700" fill="#13202a">2. A copy, pushed back</text>
+  <path d="M400 190 H610" stroke="#13202a" stroke-width="4"/>
+  <path d="M400 232 H610" stroke="#e08a00" stroke-width="4"/>
+  <path d="M520 190 V228" stroke="#e08a00" stroke-width="2" marker-end="url(#a)"/>
+  <text x="530" y="214" font-size="12" fill="#13202a">thickness</text>
+  <text x="378" y="258" font-size="12" fill="#55656f">turned inside out (winding flipped)</text>
+
+  <path d="M652 180 H692" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+
+  <rect x="692" y="84" width="236" height="190" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="708" y="110" font-size="14" font-weight="700" fill="#13202a">3. Walls on open edges</text>
+  <rect x="730" y="150" width="160" height="40" fill="#e9eef0" stroke="#13202a" stroke-width="3"/>
+  <path d="M730 150 V190 M890 150 V190" stroke="#0a6c8a" stroke-width="5"/>
+  <text x="708" y="222" font-size="12" fill="#55656f">a wall joins the two copies</text>
+  <text x="708" y="240" font-size="12" fill="#55656f">with its own points: a crisp edge</text>
+
+  <rect x="32" y="300" width="896" height="150" rx="12" fill="#e9eef0" stroke="#0a6c8a" stroke-width="2"/>
+  <text x="48" y="326" font-size="14" font-weight="700" fill="#13202a">What you get</text>
+  <text x="48" y="350" font-size="12.5" fill="#13202a">plane: a closed slab, volume = area x thickness (tested exactly)</text>
+  <text x="48" y="370" font-size="12.5" fill="#13202a">open shape (bowl, leaf, cloth): a shell with a rim</text>
+  <text x="48" y="390" font-size="12.5" fill="#13202a">closed shape (cube): hollow inside, no walls needed; the wall is evenly thick (cube: volume 1 - 0.8 cubed)</text>
+  <text x="48" y="414" font-size="12" fill="#55656f">Thickness is a share of the object size (-0.5 to 0.5, default 0.1). Negative grows the other way. Reset button on the slider.</text>
+  <text x="48" y="434" font-size="12" fill="#55656f">Nothing happens for 0 thickness, an empty mesh, or when the result would pass the point limit.</text>
+
+  <rect x="32" y="470" width="896" height="120" rx="12" fill="#fff" stroke="#c4d0d6" stroke-width="2"/>
+  <text x="48" y="496" font-size="14" font-weight="700" fill="#13202a">Even thickness</text>
+  <text x="48" y="518" font-size="12.5" fill="#13202a">A corner point is pushed along the average of its faces' normals (each face weighted by the angle it fills there, so the way a</text>
+  <text x="48" y="536" font-size="12.5" fill="#13202a">square is split into triangles does not matter), and the push is longer by 1 / cos of the angle (at most 2x). Without it the</text>
+  <text x="48" y="554" font-size="12.5" fill="#13202a">walls of a hollowed cube would be thinner at the corners.</text>
+  <text x="48" y="576" font-size="12" fill="#55656f">Code: packages/shared/src/solidify.ts, the modifier list in modifiers.ts, one slider in ModifiersSection.tsx</text>
+</svg>

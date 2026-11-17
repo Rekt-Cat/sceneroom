@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" width="960" height="620" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
+  <title id="t">Bevel and edge extrude: how an edge becomes new faces</title>
+  <desc id="d">Bevel cuts a selected edge back on both faces, joins the cuts with a strip (a curve for more than one segment) and fills the corners. Edge extrude copies the selected edges, pushes the copy out and joins it with a wall: along the surface for a border edge, as a fin for an edge between two faces. Both use the same live panel: a preview while a slider is dragged, one stored change when it is let go.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker>
+  </defs>
+  <rect width="960" height="620" fill="#f2f5f6"/>
+  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">Bevel and edge extrude (Phase 13, step 6)</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Pure functions on the topology layer. The result is a new mesh; the panel only shows and stores it.</text>
+
+  <!-- Bevel -->
+  <rect x="32" y="84" width="440" height="290" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="48" y="110" font-size="15" font-weight="700" fill="#13202a">Bevel (B)  bevelEdges(mesh, topology, edges, width, segments)</text>
+  <!-- before -->
+  <path d="M70 250 L130 190 L220 190" stroke="#13202a" stroke-width="3" fill="none"/>
+  <text x="100" y="285" font-size="12" fill="#55656f">sharp edge</text>
+  <path d="M236 230 H280" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <!-- after -->
+  <path d="M300 250 L350 205 Q362 190 380 190 L450 190" stroke="#e08a00" stroke-width="3" fill="none"/>
+  <path d="M300 250 L338 216" stroke="#13202a" stroke-width="3" fill="none"/>
+  <text x="330" y="285" font-size="12" fill="#55656f">strip (the bevel)</text>
+  <text x="48" y="320" font-size="12.5" fill="#13202a">1. each face is cut back by Width along its own edges</text>
+  <text x="48" y="338" font-size="12.5" fill="#13202a">2. a strip joins the two cuts: a curve whose control is the old corner</text>
+  <text x="48" y="356" font-size="12.5" fill="#13202a">3. where bevelled edges meet, the gap is filled (triangle, or a fan if round)</text>
+
+  <!-- Edge extrude -->
+  <rect x="488" y="84" width="440" height="290" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="504" y="110" font-size="15" font-weight="700" fill="#13202a">Edge extrude (Extrude with only edges selected)</text>
+  <!-- border edge: plane grows -->
+  <rect x="520" y="170" width="90" height="80" fill="#e9eef0" stroke="#13202a" stroke-width="2"/>
+  <path d="M520 170 V250" stroke="#e08a00" stroke-width="5"/>
+  <rect x="470" y="170" width="0" height="80" fill="none"/>
+  <path d="M520 210 H478" stroke="#0a6c8a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <text x="520" y="272" font-size="12" fill="#55656f">border edge: surface grows</text>
+  <!-- interior edge: fin -->
+  <path d="M700 250 L760 210 L840 210" stroke="#13202a" stroke-width="3" fill="none"/>
+  <path d="M760 210 V150" stroke="#e08a00" stroke-width="5"/>
+  <text x="700" y="272" font-size="12" fill="#55656f">edge between two faces: a fin</text>
+  <text x="504" y="320" font-size="12.5" fill="#13202a">direction: out along the surface (border) or the average of the two faces</text>
+  <text x="504" y="338" font-size="12.5" fill="#13202a">corners shared by selected edges move once, so a chain stays joined</text>
+  <text x="504" y="356" font-size="12.5" fill="#13202a">settings: Distance, Divisions (Scale and Twist do not apply to an edge)</text>
+
+  <!-- live panel flow -->
+  <rect x="32" y="400" width="896" height="190" rx="12" fill="#e9eef0" stroke="#0a6c8a" stroke-width="2"/>
+  <text x="48" y="426" font-size="14" font-weight="700" fill="#13202a">The live panel (same machinery as Extrude and Loop cut)</text>
+  <rect x="48" y="444" width="150" height="56" rx="8" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="123" y="468" font-size="12.5" text-anchor="middle" fill="#13202a">press Bevel / Extrude</text>
+  <text x="123" y="486" font-size="11.5" text-anchor="middle" fill="#55656f">one undo step is stored</text>
+  <path d="M198 472 H246" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="246" y="444" width="190" height="56" rx="8" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="341" y="468" font-size="12.5" text-anchor="middle" fill="#13202a">session kept in editStore</text>
+  <text x="341" y="486" font-size="11.5" text-anchor="middle" fill="#55656f">mesh before + the edges + settings</text>
+  <path d="M436 472 H484" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="484" y="444" width="200" height="56" rx="8" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="584" y="468" font-size="12.5" text-anchor="middle" fill="#13202a">drag a slider: preview only</text>
+  <text x="584" y="486" font-size="11.5" text-anchor="middle" fill="#55656f">geometry swapped on screen, nothing stored</text>
+  <path d="M684 472 H732" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="732" y="444" width="180" height="56" rx="8" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="822" y="468" font-size="12.5" text-anchor="middle" fill="#13202a">let go: commit once</text>
+  <text x="822" y="486" font-size="11.5" text-anchor="middle" fill="#55656f">replaces the first step (amend)</text>
+  <text x="48" y="530" font-size="12.5" fill="#13202a">The panel ends when anything else is done (the undo history grew). Every value has a reset button.</text>
+  <text x="48" y="550" font-size="12.5" fill="#13202a">Refused with a plain message: border edges and border corners for Bevel; nothing selected; zero distance.</text>
+  <text x="48" y="570" font-size="12.5" fill="#13202a">The new strip or edge is selected, so R scales it and W moves it.</text>
+</svg>
