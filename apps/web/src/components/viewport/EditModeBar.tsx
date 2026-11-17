@@ -223,8 +223,8 @@ export default function EditTools() {
           <button
             type="button"
             onClick={() => void extrudeSelectedFaces()}
-            disabled={selected.length < 3}
-            title="Extrude: copy the selected faces and push them out (Shift + E). Select a face first."
+            disabled={selected.length < 2}
+            title="Extrude: copy the selected faces (or edges) and push them out (Shift + E). Select a face or an edge first."
             className={ACTION}
           >
             Extrude

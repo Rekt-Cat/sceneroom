@@ -3,6 +3,7 @@ import {
   DEFAULT_LOOP_CUT_OPTIONS,
   sameCreases,
   selectedEdges,
+  selectedFaces,
   setCreases,
   buildTopology,
   edgeBetween,
@@ -20,6 +21,7 @@ import {
   expandToWelded,
   extrudeDistance,
   extrudeFaces,
+  extrudeEdges,
   weldGroups,
   type EditResult,
   type ShapeMesh,
@@ -136,15 +138,49 @@ export function insetSelectedFaces(): Promise<boolean> {
   return startExtrusion("inset");
 }
 
+/** Does the extrusion of a session (faces or edges) with these numbers. */
+function extrudeWith(
+  session: Pick<ExtrudeSession, "before" | "selectedBefore" | "edges">,
+  distance: number,
+  options: ExtrudeOptions,
+): EditResult {
+  if (session.edges) {
+    const topology = buildTopology(session.before);
+    return extrudeEdges(
+      session.before,
+      topology,
+      selectedEdges(topology, session.selectedBefore),
+      distance,
+      options.divisions,
+    );
+  }
+  return extrudeFaces(
+    session.before,
+    session.selectedBefore,
+    distance,
+    weldGroups(session.before.positions),
+    options,
+  );
+}
+
 async function startExtrusion(kind: ExtrudeSession["kind"]): Promise<boolean> {
   const edited = await editedMesh();
   if (!edited) return false;
   const groups = weldGroups(edited.mesh.positions);
   const all = expandToWelded(groups, edited.selected);
+  // Extrude works on faces; with only edges selected it extrudes the edges
+  const onlyEdges =
+    kind === "extrude" &&
+    selectedFaces(edited.mesh, all).length === 0 &&
+    selectedEdges(buildTopology(edited.mesh), all).length > 0;
   const distance = kind === "inset" ? 0 : extrudeDistance(edited.mesh, all);
   const options =
     kind === "inset" ? INSET_START_OPTIONS : DEFAULT_EXTRUDE_OPTIONS;
-  const result = extrudeFaces(edited.mesh, all, distance, groups, options);
+  const result = extrudeWith(
+    { before: edited.mesh, selectedBefore: all, edges: onlyEdges },
+    distance,
+    options,
+  );
   if (!result.ok) {
     say(result.reason);
     return false;
@@ -154,6 +190,7 @@ async function startExtrusion(kind: ExtrudeSession["kind"]): Promise<boolean> {
   selectCap(result);
   useEditStore.getState().setExtrude({
     kind,
+    edges: onlyEdges,
     before: edited.mesh,
     selectedBefore: all,
     distance,
@@ -213,13 +250,7 @@ export function previewExtrude(change: ExtrudeChange): boolean {
     return false;
   }
   const { options, distance } = paramsFor(session, change);
-  const result = extrudeFaces(
-    session.before,
-    session.selectedBefore,
-    distance,
-    weldGroups(session.before.positions),
-    options,
-  );
+  const result = extrudeWith(session, distance, options);
   if (!result.ok) return false;
 
   showOnScreen(edit.nodeId, result.mesh);
@@ -269,13 +300,7 @@ async function storeExtrusion(): Promise<boolean> {
     );
     return false;
   }
-  const result = extrudeFaces(
-    session.before,
-    session.selectedBefore,
-    session.distance,
-    weldGroups(session.before.positions),
-    session.options,
-  );
+  const result = extrudeWith(session, session.distance, session.options);
   if (!result.ok) {
     say(result.reason);
     return false;

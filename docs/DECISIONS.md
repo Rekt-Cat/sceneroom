@@ -842,3 +842,8 @@ The design from 2026-11-16 (above) was built on `feature/four-view`; not yet tri
 - **Width is limited** to 45 percent of the shortest edge at the touched corners, so two ends can never cross. The first width is a quarter of that limit.
 - **Same live panel as loop cut:** preview while dragging, one amended commit on release, one undo step. The new strip is selected so it can be scaled or moved.
 - **Not done:** bevelling single points, a profile shape control, and bevels that stop part-way across a quad strip.
+
+## Edge extrude and the live depth slice of the big side view
+
+- **Edge extrude** (`packages/shared/src/edgeExtrude.ts`): the same Extrude button (Shift + E); when only edges are selected (no whole face) it extrudes the edges. A border edge grows the surface outwards in its own plane (extend a plane, lengthen a rim); an edge between two faces grows a fin along the average of the faces. Edges that share a corner share the new corner point, so a chain stays joined. It reuses the extrude session and panel (distance and divisions; scale and twist are hidden because they have no meaning for an edge).
+- **Big side view keeps up** (found in a browser check): the near and far planes were set once when the view opened, so after rotating the object it could be cut away. They now follow the selection (`updateSlab`), and a different selection frames the view again.

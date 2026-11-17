@@ -634,3 +634,24 @@ describe("bevel", () => {
     expect(message()).toContain("Select an edge");
   });
 });
+
+describe("extruding an edge", () => {
+  async function selectAnEdge() {
+    const t = buildTopology(await mesh());
+    const [a, b] = [t.vertexPoints[t.edges[0]!]!, t.vertexPoints[t.edges[1]!]!];
+    useEditStore.getState().setSelected([...a, ...b]);
+  }
+
+  it("Extrude with only an edge selected makes a fin: 2 triangles, one undo step, settings follow", async () => {
+    await selectAnEdge();
+    const before = (await mesh()).indices.length / 3;
+    const steps = get().history.past.length;
+    expect(await extrudeSelectedFaces()).toBe(true);
+    expect((await mesh()).indices.length / 3).toBe(before + 2);
+    expect(get().history.past.length).toBe(steps + 1);
+    expect(useEditStore.getState().extrude!.edges).toBe(true);
+    expect(await changeExtrude({ divisions: 3 })).toBe(true);
+    expect((await mesh()).indices.length / 3).toBe(before + 6);
+    expect(get().history.past.length).toBe(steps + 1);
+  });
+});

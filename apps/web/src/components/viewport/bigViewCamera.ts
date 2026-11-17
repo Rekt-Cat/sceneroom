@@ -1,5 +1,10 @@
-import { OrthographicCamera } from "three";
-import { sideFrame, zoomForFrame, type SideView } from "@sceneroom/shared";
+import { OrthographicCamera, Vector3 } from "three";
+import {
+  SIDE_VIEW_NEAR_ROOM,
+  sideFrame,
+  zoomForFrame,
+  type SideView,
+} from "@sceneroom/shared";
 import { viewBox } from "./selectionBox";
 
 /**
@@ -39,5 +44,30 @@ export function fitToSize(
   camera.right = size.width / 2;
   camera.top = size.height / 2;
   camera.bottom = -size.height / 2;
+  camera.updateProjectionMatrix();
+}
+
+/**
+ * Moves the near and far planes of a flat camera that stays where it is, so they hug what is selected NOW (or the
+ * whole scene): called when objects move, turn or change size while the big side view is open. Without it the
+ * planes would still be where they were when the view was opened, and a turned object would be cut away.
+ */
+export function updateSlab(camera: OrthographicCamera): void {
+  const box = viewBox();
+  const forward = camera.getWorldDirection(new Vector3());
+  let nearest = Infinity;
+  let farthest = -Infinity;
+  for (const x of [box.min[0], box.max[0]]) {
+    for (const y of [box.min[1], box.max[1]]) {
+      for (const z of [box.min[2], box.max[2]]) {
+        const depth = new Vector3(x, y, z).sub(camera.position).dot(forward);
+        nearest = Math.min(nearest, depth);
+        farthest = Math.max(farthest, depth);
+      }
+    }
+  }
+  const room = Math.max(farthest - nearest, 1) * SIDE_VIEW_NEAR_ROOM;
+  camera.near = Math.max(0.01, nearest - room);
+  camera.far = Math.max(camera.near + 0.01, farthest + room);
   camera.updateProjectionMatrix();
 }

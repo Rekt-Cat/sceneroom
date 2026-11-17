@@ -17,6 +17,8 @@ export type SelectMode = "point" | "edge" | "face";
 export type ExtrudeSession = {
   /** "extrude" pushes the faces out; "inset" starts as a smaller copy of them in the same place. Same operation, different starting values and words. */
   kind: "extrude" | "inset";
+  /** True when edges were extruded (not faces): only the distance and divisions apply. */
+  edges?: boolean;
   before: ShapeMesh;
   selectedBefore: readonly number[];
   /** How far the extrusion goes, and the distance it started with (for its reset button). */

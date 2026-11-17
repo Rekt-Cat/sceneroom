@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useThree } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { OrthographicCamera, PerspectiveCamera, type Vector3 } from "three";
 import { isSideView } from "@sceneroom/shared";
+import { useSceneStore } from "@/store/sceneStore";
 import { useViewStore } from "@/store/viewStore";
-import { fitToSize, placeSideCamera } from "./bigViewCamera";
+import { fitToSize, placeSideCamera, updateSlab } from "./bigViewCamera";
 import { getPerspectiveCamera, setPerspectiveCamera } from "./cameraRegistry";
 
 type Controls = { target: Vector3; update: () => void };
@@ -59,6 +60,46 @@ export default function BigViewController() {
     controls.target.set(...target.current);
     controls.update();
   }, [controls, bigView, camera]);
+
+  // Objects that move, turn or change while a side view is open: the near and far planes follow what is selected,
+  // and another selection is framed again (the view cannot be panned to it by hand)
+  const change = useRef<"none" | "slab" | "frame">("none");
+  const settled = useRef(false);
+  useEffect(
+    () =>
+      useSceneStore.subscribe((state, before) => {
+        if (state.selectedIds !== before.selectedIds) change.current = "frame";
+        else if (
+          state.scene.nodes !== before.scene.nodes &&
+          change.current === "none"
+        ) {
+          change.current = "slab";
+        }
+      }),
+    [],
+  );
+  useFrame(() => {
+    const todo = change.current;
+    if (todo === "none") return;
+    // One frame is drawn first, so the objects' world matrices are up to date when they are measured
+    if (!settled.current) {
+      settled.current = true;
+      return;
+    }
+    settled.current = false;
+    change.current = "none";
+    const side = flat.current;
+    if (!side || camera !== side || !isSideView(bigView)) return;
+    if (todo === "frame") {
+      target.current = placeSideCamera(side, bigView, sizeRef.current);
+      if (controls) {
+        controls.target.set(...target.current);
+        controls.update();
+      }
+    } else {
+      updateSlab(side);
+    }
+  });
 
   // A resized canvas: the flat camera is sized in pixels
   useEffect(() => {

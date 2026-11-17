@@ -75,43 +75,49 @@ export default function ExtrudePanel() {
           commit(value === undefined ? undefined : { divisions: value })
         }
       />
-      <OperationField
-        label={inset ? "Face size" : "Scale"}
-        hint={
-          inset
-            ? "How big the new face is compared with the old one. Smaller leaves a wider border round it."
-            : "Make the new face smaller (a tapering stalk, 50% = half as wide) or bigger (a flare). 100% keeps it the same."
-        }
-        value={session.options.scale}
-        min={MIN_EXTRUDE_SCALE}
-        max={MAX_EXTRUDE_SCALE}
-        step={0.05}
-        unit="%"
-        show={(v) => v * 100}
-        defaultValue={session.defaultOptions.scale}
-        onPreview={(value) => preview({ scale: value })}
-        onCommit={(value) =>
-          commit(value === undefined ? undefined : { scale: value })
-        }
-      />
-      <OperationField
-        label="Twist"
-        hint="Turn the new face round its direction, like wringing a cloth. The walls twist with it."
-        value={session.options.twistDegrees}
-        min={-MAX_EXTRUDE_TWIST_DEGREES}
-        max={MAX_EXTRUDE_TWIST_DEGREES}
-        step={5}
-        unit="°"
-        defaultValue={session.defaultOptions.twistDegrees}
-        onPreview={(value) => preview({ twistDegrees: value })}
-        onCommit={(value) =>
-          commit(value === undefined ? undefined : { twistDegrees: value })
-        }
-      />
+      {!session.edges && (
+        <>
+          <OperationField
+            label={inset ? "Face size" : "Scale"}
+            hint={
+              inset
+                ? "How big the new face is compared with the old one. Smaller leaves a wider border round it."
+                : "Make the new face smaller (a tapering stalk, 50% = half as wide) or bigger (a flare). 100% keeps it the same."
+            }
+            value={session.options.scale}
+            min={MIN_EXTRUDE_SCALE}
+            max={MAX_EXTRUDE_SCALE}
+            step={0.05}
+            unit="%"
+            show={(v) => v * 100}
+            defaultValue={session.defaultOptions.scale}
+            onPreview={(value) => preview({ scale: value })}
+            onCommit={(value) =>
+              commit(value === undefined ? undefined : { scale: value })
+            }
+          />
+          <OperationField
+            label="Twist"
+            hint="Turn the new face round its direction, like wringing a cloth. The walls twist with it."
+            value={session.options.twistDegrees}
+            min={-MAX_EXTRUDE_TWIST_DEGREES}
+            max={MAX_EXTRUDE_TWIST_DEGREES}
+            step={5}
+            unit="°"
+            defaultValue={session.defaultOptions.twistDegrees}
+            onPreview={(value) => preview({ twistDegrees: value })}
+            onCommit={(value) =>
+              commit(value === undefined ? undefined : { twistDegrees: value })
+            }
+          />
+        </>
+      )}
       <p className="text-ed-text-3">
         {inset
           ? "Tip: inset a face, then set Depth to push the smaller face out (a button, a window frame) or in (a recess)."
-          : "To build a column or a leg: set Scale to about 50%, then press Extrude again on the new end."}
+          : session.edges
+            ? "An edge on the border grows the surface outwards; an edge between two faces grows a fin."
+            : "To build a column or a leg: set Scale to about 50%, then press Extrude again on the new end."}
       </p>
     </div>
   );
