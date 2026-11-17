@@ -12,6 +12,10 @@ import {
 } from "@sceneroom/shared";
 import type { Mesh } from "three";
 import { projectPoints } from "@/meshEdit/projectPoints";
+import {
+  MAX_POINTS_TO_TEST_FOR_VISIBILITY,
+  visiblePoints,
+} from "@/meshEdit/visibility";
 import { useEditStore } from "@/store/editStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { useBoxSelectStore } from "./boxSelectStore";
@@ -86,7 +90,7 @@ export default function BoxSelectController() {
         const mesh = getMesh(editing.nodeId) as Mesh | undefined;
         const position = mesh?.geometry?.getAttribute("position");
         if (mesh && position) {
-          const inside = pointsInRect(
+          let inside = pointsInRect(
             projectPoints(
               mesh,
               camera,
@@ -95,6 +99,14 @@ export default function BoxSelectController() {
             ),
             box,
           );
+          // Without X-ray a box only takes the points on faces the camera can see (for a very big box the
+          // test is skipped, as it would take too long)
+          if (
+            !editing.xray &&
+            inside.length <= MAX_POINTS_TO_TEST_FOR_VISIBILITY
+          ) {
+            inside = visiblePoints(inside, position.array, mesh, camera);
+          }
           editing.setSelected(
             selectionAfterBox(editing.selected, inside, event.shiftKey),
           );

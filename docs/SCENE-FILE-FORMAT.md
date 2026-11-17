@@ -46,6 +46,12 @@ of the data blobs after the header, listed in `assets` with `type: "mesh"` in th
 | next `P * 12` | The points: x, y, z as 32-bit floats                 |
 | next `I * 4`  | The corners: point numbers as 32-bit whole numbers   |
 
+**Version 2 (edge creases)** is written only for a mesh that has some, so a mesh without creases keeps its version 1
+bytes and its id. It adds `C`, the number of creases, at bytes 16 to 19 (the points then start at byte 20), and after
+the corners: `C * 4` bytes of first points, `C * 4` bytes of second points (32-bit whole numbers, the two ends of a
+creased edge), then `C` bytes of values (0 to 255 for 0 to 1). Both versions are read. A crease on a point that does not
+exist, a crease value out of range and a header that claims too many creases are refused.
+
 The id of a mesh is the SHA-256 of exactly these bytes. Normals are not stored; they are worked out from the triangles.
 A mesh that no object uses is not saved (the editor keeps old versions in memory only so Undo can bring them back).
 Opening checks a mesh like a model: the layout, the sizes against the header (before allocating anything), that every

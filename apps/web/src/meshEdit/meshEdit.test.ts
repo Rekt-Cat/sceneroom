@@ -166,6 +166,42 @@ describe("edit mode ends by itself", () => {
     }
   });
 
+  it("when a modifier is switched on while editing, saying why (the shape shown is not the stored points)", async () => {
+    const stop = watchEditMode();
+    try {
+      await startEditing("a");
+      expect(useEditStore.getState().nodeId).toBe("a");
+      get().addModifier("a", "subdivide");
+      expect(useEditStore.getState().nodeId).toBeNull();
+      const message = useImportStore.getState().message;
+      expect(message?.text).toContain("Make mesh");
+      expect(message?.text).toContain("modifier");
+      // the object itself is untouched and still selected, so nothing seems to vanish
+      expect(get().selectedIds).toEqual(["a"]);
+      expect(node("a").modifiers).toHaveLength(1);
+    } finally {
+      stop();
+    }
+  });
+
+  it("a switched-off modifier does not end it", async () => {
+    const stop = watchEditMode();
+    try {
+      await startEditing("a");
+      get().addModifier("a", "subdivide");
+      useImportStore.setState({ message: null });
+      // (edit mode ended above; start it again with the modifier off)
+      const id = node("a").modifiers[0]!.id;
+      get().setModifier("a", id, { enabled: false });
+      await startEditing("a");
+      expect(useEditStore.getState().nodeId).toBe("a");
+      get().setModifier("a", id, { enabled: false });
+      expect(useEditStore.getState().nodeId).toBe("a");
+    } finally {
+      stop();
+    }
+  });
+
   it("but not for changes that keep the same object selected (an edit and its Undo)", async () => {
     const stop = watchEditMode();
     try {
@@ -307,6 +343,39 @@ describe("the overlay of points and lines", () => {
     expect(after.slice(0, 6)).toEqual(plain.slice(0, 6)); // the others did not
     overlay.setSelected([]);
     expect(colors()).toEqual(plain);
+  });
+
+  it("draws the selected edges (both ends selected) in the selection colour, and the selected points as their own dots", () => {
+    const overlay = buildEditOverlay(square());
+    const [, , selectedLines, selectedDots] = overlay.group
+      .children as unknown as {
+      geometry: BufferGeometry;
+    }[];
+    expect(selectedLines!.geometry.index!.count).toBe(0);
+    overlay.setSelected([0, 1]);
+    // the edge between points 0 and 1 is selected
+    expect(Array.from(selectedLines!.geometry.index!.array)).toEqual([0, 1]);
+    expect(Array.from(selectedDots!.geometry.index!.array).sort()).toEqual([
+      0, 1,
+    ]);
+    // two points with no edge between them select no edge (1 and 3 are opposite corners of the square)
+    overlay.setSelected([1, 3]);
+    expect(selectedLines!.geometry.index!.count).toBe(0);
+    expect(selectedDots!.geometry.index!.count).toBe(2);
+    overlay.setSelected([]);
+    expect(selectedDots!.geometry.index!.count).toBe(0);
+  });
+
+  it("shows a dot on every point in point mode, and only the selected ones in edge and face mode", () => {
+    const overlay = buildEditOverlay(square());
+    const points = overlay.group.children[1]!;
+    expect(points.visible).toBe(true);
+    overlay.setMode("edge");
+    expect(points.visible).toBe(false);
+    overlay.setMode("face");
+    expect(points.visible).toBe(false);
+    overlay.setMode("point");
+    expect(points.visible).toBe(true);
   });
 
   it("takes no clicks and is not hit by the pointer", () => {

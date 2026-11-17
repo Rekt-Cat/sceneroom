@@ -111,8 +111,11 @@ export default function EditorShell() {
           </div>
           <ControlsLegend />
           <ToolDock />
-          <ImportBanner />
-          <EditModeBar />
+          {/* The panels over the top of the 3D view stack in one column, so a message never covers the edit panel */}
+          <div className="pointer-events-none absolute top-3 left-1/2 z-10 flex w-max max-w-[calc(100%-2rem)] -translate-x-1/2 flex-col items-center gap-2 *:pointer-events-auto">
+            <EditModeBar />
+            <ImportBanner />
+          </div>
           {dropping && (
             <div
               aria-hidden="true"

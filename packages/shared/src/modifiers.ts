@@ -5,6 +5,8 @@ import type {
   Scene,
   SceneNode,
 } from "./scene";
+import type { Crease } from "./creases";
+import { subdivideMesh } from "./subdivide";
 import {
   ASSET_NOTE_MAX_LENGTH,
   MAX_ARRAY_COUNT,
@@ -13,6 +15,7 @@ import {
   MAX_MODIFIERS,
   MAX_SEGMENTS,
   MAX_STRETCH,
+  MAX_SUBDIVIDE_LEVELS,
   MIN_ARRAY_COUNT,
   MIN_STRETCH,
   PRIMITIVE_KINDS,
@@ -26,6 +29,7 @@ export const MODIFIER_TYPES: readonly ModifierType[] = [
   "stretch",
   "noise",
   "mirror",
+  "subdivide",
   "array",
 ];
 
@@ -43,12 +47,16 @@ export const MODIFIER_INFO: Record<
   stretch: { label: "Stretch", hint: "Make the shape longer or shorter" },
   noise: { label: "Noise", hint: "Make the surface bumpy and organic" },
   mirror: { label: "Mirror", hint: "Add a reflected copy on the other side" },
+  subdivide: {
+    label: "Smooth",
+    hint: "Round the shape off: every face is cut up and smoothed",
+  },
   array: { label: "Array", hint: "Repeat the shape in a line" },
 };
 
-/** The kinds of modifier that work along an axis (noise does not: it pushes points in all directions). */
+/** The kinds of modifier that work along an axis (noise and smooth do not: they work in all directions). */
 export function usesAxis(type: ModifierType): boolean {
-  return type !== "noise";
+  return type !== "noise" && type !== "subdivide";
 }
 
 /** True for objects whose shape modifiers can change: the built-in shapes and editable meshes (not imported models, not lights). */
@@ -89,6 +97,8 @@ export function createModifier(id: string, type: ModifierType): Modifier {
       };
     case "mirror":
       return { id, type, enabled: true, axis: "x", offset: 0.5 };
+    case "subdivide":
+      return { id, type, enabled: true, axis: "y", levels: 1 };
     case "array":
       return { id, type, enabled: true, axis: "x", count: 3, spacing: 1.2 };
   }
@@ -108,6 +118,7 @@ export type ModifierChange = {
   count?: number;
   spacing?: number;
   offset?: number;
+  levels?: number;
 };
 
 /** The number settings of each kind: [smallest, largest, whole numbers only?]. */
@@ -125,6 +136,7 @@ const NUMBER_SETTINGS: Record<
     seed: [0, 9999, true],
   },
   mirror: { offset: [-MAX_MIRROR_OFFSET, MAX_MIRROR_OFFSET, false] },
+  subdivide: { levels: [1, MAX_SUBDIVIDE_LEVELS, true] },
   array: {
     count: [MIN_ARRAY_COUNT, MAX_ARRAY_COUNT, true],
     spacing: [0, MAX_ARRAY_SPACING, false],
@@ -310,6 +322,8 @@ export function describeModifier(modifier: Modifier): string {
       return "Pushes points around in a smooth, bumpy pattern. Another seed gives another pattern.";
     case "mirror":
       return `Adds a flipped copy across a plane on ${axis}. Offset 0 puts the plane through the middle of the object; 0.5 puts it at the side of the shape.`;
+    case "subdivide":
+      return `Rounds the shape off: every face is cut into smaller ones and smoothed, ${modifier.levels} time${modifier.levels === 1 ? "" : "s"}. Extra loops close to an edge keep that edge tight.`;
     case "array":
       return `Repeats the shape ${modifier.count} times along ${axis}.`;
   }
@@ -336,6 +350,8 @@ export function summariseModifier(modifier: Modifier): string {
       return `Noise strength ${plain(modifier.strength)}, scale ${plain(modifier.scale)}, seed ${modifier.seed}`;
     case "mirror":
       return `Mirror across ${axis}, offset ${plain(modifier.offset)}`;
+    case "subdivide":
+      return `Smooth, ${modifier.levels} level${modifier.levels === 1 ? "" : "s"}`;
     case "array":
       return `Array ×${modifier.count} along ${axis}, spacing ${plain(modifier.spacing)}`;
   }
@@ -373,7 +389,12 @@ export function appendNoteLine(
  * A shape as the modifiers see it: its points (x, y, z, x, y, z, ...) and its triangles (three point
  * numbers each). Modifiers that only move points keep the triangles; mirror and array add more of both.
  */
-export type ShapeMesh = { positions: Float32Array; indices: Uint32Array };
+export type ShapeMesh = {
+  positions: Float32Array;
+  indices: Uint32Array;
+  /** Edges marked as sharp for smoothing (see creases.ts). Most meshes have none. */
+  creases?: readonly Crease[];
+};
 
 /** The most points a shape may have after its modifiers; a modifier that would go past this is skipped. */
 export const MAX_DEFORMED_POINTS = 400_000;
@@ -418,6 +439,7 @@ export function deformMesh(
     ? {
         positions: new Float32Array(mesh.positions),
         indices: new Uint32Array(mesh.indices),
+        creases: mesh.creases,
       }
     : current;
 }
@@ -435,6 +457,8 @@ export function deformPoints(
 
 function applyModifier(mesh: ShapeMesh, modifier: Modifier): ShapeMesh {
   switch (modifier.type) {
+    case "subdivide":
+      return subdivideMesh(mesh, modifier.levels, MAX_DEFORMED_POINTS);
     case "mirror":
       return mirror(mesh, AXIS_INDEX[modifier.axis], modifier.offset);
     case "array":
@@ -448,6 +472,7 @@ function applyModifier(mesh: ShapeMesh, modifier: Modifier): ShapeMesh {
       return {
         positions: movePoints(mesh.positions, modifier),
         indices: mesh.indices,
+        creases: mesh.creases,
       };
   }
 }
@@ -477,7 +502,12 @@ function mirror(mesh: ShapeMesh, along: number, offset: number): ShapeMesh {
     indices[at + 1] = mesh.indices[t + 2]! + count;
     indices[at + 2] = mesh.indices[t + 1]! + count;
   }
-  return { positions, indices };
+  // The reflected copy has the same creases, on its own points
+  const creases = mesh.creases && [
+    ...mesh.creases,
+    ...mesh.creases.map((c) => ({ ...c, a: c.a + count, b: c.b + count })),
+  ];
+  return { positions, indices, creases };
 }
 
 /** Repeats the shape `copies` times along one axis, `spacing` shape-lengths apart (1 = touching). */
@@ -507,7 +537,16 @@ function array(
       indices[k * mesh.indices.length + t] = mesh.indices[t]! + k * count;
     }
   }
-  return { positions, indices };
+  const creases =
+    mesh.creases &&
+    Array.from({ length: copies }, (_, k) =>
+      mesh.creases!.map((c) => ({
+        ...c,
+        a: c.a + k * count,
+        b: c.b + k * count,
+      })),
+    ).flat();
+  return { positions, indices, creases };
 }
 
 /** The modifiers that only move the points. */

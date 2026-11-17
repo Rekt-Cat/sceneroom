@@ -6,11 +6,15 @@ import { useSceneStore } from "@/store/sceneStore";
 import { SEARCH_INPUT_ID } from "./HierarchyPanel";
 import {
   deleteSelectedPoints,
+  CREASE_SHARP,
+  creaseSelectedEdges,
   extrudeSelectedFaces,
+  insetSelectedFaces,
 } from "@/meshEdit/editOperations";
 import { stopEditing, toggleEditMode } from "@/meshEdit/startEditing";
 import { saveProjectToFile } from "@/sceneFile/sceneFileActions";
-import { useEditStore } from "@/store/editStore";
+import { useEditStore, type SelectMode } from "@/store/editStore";
+import { useViewStore } from "@/store/viewStore";
 import { pasteClipboard } from "./clipboardActions";
 import { selectAllPoints } from "./MeshEditor";
 
@@ -30,6 +34,17 @@ function isTypingTarget(target: EventTarget | null): boolean {
  * 1 to 5 add a shape, "/" focuses the search box, L locks or unlocks the selection,
  * and holding Shift flips snapping while it is held.
  */
+/** The selection mode a number key chooses in edit mode: 1 points, 2 edges, 3 faces. */
+function selectModeForKey(key: string): SelectMode | null {
+  return key === "1"
+    ? "point"
+    : key === "2"
+      ? "edge"
+      : key === "3"
+        ? "face"
+        : null;
+}
+
 export function useEditorShortcuts(): void {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -38,6 +53,12 @@ export function useEditorShortcuts(): void {
         return;
       }
       if (isTypingTarget(event.target)) return;
+
+      // Holding the right mouse button in the 3D view: W A S D Q E fly the camera (see FlyController), so they
+      // must not do their usual jobs
+      if (useViewStore.getState().flying && /^Key[WASDQE]$/.test(event.code)) {
+        return;
+      }
 
       const store = useSceneStore.getState();
 
@@ -119,7 +140,10 @@ export function useEditorShortcuts(): void {
         const plain = !event.ctrlKey && !event.metaKey && !event.altKey;
         if (event.key === "Escape") {
           event.preventDefault();
-          stopEditing();
+          // Escape first cancels the Loop cut tool; with it off, it leaves edit mode
+          const edit = useEditStore.getState();
+          if (edit.loopCutMode) edit.setLoopCutMode(false);
+          else stopEditing();
         } else if (plain && event.key.toLowerCase() === "a") {
           event.preventDefault();
           selectAllPoints();
@@ -135,6 +159,42 @@ export function useEditorShortcuts(): void {
           store.setTransformMode(modeForKey(event.key)!);
         } else if (plain && event.key.toLowerCase() === "x") {
           store.toggleSnap();
+        } else if (
+          event.altKey &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          event.code === "KeyZ"
+        ) {
+          // Alt + Z: X-ray, see (and pick) the points on the far side too
+          event.preventDefault();
+          const edit = useEditStore.getState();
+          edit.setXray(!edit.xray);
+        } else if (
+          event.shiftKey &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          !event.altKey &&
+          event.key.toLowerCase() === "c"
+        ) {
+          // Shift + C: crease the selected edges (sharp)
+          event.preventDefault();
+          void creaseSelectedEdges(CREASE_SHARP);
+        } else if (plain && event.key.toLowerCase() === "i") {
+          // I: inset the selected faces
+          event.preventDefault();
+          void insetSelectedFaces();
+        } else if (
+          plain &&
+          !event.shiftKey &&
+          event.key.toLowerCase() === "c"
+        ) {
+          // C: the Loop cut tool on or off
+          event.preventDefault();
+          const edit = useEditStore.getState();
+          edit.setLoopCutMode(!edit.loopCutMode);
+        } else if (plain && selectModeForKey(event.key)) {
+          // 1, 2, 3: pick points, edges or faces
+          useEditStore.getState().setSelectMode(selectModeForKey(event.key)!);
         }
         return;
       }
@@ -162,6 +222,12 @@ export function useEditorShortcuts(): void {
         : undefined;
       if (kind) {
         store.addPrimitive(kind);
+        return;
+      }
+      // F: zoom to the selected objects (as in Blender, Maya and Unity)
+      if (event.key.toLowerCase() === "f" && store.selectedIds.length > 0) {
+        event.preventDefault();
+        useViewStore.getState().requestFocus(store.selectedIds);
         return;
       }
       // "/" jumps to the search box

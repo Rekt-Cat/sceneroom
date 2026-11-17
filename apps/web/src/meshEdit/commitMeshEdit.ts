@@ -12,6 +12,8 @@ export async function commitMesh(
   nodeId: string,
   mesh: ShapeMesh,
   label: string,
+  /** True: no new undo step, the mesh takes the place of the one the last step made. */
+  amend = false,
 ): Promise<boolean> {
   const { scene } = useSceneStore.getState();
   const node = scene.nodes[nodeId];
@@ -28,7 +30,7 @@ export async function commitMesh(
       stored.bytes,
       old.note,
     );
-    useSceneStore.getState().replaceNodeMesh(nodeId, info, label);
+    useSceneStore.getState().replaceNodeMesh(nodeId, info, label, amend);
     return true;
   } catch (error) {
     console.error("Storing the edited mesh failed:", error);
@@ -53,7 +55,12 @@ export async function commitMeshPositions(
   if (!node?.assetId) return false;
   try {
     const before = await loadMeshData(node.assetId);
-    return commitMesh(nodeId, { positions, indices: before.indices }, label);
+    // The points moved, the triangles and the creases did not
+    return commitMesh(
+      nodeId,
+      { positions, indices: before.indices, creases: before.creases },
+      label,
+    );
   } catch (error) {
     console.error("Reading the mesh failed:", error);
     useImportStore.getState().setMessage({

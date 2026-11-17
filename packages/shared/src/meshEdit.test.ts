@@ -6,6 +6,7 @@ import {
   meshEdges,
   nearestPoint,
   pointsInRect,
+  pointsNear,
   selectionAfterBox,
   selectionAfterClick,
   selectionCentroid,
@@ -496,15 +497,22 @@ describe("extruding faces", () => {
     expect(untouched.length).toBe(2);
   });
 
-  it("a different distance changes how far the copy goes, and a distance of 0 still makes valid geometry", () => {
+  it("a different distance changes how far the copy goes", () => {
     const mesh = quad();
     const groups = weldGroups(mesh.positions);
     const far = extrudeFaces(mesh, [0, 1, 2, 3], 3, groups);
-    const flat = extrudeFaces(mesh, [0, 1, 2, 3], 0, groups);
     expect(far.ok && far.mesh.positions[far.selected[0]! * 3 + 2]).toBeCloseTo(
       3,
     );
-    expect(flat.ok && flat.mesh.indices.length / 3).toBe(10);
+  });
+
+  it("a distance of 0 changes nothing, so it is refused; with a smaller scale it is an inset and valid", () => {
+    const mesh = quad();
+    const groups = weldGroups(mesh.positions);
+    const flat = extrudeFaces(mesh, [0, 1, 2, 3], 0, groups);
+    expect(flat.ok).toBe(false);
+    const inset = extrudeFaces(mesh, [0, 1, 2, 3], 0, groups, { scale: 0.5 });
+    expect(inset.ok && inset.mesh.indices.length / 3).toBe(10);
   });
 
   it("every triangle uses points that exist", () => {
@@ -686,5 +694,50 @@ describe("selecting a whole face", () => {
     // the cap sits half a unit above the old +z side
     for (const point of result.selected)
       expect(result.mesh.positions[point * 3 + 2]).toBeCloseTo(1);
+  });
+});
+
+describe("pointsNear", () => {
+  const projected = Float32Array.from([0, 0, 10, 0, 3, 4, NaN, NaN, 100, 100]);
+  it("lists the points within the distance, nearest first, ties by number", () => {
+    expect(pointsNear(projected, 0, 0, 20)).toEqual([0, 2, 1]);
+    expect(pointsNear(projected, 5, 0, 5)).toEqual([2, 0, 1]);
+  });
+  it("leaves out points that cannot be shown, and far ones", () => {
+    expect(pointsNear(projected, 100, 100, 5)).toEqual([4]);
+    expect(pointsNear(projected, 0, 0, 1)).toEqual([0]);
+    expect(pointsNear(new Float32Array(0), 0, 0, 5)).toEqual([]);
+  });
+});
+
+describe("deleting points keeps the creases that are left", () => {
+  it("renumbers a crease with its points and drops one on a deleted point", () => {
+    // a strip of two squares: points 0..5, triangles (0,1,4)(0,4,3)(1,2,5)(1,5,4)
+    const mesh = {
+      positions: Float32Array.from([
+        0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 1, 0, 1, 1, 0, 2, 1, 0,
+      ]),
+      indices: Uint32Array.from([0, 1, 4, 0, 4, 3, 1, 2, 5, 1, 5, 4]),
+      creases: [
+        { a: 1, b: 2, value: 1 },
+        { a: 0, b: 1, value: 0.5 },
+      ],
+    };
+    // delete point 0 (and the left square): the points 1..5 become 0..3 (point 3 is gone too: only 1, 2, 4, 5 are used)
+    const result = deletePoints(mesh, [0]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.mesh.creases).toHaveLength(1);
+    const c = result.mesh.creases![0]!;
+    expect(c.value).toBe(1);
+    // the crease still joins the two points that were 1 and 2
+    const at = (p: number) => [
+      result.mesh.positions[p * 3],
+      result.mesh.positions[p * 3 + 1],
+    ];
+    expect([at(c.a), at(c.b)]).toEqual([
+      [1, 0],
+      [2, 0],
+    ]);
   });
 });

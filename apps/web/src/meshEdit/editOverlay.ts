@@ -8,7 +8,8 @@ import {
   Points,
   PointsMaterial,
 } from "three";
-import { meshEdges } from "@sceneroom/shared";
+import { meshEdges, type Crease } from "@sceneroom/shared";
+import type { SelectMode } from "@/store/editStore";
 
 /** The size of a point dot, in screen pixels. */
 export const POINT_SIZE_PX = 8;
@@ -23,8 +24,16 @@ export const WIRE_OPACITY = 0.35;
 /** What is drawn over a mesh in edit mode: its wire lines and a dot on every point. */
 export type EditOverlay = {
   group: Group;
-  /** Colours the selected points. */
+  /** Colours the selected points and draws the selected edges (both ends selected). */
   setSelected: (selected: readonly number[]) => void;
+  /** In point mode every point has a dot; in edge and face mode only the selected ones do. */
+  setMode: (mode: SelectMode) => void;
+  /** X-ray on: lines and dots show through the mesh. Off: parts behind a face are hidden by it. */
+  setXray: (xray: boolean) => void;
+  /** Draws the creased edges (sharp ones in strong pink, softer ones paler); pass the mesh's creases. */
+  setCreases: (creases: readonly Crease[] | undefined) => void;
+  /** Shows (or, with null, hides) the lines a loop cut would make: pairs of spots (x, y, z, x, y, z, ...) in the mesh's space. */
+  setCutPreview: (lines: Float32Array | null) => void;
   /** Frees what the overlay made (the points it shares with the mesh are the mesh's own). */
   dispose: () => void;
 };
@@ -84,7 +93,85 @@ export function buildEditOverlay(geometry: BufferGeometry): EditOverlay {
   lines.renderOrder = 10;
   lines.frustumCulled = false;
 
-  group.add(lines, points);
+  // The selected edges, drawn over the others in the selection colour, and the selected points as their
+  // own dots (so they show in every mode)
+  const edgePairs = meshEdges(
+    index ? Uint32Array.from(index.array) : sequential(position.count),
+  );
+  const selectedLineGeometry = new BufferGeometry();
+  selectedLineGeometry.setAttribute("position", position);
+  selectedLineGeometry.setIndex(new BufferAttribute(new Uint32Array(0), 1));
+  const selectedLineMaterial = new LineBasicMaterial({
+    color: 0xffb020,
+    depthTest: false,
+    transparent: true,
+  });
+  const selectedLines = new LineSegments(
+    selectedLineGeometry,
+    selectedLineMaterial,
+  );
+  selectedLines.raycast = hitNothing;
+  selectedLines.renderOrder = 12;
+  selectedLines.frustumCulled = false;
+
+  const selectedDotGeometry = new BufferGeometry();
+  selectedDotGeometry.setAttribute("position", position);
+  selectedDotGeometry.setIndex(new BufferAttribute(new Uint32Array(0), 1));
+  const selectedDotMaterial = new PointsMaterial({
+    size: POINT_SIZE_PX,
+    sizeAttenuation: false,
+    color: 0xffb020,
+    depthTest: false,
+    transparent: true,
+  });
+  const selectedDots = new Points(selectedDotGeometry, selectedDotMaterial);
+  selectedDots.raycast = hitNothing;
+  selectedDots.renderOrder = 13;
+  selectedDots.frustumCulled = false;
+
+  // The order matters to the tests: all edges, all points, then the selected edges and points
+  // The lines a loop cut would draw (green), set while the Loop cut tool hovers over an edge
+  const cutGeometry = new BufferGeometry();
+  cutGeometry.setAttribute("position", new Float32BufferAttribute([], 3));
+  const cutMaterial = new LineBasicMaterial({
+    color: 0x58e07a,
+    depthTest: false,
+    transparent: true,
+  });
+  const cutLines = new LineSegments(cutGeometry, cutMaterial);
+  cutLines.raycast = hitNothing;
+  cutLines.renderOrder = 14;
+  cutLines.frustumCulled = false;
+  cutLines.visible = false;
+
+  // The creased edges: sharp ones strong pink, semi-sharp ones paler, each drawn over the plain lines
+  const makeCreaseLines = (color: number, order: number) => {
+    const geometry = new BufferGeometry();
+    geometry.setAttribute("position", position);
+    geometry.setIndex(new BufferAttribute(new Uint32Array(0), 1));
+    const material = new LineBasicMaterial({
+      color,
+      depthTest: false,
+      transparent: true,
+    });
+    const object = new LineSegments(geometry, material);
+    object.raycast = hitNothing;
+    object.renderOrder = order;
+    object.frustumCulled = false;
+    return { geometry, material, object };
+  };
+  const softCrease = makeCreaseLines(0xf3a6cf, 12);
+  const sharpCrease = makeCreaseLines(0xff3d9a, 12);
+
+  group.add(
+    lines,
+    points,
+    selectedLines,
+    selectedDots,
+    cutLines,
+    softCrease.object,
+    sharpCrease.object,
+  );
 
   const setSelected = (selected: readonly number[]) => {
     const color = pointGeometry.getAttribute("color") as BufferAttribute;
@@ -95,18 +182,98 @@ export function buildEditOverlay(geometry: BufferGeometry): EditOverlay {
         array.set(SELECTED_COLOR, point * 3);
     }
     color.needsUpdate = true;
+
+    const chosen = new Set(selected);
+    const lineIndex: number[] = [];
+    for (let i = 0; i + 1 < edgePairs.length; i += 2) {
+      const a = edgePairs[i]!;
+      const b = edgePairs[i + 1]!;
+      if (chosen.has(a) && chosen.has(b)) lineIndex.push(a, b);
+    }
+    selectedLineGeometry.setIndex(
+      new BufferAttribute(Uint32Array.from(lineIndex), 1),
+    );
+    selectedDotGeometry.setIndex(
+      new BufferAttribute(
+        Uint32Array.from(
+          [...chosen].filter((point) => point >= 0 && point < position.count),
+        ),
+        1,
+      ),
+    );
   };
   setSelected([]);
+
+  const setMode = (mode: SelectMode) => {
+    points.visible = mode === "point";
+  };
+  setMode("point");
+
+  const setCreases = (creases: readonly Crease[] | undefined) => {
+    const soft: number[] = [];
+    const sharp: number[] = [];
+    for (const crease of creases ?? []) {
+      if (crease.a >= position.count || crease.b >= position.count) continue;
+      (crease.value >= 0.99 ? sharp : soft).push(crease.a, crease.b);
+    }
+    softCrease.geometry.setIndex(
+      new BufferAttribute(Uint32Array.from(soft), 1),
+    );
+    sharpCrease.geometry.setIndex(
+      new BufferAttribute(Uint32Array.from(sharp), 1),
+    );
+  };
+
+  const setCutPreview = (positions: Float32Array | null) => {
+    if (!positions || positions.length === 0) {
+      cutLines.visible = false;
+      return;
+    }
+    cutGeometry.setAttribute(
+      "position",
+      new Float32BufferAttribute(positions, 3),
+    );
+    cutGeometry.computeBoundingSphere();
+    cutLines.visible = true;
+  };
+
+  const setXray = (xray: boolean) => {
+    // Without x-ray the overlay is hidden by the mesh in front of it (the mesh is pushed back a little by the
+    // editor so lines lying on its surface are not hidden by it)
+    for (const material of [
+      lineMaterial,
+      pointMaterial,
+      selectedLineMaterial,
+      selectedDotMaterial,
+    ]) {
+      material.depthTest = !xray;
+    }
+  };
+  setXray(false);
 
   return {
     group,
     setSelected,
+    setMode,
+    setXray,
+    setCutPreview,
+    setCreases,
     dispose: () => {
       group.removeFromParent();
       pointGeometry.dispose();
       lineGeometry.dispose();
+      selectedLineGeometry.dispose();
+      selectedDotGeometry.dispose();
+      cutGeometry.dispose();
+      cutMaterial.dispose();
+      softCrease.geometry.dispose();
+      softCrease.material.dispose();
+      sharpCrease.geometry.dispose();
+      sharpCrease.material.dispose();
       pointMaterial.dispose();
       lineMaterial.dispose();
+      selectedLineMaterial.dispose();
+      selectedDotMaterial.dispose();
     },
   };
 }

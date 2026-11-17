@@ -15,7 +15,7 @@ export default function ImportBanner() {
   return (
     <div
       role={isError ? "alert" : "status"}
-      className={`absolute top-3 left-1/2 flex max-w-[min(34rem,calc(100%-2rem))] -translate-x-1/2 items-start gap-3 rounded-lg border px-3.5 py-2.5 text-sm shadow-lg shadow-black/40 backdrop-blur ${
+      className={`flex max-w-[min(34rem,100%)] items-start gap-3 rounded-lg border px-3.5 py-2.5 text-sm shadow-lg shadow-black/40 backdrop-blur ${
         isError
           ? "border-[#5a2b31] bg-[#2a1215]/95 text-ed-danger"
           : "border-ed-line-strong bg-ed-panel/95 text-ed-text"

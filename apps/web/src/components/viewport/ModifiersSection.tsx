@@ -5,6 +5,7 @@ import {
   MAX_ARRAY_COUNT,
   MAX_ARRAY_SPACING,
   MAX_MIRROR_OFFSET,
+  MAX_SUBDIVIDE_LEVELS,
   MAX_MODIFIERS,
   MAX_SEGMENTS,
   MAX_STRETCH,
@@ -56,6 +57,7 @@ type SliderSpec = {
     | "scale"
     | "seed"
     | "count"
+    | "levels"
     | "spacing";
   label: string;
   min: number;
@@ -112,6 +114,16 @@ const SLIDERS: Record<ModifierType, readonly SliderSpec[]> = {
       max: MAX_MIRROR_OFFSET,
       step: 0.01,
       decimals: 2,
+    },
+  ],
+  subdivide: [
+    {
+      key: "levels",
+      label: "Smoothness",
+      min: 1,
+      max: MAX_SUBDIVIDE_LEVELS,
+      step: 1,
+      decimals: 0,
     },
   ],
   array: [
@@ -269,7 +281,7 @@ function MeshInfo({ node }: { node: SceneNode }) {
     <div className="space-y-1.5">
       <p className="text-[11px] leading-relaxed text-ed-text-3">
         {info
-          ? `Editable mesh: ${info.triangles.toLocaleString("en-US")} triangles. Modifiers below are applied on top of it without changing it.`
+          ? `Editable mesh: ${info.triangles.toLocaleString("en-US")} triangles. Modifiers below are applied on top of it without changing it. The Segments slider is gone because the cuts are now real points and lines: set Segments on a plain shape before pressing Tab, or undo to get the slider back.`
           : "The record of this mesh is missing, so it cannot be shown."}
       </p>
       {info?.note && (

@@ -217,7 +217,16 @@ type SceneState = {
    * Makes an editable mesh object point to a NEW stored version of its mesh (after its points were
    * edited), as one undo step with the given label. Ignored for locked objects and objects that are not meshes.
    */
-  replaceNodeMesh: (nodeId: string, info: AssetInfo, label: string) => void;
+  /**
+   * Makes the object use another version of its mesh, as one undo step. With `amend` there is no new undo step:
+   * the change takes the place of the one just made (used to change the settings of an extrusion).
+   */
+  replaceNodeMesh: (
+    nodeId: string,
+    info: AssetInfo,
+    label: string,
+    amend?: boolean,
+  ) => void;
   /** Adds a character (person, child, stocky or tall) at the middle of the scene, standing at rest, and selects it. One undo step. Returns its id. */
   addCharacter: (preset: CharacterPresetName) => string;
   /** Changes some settings of a character (including its whole pose) as one undo step. Ignored for locked objects and objects that are not characters. */
@@ -550,7 +559,7 @@ export const useSceneStore = create<SceneState>()((set) => ({
         history: record(state, label),
       };
     }),
-  replaceNodeMesh: (nodeId, info, label) =>
+  replaceNodeMesh: (nodeId, info, label, amend = false) =>
     set((state) => {
       const node = state.scene.nodes[nodeId];
       if (
@@ -562,7 +571,7 @@ export const useSceneStore = create<SceneState>()((set) => ({
       }
       return {
         scene: replaceMesh(state.scene, nodeId, info),
-        history: record(state, label),
+        history: amend ? state.history : record(state, label),
       };
     }),
   addPlant: (preset) => {

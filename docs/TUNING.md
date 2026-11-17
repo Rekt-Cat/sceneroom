@@ -320,25 +320,29 @@ Details of the file: `docs/SCENE-FILE-FORMAT.md`.
 
 ## Edit mode (points)
 
-| What                 | Setting                                                        | Our value          | What it does                                                                                                                                 |
-| -------------------- | -------------------------------------------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Enter and leave      | `useEditorShortcuts.ts`                                        | Tab; Escape leaves | Tab enters edit mode for the one selected shape or mesh (a shape is turned into a mesh first); Tab or Escape leaves.                         |
-| Select all points    | `useEditorShortcuts.ts`                                        | A                  | Selects every point of the mesh being edited.                                                                                                |
-| Add to the selection | `selectionAfterClick` in `packages/shared/src/meshEdit.ts`     | Shift + click      | Adds a point, or takes it out if it was already selected.                                                                                    |
-| Box select           | `BoxSelectController.tsx`                                      | Ctrl or Cmd + drag | Selects the points inside the box (Shift adds to the selection).                                                                             |
-| Click distance       | `PICK_DISTANCE_PX` in `MeshEditor.tsx`                         | `12` px            | How close the pointer must be to a point for a click to pick it.                                                                             |
-| Click or drag        | `CLICK_MOVE_LIMIT_PX` in `MeshEditor.tsx`                      | `4` px             | A press that moves less than this is a click; more is a camera drag.                                                                         |
-| Dot size             | `POINT_SIZE_PX` in `apps/web/src/meshEdit/editOverlay.ts`      | `8` px             | Size of the dot on every point.                                                                                                              |
-| Dot colours          | `POINT_COLOR`, `SELECTED_COLOR` in `editOverlay.ts`            | light blue, amber  | A point, and a selected point (the same amber as a selected object).                                                                         |
-| Wire lines           | `WIRE_OPACITY` in `editOverlay.ts`                             | `0.35`             | How strongly the edges are drawn over the mesh (0 not at all, 1 solid).                                                                      |
-| Move, turn, scale    | `W`, `E`, `R` (as for objects)                                 | W / E / R          | Switch the handle on the selected points between moving, turning and scaling them (around the middle of the selection).                      |
-| Select a face        | `selectFaceAt` in `MeshEditor.tsx`                             | Alt + click        | Selects the whole flat face under the pointer (Shift adds). Ready for Extrude.                                                               |
-| Flat face angle      | `FLAT_FACE_ANGLE_DEGREES` in `packages/shared/src/meshEdit.ts` | `1` degree         | Triangles whose directions differ by less than this count as one flat face for Alt + click.                                                  |
-| Extrude              | Shift + E, or the Extrude button                               | -                  | Copies the selected faces, pushes them out and joins them with walls. The new face is selected, so you can drag it further or extrude again. |
-| Extrude distance     | `EXTRUDE_FRACTION` in `meshEdit.ts`                            | `0.25`             | How far a new extrusion pushes out, as a fraction of the biggest side of the selected faces.                                                 |
-| Delete               | Delete or Backspace, or the Delete button                      | -                  | Deletes the selected points and every face that uses them (in edit mode these keys never delete the object).                                 |
-| Same-spot tolerance  | `weldGroups` `tolerance` in `meshEdit.ts`                      | `0.0001` units     | Points closer than this count as one spot: they are selected and moved together, so a surface never tears.                                   |
-| Snapping             | `SNAP.translate` in `snapSettings.ts`                          | `0.5` units        | When snapping is on (X, or hold Shift), moving points snaps to steps of this size, like moving objects.                                      |
+| What                                 | Setting                                                                     | Our value                  | What it does                                                                                                                                 |
+| ------------------------------------ | --------------------------------------------------------------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Enter and leave                      | `useEditorShortcuts.ts`                                                     | Tab; Escape leaves         | Tab enters edit mode for the one selected shape or mesh (a shape is turned into a mesh first); Tab or Escape leaves.                         |
+| Selection mode                       | `selectModeForKey` in `useEditorShortcuts.ts`, `MODES` in `EditModeBar.tsx` | 1 points, 2 edges, 3 faces | What a click picks. The mode is kept between edit sessions.                                                                                  |
+| Loop of an edge                      | `selectEdgeAt` in `MeshEditor.tsx`                                          | Alt + click (edge mode)    | Selects the whole loop through the edge. The Loop and Ring buttons do it for the selected edges.                                             |
+| Squares from triangles (by the list) | `LISTED_QUAD_MAX_ANGLE_DEGREES` in `packages/shared/src/topology.ts`        | `80` degrees               | Two triangles in a row that share an edge are one square unless they fold more than this. High on purpose, so squares survive moving points. |
+| Squares from triangles (by shape)    | `QUAD_MAX_ANGLE_DEGREES` in `packages/shared/src/topology.ts`               | `30` degrees               | For triangles that are not in a row: they join into one quad if flat within this and the shared edge is the longer diagonal.                 |
+| Select all points                    | `useEditorShortcuts.ts`                                                     | A                          | Selects every point of the mesh being edited.                                                                                                |
+| Add to the selection                 | `selectionAfterClick` in `packages/shared/src/meshEdit.ts`                  | Shift + click              | Adds a point, or takes it out if it was already selected.                                                                                    |
+| Box select                           | `BoxSelectController.tsx`                                                   | Ctrl or Cmd + drag         | Selects the points inside the box (Shift adds to the selection).                                                                             |
+| Click distance                       | `PICK_DISTANCE_PX` in `MeshEditor.tsx`                                      | `12` px                    | How close the pointer must be to a point (or, in edge mode, to an edge) for a click to pick it.                                              |
+| Click or drag                        | `CLICK_MOVE_LIMIT_PX` in `MeshEditor.tsx`                                   | `4` px                     | A press that moves less than this is a click; more is a camera drag.                                                                         |
+| Dot size                             | `POINT_SIZE_PX` in `apps/web/src/meshEdit/editOverlay.ts`                   | `8` px                     | Size of the dot on every point.                                                                                                              |
+| Dot colours                          | `POINT_COLOR`, `SELECTED_COLOR` in `editOverlay.ts`                         | light blue, amber          | A point, and a selected point (the same amber as a selected object).                                                                         |
+| Wire lines                           | `WIRE_OPACITY` in `editOverlay.ts`                                          | `0.35`                     | How strongly the edges are drawn over the mesh (0 not at all, 1 solid).                                                                      |
+| Move, turn, scale                    | `W`, `E`, `R` (as for objects)                                              | W / E / R                  | Switch the handle on the selected points between moving, turning and scaling them (around the middle of the selection).                      |
+| Select a face                        | `selectFaceAt` in `MeshEditor.tsx`                                          | Alt + click                | Selects the whole flat face under the pointer (Shift adds). Ready for Extrude.                                                               |
+| Flat face angle                      | `FLAT_FACE_ANGLE_DEGREES` in `packages/shared/src/meshEdit.ts`              | `1` degree                 | Triangles whose directions differ by less than this count as one flat face for Alt + click.                                                  |
+| Extrude                              | Shift + E, or the Extrude button                                            | -                          | Copies the selected faces, pushes them out and joins them with walls. The new face is selected, so you can drag it further or extrude again. |
+| Extrude distance                     | `EXTRUDE_FRACTION` in `meshEdit.ts`                                         | `0.25`                     | How far a new extrusion pushes out, as a fraction of the biggest side of the selected faces.                                                 |
+| Delete                               | Delete or Backspace, or the Delete button                                   | -                          | Deletes the selected points and every face that uses them (in edit mode these keys never delete the object).                                 |
+| Same-spot tolerance                  | `weldGroups` `tolerance` in `meshEdit.ts`                                   | `0.0001` units             | Points closer than this count as one spot: they are selected and moved together, so a surface never tears.                                   |
+| Snapping                             | `SNAP.translate` in `snapSettings.ts`                                       | `0.5` units                | When snapping is on (X, or hold Shift), moving points snaps to steps of this size, like moving objects.                                      |
 
 ## Plants (trees, pines, bushes)
 
@@ -447,6 +451,77 @@ Files: `apps/web/src/components/viewport/InspectorFields.tsx` (rows, steps, colo
 | The "SceneRoom" name and logo | `apps/web/src/components/viewport/TopBar.tsx`         | The name comes from `APP_NAME` in `packages/shared/src/index.ts`. The project name and scene tabs are `SceneTabs.tsx`. |
 | The loading message           | `apps/web/src/components/viewport/ViewportLoader.tsx` | The text inside `loading: () => ...`.                                                                                  |
 | Tab title and description     | `apps/web/src/app/layout.tsx`                         | The `metadata` object.                                                                                                 |
+
+## Flying the camera (hold right-click, W A S D Q E)
+
+| What                      | Where                                                                          | Our value   | What it does                                                                           |
+| ------------------------- | ------------------------------------------------------------------------------ | ----------- | -------------------------------------------------------------------------------------- |
+| Slowest and fastest speed | `FLY_MIN_SPEED`, `FLY_MAX_SPEED` in `packages/shared/src/fly.ts`               | 2 and 60    | Units per second.                                                                      |
+| Speed per distance        | `FLY_SPEED_PER_DISTANCE` in `fly.ts`                                           | 0.9         | Speed is this times the distance to what is looked at (slow close up, quick far away). |
+| Fast key factor           | `FLY_FAST_FACTOR` in `fly.ts`                                                  | 3           | How much faster with Ctrl or Cmd held.                                                 |
+| Turn-on-the-spot distance | `LOOK_AROUND_DISTANCE` in `apps/web/src/components/viewport/FlyController.tsx` | 0.05        | While flying, the point the camera turns round is this far in front of it.             |
+| The keys                  | `FLY_KEY_CODES` in `fly.ts`                                                    | W A S D Q E | Forward, left, back, right, down, up. Add or change a `KeyX: "direction"` line.        |
+
+## X-ray (edit mode)
+
+| What                    | Where                                                                        | Our value | What it does                                                                                     |
+| ----------------------- | ---------------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------ |
+| X-ray                   | `xray` in `editStore.ts`; Alt + Z                                            | off       | Off: lines, points and picking only on faces the camera can see. On: see through (the old look). |
+| Hidden-point test limit | `MAX_POINTS_TO_TEST_FOR_VISIBILITY` in `apps/web/src/meshEdit/visibility.ts` | 4000      | A box with more points than this takes everything inside it (the test would be too slow).        |
+| Nearest points tried    | `MAX_CANDIDATES` in `MeshEditor.tsx`                                         | 40        | How many of the points (or edges) nearest the pointer are tested for being hidden.               |
+
+## Extrude settings (edit mode)
+
+| What              | Where                                                                 | Our value   | What it does                                                               |
+| ----------------- | --------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------- |
+| Starting distance | `EXTRUDE_FRACTION` in `packages/shared/src/meshEdit.ts`               | 0.25        | A new extrusion pushes out this fraction of the size of what is extruded.  |
+| Divisions range   | `MAX_EXTRUDE_DIVISIONS` in `packages/shared/src/meshEdit.ts`          | 1 to 12     | Most bands an extrusion can be cut into.                                   |
+| Scale range       | `MIN_EXTRUDE_SCALE`, `MAX_EXTRUDE_SCALE` in `meshEdit.ts`             | 5% to 400%  | How small or big the new face can be. Not 0: the walls would have no size. |
+| Twist range       | `MAX_EXTRUDE_TWIST_DEGREES` in `meshEdit.ts`                          | -360 to 360 | How far the new face can be turned.                                        |
+| Distance range    | `MIN_EXTRUDE_DISTANCE`, `MAX_EXTRUDE_DISTANCE` in `editOperations.ts` | 0.01 to 50  | Closest and furthest an extrusion can go.                                  |
+
+## Edge creases
+
+| What                       | Where                                                                      | Our value                   | What it does                                                                |
+| -------------------------- | -------------------------------------------------------------------------- | --------------------------- | --------------------------------------------------------------------------- |
+| Sharp and Soft values      | `CREASE_SHARP`, `CREASE_SOFT` in `apps/web/src/meshEdit/editOperations.ts` | 100% and 50%                | What the Sharp and Soft buttons set.                                        |
+| Levels a full crease lasts | `FULL_SHARPNESS_LEVELS` in `packages/shared/src/creases.ts`                | 3 (the most Smooth levels)  | A value of 1 stays sharp through all levels; 0.5 for about one and a half.  |
+| Most creases               | `MAX_CREASES` in `creases.ts`                                              | 200 000                     | A mesh with more creases is refused when stored.                            |
+| Key                        | `useEditorShortcuts.ts`                                                    | Shift + C                   | Creases the selected edges (sharp).                                         |
+| Colours                    | `softCrease`, `sharpCrease` in `apps/web/src/meshEdit/editOverlay.ts`      | pink `0xf3a6cf`, `0xff3d9a` | The colour of creased edges in edit mode (pale for soft, strong for sharp). |
+
+## Smooth (subdivision modifier)
+
+| What        | Where                                                       | Our value | What it does                                                                        |
+| ----------- | ----------------------------------------------------------- | --------- | ----------------------------------------------------------------------------------- |
+| Most levels | `MAX_SUBDIVIDE_LEVELS` in `packages/shared/src/scene.ts`    | 3         | Each level makes about four times the faces (3 levels = about 64 times).            |
+| Point limit | `MAX_DEFORMED_POINTS` in `packages/shared/src/modifiers.ts` | 400 000   | A level that would pass this many points is skipped (shared with Mirror and Array). |
+
+## Inset (edit mode)
+
+| What          | Where                                                              | Our value | What it does                                                                          |
+| ------------- | ------------------------------------------------------------------ | --------- | ------------------------------------------------------------------------------------- |
+| Starting size | `INSET_START_OPTIONS` in `apps/web/src/meshEdit/editOperations.ts` | 75%       | How big the new face is when an inset starts (smaller = a wider border).              |
+| Key           | `useEditorShortcuts.ts`                                            | I         | Insets the selected faces.                                                            |
+| Depth range   | `MAX_EXTRUDE_DISTANCE` in `editOperations.ts`                      | -50 to 50 | How far the new face can be pushed out (positive) or in (negative); also for Extrude. |
+
+## Loop cut
+
+| What           | Where                                                   | Our value        | What it does                                                                                     |
+| -------------- | ------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------ |
+| Most cuts      | `MAX_LOOP_CUTS` in `packages/shared/src/loopCut.ts`     | 10               | Most new loops one cut can add.                                                                  |
+| Slide limit    | `SLIDE_LIMIT` in `loopCut.ts`                           | 0.9              | How far (as a fraction of the gap) the loops can slide; below 1 so a loop never sits on an edge. |
+| Tool key       | `useEditorShortcuts.ts`                                 | C                | Turns the Loop cut tool on and off (Esc cancels).                                                |
+| Preview colour | `cutMaterial` in `apps/web/src/meshEdit/editOverlay.ts` | green `0x58e07a` | The colour of the line that shows where a cut would go.                                          |
+| Click distance | `PICK_DISTANCE_PX` in `MeshEditor.tsx`                  | 12 px            | How close the pointer must be to an edge to pick it (same as edge mode).                         |
+
+## Zoom to an object (double-click in the scene list, F)
+
+| What                      | Where                                                                     | Our value | What it does                                                                                                |
+| ------------------------- | ------------------------------------------------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------- |
+| How long the glide takes  | `FOCUS_SECONDS` in `apps/web/src/components/viewport/FocusController.tsx` | 0.35 s    | The camera glides to the object this long (smooth at both ends). People with "reduce motion" on get a jump. |
+| Room round the object     | `padding` in `framingDistance`, `packages/shared/src/framing.ts`          | 1.3       | 1 = the object just touches the edge of the view; bigger = more space round it.                             |
+| Smallest size it zooms to | `minRadius` in `framingDistance`                                          | 0.25      | A tiny object (or a point) is framed as if it were this big, so the camera does not press against it.       |
 
 ## Projects and scenes
 
