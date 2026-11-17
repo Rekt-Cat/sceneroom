@@ -19,6 +19,9 @@ import ToolDock from "./ToolDock";
 import TopBar from "./TopBar";
 import ViewportLoader from "./ViewportLoader";
 import { useEditorShortcuts } from "./useEditorShortcuts";
+import { usePeekKeys } from "./usePeekKeys";
+import PeekOverlay from "./PeekOverlay";
+import BigViewSwitch from "./BigViewSwitch";
 
 /** True if a drag carries files from the computer (as opposed to text or an element on the page). */
 function carriesFiles(event: DragEvent | globalThis.DragEvent): boolean {
@@ -31,6 +34,8 @@ function carriesFiles(event: DragEvent | globalThis.DragEvent): boolean {
  */
 export default function EditorShell() {
   useEditorShortcuts();
+  // Hold Space: the four views
+  usePeekKeys();
 
   // The plants this person saved (in this browser)
   useEffect(() => usePlantLibraryStore.getState().hydrate(), []);
@@ -110,6 +115,8 @@ export default function EditorShell() {
             <ViewportLoader />
           </div>
           <ControlsLegend />
+          <BigViewSwitch />
+          <PeekOverlay />
           <ToolDock />
           {/* The panels over the top of the 3D view stack in one column, so a message never covers the edit panel */}
           <div className="pointer-events-none absolute top-3 left-1/2 z-10 flex w-max max-w-[calc(100%-2rem)] -translate-x-1/2 flex-col items-center gap-2 *:pointer-events-auto">

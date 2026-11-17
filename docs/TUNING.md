@@ -480,6 +480,18 @@ Files: `apps/web/src/components/viewport/InspectorFields.tsx` (rows, steps, colo
 | Twist range       | `MAX_EXTRUDE_TWIST_DEGREES` in `meshEdit.ts`                          | -360 to 360 | How far the new face can be turned.                                        |
 | Distance range    | `MIN_EXTRUDE_DISTANCE`, `MAX_EXTRUDE_DISTANCE` in `editOperations.ts` | 0.01 to 50  | Closest and furthest an extrusion can go.                                  |
 
+## Four views (hold Space)
+
+| What                        | Where                                                          | Our value                      | What it does                                                                                   |
+| --------------------------- | -------------------------------------------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------- |
+| Hold time                   | `PEEK_SHOW_DELAY_MS` in `packages/shared/src/views.ts`         | 150 ms                         | Space must be held this long for the four views to appear (shorter is a tap and does nothing). |
+| First four tiles            | `DEFAULT_PEEK_TILES` in `views.ts`                             | Top, Front, Right, Perspective | What the tiles show at the start (top left, top right, bottom left, bottom right).             |
+| Gap between tiles           | `gap` in `peekTileRects` in `views.ts`                         | 8 px                           | The space between and round the tiles.                                                         |
+| Room round the object       | `SIDE_VIEW_MARGIN` in `views.ts`                               | 1.25                           | 1 = the object touches the edge of a flat view; bigger = more space round it.                  |
+| Smallest framed size        | `SIDE_VIEW_MIN_HALF_SIZE` in `views.ts`                        | 0.25                           | A tiny object (or a point) is framed as if it were this big.                                   |
+| Backdrop colour             | `BACKDROP` in `apps/web/src/components/viewport/peekRender.ts` | `0x0e1114`                     | The colour between and behind the tiles.                                                       |
+| Which side looks from where | `SIDE_VIEWS` in `views.ts`                                     | see file                       | The direction each side looks from and which way is up on its screen.                          |
+
 ## Edge creases
 
 | What                       | Where                                                                      | Our value                   | What it does                                                                |

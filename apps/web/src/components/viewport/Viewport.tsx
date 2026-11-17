@@ -2,13 +2,17 @@
 
 import { useRef } from "react";
 import { Canvas } from "@react-three/fiber";
+import BigViewController from "./BigViewController";
 import FlyController from "./FlyController";
+import PeekRenderer from "./PeekRenderer";
 import FocusController from "./FocusController";
 import { Grid, OrbitControls, Stats } from "@react-three/drei";
 import { MOUSE, type DirectionalLight } from "three";
 import { sunPosition } from "@sceneroom/shared";
 import { useEditStore } from "@/store/editStore";
+import { isSideView } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
+import { useViewStore } from "@/store/viewStore";
 import AssetDropController from "./AssetDropController";
 import AssetPreview from "./AssetPreview";
 import BoxSelectController from "./BoxSelectController";
@@ -71,6 +75,8 @@ function BaseSun({
  */
 export default function Viewport() {
   const select = useSceneStore((state) => state.select);
+  const peekActive = useViewStore((state) => state.peekActive);
+  const bigView = useViewStore((state) => state.bigView);
   const environment = useSceneStore((state) => state.scene.environment);
   // The built-in sun stops casting its own shadow once the scene has a light of its own: two lights
   // casting shadows from different directions make a messy double shadow
@@ -131,6 +137,9 @@ export default function Viewport() {
       <OrbitControls
         makeDefault
         enableDamping={false}
+        // A pinned side view can zoom but not turn or pan: what you see stays centred on the object
+        enableRotate={!isSideView(bigView)}
+        enablePan={!isSideView(bigView)}
         rotateSpeed={1.25}
         // Left-drag pans the camera, right-drag rotates it. Holding Shift swaps the two
         // (built into OrbitControls). The middle button is left unmapped, so it does nothing.
@@ -139,6 +148,10 @@ export default function Viewport() {
 
       {/* Double-click in the scene list, or F: the camera glides to the object */}
       <FocusController />
+      {/* The big view: the normal camera, or a pinned flat side view (chosen with the four-view peek) */}
+      <BigViewController />
+      {/* While Space is held the four views are drawn instead of the normal view */}
+      {peekActive && <PeekRenderer />}
       {/* Hold the right mouse button and press W A S D Q E to fly the camera */}
       <FlyController />
       {/* Lets Shift switch pan/rotate in the middle of a camera drag */}

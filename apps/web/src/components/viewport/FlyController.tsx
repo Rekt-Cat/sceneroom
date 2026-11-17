@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Vector3 } from "three";
+import { PerspectiveCamera, Vector3 } from "three";
 import {
   FLY_KEY_CODES,
   NO_FLY_KEYS,
@@ -74,6 +74,8 @@ export default function FlyController() {
     }
 
     function onPointerDown(event: PointerEvent) {
+      // Only the normal camera flies; a pinned side view stays where it is
+      if (!(camera instanceof PerspectiveCamera)) return;
       if (!event.isTrusted || event.button !== 2 || event.target !== canvas)
         return;
       flying.current = true;

@@ -39,3 +39,4 @@ export * from "./fly";
 export * from "./loopCut";
 export * from "./subdivide";
 export * from "./creases";
+export * from "./views";
