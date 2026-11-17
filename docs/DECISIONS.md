@@ -847,3 +847,11 @@ The design from 2026-11-16 (above) was built on `feature/four-view`; not yet tri
 
 - **Edge extrude** (`packages/shared/src/edgeExtrude.ts`): the same Extrude button (Shift + E); when only edges are selected (no whole face) it extrudes the edges. A border edge grows the surface outwards in its own plane (extend a plane, lengthen a rim); an edge between two faces grows a fin along the average of the faces. Edges that share a corner share the new corner point, so a chain stays joined. It reuses the extrude session and panel (distance and divisions; scale and twist are hidden because they have no meaning for an edge).
 - **Big side view keeps up** (found in a browser check): the near and far planes were set once when the view opened, so after rotating the object it could be cut away. They now follow the selection (`updateSlab`), and a different selection frames the view again.
+
+## Thicken (Solidify) modifier
+
+- **A modifier, not an edit-mode tool**: non-destructive like Smooth, so the thickness can be changed later, reordered, switched off, and baked by Make mesh. Shown as "Thicken" (plain word); the code calls it `solidify` (the pro term, also in the tooltip).
+- **Thickness is a share of the shape's size** (-0.5 to 0.5), like Noise, so it works the same on a small or large object. Positive grows against the way the surface faces, negative the other way; each has a reset button.
+- **Even thickness:** the push at a corner is longer (1 / cos of the angle, at most twice) so a hollowed cube has walls of equal thickness. Normals are weighted by the angle each face fills at the point, so cutting a square one way or the other does not change the result. Points on the same spot are one (a cube does not come apart).
+- **Open edges are joined by a wall**; a closed shape gets a hollow inside (no walls needed).
+- **Not done:** offset (grow both ways from the surface), a separate rim material, and thickness varying by vertex group.

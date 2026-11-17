@@ -509,6 +509,14 @@ Files: `apps/web/src/components/viewport/InspectorFields.tsx` (rows, steps, colo
 | Most levels | `MAX_SUBDIVIDE_LEVELS` in `packages/shared/src/scene.ts`    | 3         | Each level makes about four times the faces (3 levels = about 64 times).            |
 | Point limit | `MAX_DEFORMED_POINTS` in `packages/shared/src/modifiers.ts` | 400 000   | A level that would pass this many points is skipped (shared with Mirror and Array). |
 
+## Thicken (Solidify modifier)
+
+| What                | Where                                                       | Our value | What it does                                                                         |
+| ------------------- | ----------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------ |
+| Thickest            | `MAX_SOLIDIFY_THICKNESS` in `packages/shared/src/scene.ts`  | 0.5       | The largest thickness, as a share of the shape's size (negative goes the other way). |
+| Starting value      | `createModifier` in `packages/shared/src/modifiers.ts`      | 0.1       | The thickness a new Thicken modifier (and its reset button) uses.                    |
+| Longest corner push | the `Math.min(2, ...)` in `packages/shared/src/solidify.ts` | 2         | At sharp corners the wall is pushed up to twice as far, to keep it evenly thick.     |
+
 ## Inset (edit mode)
 
 | What          | Where                                                              | Our value | What it does                                                                          |

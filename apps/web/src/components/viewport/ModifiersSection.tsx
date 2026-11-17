@@ -6,6 +6,7 @@ import {
   MAX_ARRAY_COUNT,
   MAX_ARRAY_SPACING,
   MAX_MIRROR_OFFSET,
+  MAX_SOLIDIFY_THICKNESS,
   MAX_SUBDIVIDE_LEVELS,
   MAX_MODIFIERS,
   MAX_SEGMENTS,
@@ -59,6 +60,7 @@ type SliderSpec = {
     | "seed"
     | "count"
     | "levels"
+    | "thickness"
     | "spacing";
   label: string;
   min: number;
@@ -125,6 +127,16 @@ const SLIDERS: Record<ModifierType, readonly SliderSpec[]> = {
       max: MAX_SUBDIVIDE_LEVELS,
       step: 1,
       decimals: 0,
+    },
+  ],
+  solidify: [
+    {
+      key: "thickness",
+      label: "Thickness",
+      min: -MAX_SOLIDIFY_THICKNESS,
+      max: MAX_SOLIDIFY_THICKNESS,
+      step: 0.01,
+      decimals: 2,
     },
   ],
   array: [

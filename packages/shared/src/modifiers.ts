@@ -6,6 +6,7 @@ import type {
   SceneNode,
 } from "./scene";
 import type { Crease } from "./creases";
+import { solidifyMesh } from "./solidify";
 import { subdivideMesh } from "./subdivide";
 import {
   ASSET_NOTE_MAX_LENGTH,
@@ -15,6 +16,7 @@ import {
   MAX_MODIFIERS,
   MAX_SEGMENTS,
   MAX_STRETCH,
+  MAX_SOLIDIFY_THICKNESS,
   MAX_SUBDIVIDE_LEVELS,
   MIN_ARRAY_COUNT,
   MIN_STRETCH,
@@ -30,6 +32,7 @@ export const MODIFIER_TYPES: readonly ModifierType[] = [
   "noise",
   "mirror",
   "subdivide",
+  "solidify",
   "array",
 ];
 
@@ -51,12 +54,16 @@ export const MODIFIER_INFO: Record<
     label: "Smooth",
     hint: "Round the shape off: every face is cut up and smoothed",
   },
+  solidify: {
+    label: "Thicken",
+    hint: "Give a flat surface thickness: a plane becomes a slab, an open shape a shell",
+  },
   array: { label: "Array", hint: "Repeat the shape in a line" },
 };
 
 /** The kinds of modifier that work along an axis (noise and smooth do not: they work in all directions). */
 export function usesAxis(type: ModifierType): boolean {
-  return type !== "noise" && type !== "subdivide";
+  return type !== "noise" && type !== "subdivide" && type !== "solidify";
 }
 
 /** True for objects whose shape modifiers can change: the built-in shapes and editable meshes (not imported models, not lights). */
@@ -99,6 +106,8 @@ export function createModifier(id: string, type: ModifierType): Modifier {
       return { id, type, enabled: true, axis: "x", offset: 0.5 };
     case "subdivide":
       return { id, type, enabled: true, axis: "y", levels: 1 };
+    case "solidify":
+      return { id, type, enabled: true, axis: "y", thickness: 0.1 };
     case "array":
       return { id, type, enabled: true, axis: "x", count: 3, spacing: 1.2 };
   }
@@ -119,6 +128,7 @@ export type ModifierChange = {
   spacing?: number;
   offset?: number;
   levels?: number;
+  thickness?: number;
 };
 
 /** The number settings of each kind: [smallest, largest, whole numbers only?]. */
@@ -137,6 +147,9 @@ const NUMBER_SETTINGS: Record<
   },
   mirror: { offset: [-MAX_MIRROR_OFFSET, MAX_MIRROR_OFFSET, false] },
   subdivide: { levels: [1, MAX_SUBDIVIDE_LEVELS, true] },
+  solidify: {
+    thickness: [-MAX_SOLIDIFY_THICKNESS, MAX_SOLIDIFY_THICKNESS, false],
+  },
   array: {
     count: [MIN_ARRAY_COUNT, MAX_ARRAY_COUNT, true],
     spacing: [0, MAX_ARRAY_SPACING, false],
@@ -324,6 +337,8 @@ export function describeModifier(modifier: Modifier): string {
       return `Adds a flipped copy across a plane on ${axis}. Offset 0 puts the plane through the middle of the object; 0.5 puts it at the side of the shape.`;
     case "subdivide":
       return `Rounds the shape off: every face is cut into smaller ones and smoothed, ${modifier.levels} time${modifier.levels === 1 ? "" : "s"}. Extra loops close to an edge keep that edge tight.`;
+    case "solidify":
+      return "Gives the surface thickness: a flat plane becomes a slab and an open shape a shell. A negative thickness grows it the other way.";
     case "array":
       return `Repeats the shape ${modifier.count} times along ${axis}.`;
   }
@@ -352,6 +367,8 @@ export function summariseModifier(modifier: Modifier): string {
       return `Mirror across ${axis}, offset ${plain(modifier.offset)}`;
     case "subdivide":
       return `Smooth, ${modifier.levels} level${modifier.levels === 1 ? "" : "s"}`;
+    case "solidify":
+      return `Thicken ${plain(modifier.thickness)}`;
     case "array":
       return `Array ×${modifier.count} along ${axis}, spacing ${plain(modifier.spacing)}`;
   }
@@ -459,6 +476,8 @@ function applyModifier(mesh: ShapeMesh, modifier: Modifier): ShapeMesh {
   switch (modifier.type) {
     case "subdivide":
       return subdivideMesh(mesh, modifier.levels, MAX_DEFORMED_POINTS);
+    case "solidify":
+      return solidifyMesh(mesh, modifier.thickness, MAX_DEFORMED_POINTS);
     case "mirror":
       return mirror(mesh, AXIS_INDEX[modifier.axis], modifier.offset);
     case "array":
