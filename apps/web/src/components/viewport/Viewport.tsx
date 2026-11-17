@@ -5,6 +5,7 @@ import { Canvas } from "@react-three/fiber";
 import BigViewController from "./BigViewController";
 import FlyController from "./FlyController";
 import PeekRenderer from "./PeekRenderer";
+import ThumbnailSource from "./ThumbnailSource";
 import FocusController from "./FocusController";
 import { Grid, OrbitControls, Stats } from "@react-three/drei";
 import { MOUSE, type DirectionalLight } from "three";
@@ -150,6 +151,7 @@ export default function Viewport() {
       <FocusController />
       {/* The big view: the normal camera, or a pinned flat side view (chosen with the four-view peek) */}
       <BigViewController />
+      <ThumbnailSource />
       {/* While Space is held the four views are drawn instead of the normal view */}
       {peekActive && <PeekRenderer />}
       {/* Hold the right mouse button and press W A S D Q E to fly the camera */}

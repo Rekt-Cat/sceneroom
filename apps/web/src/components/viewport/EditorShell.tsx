@@ -4,6 +4,8 @@ import { useEffect, useState, type DragEvent } from "react";
 import { importFiles } from "@/assets/importFile";
 import { watchEditMode } from "@/meshEdit/startEditing";
 import { startPersistence } from "@/persistence/startPersistence";
+import { usePersistenceStore } from "@/store/persistenceStore";
+import ProjectNotFound from "./ProjectNotFound";
 import { startPrefabEditing } from "@/store/prefabEditing";
 import { usePlantLibraryStore } from "@/store/plantLibraryStore";
 import { useLayoutStore } from "@/store/layoutStore";
@@ -32,7 +34,7 @@ function carriesFiles(event: DragEvent | globalThis.DragEvent): boolean {
  * The whole editor screen: top bar, scene list on the left, 3D view in the middle (nothing covers
  * it except its own small controls), Inspector on the right.
  */
-export default function EditorShell() {
+export default function EditorShell({ projectId }: { projectId: string }) {
   useEditorShortcuts();
   // Hold Space: the four views
   usePeekKeys();
@@ -47,7 +49,8 @@ export default function EditorShell() {
   useEffect(() => startPrefabEditing(), []);
 
   // Restore the scene saved last time, then save every change (see startPersistence)
-  useEffect(() => startPersistence(), []);
+  useEffect(() => startPersistence(projectId), [projectId]);
+  const missing = usePersistenceStore((state) => state.status === "missing");
 
   // Read the saved panel widths once the page is in the browser (not during the server render)
   useEffect(() => useLayoutStore.getState().hydrate(), []);
@@ -76,6 +79,9 @@ export default function EditorShell() {
       window.removeEventListener("drop", cancel);
     };
   }, []);
+
+  // The address names a project that is not in this browser (a wrong link, or one that was deleted)
+  if (missing) return <ProjectNotFound />;
 
   return (
     <div className="flex h-dvh flex-col bg-ed-bg text-ed-text">

@@ -8,6 +8,7 @@ import {
   createTemplateScene,
   deleteProjectScene,
   moveProjectScene,
+  normalizeSceneName,
   renameProjectScene,
   whyCannotAddScene,
   DEFAULT_PROJECT_NAME,
@@ -62,6 +63,8 @@ type ProjectState = {
   renameScene: (id: string, name: string) => string | null;
   /** The last scene cannot be deleted. The caller has already asked the user. */
   deleteScene: (id: string) => string | null;
+  /** Renames the project. Returns an error sentence if the name is empty, otherwise null. */
+  renameProject: (name: string) => string | null;
   /** Moves a scene to a new place in the tab order. */
   moveScene: (id: string, toIndex: number) => void;
   /** Replaces the whole project (what was saved in the browser). Clears every undo history. */
@@ -248,6 +251,13 @@ export const useProjectStore = create<ProjectState>()((set, get) => {
         return "A project needs at least one scene, so the last one cannot be deleted.";
       }
       apply(deleteProjectScene(project, id));
+      return null;
+    },
+
+    renameProject: (name) => {
+      const clean = normalizeSceneName(name);
+      if (clean === null) return "The project needs a name.";
+      set({ name: clean });
       return null;
     },
 

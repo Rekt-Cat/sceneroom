@@ -5,7 +5,8 @@ import type { SaveStatus } from "@/persistence/autosave";
 export type PersistenceStatus =
   | "loading" // looking for a saved scene
   | SaveStatus // saving, saved, error
-  | "unavailable"; // the browser does not allow saving at all
+  | "unavailable" // the browser does not allow saving at all
+  | "missing"; // there is no project with the id in the address
 
 type PersistenceState = {
   status: PersistenceStatus;
