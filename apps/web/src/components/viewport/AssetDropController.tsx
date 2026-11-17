@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useThree } from "@react-three/fiber";
 import { Raycaster, Vector2 } from "three";
 import { groundHit } from "@sceneroom/shared";
-import { useSceneStore } from "@/store/sceneStore";
+import { placeLibraryItem } from "@/store/libraryActions";
 import { ASSET_DRAG_TYPE, carriesAsset, useAssetDragStore } from "./assetDrag";
 
 /**
@@ -58,7 +58,7 @@ export default function AssetDropController() {
       // The preview goes away and the real object appears in its place, at full strength
       const spot = spotAt(event);
       useAssetDragStore.getState().end();
-      useSceneStore.getState().placeAsset(assetId, spot);
+      placeLibraryItem(assetId, spot);
     };
 
     canvas.addEventListener("dragover", onDragOver);

@@ -9,7 +9,7 @@ import {
   extrudeSelectedFaces,
 } from "@/meshEdit/editOperations";
 import { stopEditing, toggleEditMode } from "@/meshEdit/startEditing";
-import { saveSceneToFile } from "@/sceneFile/sceneFileActions";
+import { saveProjectToFile } from "@/sceneFile/sceneFileActions";
 import { useEditStore } from "@/store/editStore";
 import { pasteClipboard } from "./clipboardActions";
 import { selectAllPoints } from "./MeshEditor";
@@ -70,7 +70,7 @@ export function useEditorShortcuts(): void {
         // Ctrl/Cmd + S saves the scene as a file (the browser would otherwise offer to save the web page)
         if (key === "s" && !event.shiftKey) {
           event.preventDefault();
-          void saveSceneToFile();
+          void saveProjectToFile();
           return;
         }
         // Editing points: copy, cut, paste and duplicate act on whole objects, so they are off

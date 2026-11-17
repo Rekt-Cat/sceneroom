@@ -5,7 +5,7 @@ import { Mesh, type Material, type Object3D } from "three";
 import { clone } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { fitScale, modelOffset } from "@sceneroom/shared";
 import { loadModelScene } from "@/assets/loadModel";
-import { useSceneStore } from "@/store/sceneStore";
+import { isPrefabId, projectModels } from "@/store/libraryActions";
 import { useAssetDragStore } from "./assetDrag";
 
 /** How solid the preview looks while an asset is dragged over the 3D view (1 = solid, 0 = invisible). */
@@ -20,7 +20,8 @@ const hitNothing = () => undefined;
 export default function AssetPreview() {
   const assetId = useAssetDragStore((state) => state.assetId);
   const spot = useAssetDragStore((state) => state.spot);
-  if (!assetId || !spot) return null;
+  // A prefab has no single model file to show (it is placed as soon as it is dropped)
+  if (!assetId || !spot || isPrefabId(assetId)) return null;
   return <Ghost assetId={assetId} spot={spot} />;
 }
 
@@ -31,7 +32,11 @@ function Ghost({
   assetId: string;
   spot: [number, number, number];
 }) {
-  const info = useSceneStore((state) => state.scene.assets[assetId]);
+  // The file may belong to another scene of the project; the library knows every scene's models
+  const info = useMemo(
+    () => projectModels().find((model) => model.id === assetId),
+    [assetId],
+  );
   const [root, setRoot] = useState<Object3D | null>(null);
 
   useEffect(() => {

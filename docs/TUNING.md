@@ -442,11 +442,24 @@ Files: `apps/web/src/components/viewport/InspectorFields.tsx` (rows, steps, colo
 
 ## The page around the viewport
 
-| What                          | Where                                                 | What to change                                                                                                     |
-| ----------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| The "SceneRoom" name and logo | `apps/web/src/components/viewport/TopBar.tsx`         | The name comes from `APP_NAME` in `packages/shared/src/index.ts`. The "Untitled scene" text is plain text for now. |
-| The loading message           | `apps/web/src/components/viewport/ViewportLoader.tsx` | The text inside `loading: () => ...`.                                                                              |
-| Tab title and description     | `apps/web/src/app/layout.tsx`                         | The `metadata` object.                                                                                             |
+| What                          | Where                                                 | What to change                                                                                                         |
+| ----------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| The "SceneRoom" name and logo | `apps/web/src/components/viewport/TopBar.tsx`         | The name comes from `APP_NAME` in `packages/shared/src/index.ts`. The project name and scene tabs are `SceneTabs.tsx`. |
+| The loading message           | `apps/web/src/components/viewport/ViewportLoader.tsx` | The text inside `loading: () => ...`.                                                                                  |
+| Tab title and description     | `apps/web/src/app/layout.tsx`                         | The `metadata` object.                                                                                                 |
+
+## Projects and scenes
+
+| What                                    | Where                                                                               | Our value                                                           | What it does                                                                                                                         |
+| --------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Most scenes in a project                | `MAX_PROJECT_SCENES` in `packages/shared/src/project.ts`                            | 50                                                                  | "New scene" and "Duplicate" refuse beyond this, with a message.                                                                      |
+| Longest scene name                      | `MAX_SCENE_NAME_LENGTH` in `packages/shared/src/project.ts`                         | 60 letters                                                          | Longer names are cut. Also the limit of the rename box.                                                                              |
+| Starting project name                   | `DEFAULT_PROJECT_NAME` in `packages/shared/src/project.ts`                          | "Untitled project"                                                  | Shown left of the scene tabs (it cannot be renamed yet).                                                                             |
+| What each scene template has            | `createTemplateScene` and `SCENE_TEMPLATE_INFO` in `packages/shared/src/project.ts` | Ground size 12 / 60 / 60 / 120, ground colours, fog for Environment | The starting objects and environment of Blank, Characters, Buildings, Environment and Assembly. Add a template in `SCENE_TEMPLATES`. |
+| Most prefabs in a project               | `MAX_PREFABS` in `packages/shared/src/prefab.ts`                                    | 200                                                                 | Make prefab refuses beyond this, with a message.                                                                                     |
+| Most objects in a prefab                | `MAX_PREFAB_NODES` in `packages/shared/src/prefab.ts`                               | 5000                                                                | A bigger object (a huge forest) cannot be made a prefab.                                                                             |
+| Wait before copies follow a prefab edit | `PREFAB_APPLY_DEBOUNCE_MS` in `apps/web/src/store/prefabEditing.ts`                 | 300 ms                                                              | How long after the last change in a prefab's scene the copies are rebuilt. Lower = snappier but more rebuilds while dragging.        |
+| Tab width                               | `max-w-44` in `SceneTabs.tsx`                                                       | 11 rem                                                              | Longer names are shortened with "…" on the tab (the full name shows when you hover).                                                 |
 
 ## Project settings
 

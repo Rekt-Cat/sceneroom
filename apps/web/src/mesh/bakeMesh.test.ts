@@ -23,8 +23,8 @@ import {
 import { useImportStore } from "@/store/importStore";
 import { useSceneStore } from "@/store/sceneStore";
 import {
-  buildSceneFile,
-  openSceneFromFile,
+  buildProjectFile,
+  openProjectFromFile,
 } from "@/sceneFile/sceneFileActions";
 import { bakeNodeToMesh } from "./bakeMesh";
 
@@ -186,7 +186,7 @@ describe("meshes in saved files and in the editor", () => {
     await bakeNodeToMesh("trunk");
     const meshId = node("trunk").assetId!;
     const scene = get().scene;
-    const { bytes, missing } = await buildSceneFile();
+    const { bytes, missing } = await buildProjectFile();
     expect(missing).toEqual([]);
 
     // a fresh browser
@@ -195,7 +195,7 @@ describe("meshes in saved files and in the editor", () => {
     clearMeshCache();
     expect(await assetStorage.has(meshId)).toBe(false);
 
-    await openSceneFromFile(
+    await openProjectFromFile(
       new File([bytes.slice().buffer], "trunk.sceneroom"),
       () => true,
     );
@@ -215,7 +215,7 @@ describe("meshes in saved files and in the editor", () => {
     get().redo();
     const used = node("trunk").assetId!;
     expect(used).not.toBe(first);
-    const { bytes } = await buildSceneFile();
+    const { bytes } = await buildProjectFile();
     // read the header: only the mesh in use is listed
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     const header = JSON.parse(
@@ -288,9 +288,9 @@ describe("the record of how a mesh was made", () => {
 
   it("the record is part of the scene, so it is saved in the file and comes back", async () => {
     await bakeNodeToMesh("trunk");
-    const { bytes } = await buildSceneFile();
+    const { bytes } = await buildProjectFile();
     get().loadScene(createEmptyScene());
-    await openSceneFromFile(
+    await openProjectFromFile(
       new File([bytes.slice().buffer], "t.sceneroom"),
       () => true,
     );

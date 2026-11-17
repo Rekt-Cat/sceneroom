@@ -17,6 +17,7 @@ import AddMenu from "./AddMenu";
 import ImportButton from "./ImportButton";
 import PanelResizer from "./PanelResizer";
 import AssetsPanel from "./AssetsPanel";
+import { useLibrary } from "./useLibrary";
 import {
   ROOT_DROP_ID,
   SCROLL_LIST_ATTRIBUTE,
@@ -46,9 +47,9 @@ export default function HierarchyPanel() {
   const { drag, startDrag, justDragged } = useRowDrag();
 
   const total = Object.keys(scene.nodes).length;
-  const assetCount = Object.values(scene.assets).filter(
-    (asset) => asset.type === "model",
-  ).length;
+  // Models and prefabs of the whole project, the same list the Assets tab shows
+  const library = useLibrary();
+  const assetCount = library.models.length + library.prefabList.length;
   // Which tab of the left panel is showing (not saved: it starts on the scene list)
   const [tab, setTab] = useState<"scene" | "assets">("scene");
   // Objects that are cut (waiting to be pasted somewhere) are shown greyed

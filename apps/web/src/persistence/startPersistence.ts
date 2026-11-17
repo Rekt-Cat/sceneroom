@@ -1,18 +1,20 @@
 import { setAssetStorage } from "@/assets/assetStorage";
 import { useImportStore } from "@/store/importStore";
 import { usePersistenceStore } from "@/store/persistenceStore";
+import { applyAllPrefabScenes } from "@/store/libraryActions";
+import { getProject, useProjectStore } from "@/store/projectStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { IndexedDbAssetStorage } from "./assetStorageIdb";
 import { createAutosave, type Autosave } from "./autosave";
 import { describeStorageError, openDatabase } from "./idb";
-import { IndexedDbSceneRepository } from "./sceneRepository";
+import { IndexedDbProjectRepository } from "./sceneRepository";
 
 /**
- * Turns on saving for this page: opens the browser's storage, restores the scene that was saved last
+ * Turns on saving for this page: opens the browser's storage, restores the project that was saved last
  * time, then saves every change a moment after it happens. Returns a function that turns it off again.
  *
  * Saving only starts AFTER the restore has finished. Otherwise the starting scene (one cube) could be
- * saved over the real one before it was read. If the saved scene cannot be READ (as opposed to being
+ * saved over the real one before it was read. If the saved project cannot be READ (as opposed to being
  * unreadable data), saving stays off, for the same reason.
  */
 export function startPersistence(): () => void {
@@ -46,17 +48,19 @@ export function startPersistence(): () => void {
 
     // From here on imported files are kept in the browser's storage and survive a reload
     setAssetStorage(new IndexedDbAssetStorage(database));
-    const repository = new IndexedDbSceneRepository(database);
+    const repository = new IndexedDbProjectRepository(database);
 
     try {
       const result = await repository.load();
       if (stopped) return;
       if (result.status === "loaded") {
-        useSceneStore.getState().loadScene(result.scene);
+        useProjectStore.getState().loadProject(result.project);
+        // A prefab scene whose last change was not applied before the page closed is applied now
+        applyAllPrefabScenes();
       } else if (result.status === "invalid") {
         tell({
           tone: "error",
-          text: `Your saved scene could not be read (${result.reason}), so a new scene was started. The old data is kept as a backup in this browser.`,
+          text: `Your saved project could not be read (${result.reason}), so a new project was started. The old data is kept as a backup in this browser.`,
         });
       }
     } catch (error) {
@@ -65,18 +69,18 @@ export function startPersistence(): () => void {
       setStatus("error");
       tell({
         tone: "error",
-        text: "The saved scene could not be read from the browser storage, so saving is turned off to protect it. Reload the page to try again.",
+        text: "The saved project could not be read from the browser storage, so saving is turned off to protect it. Reload the page to try again.",
       });
       return;
     }
 
     autosave = createAutosave({
-      getScene: () => useSceneStore.getState().scene,
-      save: (scene) => repository.save(scene),
+      getData: getProject,
+      save: (project) => repository.save(project),
       onStatus: (status, error) => {
         setStatus(status);
         if (status === "error") {
-          console.error("Could not save the scene:", error);
+          console.error("Could not save the project:", error);
           tell({
             tone: "error",
             text: `${describeStorageError(error)} The latest changes are not saved yet; saving is retried when you change something.`,
@@ -84,10 +88,18 @@ export function startPersistence(): () => void {
         }
       },
     });
-    // Only changes to the scene are saved (not selecting things, the gizmo mode and so on)
-    unsubscribe = useSceneStore.subscribe((state, previous) => {
+    // Only changes to the project are saved: the open scene, and the list of scenes and which is open
+    // (not selecting things, the gizmo mode and so on)
+    const stopScene = useSceneStore.subscribe((state, previous) => {
       if (state.scene !== previous.scene) autosave?.markChanged();
     });
+    const stopProject = useProjectStore.subscribe(() =>
+      autosave?.markChanged(),
+    );
+    unsubscribe = () => {
+      stopScene();
+      stopProject();
+    };
     setStatus("saved");
   })();
 

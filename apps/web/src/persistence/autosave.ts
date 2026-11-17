@@ -1,12 +1,10 @@
-import type { Scene } from "@sceneroom/shared";
-
 /** How long to wait after the last change before writing (a drag makes many changes; this makes them one write). */
 export const AUTOSAVE_DEBOUNCE_MS = 500;
 
 export type SaveStatus = "saving" | "saved" | "error";
 
 export type Autosave = {
-  /** Call after every change to the scene. */
+  /** Call after every change to the saved data. */
   markChanged: () => void;
   /** Writes right now if anything is waiting, and resolves when done (for when the page is being left). */
   flush: () => Promise<void>;
@@ -17,13 +15,14 @@ export type Autosave = {
 };
 
 /**
- * Saves the scene a moment after it changes. Many quick changes become one write; if more changes
+ * Saves the data (the project) a moment after it changes. Many quick changes become one write; if more changes
  * arrive while a write is running, another write follows. A failed write is reported and retried on
  * the next change (the unsaved state is remembered, so the page can warn before closing).
  */
-export function createAutosave(options: {
-  save: (scene: Scene) => Promise<void>;
-  getScene: () => Scene;
+export function createAutosave<T>(options: {
+  save: (data: T) => Promise<void>;
+  /** Reads the data to save at the moment of writing (always the latest). */
+  getData: () => T;
   onStatus: (status: SaveStatus, error?: unknown) => void;
   debounceMs?: number;
 }): Autosave {
@@ -44,7 +43,7 @@ export function createAutosave(options: {
       clearTimer();
       dirty = false;
       try {
-        await options.save(options.getScene());
+        await options.save(options.getData());
       } catch (error) {
         failure = error;
         dirty = true; // still unsaved

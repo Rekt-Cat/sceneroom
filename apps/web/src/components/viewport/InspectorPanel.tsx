@@ -5,6 +5,7 @@ import ModifiersSection from "./ModifiersSection";
 import CharacterSection from "./CharacterSection";
 import LightSection from "./LightSection";
 import PlantSection from "./PlantSection";
+import { MakePrefabButton, PrefabStrip } from "./PrefabSection";
 import SurfaceSection from "./SurfaceSection";
 import { useState } from "react";
 import {
@@ -165,10 +166,13 @@ function SingleObject({ node }: { node: SceneNode }) {
             }}
             className="-ml-2 h-[30px] w-full rounded-md border border-transparent bg-transparent px-2 text-[15px] font-semibold hover:border-ed-line-strong focus-visible:border-ed-accent focus-visible:outline-none disabled:cursor-not-allowed disabled:text-ed-text-2"
           />
-          <p className="text-xs text-ed-text-3">
-            {KIND_LABELS[node.kind]} ·{" "}
-            {parentName ? `inside ${parentName}` : "top level"}
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="min-w-0 truncate text-xs text-ed-text-3">
+              {KIND_LABELS[node.kind]} ·{" "}
+              {parentName ? `inside ${parentName}` : "top level"}
+            </p>
+            {!node.prefab && <MakePrefabButton node={node} />}
+          </div>
         </div>
         <button
           type="button"
@@ -181,6 +185,7 @@ function SingleObject({ node }: { node: SceneNode }) {
           <Icon name={node.visible ? "eye" : "eyeOff"} />
         </button>
       </div>
+      <PrefabStrip node={node} />
       {locked && (
         <div
           role="status"
@@ -208,7 +213,7 @@ function SingleObject({ node }: { node: SceneNode }) {
       <div className="min-h-0 flex-1 overflow-y-auto">
         <ParentSection node={node} disabled={locked} />
         <TransformSection node={node} disabled={locked} />
-        {node.light ? (
+        {node.prefab ? null : node.light ? (
           <LightSection node={node} disabled={locked} />
         ) : node.character ? (
           <>

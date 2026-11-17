@@ -8,6 +8,8 @@ import {
   stepPlacement,
 } from "@sceneroom/shared";
 import { useContextMenuStore } from "@/store/contextMenuStore";
+import { useImportStore } from "@/store/importStore";
+import { makePrefab } from "@/store/libraryActions";
 import { useSceneStore } from "@/store/sceneStore";
 import { pasteClipboard } from "./clipboardActions";
 import { OBJECT_NAME_INPUT_ID } from "./domIds";
@@ -139,6 +141,18 @@ function MenuBody({
                   input.select();
                 }
               });
+            }),
+          },
+          {
+            label: "Make prefab",
+            disabled: count !== 1 || !!onlyNode?.prefab,
+            onSelect: act(() => {
+              const problem = onlyNode ? makePrefab(onlyNode.id) : null;
+              if (problem) {
+                useImportStore
+                  .getState()
+                  .setMessage({ tone: "error", text: problem });
+              }
             }),
           },
           {

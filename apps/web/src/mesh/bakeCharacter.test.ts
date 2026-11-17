@@ -7,8 +7,8 @@ import {
 import { MemoryAssetStorage, setAssetStorage } from "@/assets/assetStorage";
 import { clearMeshCache, loadMeshData } from "@/assets/meshStorage";
 import {
-  buildSceneFile,
-  openSceneFromFile,
+  buildProjectFile,
+  openProjectFromFile,
 } from "@/sceneFile/sceneFileActions";
 import { useImportStore } from "@/store/importStore";
 import { useSceneStore } from "@/store/sceneStore";
@@ -113,9 +113,9 @@ describe("characters in saved files", () => {
       { x: -3, z: 2, turn: 1.5, size: 0.95, seed: 6 },
     ]);
     const scene = get().scene;
-    const { bytes } = await buildSceneFile();
+    const { bytes } = await buildProjectFile();
     get().loadScene(createEmptyScene());
-    await openSceneFromFile(
+    await openProjectFromFile(
       new File([bytes.slice().buffer], "crowd.sceneroom"),
       () => true,
     );
@@ -128,12 +128,12 @@ describe("characters in saved files", () => {
   it("a character baked into meshes is saved with its mesh data", async () => {
     await bakeCharacterToMeshes(id);
     const scene = get().scene;
-    const { bytes, missing } = await buildSceneFile();
+    const { bytes, missing } = await buildProjectFile();
     expect(missing).toEqual([]);
     get().loadScene(createEmptyScene());
     setAssetStorage(new MemoryAssetStorage());
     clearMeshCache();
-    await openSceneFromFile(
+    await openProjectFromFile(
       new File([bytes.slice().buffer], "person.sceneroom"),
       () => true,
     );
