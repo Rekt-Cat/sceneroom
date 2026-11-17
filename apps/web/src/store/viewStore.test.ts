@@ -37,3 +37,46 @@ describe("flying the camera (right mouse button held)", () => {
     expect(useViewStore.getState().flewThisHold).toBe(false);
   });
 });
+
+describe("the four-view peek", () => {
+  it("starts hidden, showing top, front, right and perspective, with the normal view big", () => {
+    const s = useViewStore.getState();
+    expect(s.peekActive).toBe(false);
+    expect(s.peekTiles).toEqual(["top", "front", "right", "perspective"]);
+    expect(s.bigView).toBe("perspective");
+    expect(s.peekHover).toBe(-1);
+  });
+
+  it("changes what one tile shows without touching the others", () => {
+    useViewStore.getState().setPeekTile(2, "left");
+    expect(useViewStore.getState().peekTiles).toEqual([
+      "top",
+      "front",
+      "left",
+      "perspective",
+    ]);
+    // an unknown tile is ignored
+    useViewStore.getState().setPeekTile(9, "back");
+    expect(useViewStore.getState().peekTiles).toEqual([
+      "top",
+      "front",
+      "left",
+      "perspective",
+    ]);
+  });
+
+  it("forgets which tile the pointer was over when the views are hidden", () => {
+    useViewStore.getState().setPeekActive(true);
+    useViewStore.getState().setPeekHover(3);
+    expect(useViewStore.getState().peekHover).toBe(3);
+    useViewStore.getState().setPeekActive(false);
+    expect(useViewStore.getState().peekHover).toBe(-1);
+  });
+
+  it("the big view can be set to a side and back", () => {
+    useViewStore.getState().setBigView("right");
+    expect(useViewStore.getState().bigView).toBe("right");
+    useViewStore.getState().setBigView("perspective");
+    expect(useViewStore.getState().bigView).toBe("perspective");
+  });
+});

@@ -2,12 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Box3, PerspectiveCamera, Sphere, Vector3 } from "three";
-import { framingDistance, getSubtreeIds } from "@sceneroom/shared";
-import { useSceneStore } from "@/store/sceneStore";
+import { PerspectiveCamera, Sphere, Vector3 } from "three";
+import { framingDistance } from "@sceneroom/shared";
 import { useViewStore } from "@/store/viewStore";
-import { getMesh } from "./meshRegistry";
-import { worldBoxOf } from "./screenBounds";
+import { boxOfNodes } from "./selectionBox";
 
 /** How long the camera takes to glide to the object, in seconds. */
 export const FOCUS_SECONDS = 0.35;
@@ -22,24 +20,6 @@ type Glide = {
   toTarget: Vector3;
   elapsed: number;
 };
-
-/** The box round the objects (and everything inside them) as they are on screen, or null if none can be seen. */
-function boxOfNodes(ids: readonly string[]): Box3 | null {
-  const { scene } = useSceneStore.getState();
-  const all = new Set<string>();
-  for (const id of ids) {
-    if (scene.nodes[id])
-      for (const inside of getSubtreeIds(scene, id)) all.add(inside);
-  }
-  const total = new Box3();
-  for (const id of all) {
-    const object = getMesh(id);
-    if (!object) continue;
-    const box = worldBoxOf(object);
-    if (box) total.union(box);
-  }
-  return total.isEmpty() ? null : total;
-}
 
 /**
  * Moves the camera so the requested objects fill the view: the same direction of looking, the orbit point
