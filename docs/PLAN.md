@@ -5,7 +5,7 @@
 - **Phase:** 4 (lights, materials, environment) is done and merged (pull requests up to #11). **Order change (2026-11-14):** the owner chose to build the 3D editing tools (Phases 11 to 15, plus what they need from Phase 5) BEFORE the database and multiplayer (Phases 6 to 10). Now in progress: Phase 11, modifiers (`feature/modifiers`).
 - **Done:** Phases 0 to 4, all on `main` and live at https://sceneroom.vercel.app: 3D viewport; scene model; selection, multi-select, gizmo, camera controls; add / duplicate / delete / rename; scene list with search and drag-to-re-parent; Inspector (position, rotation, scale, colour, parent); undo/redo; resizable panels and value dragging; lock. A git pre-push hook runs type-check, lint, test and build before every push. Since then: right-click menu and clipboard, list ordering, Assets tab (thumbnails, drag into the view), Surface and shading, lights, environment.
 - **CI:** green on pull requests up to #11.
-- **Next action:** `feature/four-view` (the four-view peek, hold Space) is built and waits for a browser check; `main` already has projects, scenes, prefabs and the edit tools up to Smooth and edge creases. Bevel is built (B in edit mode, waits for a browser check). Edge extrude is built (waits for a browser check). Next candidates: Boolean, Solidify, project overview and settings (Phase 5b step 4). Still open: test `SETUP-SECOND-PC.md` on the second PC.
+- **Next action:** `feature/four-view` (the four-view peek, hold Space) is built and waits for a browser check; `main` already has projects, scenes, prefabs and the edit tools up to Smooth and edge creases. Bevel is built (B in edit mode, waits for a browser check). Edge extrude is built (waits for a browser check). Thicken (Solidify) is built on `feature/solidify` and waits for a browser check. Next: **Phase 5c, the project home screen** (planned, see below), then the rest of Phase 5b step 4. Other candidates: Boolean, project overview and settings (Phase 5b step 4). Still open: test `SETUP-SECOND-PC.md` on the second PC.
 
 Update this block at the end of every sub-phase and commit it.
 
@@ -108,7 +108,44 @@ The structure above, built without a server. Done first because it decides how s
 - [x] **Step 2: project files** (`feature/projects-scenes`, waiting for a browser check). The `.sceneroom` file becomes a project file (all scenes plus the shared files, deduplicated; format version 2); old single-scene files open as a project with one scene; "Export this scene" still writes a single-scene file; GLB export works per scene (and for the whole project as separate files)
 - [x] **Step 3 (first version, `feature/projects-scenes`, waiting for a browser check): prefabs and project-wide assets.** Models you import belong to the whole project (the Assets tab lists them in every scene). **Make prefab** (Inspector or right-click) keeps an object in the Assets tab, and the object becomes a linked copy. Drag a prefab into any scene for another copy. **Double-click the prefab (or Edit prefab)** opens it as a scene of its own; change it like any scene and every copy follows. Unlink and delete. Still to do:
 - [ ] **Step 3, the rest:** prefabs inside prefabs (with a cycle check); overrides beyond the transform (colour, pose); thumbnails, search and tags in the Assets tab; a see-through preview while dragging a prefab; moving saved plants and characters ("my plants") into the library so they travel with the project
-- [ ] **Step 4: project-level tools.** A project overview (scene list with thumbnails and last edit), project settings (units, default environment and lighting for new scenes), cross-scene search, "where is this used?" for components, models and meshes, and clean-up of files no scene uses any more
+- [ ] **Step 4: project-level tools (first part built on `feature/solidify`, waits for a browser check: click the project name in the top bar for the overview: rename the project, each scene's objects, lights, prefab copies and triangles with an Open button, and removal of imported models nothing uses). Still to do: units, default environment and lighting for new scenes, scene thumbnails and last edit, cross-scene search.** A project overview (scene list with thumbnails and last edit), project settings (units, default environment and lighting for new scenes), cross-scene search, "where is this used?" for components, models and meshes, and clean-up of files no scene uses any more
+
+### Phase 5c: Project home (the screen before a project opens)
+
+Today the app opens straight into one project. A home screen comes first: it lists your projects with pictures, and the editor opens from it. Planned on 2026-11-17 (owner's request). Split in two: the **local part** needs no server and can be built now; the **online part** (invites, members) needs the backend of Phases 6 and 8, and is designed here so the local part does not have to be redone.
+
+**What the owner sees** (beginner-first: one obvious button, nothing else until needed)
+
+- A grid of **project cards**: a thumbnail of the scene, the name, "edited 2 hours ago", number of scenes, and (online part) the people on it. The newest-edited project comes first.
+- One big **New project** card (starts from a template: Blank, or the scene templates that already exist), then **Open file** (a `.sceneroom` file) beside it.
+- A card's **⋯ menu**: Open, Rename, Duplicate, Export file, Delete (asks first). Search box and sort (last edited, name) appear once there are more than a few projects.
+- An empty first visit shows a single "Make your first project" card, nothing else.
+- Opening a card goes to the editor; a **Projects** button (the logo in the top bar) comes back, after the project is saved.
+
+**Local part (built on `feature/project-home`, waits for a browser check: home screen at `/`, editor at `/p/[projectId]`, many projects in the browser, thumbnails, rename / duplicate / export / delete, open a file as a new project; the Share item is shown disabled)**
+
+1. **Storage for many projects.** Today one project is one record in the browser (IndexedDB, autosaved). It becomes an index (id, name, thumbnail, created, last edited, scene count) plus one record per project, with the model files shared by fingerprint across projects (a model used in two projects is stored once). A migration turns the one existing project into the first card; the old record is kept as a backup until the owner has opened the new version once. This is the riskiest step, so it comes with tests for migration, for losing nothing when a save is interrupted, and for the "storage not allowed" case.
+2. **Routes.** `/` is the home screen; `/p/[projectId]` is the editor. The URL says which project is open (it can be bookmarked, and online it becomes the share link target). An unknown id shows a plain "This project was not found" page with a way back.
+3. **Thumbnails.** The 3D view is drawn once to a small picture (about 480 x 270, JPEG) when the project is saved after a change and when leaving the editor, and kept in the index. A project with no picture yet shows a plain tile with the first letters of its name. Cost is small; no library needed (the canvas can make the picture).
+4. **Home screen UI** as above, with keyboard use and a screen-reader label per card; the actions are plain functions, the React part only shows them.
+5. **Project overview dialog** (already built) stays inside the editor for scene-level detail; it moves behind the project name as before.
+
+**Online part (after Phases 6 and 8; designed now)**
+
+- **Who can do what:** roles Owner, Editor, Commenter, Viewer (as in Phase 8). The server decides everything; the browser only shows what it is told.
+- **Invite links:** the owner presses Share on a card (or in the editor) and chooses a role and, optionally, an expiry; the server makes a long random token, stores only its hash, and shows the link once. Opening the link asks the person to sign in, then adds them to the project with that role. Links can be revoked at any time, and each use is listed (who, when). Invites by email address are a later addition.
+- **The home screen then has two groups:** "Your projects" and "Shared with you", with the people on each card (small avatars), and who is online in it now (from the presence of Phase 7).
+- **Limits and safety:** the number of links and members per project, a rate limit on the link endpoint, tokens that expire, no guessable ids, a project's files only handed out to members.
+- **Local projects can be moved online** with an "Upload to my account" action (with a size check and a clear progress and failure message).
+
+**Decisions (settled by the owner, 2026-11-17)**
+
+1. `/` is the home screen for everyone (no landing page for now).
+2. Online, thumbnails live in object storage (R2) next to the project, with the small local copy as a cache.
+3. A project is private by default; sharing is only ever an explicit action.
+4. The editor keeps autosaving per project in the browser even when online (the offline fallback); the server copy is the source of truth when online.
+
+**Order:** local steps 1 to 4 (about the size of Phase 5b), then Phases 6 to 8 bring the online part. Until the backend exists the Share button is shown disabled with a one-line explanation ("Sharing comes with accounts"), and "Export file" is the way to send a project.
 
 ### Phase 6: Docker, database, project backend
 

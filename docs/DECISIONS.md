@@ -847,3 +847,36 @@ The design from 2026-11-16 (above) was built on `feature/four-view`; not yet tri
 
 - **Edge extrude** (`packages/shared/src/edgeExtrude.ts`): the same Extrude button (Shift + E); when only edges are selected (no whole face) it extrudes the edges. A border edge grows the surface outwards in its own plane (extend a plane, lengthen a rim); an edge between two faces grows a fin along the average of the faces. Edges that share a corner share the new corner point, so a chain stays joined. It reuses the extrude session and panel (distance and divisions; scale and twist are hidden because they have no meaning for an edge).
 - **Big side view keeps up** (found in a browser check): the near and far planes were set once when the view opened, so after rotating the object it could be cut away. They now follow the selection (`updateSlab`), and a different selection frames the view again.
+
+## Thicken (Solidify) modifier
+
+- **A modifier, not an edit-mode tool**: non-destructive like Smooth, so the thickness can be changed later, reordered, switched off, and baked by Make mesh. Shown as "Thicken" (plain word); the code calls it `solidify` (the pro term, also in the tooltip).
+- **Thickness is a share of the shape's size** (-0.5 to 0.5), like Noise, so it works the same on a small or large object. Positive grows against the way the surface faces, negative the other way; each has a reset button.
+- **Even thickness:** the push at a corner is longer (1 / cos of the angle, at most twice) so a hollowed cube has walls of equal thickness. Normals are weighted by the angle each face fills at the point, so cutting a square one way or the other does not change the result. Points on the same spot are one (a cube does not come apart).
+- **Open edges are joined by a wall**; a closed shape gets a hollow inside (no walls needed).
+- **Not done:** offset (grow both ways from the surface), a separate rim material, and thickness varying by vertex group.
+
+## Project overview (Phase 5b step 4, first part)
+
+- **One dialog, opened from the project name** (it was plain text, so a project could never be renamed). It shows the name (with a reset button to "Untitled project"), every scene with what it holds, the library counts and the unused-model clean-up. Numbers are computed by pure functions in `packages/shared/src/projectOverview.ts` (`summariseScene`, `unusedModels`), and the open scene is read from the editor so they are current.
+- **Clean-up removes records only.** An unused model is taken out of the Assets tab and the project; the bytes stay in the browser's storage because the storage interface has no delete yet (and a saved `.sceneroom` file only contains used models anyway).
+- **Not done:** thumbnails, "last edit" (scenes do not store a time yet), units, default environment for new scenes, cross-scene search.
+
+## Project home screen (planned 2026-11-17)
+
+- **A screen before the editor** that lists projects as cards with thumbnails, last edit and scene count, and starts or opens one. Written up as Phase 5c in PLAN.md.
+- **Local first, invites later:** many projects in the browser need no server and are built first; invite links, roles and "Shared with you" need accounts and a backend (Phases 6 to 8) and are designed now so the local part is not redone. Until then Share is shown disabled with a reason.
+- **One record per project plus an index**, model files shared across projects by fingerprint, a migration that keeps the old record as a backup. Routes `/` (home) and `/p/[projectId]` (editor).
+- **Invite links are server-checked tokens** (random, stored as a hash, with a role, an optional expiry and revocation); the browser never decides who may do what.
+
+- **Settled (2026-11-17):** `/` is the home screen; online thumbnails go to object storage with a local cache; projects are private by default; browser autosave stays per project as the offline fallback, the server copy is the truth when online.
+
+## Project home screen: how the local part was built
+
+- **Storage:** the same IndexedDB "scenes" store, no database version change. Keys: `project-index` (the cards: id, name, created, last edit, scene count), `project:<id>` (the whole project) and `thumb:<id>` (a JPEG data URL). Model files stay in the "assets" store by fingerprint, so a model used by two projects is stored once. The old single `project` record is read once, becomes the first card and is left untouched as a backup.
+- **The index repairs itself:** `list()` checks it against the records, so a save that stopped between the two writes (record first, index second) loses nothing; an unreadable index is rebuilt from the records; an unreadable project is copied to `unreadable-project:<id>` before anything can overwrite it, and saving is turned off for it.
+- **Editor opens by address:** `/p/[projectId]`. `startPersistence(projectId)` loads that project; an unknown id shows "This project was not found" and saves nothing. Leaving the editor (logo button) saves what is waiting and takes the picture first; cleanup also flushes before closing the storage.
+- **Thumbnails:** the 3D view is drawn once more and copied to a 480 x 270 JPEG (quality 0.7, "cover" crop), at most every 30 seconds after a save and when leaving. No library.
+- **Unique names:** new, copied, renamed and imported projects get a name no other project has ("Untitled project (2)").
+- **Open file makes a NEW project** (nothing is replaced, so no question is asked).
+- **Share is a disabled menu item** with the reason, until accounts exist.

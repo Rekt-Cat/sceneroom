@@ -7,17 +7,54 @@ import { useSceneStore } from "@/store/sceneStore";
 import { IndexedDbAssetStorage } from "./assetStorageIdb";
 import { createAutosave, type Autosave } from "./autosave";
 import { describeStorageError, openDatabase } from "./idb";
-import { IndexedDbProjectRepository } from "./sceneRepository";
+import { captureThumbnail } from "@/components/viewport/thumbnail";
+import { IndexedDbProjectLibrary } from "./projectLibrary";
+
+/** The project being worked on, so "go back to the projects" can save it and take its picture first. */
+let session: {
+  id: string;
+  library: IndexedDbProjectLibrary;
+  autosave: Autosave;
+} | null = null;
+
+/** A picture is taken at most this often while editing (it costs one extra draw of the 3D view). */
+export const THUMBNAIL_EVERY_MS = 30_000;
+/** The first picture of a project is taken this long after it opens. */
+export const FIRST_THUMBNAIL_AFTER_MS = 4_000;
+
+/** Takes the picture of the open project and keeps it with the project. Nothing happens if there is nothing to take. */
+async function storeThumbnail(
+  library: IndexedDbProjectLibrary,
+  id: string,
+): Promise<void> {
+  const picture = captureThumbnail();
+  if (picture) await library.setThumbnail(id, picture);
+}
 
 /**
- * Turns on saving for this page: opens the browser's storage, restores the project that was saved last
- * time, then saves every change a moment after it happens. Returns a function that turns it off again.
+ * Saves the open project and its picture right now (for leaving the editor). Resolves when it is written; a
+ * failure is logged and the caller goes on (the autosave status already tells the person).
+ */
+export async function saveOpenProjectNow(): Promise<void> {
+  if (!session) return;
+  const { id, library, autosave } = session;
+  try {
+    await autosave.flush();
+    await storeThumbnail(library, id);
+  } catch (error) {
+    console.error("Could not save the project before leaving:", error);
+  }
+}
+
+/**
+ * Turns on saving for this page: opens the browser's storage, restores the project with this id (the one in the
+ * address), then saves every change a moment after it happens. Returns a function that turns it off again.
  *
  * Saving only starts AFTER the restore has finished. Otherwise the starting scene (one cube) could be
  * saved over the real one before it was read. If the saved project cannot be READ (as opposed to being
  * unreadable data), saving stays off, for the same reason.
  */
-export function startPersistence(): () => void {
+export function startPersistence(projectId: string): () => void {
   const setStatus = usePersistenceStore.getState().setStatus;
   const tell = useImportStore.getState().setMessage;
 
@@ -25,6 +62,8 @@ export function startPersistence(): () => void {
   let database: IDBDatabase | null = null;
   let autosave: Autosave | null = null;
   let unsubscribe: (() => void) | null = null;
+  let lastPicture = 0;
+  let firstPicture: ReturnType<typeof setTimeout> | null = null;
 
   setStatus("loading");
 
@@ -48,20 +87,26 @@ export function startPersistence(): () => void {
 
     // From here on imported files are kept in the browser's storage and survive a reload
     setAssetStorage(new IndexedDbAssetStorage(database));
-    const repository = new IndexedDbProjectRepository(database);
+    const library = new IndexedDbProjectLibrary(database);
 
     try {
-      const result = await repository.load();
+      const result = await library.load(projectId);
       if (stopped) return;
       if (result.status === "loaded") {
         useProjectStore.getState().loadProject(result.project);
         // A prefab scene whose last change was not applied before the page closed is applied now
         applyAllPrefabScenes();
+      } else if (result.status === "empty") {
+        // No such project (a wrong or old link, or one that was deleted): the page says so, nothing is saved
+        setStatus("missing");
+        return;
       } else if (result.status === "invalid") {
         tell({
           tone: "error",
-          text: `Your saved project could not be read (${result.reason}), so a new project was started. The old data is kept as a backup in this browser.`,
+          text: `This project could not be read (${result.reason}), so saving is turned off to protect it. The data is kept as a backup in this browser.`,
         });
+        setStatus("error");
+        return;
       }
     } catch (error) {
       console.error("Could not read the saved scene:", error);
@@ -76,9 +121,18 @@ export function startPersistence(): () => void {
 
     autosave = createAutosave({
       getData: getProject,
-      save: (project) => repository.save(project),
+      save: (project) => library.save(projectId, project),
       onStatus: (status, error) => {
         setStatus(status);
+        if (
+          status === "saved" &&
+          Date.now() - lastPicture >= THUMBNAIL_EVERY_MS
+        ) {
+          lastPicture = Date.now();
+          void storeThumbnail(library, projectId).catch((e) =>
+            console.warn("Could not keep the picture of the project:", e),
+          );
+        }
         if (status === "error") {
           console.error("Could not save the project:", error);
           tell({
@@ -100,6 +154,16 @@ export function startPersistence(): () => void {
       stopScene();
       stopProject();
     };
+    session = { id: projectId, library, autosave };
+    // A first picture soon after opening, so a project that is only looked at (no change to save) still gets a card
+    // picture. The wait gives the 3D view time to draw what the project contains.
+    firstPicture = setTimeout(() => {
+      if (lastPicture !== 0) return;
+      lastPicture = Date.now();
+      void storeThumbnail(library, projectId).catch((e) =>
+        console.warn("Could not keep the picture of the project:", e),
+      );
+    }, FIRST_THUMBNAIL_AFTER_MS);
     setStatus("saved");
   })();
 
@@ -120,11 +184,22 @@ export function startPersistence(): () => void {
 
   return () => {
     stopped = true;
+    if (firstPicture) clearTimeout(firstPicture);
     window.removeEventListener("pagehide", flush);
     document.removeEventListener("visibilitychange", onVisibilityChange);
     window.removeEventListener("beforeunload", onBeforeUnload);
     unsubscribe?.();
-    autosave?.stop();
-    database?.close();
+    const last = autosave;
+    const db = database;
+    if (session?.autosave === last) session = null;
+    // What is still waiting is written before the storage is closed (leaving the editor must not lose a change)
+    if (last) {
+      void last.flush().finally(() => {
+        last.stop();
+        db?.close();
+      });
+    } else {
+      db?.close();
+    }
   };
 }

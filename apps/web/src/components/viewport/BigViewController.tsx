@@ -7,6 +7,10 @@ import { isSideView } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
 import { useViewStore } from "@/store/viewStore";
 import { fitToSize, placeSideCamera, updateSlab } from "./bigViewCamera";
+import {
+  syncFlatBackground,
+  type FlatBackgroundMemory,
+} from "./flatBackground";
 import { getPerspectiveCamera, setPerspectiveCamera } from "./cameraRegistry";
 
 type Controls = { target: Vector3; update: () => void };
@@ -99,6 +103,18 @@ export default function BigViewController() {
     } else {
       updateSlab(side);
     }
+  });
+
+  // The flat side views draw a plain background (the sky picture looks like a stray box through a flat camera).
+  // The scene's own background is kept and put back when the normal view returns.
+  const scene = useThree((state) => state.scene);
+  const memory = useRef<FlatBackgroundMemory>({ mine: null, original: null });
+  useFrame(() => {
+    syncFlatBackground(
+      scene,
+      flat.current !== null && camera === flat.current,
+      memory.current,
+    );
   });
 
   // A resized canvas: the flat camera is sized in pixels

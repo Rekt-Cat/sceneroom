@@ -118,6 +118,8 @@ export const MIN_ARRAY_COUNT = 2;
 export const MAX_ARRAY_COUNT = 20;
 export const MAX_ARRAY_SPACING = 5;
 export const MAX_SUBDIVIDE_LEVELS = 3;
+/** The thickest a Solidify modifier can make a shape, as a share of the shape's size (negative grows the other way). */
+export const MAX_SOLIDIFY_THICKNESS = 0.5;
 
 const modifierBase = {
   id: z.string().min(1),
@@ -136,6 +138,7 @@ const modifierBase = {
  * - noise: pushes points around in a smooth, bumpy pattern (the axis does not matter)
  * - mirror: adds a reflected copy on the other side of the middle of the object
  * - subdivide: smooths the shape (every face is cut up and rounded off; the axis does not matter)
+ * - solidify: gives a flat surface thickness (a plane becomes a slab, an open shape a shell; the axis does not matter)
  * - array: repeats the shape along the axis
  */
 export const modifierSchema = z.discriminatedUnion("type", [
@@ -191,6 +194,19 @@ export const modifierSchema = z.discriminatedUnion("type", [
     type: z.literal("subdivide"),
     /** How many times every face is cut up and smoothed (each level makes about four times as many faces). */
     levels: z.number().int().min(1).max(MAX_SUBDIVIDE_LEVELS).default(1),
+  }),
+  z.object({
+    ...modifierBase,
+    type: z.literal("solidify"),
+    /**
+     * How thick the shell becomes, as a share of the size of the shape. Positive grows it against the way the
+     * surface faces (a plane facing up grows downwards); negative grows it the other way.
+     */
+    thickness: z
+      .number()
+      .min(-MAX_SOLIDIFY_THICKNESS)
+      .max(MAX_SOLIDIFY_THICKNESS)
+      .default(0.1),
   }),
   z.object({
     ...modifierBase,

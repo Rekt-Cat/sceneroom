@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   APP_NAME,
   SCENE_FILE_EXTENSION,
@@ -12,6 +13,7 @@ import {
   openProjectFromFile,
   saveProjectToFile,
 } from "@/sceneFile/sceneFileActions";
+import { saveOpenProjectNow } from "@/persistence/startPersistence";
 import { useImportStore } from "@/store/importStore";
 import {
   usePersistenceStore,
@@ -79,6 +81,11 @@ const SAVE_STATUS: Record<
     text: "Could not save",
     dot: "bg-[#e5545f]",
     help: "The latest changes are not saved. See the message at the top of the 3D view.",
+  },
+  missing: {
+    text: "No such project",
+    dot: "bg-[#e5545f]",
+    help: "There is no project with this address in this browser",
   },
   unavailable: {
     text: "Not saved",
@@ -159,6 +166,32 @@ function FileButtons() {
   );
 }
 
+/**
+ * The logo and name: back to the list of projects. The project is saved first and its picture is taken, so the
+ * card on the home screen is up to date.
+ */
+function HomeButton() {
+  const router = useRouter();
+  const [leaving, setLeaving] = useState(false);
+  return (
+    <button
+      type="button"
+      disabled={leaving}
+      title="Back to your projects. This project is saved first."
+      onClick={() => {
+        setLeaving(true);
+        void saveOpenProjectNow().finally(() => router.push("/"));
+      }}
+      className="flex items-center gap-3 rounded-md pr-1 hover:opacity-80 focus-visible:outline-2 focus-visible:outline-ed-accent disabled:cursor-wait"
+    >
+      <span className="grid size-[26px] place-items-center rounded-[7px] bg-linear-to-br from-[#6f80ff] to-[#4152d4] text-white">
+        <Icon name="cube" />
+      </span>
+      <span className="text-sm font-semibold tracking-tight">{APP_NAME}</span>
+    </button>
+  );
+}
+
 /** Bar across the top of the editor: logo, Undo and Redo, the project and its scene tabs. */
 export default function TopBar() {
   const undoLabel = useSceneStore((state) => nextUndoLabel(state.history));
@@ -168,10 +201,7 @@ export default function TopBar() {
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-3 border-b border-ed-line bg-ed-panel px-3.5">
-      <span className="grid size-[26px] place-items-center rounded-[7px] bg-linear-to-br from-[#6f80ff] to-[#4152d4] text-white">
-        <Icon name="cube" />
-      </span>
-      <span className="text-sm font-semibold tracking-tight">{APP_NAME}</span>
+      <HomeButton />
       <span className="h-5 w-px bg-ed-line-strong" aria-hidden="true" />
       <div className="flex gap-0.5">
         <HistoryButton

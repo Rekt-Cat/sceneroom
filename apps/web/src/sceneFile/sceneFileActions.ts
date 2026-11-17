@@ -104,7 +104,7 @@ function describe(objects: number): string {
   return `${objects} object${objects === 1 ? "" : "s"}`;
 }
 
-function describeProject(project: Project): string {
+export function describeProject(project: Project): string {
   const objects = project.scenes.reduce(
     (sum, s) => sum + Object.keys(s.scene.nodes).length,
     0,
@@ -117,7 +117,7 @@ function describeProject(project: Project): string {
  * Reads and checks a SceneRoom file: its size, its structure, and that every model file matches its
  * fingerprint. Says in the bar over the 3D view exactly what is wrong and gives back null if anything is.
  */
-async function readProjectFile(
+export async function readProjectFile(
   file: File,
 ): Promise<{ project: Project; assets: Record<string, Uint8Array> } | null> {
   const { setMessage } = useImportStore.getState();
@@ -153,7 +153,10 @@ async function readProjectFile(
 }
 
 /** What is said after a file was loaded: how many scenes, and which models have no file. */
-function missingNote(project: Project, assets: Record<string, Uint8Array>) {
+export function missingNote(
+  project: Project,
+  assets: Record<string, Uint8Array>,
+) {
   const missing = projectAssetIds(project).filter((id) => !assets[id]);
   return {
     tone: missing.length > 0 ? ("error" as const) : ("info" as const),

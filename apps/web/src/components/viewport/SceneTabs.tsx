@@ -24,6 +24,7 @@ import {
 import { closePrefabScene } from "@/store/libraryActions";
 import { sceneObjectCount, useProjectStore } from "@/store/projectStore";
 import { Icon } from "./icons";
+import ProjectDialog from "./ProjectDialog";
 
 /** Tells the person why something was refused, in the bar over the 3D view. */
 function tellProblem(text: string | null) {
@@ -414,15 +415,19 @@ export default function SceneTabs(): ReactNode {
   const projectName = useProjectStore((s) => s.name);
   const scenes = useProjectStore((s) => s.scenes);
   const activeSceneId = useProjectStore((s) => s.activeSceneId);
+  const [overview, setOverview] = useState(false);
 
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2">
-      <span
-        className="shrink-0 text-sm text-ed-text-3"
-        title="The project holds all your scenes"
+      <button
+        type="button"
+        onClick={() => setOverview(true)}
+        title="The project holds all your scenes. Click for the overview: rename it, see what each scene holds, clean up unused models."
+        className="max-w-48 shrink-0 truncate rounded-md px-1.5 py-0.5 text-sm text-ed-text-3 hover:bg-ed-raised hover:text-ed-text focus-visible:outline-2 focus-visible:outline-ed-accent"
       >
         {projectName}
-      </span>
+      </button>
+      {overview && <ProjectDialog onClose={() => setOverview(false)} />}
       <span className="text-ed-text-3" aria-hidden="true">
         /
       </span>

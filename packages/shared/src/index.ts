@@ -42,3 +42,6 @@ export * from "./creases";
 export * from "./views";
 export * from "./bevel";
 export * from "./edgeExtrude";
+export * from "./solidify";
+export * from "./projectOverview";
+export * from "./projectIndex";

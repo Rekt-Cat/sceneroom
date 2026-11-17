@@ -170,3 +170,13 @@ describe("scenes in a project", () => {
     );
   });
 });
+
+describe("renaming the project", () => {
+  it("trims the name, keeps it in the saved project, and refuses an empty one", () => {
+    expect(useProjectStore.getState().renameProject("  My   game ")).toBeNull();
+    expect(useProjectStore.getState().name).toBe("My game");
+    expect(getProject().name).toBe("My game");
+    expect(useProjectStore.getState().renameProject("   ")).toContain("name");
+    expect(useProjectStore.getState().name).toBe("My game");
+  });
+});

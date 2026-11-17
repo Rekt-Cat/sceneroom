@@ -7,6 +7,7 @@ import {
 import { isSideView, peekTileRects, sideFrame } from "@sceneroom/shared";
 import { useViewStore } from "@/store/viewStore";
 import { getPerspectiveCamera } from "./cameraRegistry";
+import { withFlatBackground } from "./flatBackground";
 import { viewBox } from "./selectionBox";
 
 /** The colour behind and between the four tiles. */
@@ -72,7 +73,7 @@ export function renderPeek(
       sideCamera.lookAt(...frame.target);
       sideCamera.updateProjectionMatrix();
       sideCamera.updateMatrixWorld();
-      gl.render(scene, sideCamera);
+      withFlatBackground(scene, () => gl.render(scene, sideCamera));
     } else if (perspective) {
       // The normal camera, with the shape of this tile for the moment it takes to draw it
       const before = perspective.aspect;

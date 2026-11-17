@@ -509,6 +509,14 @@ Files: `apps/web/src/components/viewport/InspectorFields.tsx` (rows, steps, colo
 | Most levels | `MAX_SUBDIVIDE_LEVELS` in `packages/shared/src/scene.ts`    | 3         | Each level makes about four times the faces (3 levels = about 64 times).            |
 | Point limit | `MAX_DEFORMED_POINTS` in `packages/shared/src/modifiers.ts` | 400 000   | A level that would pass this many points is skipped (shared with Mirror and Array). |
 
+## Thicken (Solidify modifier)
+
+| What                | Where                                                       | Our value | What it does                                                                         |
+| ------------------- | ----------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------ |
+| Thickest            | `MAX_SOLIDIFY_THICKNESS` in `packages/shared/src/scene.ts`  | 0.5       | The largest thickness, as a share of the shape's size (negative goes the other way). |
+| Starting value      | `createModifier` in `packages/shared/src/modifiers.ts`      | 0.1       | The thickness a new Thicken modifier (and its reset button) uses.                    |
+| Longest corner push | the `Math.min(2, ...)` in `packages/shared/src/solidify.ts` | 2         | At sharp corners the wall is pushed up to twice as far, to keep it evenly thick.     |
+
 ## Inset (edit mode)
 
 | What          | Where                                                              | Our value | What it does                                                                          |
@@ -580,3 +588,13 @@ value and what it does.
 | Colour picker   | the swatch left of the hex box (`AppearanceSection` in `InspectorFields.tsx`) | -         | Click it to choose any colour. It uses the browser's own chooser, so it looks different in Chrome, Safari and Firefox. |
 | Quick colours   | `QUICK_COLORS` in `InspectorFields.tsx`                                       | 7 colours | The round buttons below the hex box. Add, remove or change a `{ name, hex }` line.                                     |
 | Starting colour | `DEFAULT_COLOR` in `packages/shared/src/scene.ts`                             | `#5cc4e0` | What a new object gets, and what the colour reset button goes back to.                                                 |
+
+## Project home screen
+
+| What              | Where                                                                        | Our value  | What it does                                                                 |
+| ----------------- | ---------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------- |
+| Most projects     | `MAX_LOCAL_PROJECTS` in `packages/shared/src/projectIndex.ts`                | 100        | The most projects one browser keeps (New and Open file stop at this).        |
+| Picture size      | `THUMBNAIL_WIDTH` / `THUMBNAIL_HEIGHT` in `components/viewport/thumbnail.ts` | 480 x 270  | The size of a project's picture on its card.                                 |
+| Picture quality   | `THUMBNAIL_QUALITY` in `thumbnail.ts`                                        | 0.7        | JPEG quality (0 to 1) of the picture; lower is smaller.                      |
+| Picture rhythm    | `THUMBNAIL_EVERY_MS` in `persistence/startPersistence.ts`                    | 30 000     | At most one new picture this often while editing (also taken when leaving).  |
+| Search shows from | `SEARCH_FROM` in `components/home/HomeScreen.tsx`                            | 5 projects | The search box and the sort choice appear once there are this many projects. |
