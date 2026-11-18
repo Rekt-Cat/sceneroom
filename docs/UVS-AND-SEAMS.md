@@ -85,3 +85,5 @@ Today each mesh edit stores a **whole new mesh** under its fingerprint, and the 
 ## Out of scope for now
 
 Painting and baking (step 10), pinning and relaxing points in the UV window, several UV sets per mesh, UDIM tiles, and importing a picture to preview on the object (comes with materials and textures, Phase 4).
+
+Diagram of the built steps 1 to 4: `docs/diagrams/uvs-and-seams.svg`.
