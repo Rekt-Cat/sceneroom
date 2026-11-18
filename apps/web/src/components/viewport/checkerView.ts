@@ -21,6 +21,6 @@ export function setChecker(nodeId: string, on: boolean): void {
     useSceneStore.getState().scene.nodes[nodeId]?.name ?? "This object";
   useImportStore.getState().setMessage({
     tone: "info",
-    text: `"${name}" has no UV map, so the checker cannot be shown on it. Smooth, Thicken and most edit tools remove the map; Unwrap makes a new one (coming soon).`,
+    text: `"${name}" has no UV map, so the checker cannot be shown on it. The Smooth modifier removes the map; Unwrap makes a new one.`,
   });
 }

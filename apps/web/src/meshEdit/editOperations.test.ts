@@ -801,15 +801,33 @@ describe("UVs of an edited mesh", () => {
     expect(Array.from(after.uvs ?? [])).toEqual(Array.from(before.uvs ?? []));
   });
 
-  it("a tool that does not know UVs removes them and says so, once", async () => {
-    expect(await divideSelectedFaces()).toBe(true);
-    expect(await changeDivide(1)).toBe(true);
+  it("a tool that leaves the map out removes it and says so, once (the safety net for tools that do not know UVs)", async () => {
+    const before = await mesh();
+    // what such a tool would hand back: the same points and triangles, with no map
+    const bare = { positions: before.positions, indices: before.indices };
+    expect(
+      await commitMesh("a", { ...bare, creases: undefined }, "Test tool"),
+    ).toBe(true);
     expect((await mesh()).uvs).toBeUndefined();
     expect(message()).toContain("removed the UV map");
-    expect(message()).toContain("Divide");
+    expect(message()).toContain("Test tool");
     // the next change has no map left to lose, so nothing more is said
     useImportStore.setState({ message: null });
-    expect(await changeDivide(2)).toBe(true);
+    expect(
+      await commitMesh(
+        "a",
+        { ...bare, positions: Float32Array.from(bare.positions, (v) => v * 2) },
+        "Test tool",
+      ),
+    ).toBe(true);
+    expect(message()).toBe("");
+  });
+
+  it("divide keeps the map, with no message", async () => {
+    useImportStore.setState({ message: null });
+    expect(await divideSelectedFaces()).toBe(true);
+    expect(await changeDivide(1)).toBe(true);
+    expect((await mesh()).uvs).toBeDefined();
     expect(message()).toBe("");
   });
 });

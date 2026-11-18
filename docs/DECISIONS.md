@@ -947,3 +947,12 @@ The design from 2026-11-16 (above) was built on `feature/four-view`; not yet tri
 - **Not done:** relaxing the map, pinning points, rotating pieces for tighter packing; Unwrap along seams does not keep an existing hand-made map.
 
 - **Outline** (found in the first browser check of Unwrap along seams): an edge loop cannot go round the rim of a lid, because loops run through squares and a lid is a fan of triangles, so a capped cylinder could not be cut open with the tools at hand. `outlineSelection` (Adjust row) selects the edges round the selected faces: select the lid (face mode, Alt-click), press Outline, get the rim. A face counts as selected when all its corners are; the result is the points of edges with exactly one selected face beside them. Known limit: an edge inside the region that joins two outline points is selected as well.
+
+## UVs, sub-step 5: the tools keep the map
+
+- **Divide and Loop cut interpolate** the map exactly: a new point on an edge lies between the UVs of the edge's two points; an interior point of a Divide is the bilinear (square) or barycentric (triangle) mix of the corner UVs. Tested with a map that is a straight-line function of position: every old and new point stays exactly on it.
+- **Tools that remove or join points renumber the map** with the points (delete points and faces, merge, weld); **flip and bridge** leave it unchanged (flipped faces show as turned over in the Stretch view, which is true on the map); **fill hole** puts the new middle at the middle of the rim's UVs.
+- **Tools that copy points copy the UV of the source point** (extrude, inset, edge extrude, Thicken): the cap and the inner shell are right; the new WALLS are smeared along the map (zero width) until the object is unwrapped again, and the Stretch view shows them red. Projecting walls onto the map would overlap other pieces; smearing is honest and simple.
+- **Bevel:** a cut point takes the UV of its own face's corner, a strip point lies between the UVs of the two faces it joins, a corner fill point is the average of its border.
+- **Smooth still drops the map** (with no message, because a modifier only changes what is shown): it merges points that share a spot into one, which a UV seam cannot survive. It needs the subdivision to work per point, a bigger change, left for later. The safety net stays: a tool that hands back a mesh with no map still gets "removed the UV map" (tested with a stand-in).
+

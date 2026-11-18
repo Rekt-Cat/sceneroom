@@ -223,16 +223,26 @@ export function bevelEdges(
   };
 
   const positions: number[] = Array.from(mesh.positions);
+  // The map: a new point takes a place on it from the points of the faces round it (a cut point lies on its own face,
+  // a strip point between the two faces it joins), so the bevel stays on the map
+  const uvs: number[] | null = mesh.uvs ? Array.from(mesh.uvs) : null;
+  const uvOf = (i: number): [number, number] =>
+    uvs ? [uvs[i * 2]!, uvs[i * 2 + 1]!] : [0, 0];
   const indices: number[] = [];
   const shared = new Map<string, number>();
   const strip = new Set<number>();
-  const alloc = (p: Vec, name?: string): number => {
+  const alloc = (
+    p: Vec,
+    name?: string,
+    uv: [number, number] = [0, 0],
+  ): number => {
     if (name !== undefined) {
       const found = shared.get(name);
       if (found !== undefined) return found;
     }
     const id = positions.length / 3;
     positions.push(p[0], p[1], p[2]);
+    uvs?.push(uv[0], uv[1]);
     if (name !== undefined) shared.set(name, id);
     return id;
   };
@@ -304,7 +314,9 @@ export function bevelEdges(
       const first = onSide(prev, f, v);
       const second = onSide(next, f, v);
       const make = (p: Vec) =>
-        same(p, point(topology, v)) ? ownPoint(f, v) : alloc(p);
+        same(p, point(topology, v))
+          ? ownPoint(f, v)
+          : alloc(p, undefined, uvOf(ownPoint(f, v)));
       poly.push(make(first));
       if (!same(first, second)) poly.push(make(second));
     });
@@ -317,8 +329,14 @@ export function bevelEdges(
     const a = onSide(e, left, v);
     const b = onSide(e, right, v);
     const control = point(topology, v);
+    const ua = uvOf(ownPoint(left, v));
+    const ub = uvOf(ownPoint(right, v));
     return Array.from({ length: n + 1 }, (_, j) => {
-      const id = alloc(curve(a, control, b, j / n), `strip:${e}:${v}:${j}`);
+      const t = j / n;
+      const id = alloc(curve(a, control, b, t), `strip:${e}:${v}:${j}`, [
+        ua[0] + (ub[0] - ua[0]) * t,
+        ua[1] + (ub[1] - ua[1]) * t,
+      ]);
       strip.add(id);
       return id;
     });
@@ -361,7 +379,9 @@ export function bevelEdges(
         border.push(...(left === before ? strips : [...strips].reverse()));
       } else {
         const p = plainPoint(e, v);
-        border.push(alloc(p));
+        border.push(
+          alloc(p, undefined, uvOf(ownPoint(topology.edgeFaces[e]![0]!, v))),
+        );
       }
     });
     // Drop points that sit on top of the one before them
@@ -370,6 +390,17 @@ export function bevelEdges(
         !same(at(p), at(border[(i + border.length - 1) % border.length]!)),
     );
     if (distinct.length < 3) continue;
+    // Where two bevelled edges meet at a corner whose other edge is plain, the two strips share the same end curve (a
+    // mitre), so the border of the "gap" has no area: filling it would stack zero-area faces on the strips
+    const borderNormal: Vec = [0, 0, 0];
+    for (let i = 0; i < distinct.length; i++) {
+      const p = at(distinct[i]!);
+      const q = at(distinct[(i + 1) % distinct.length]!);
+      borderNormal[0] += (p[1] - q[1]) * (p[2] + q[2]);
+      borderNormal[1] += (p[2] - q[2]) * (p[0] + q[0]);
+      borderNormal[2] += (p[0] - q[0]) * (p[1] + q[1]);
+    }
+    if (length(borderNormal) < 1e-6 * w * w) continue;
     const target = unit(
       faces.reduce<Vec>((sum, f) => add(sum, normals[f]!), [0, 0, 0]),
     );
@@ -381,8 +412,16 @@ export function bevelEdges(
         distinct.reduce<Vec>((sum, p) => add(sum, at(p)), [0, 0, 0]),
         1 / distinct.length,
       );
+      let su = 0;
+      let sv = 0;
+      for (const p of distinct) {
+        su += uvOf(p)[0];
+        sv += uvOf(p)[1];
+      }
       const centre = alloc(
         add(middle, scale(sub(point(topology, v), middle), 0.3)),
+        undefined,
+        [su / distinct.length, sv / distinct.length],
       );
       for (let i = 0; i < distinct.length; i++) {
         fill(
@@ -397,11 +436,13 @@ export function bevelEdges(
   const used = new Set(indices);
   const renumber = new Int32Array(positions.length / 3).fill(-1);
   const kept: number[] = [];
+  const keptUvs: number[] | null = uvs ? [] : null;
   let next = 0;
   for (let p = 0; p < positions.length / 3; p++) {
     if (!used.has(p)) continue;
     renumber[p] = next++;
     kept.push(positions[p * 3]!, positions[p * 3 + 1]!, positions[p * 3 + 2]!);
+    if (keptUvs && uvs) keptUvs.push(uvs[p * 2]!, uvs[p * 2 + 1]!);
   }
   return {
     ok: true,
@@ -415,6 +456,7 @@ export function bevelEdges(
       ...seamsOf(
         remapSeams(mesh.seams, renumber.subarray(0, mesh.positions.length / 3)),
       ),
+      ...(keptUvs ? { uvs: Float32Array.from(keptUvs) } : {}),
     },
     selected: [...strip]
       .filter((p) => renumber[p]! >= 0)

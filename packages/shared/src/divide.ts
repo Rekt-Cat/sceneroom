@@ -1,7 +1,7 @@
 import type { Crease } from "./creases";
 import { seamsOf, type Seam } from "./seams";
 import type { EditMesh, EditResult } from "./meshEdit";
-import { buildTopology } from "./topology";
+import { buildTopology, edgeBetween } from "./topology";
 
 /** The most cuts one Divide can make across a face (each cut adds a line of new edges). */
 export const MAX_DIVIDE_CUTS = 10;
@@ -56,14 +56,31 @@ export function divideFaces(
     };
   }
   const chosenSet = new Set(chosen);
+  // The faces next to a divided face that are not divided themselves: the divided edge has new points on it, so they
+  // are cut up to use them (or the new points would sit on one face only and the surface would be open there)
+  const joined = new Set<number>();
+  const dividedEdges = new Set<number>();
+  for (const f of chosen) {
+    const vs = topology.faces[f]!.vertices;
+    for (let i = 0; i < vs.length; i++) {
+      const e = edgeBetween(topology, vs[i]!, vs[(i + 1) % vs.length]!);
+      if (e === -1) continue;
+      for (const other of topology.edgeFaces[e]!) {
+        if (chosenSet.has(other)) continue;
+        joined.add(other);
+        dividedEdges.add(e);
+      }
+    }
+  }
   let estimate = 0;
   for (let t = 0; t < mesh.indices.length / 3; t++) {
     const f = topology.triangleFace[t]!;
-    if (f === -1 || !chosenSet.has(f)) estimate += 1;
+    if (f === -1 || !(chosenSet.has(f) || joined.has(f))) estimate += 1;
   }
   for (const f of chosen) {
     estimate += (topology.faces[f]!.vertices.length === 4 ? 2 : 1) * n * n;
   }
+  estimate += joined.size * (4 + 2 * n);
   if (estimate > MAX_DIVIDED_TRIANGLES) {
     return {
       ok: false,
@@ -78,15 +95,20 @@ export function divideFaces(
     positions[p * 3 + 1]!,
     positions[p * 3 + 2]!,
   ];
-  const addPoint = (p: Vec): number => {
+  // The map goes along: a new point gets a place on it worked out from the points it lies between
+  const uvs: number[] | null = mesh.uvs ? Array.from(mesh.uvs) : null;
+  const uvAt = (p: number): [number, number] =>
+    uvs ? [uvs[p * 2]!, uvs[p * 2 + 1]!] : [0, 0];
+  const addPoint = (p: Vec, uv: [number, number] = [0, 0]): number => {
     positions.push(p[0], p[1], p[2]);
+    uvs?.push(uv[0], uv[1]);
     return positions.length / 3 - 1;
   };
 
   // The triangles of faces that are not divided stay as they are
   for (let t = 0; t < mesh.indices.length / 3; t++) {
     const f = topology.triangleFace[t]!;
-    if (f !== -1 && chosenSet.has(f)) continue;
+    if (f !== -1 && (chosenSet.has(f) || joined.has(f))) continue;
     indices.push(
       mesh.indices[t * 3]!,
       mesh.indices[t * 3 + 1]!,
@@ -104,15 +126,20 @@ export function divideFaces(
     if (!chain) {
       const pa = at(low);
       const pb = at(high);
+      const ua = uvAt(low);
+      const ub = uvAt(high);
       chain = [];
       for (let k = 1; k < n; k++) {
         const t = k / n;
         chain.push(
-          addPoint([
-            pa[0] + (pb[0] - pa[0]) * t,
-            pa[1] + (pb[1] - pa[1]) * t,
-            pa[2] + (pb[2] - pa[2]) * t,
-          ]),
+          addPoint(
+            [
+              pa[0] + (pb[0] - pa[0]) * t,
+              pa[1] + (pb[1] - pa[1]) * t,
+              pa[2] + (pb[2] - pa[2]) * t,
+            ],
+            [ua[0] + (ub[0] - ua[0]) * t, ua[1] + (ub[1] - ua[1]) * t],
+          ),
         );
       }
       along.set(key, chain);
@@ -120,10 +147,9 @@ export function divideFaces(
     return a < b ? chain : [...chain].reverse();
   };
 
-  const touched = new Set<number>();
-  for (const f of chosen) {
+  /** The face's own points in the order of its corners, wound the way its triangles are. */
+  const cycleOf = (f: number): number[] => {
     const face = topology.faces[f]!;
-    // The face's own points, in the order of its corners, wound the way its triangles are
     const corner = (v: number): number => {
       for (const t of face.triangles) {
         for (let k = 0; k < 3; k++) {
@@ -148,6 +174,12 @@ export function divideFaces(
       normal[2] += (p[0] - q[0]) * (p[1] + q[1]);
     }
     if (dot(normal, wanted) < 0) cycle = [...cycle].reverse();
+    return cycle;
+  };
+
+  const touched = new Set<number>();
+  for (const f of chosen) {
+    const cycle = cycleOf(f);
     for (const p of cycle) touched.add(p);
 
     if (cycle.length === 4) {
@@ -170,6 +202,7 @@ export function divideFaces(
         grid[0]![k] = left[k - 1]!;
       }
       const P = [at(c0), at(c1), at(c2), at(c3)];
+      const Q = [uvAt(c0), uvAt(c1), uvAt(c2), uvAt(c3)];
       for (let i = 1; i < n; i++) {
         for (let j = 1; j < n; j++) {
           const u = i / n;
@@ -182,6 +215,13 @@ export function divideFaces(
                 u * v * P[2]![k]! +
                 (1 - u) * v * P[3]![k]!,
             ) as Vec,
+            [0, 1].map(
+              (k) =>
+                (1 - u) * (1 - v) * Q[0]![k]! +
+                u * (1 - v) * Q[1]![k]! +
+                u * v * Q[2]![k]! +
+                (1 - u) * v * Q[3]![k]!,
+            ) as [number, number],
           );
         }
       }
@@ -211,6 +251,7 @@ export function divideFaces(
         grid.set(key(n - k, k), e12[k - 1]!);
       }
       const P = [at(t0), at(t1), at(t2)];
+      const Q = [uvAt(t0), uvAt(t1), uvAt(t2)];
       for (let i = 1; i < n; i++) {
         for (let j = 1; i + j < n; j++) {
           const w0 = (n - i - j) / n;
@@ -222,6 +263,9 @@ export function divideFaces(
               [0, 1, 2].map(
                 (k) => w0 * P[0]![k]! + w1 * P[1]![k]! + w2 * P[2]![k]!,
               ) as Vec,
+              [0, 1].map(
+                (k) => w0 * Q[0]![k]! + w1 * Q[1]![k]! + w2 * Q[2]![k]!,
+              ) as [number, number],
             ),
           );
         }
@@ -243,6 +287,63 @@ export function divideFaces(
           }
         }
       }
+    }
+  }
+
+  // The faces next to the divided ones: each becomes a fan round a middle point, through the new points on its divided
+  // edges, so the surface stays closed with no point lying on one face only
+  for (const g of joined) {
+    const cycle = cycleOf(g);
+    const poly: number[] = [];
+    for (let i = 0; i < cycle.length; i++) {
+      const pa = cycle[i]!;
+      const pb = cycle[(i + 1) % cycle.length]!;
+      poly.push(pa);
+      const e = edgeBetween(
+        topology,
+        topology.vertexOf[pa]!,
+        topology.vertexOf[pb]!,
+      );
+      if (e === -1 || !dividedEdges.has(e)) continue;
+      const shared = along.get(`${Math.min(pa, pb)},${Math.max(pa, pb)}`);
+      if (shared) {
+        // Points the divided face already made (the two faces share their points here)
+        poly.push(...(pa < pb ? shared : [...shared].reverse()));
+        continue;
+      }
+      // The two faces have their own points here (a hard edge): make this face's own copies of the new points
+      const A = at(pa);
+      const B = at(pb);
+      const ua = uvAt(pa);
+      const ub = uvAt(pb);
+      for (let k = 1; k < n; k++) {
+        const t = k / n;
+        poly.push(
+          addPoint(
+            [
+              A[0] + (B[0] - A[0]) * t,
+              A[1] + (B[1] - A[1]) * t,
+              A[2] + (B[2] - A[2]) * t,
+            ],
+            [ua[0] + (ub[0] - ua[0]) * t, ua[1] + (ub[1] - ua[1]) * t],
+          ),
+        );
+      }
+    }
+    const middle: Vec = [0, 0, 0];
+    let mu = 0;
+    let mv = 0;
+    for (const point of poly) {
+      const p = at(point);
+      middle[0] += p[0] / poly.length;
+      middle[1] += p[1] / poly.length;
+      middle[2] += p[2] / poly.length;
+      mu += uvAt(point)[0] / poly.length;
+      mv += uvAt(point)[1] / poly.length;
+    }
+    const centre = addPoint(middle, [mu, mv]);
+    for (let i = 0; i < poly.length; i++) {
+      indices.push(centre, poly[i]!, poly[(i + 1) % poly.length]!);
     }
   }
 
@@ -311,6 +412,7 @@ export function divideFaces(
       indices: Uint32Array.from(indices),
       creases,
       ...seamsOf(seams),
+      ...(uvs ? { uvs: Float32Array.from(uvs) } : {}),
     },
     selected: [...touched].sort((a, b) => a - b),
   };

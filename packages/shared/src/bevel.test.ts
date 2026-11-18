@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  allPoints,
   bevelEdges,
   buildTopology,
+  selectedEdges,
   edgeBetween,
   maxBevelWidth,
   type EditMesh,
@@ -115,5 +117,40 @@ describe("bevel refusals", () => {
     const mesh = box(1);
     const t = buildTopology(mesh);
     expect(maxBevelWidth(mesh, t, cubeEdge(t))).toBeCloseTo(0.45);
+  });
+});
+
+describe("bevel with several segments where bevelled edges meet", () => {
+  const top = (mesh: EditMesh) =>
+    allPoints(mesh.positions.length / 3).filter(
+      (p) => Math.abs(mesh.positions[p * 3 + 1]! - 0.5) < 1e-6,
+    );
+
+  it("the four edges of one face of a cube (two bevelled edges and a plain one at each corner): closed for every segment count", () => {
+    for (const segments of [1, 2, 3, 5]) {
+      const mesh = box(1);
+      const topology = buildTopology(mesh);
+      const edges = selectedEdges(topology, top(mesh));
+      expect(edges).toHaveLength(4);
+      const result = bevelEdges(mesh, topology, edges, 0.1, segments);
+      expect(result.ok).toBe(true);
+      if (!result.ok) continue;
+      const faces = buildTopology(result.mesh).edgeFaces;
+      expect(faces.filter((f) => f.length !== 2)).toHaveLength(0);
+    }
+  });
+
+  it("all twelve edges of a cube with rounded corners: closed and outward-facing", () => {
+    for (const segments of [2, 3]) {
+      const mesh = box(1);
+      const topology = buildTopology(mesh);
+      const all = topology.edgeFaces.map((_, e) => e);
+      const result = bevelEdges(mesh, topology, all, 0.1, segments);
+      expect(result.ok).toBe(true);
+      if (!result.ok) continue;
+      expect(
+        buildTopology(result.mesh).edgeFaces.every((f) => f.length === 2),
+      ).toBe(true);
+    }
   });
 });
