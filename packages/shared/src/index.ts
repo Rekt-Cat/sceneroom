@@ -49,3 +49,4 @@ export * from "./meshTools";
 export * from "./selectionOps";
 export * from "./divide";
 export * from "./seams";
+export * from "./unwrap";

@@ -19,6 +19,7 @@ import HierarchyPanel from "./HierarchyPanel";
 import ImportBanner from "./ImportBanner";
 import InspectorPanel from "./InspectorPanel";
 import ToolDock from "./ToolDock";
+import UvWindow from "./UvWindow";
 import TopBar from "./TopBar";
 import ViewportLoader from "./ViewportLoader";
 import { useEditorShortcuts } from "./useEditorShortcuts";
@@ -128,6 +129,7 @@ export default function EditorShell({ projectId }: { projectId: string }) {
           <BigViewSwitch />
           <PeekOverlay />
           <ToolDock />
+          <UvWindow />
           {/* The panels over the top of the 3D view stack in one column, so a message never covers the edit panel */}
           <div className="pointer-events-none absolute top-3 left-1/2 z-10 flex w-max max-w-[calc(100%-2rem)] -translate-x-1/2 flex-col items-center gap-2 *:pointer-events-auto">
             <EditStatus />

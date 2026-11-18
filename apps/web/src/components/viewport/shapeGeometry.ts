@@ -9,6 +9,7 @@ import {
 } from "three";
 import {
   deformMesh,
+  weldGroups,
   type Crease,
   type Modifier,
   type PrimitiveKind,
@@ -70,6 +71,8 @@ export function buildMeshGeometry(
     );
   }
   geometry.computeVertexNormals();
+  // Unwrapping splits points where the map is cut; the surface must not look cut there too
+  if (mesh.uvs) smoothAcrossSplitPoints(geometry);
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
   // The creases ride along: the modifiers read them (Smooth), and edit mode draws them
@@ -77,6 +80,50 @@ export function buildMeshGeometry(
   // The seams ride along too (edit mode draws them; they are not changed by the modifiers)
   if (mesh.seams) geometry.userData[SEAMS_KEY] = mesh.seams;
   return withModifiers(geometry, modifiers);
+}
+
+/** Points on one spot whose normals differ by less than this many degrees are shaded as one (a cut in the UV map, not a corner). */
+export const SPLIT_POINT_SMOOTH_DEGREES = 40;
+
+/**
+ * Points that sit on the same spot (a UV map cut splits a point in two) get the average of their normals when those
+ * point nearly the same way, so the cut does not show as a line in the shading. Real corners (a cube's edge, 90
+ * degrees) keep their separate normals.
+ */
+export function smoothAcrossSplitPoints(geometry: BufferGeometry): void {
+  const position = geometry.getAttribute("position") as BufferAttribute;
+  const normal = geometry.getAttribute("normal") as BufferAttribute;
+  const groups = weldGroups(position.array as Float32Array);
+  const limit = Math.cos((SPLIT_POINT_SMOOTH_DEGREES * Math.PI) / 180);
+  const out = new Float32Array(normal.array.length);
+  out.set(normal.array as Float32Array);
+  for (const members of groups.members) {
+    if (members.length < 2) continue;
+    for (const i of members) {
+      let x = 0;
+      let y = 0;
+      let z = 0;
+      for (const j of members) {
+        const d =
+          normal.getX(i) * normal.getX(j) +
+          normal.getY(i) * normal.getY(j) +
+          normal.getZ(i) * normal.getZ(j);
+        if (d >= limit) {
+          x += normal.getX(j);
+          y += normal.getY(j);
+          z += normal.getZ(j);
+        }
+      }
+      const length = Math.hypot(x, y, z);
+      if (length > 1e-9) {
+        out[i * 3] = x / length;
+        out[i * 3 + 1] = y / length;
+        out[i * 3 + 2] = z / length;
+      }
+    }
+  }
+  normal.array.set(out);
+  normal.needsUpdate = true;
 }
 
 /** Where a geometry keeps the creases of the mesh it was made from. */

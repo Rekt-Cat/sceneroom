@@ -90,6 +90,9 @@ type EditState = {
   /** The loop cut whose settings can still be changed, or null. */
   loopCut: LoopCutSession | null;
   setLoopCut: (session: LoopCutSession | null) => void;
+  /** True while the UV window (the flat map of the mesh being edited) is shown. */
+  uvWindow: boolean;
+  setUvWindow: (on: boolean) => void;
   /** The divide whose number of cuts can still be changed, or null. */
   divide: DivideSession | null;
   setDivide: (session: DivideSession | null) => void;
@@ -127,6 +130,8 @@ export const useEditStore = create<EditState>()((set) => ({
   setExtrude: (extrude) => set({ extrude }),
   loopCutMode: false,
   setLoopCutMode: (loopCutMode) => set({ loopCutMode }),
+  uvWindow: false,
+  setUvWindow: (uvWindow) => set({ uvWindow }),
   divide: null,
   setDivide: (divide) => set({ divide }),
   bevel: null,

@@ -638,3 +638,12 @@ value and what it does.
 | ----------- | ----------------------------------------------------- | -------------- | --------------------------------------------------------- |
 | Seam colour | `seamLines` in `apps/web/src/meshEdit/editOverlay.ts` | red `0xf0434a` | The colour of seam lines in edit mode (creases are pink). |
 | Most seams  | `MAX_SEAMS` in `packages/shared/src/seams.ts`         | 200 000        | The most seams one mesh may have.                         |
+
+## Unwrap
+
+| What        | Where                                                                  | Our value | What it does                                                                                                                                   |
+| ----------- | ---------------------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chart angle | `DEFAULT_CHART_ANGLE_DEGREES` in `packages/shared/src/unwrap.ts`       | 66        | Neighbouring faces join one flat piece while they point within this many degrees of the piece's average. Bigger: fewer, more distorted pieces. |
+| Margin      | `DEFAULT_UV_MARGIN` in `unwrap.ts`                                     | 0.02      | The empty strip between pieces and round the edge of the 0 to 1 square (a share of its side).                                                  |
+| Smooth cuts | `SPLIT_POINT_SMOOTH_DEGREES` in `components/viewport/shapeGeometry.ts` | 40        | Points split by an unwrap share their shading when their surfaces differ by less than this many degrees.                                       |
+| UV window   | `SIZE` in `components/viewport/UvWindow.tsx`                           | 232 px    | The size of the map picture.                                                                                                                   |

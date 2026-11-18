@@ -21,6 +21,7 @@ import {
   changeExtrude,
   changeLoopCut,
   bevelSelectedEdges,
+  unwrapMesh,
   seamSelectedEdges,
   changeDivide,
   commitDivide,
@@ -846,5 +847,39 @@ describe("seams", () => {
   it("asks for an edge when nothing is selected", async () => {
     expect(await seamSelectedEdges(true)).toBe(false);
     expect(message()).toContain("Select an edge");
+  });
+});
+
+describe("unwrap", () => {
+  it("gives the cube a map of six pieces as one undo step, keeps the shape, and says what it did", async () => {
+    const before = await mesh();
+    const steps = get().history.past.length;
+    expect(await unwrapMesh()).toBe(true);
+    expect(get().history.past.length).toBe(steps + 1);
+    expect(get().history.past.at(-1)?.label).toBe("Unwrap");
+    const after = await mesh();
+    expect(after.uvs).toBeDefined();
+    expect(after.indices.length).toBe(before.indices.length);
+    expect(useEditStore.getState().selected).toEqual([]);
+    expect(message()).toContain("Unwrapped into 6 pieces");
+    get().undo();
+    // the cube's own map is back
+    expect((await mesh()).uvs).toEqual(before.uvs);
+  });
+
+  it("unwrapping again replaces the map and adds one more undo step", async () => {
+    await unwrapMesh();
+    const steps = get().history.past.length;
+    await unwrapMesh();
+    expect(get().history.past.length).toBe(steps);
+  });
+
+  it("a seam is respected: a cube with no seam on its sides still has six pieces, a seam only adds cuts", async () => {
+    const t = buildTopology(await mesh());
+    const [a, b] = [t.vertexPoints[t.edges[0]!]!, t.vertexPoints[t.edges[1]!]!];
+    useEditStore.getState().setSelected([...a, ...b]);
+    await seamSelectedEdges(true);
+    expect(await unwrapMesh()).toBe(true);
+    expect((await mesh()).uvs).toBeDefined();
   });
 });

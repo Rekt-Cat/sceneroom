@@ -13,6 +13,7 @@ import {
   CREASE_SOFT,
   creaseSelectedEdges,
   seamSelectedEdges,
+  unwrapMesh,
   deleteSelectedPoints,
   extrudeSelectedFaces,
   bevelSelectedEdges,
@@ -80,6 +81,8 @@ export default function EditTools() {
   const selectMode = useEditStore((state) => state.selectMode);
   const setSelectMode = useEditStore((state) => state.setSelectMode);
   const xray = useEditStore((state) => state.xray);
+  const uvWindow = useEditStore((state) => state.uvWindow);
+  const setUvWindow = useEditStore((state) => state.setUvWindow);
   const checker = useViewStore((state) =>
     nodeId ? state.checkerIds.has(nodeId) : false,
   );
@@ -262,6 +265,27 @@ export default function EditTools() {
 
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-ed-text-3">UV</span>
+          <button
+            type="button"
+            onClick={() => void unwrapMesh()}
+            title="Unwrap: lay the surface flat, like a sewing pattern, and give the mesh a UV map. Needs no seams (marked seams are respected). Replaces an earlier map."
+            className={ACTION}
+          >
+            Unwrap
+          </button>
+          <button
+            type="button"
+            aria-pressed={uvWindow}
+            onClick={() => setUvWindow(!uvWindow)}
+            title="UV window: show the flat map of the mesh in the corner of the 3D view"
+            className={`rounded-md border px-2.5 py-1 font-medium focus-visible:outline-2 focus-visible:outline-ed-accent ${
+              uvWindow
+                ? "border-ed-select/60 bg-ed-select/25 text-ed-select"
+                : "border-ed-line-strong hover:bg-ed-field"
+            }`}
+          >
+            UV window
+          </button>
           <button
             type="button"
             onClick={() => void seamSelectedEdges(true)}

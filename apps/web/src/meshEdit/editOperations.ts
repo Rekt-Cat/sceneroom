@@ -25,6 +25,7 @@ import {
   extrudeFaces,
   extrudeEdges,
   bridgeLoops,
+  smartUnwrap,
   divideFaces,
   MAX_DIVIDE_CUTS,
   deleteFaces,
@@ -676,6 +677,30 @@ export async function changeBevel(change: BevelChange): Promise<boolean> {
   }
   if (!previewBevel(change)) return false;
   return commitBevel();
+}
+
+// ---- Unwrap ----
+
+/**
+ * Unwrap: gives the mesh a UV map (see `smartUnwrap`): the surface is cut into flat pieces, which are packed into the
+ * 0 to 1 square. Needs no seams, but marked seams are respected. Replaces an earlier map. One undo step. The points
+ * are renumbered (those on a cut are doubled), so the selection is cleared.
+ */
+export async function unwrapMesh(): Promise<boolean> {
+  const edited = await editedMesh();
+  if (!edited) return false;
+  const result = smartUnwrap(edited.mesh);
+  if (!result.ok) {
+    say(result.reason);
+    return false;
+  }
+  if (!(await commitMesh(edited.nodeId, result.mesh, "Unwrap"))) return false;
+  useEditStore.getState().setSelected([]);
+  useImportStore.getState().setMessage({
+    tone: "info",
+    text: `Unwrapped into ${result.islands} piece${result.islands === 1 ? "" : "s"}. Turn on the Checker to see how the map lies on the object, and the UV window to see the map itself.`,
+  });
+  return true;
 }
 
 // ---- Seams ----
