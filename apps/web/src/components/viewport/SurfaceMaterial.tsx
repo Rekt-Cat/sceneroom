@@ -3,6 +3,7 @@
 import { DoubleSide, FrontSide } from "three";
 import type { Material } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
+import { getCheckerTexture } from "./checkerTexture";
 import { useEnvironmentTexture } from "./environmentTexture";
 
 /**
@@ -10,32 +11,38 @@ import { useEnvironmentTexture } from "./environmentTexture";
  * roughness, metalness, glow, opacity, flat shading, which sides are drawn, and how much of the scene's
  * reflections it shows. Used by shapes, meshes and plants, so they all look the same way.
  *
- * `cut` draws the object faded (an object waiting to be pasted).
+ * `cut` draws the object faded (an object waiting to be pasted). `checker` draws the UV checkerboard.
  */
 export default function SurfaceMaterial({
   color,
   material,
   cut = false,
+  checker = false,
 }: {
   color: string;
   material: Material;
   cut?: boolean;
+  /** Draw the UV checkerboard instead of the colour (this object is selected and the checker is on). */
+  checker?: boolean;
 }) {
   const envTexture = useEnvironmentTexture((state) => state.texture);
   const reflectionStrength = useSceneStore(
     (state) => state.scene.environment.reflectionStrength,
   );
   const seeThrough = cut || material.opacity < 1;
+  const checkerMap = checker ? getCheckerTexture() : null;
   return (
     <meshStandardMaterial
       // A new material when the shading, the side or solid / see-through changes: three.js builds its
       // shader for these (a solid material is compiled to ignore opacity completely)
-      key={`${material.flatShading}-${material.doubleSided}-${seeThrough}-${envTexture !== null}`}
+      key={`${material.flatShading}-${material.doubleSided}-${seeThrough}-${envTexture !== null}-${checkerMap !== null}`}
       // What the surface reflects. Set on each material (and not left to the scene) so that the
       // object's own Reflection strength can scale it
       envMap={envTexture}
       envMapIntensity={material.reflectionStrength * reflectionStrength}
-      color={color}
+      // The checkerboard is drawn in its own colours, not tinted by the object's
+      color={checkerMap ? "#ffffff" : color}
+      map={checkerMap}
       roughness={material.roughness}
       metalness={material.metalness}
       emissive={material.emissiveColor}

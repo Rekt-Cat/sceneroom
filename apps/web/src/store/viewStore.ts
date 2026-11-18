@@ -1,5 +1,21 @@
 import { create } from "zustand";
-import { DEFAULT_PEEK_TILES, type ViewKind } from "@sceneroom/shared";
+import {
+  DEFAULT_PEEK_TILES,
+  parsePeekTiles,
+  type ViewKind,
+} from "@sceneroom/shared";
+
+/** Where the four tile choices are remembered between visits (in this browser only). */
+const PEEK_TILES_KEY = "sceneroom.peekTiles.v1";
+
+function savePeekTiles(tiles: readonly ViewKind[]): void {
+  try {
+    window.localStorage.setItem(PEEK_TILES_KEY, JSON.stringify(tiles));
+  } catch (error) {
+    // Storage can be blocked (private window) or full; the choices still work, they are just not remembered
+    console.warn("Could not save the four-view choices:", error);
+  }
+}
 
 /**
  * Requests to the 3D view that are not scene data: "zoom to these objects", and whether the camera is being
@@ -22,9 +38,17 @@ type ViewState = {
   peekTiles: readonly ViewKind[];
   /** Changes what one tile shows (from its drop-down). */
   setPeekTile: (tile: number, view: ViewKind) => void;
+  /** Reads the saved tile choices from the browser. Called once, after the first render. */
+  hydratePeekTiles: () => void;
   /** The tile the pointer is over, or -1. */
   peekHover: number;
   setPeekHover: (tile: number) => void;
+  /**
+   * The objects that show the UV checker: a checkerboard instead of their colour, to see how the flat texture map
+   * lies on them (equal, square cells mean a good map). Screen state, not saved. Each object has its own switch.
+   */
+  checkerIds: ReadonlySet<string>;
+  setChecker: (nodeId: string, on: boolean) => void;
   /** What the big view shows: the normal 3D view, or a pinned flat side view. */
   bigView: ViewKind;
   setBigView: (view: ViewKind) => void;
@@ -47,13 +71,31 @@ export const useViewStore = create<ViewState>()((set) => ({
     set(peekActive ? { peekActive } : { peekActive, peekHover: -1 }),
   peekTiles: DEFAULT_PEEK_TILES,
   setPeekTile: (tile, view) =>
-    set((state) =>
-      tile < 0 || tile > 3
-        ? state
-        : { peekTiles: state.peekTiles.map((v, i) => (i === tile ? view : v)) },
-    ),
+    set((state) => {
+      if (tile < 0 || tile > 3) return state;
+      const peekTiles = state.peekTiles.map((v, i) => (i === tile ? view : v));
+      savePeekTiles(peekTiles);
+      return { peekTiles };
+    }),
+  hydratePeekTiles: () => {
+    try {
+      const saved = parsePeekTiles(window.localStorage.getItem(PEEK_TILES_KEY));
+      if (saved) set({ peekTiles: saved });
+    } catch (error) {
+      console.warn("Could not read the saved four-view choices:", error);
+    }
+  },
   peekHover: -1,
   setPeekHover: (peekHover) => set({ peekHover }),
+  checkerIds: new Set<string>(),
+  setChecker: (nodeId, on) =>
+    set((state) => {
+      if (state.checkerIds.has(nodeId) === on) return state;
+      const checkerIds = new Set(state.checkerIds);
+      if (on) checkerIds.add(nodeId);
+      else checkerIds.delete(nodeId);
+      return { checkerIds };
+    }),
   bigView: "perspective",
   setBigView: (bigView) => set({ bigView }),
 }));

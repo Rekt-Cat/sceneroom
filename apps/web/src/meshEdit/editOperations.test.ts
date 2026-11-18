@@ -12,7 +12,7 @@ import { clearMeshCache, loadMeshData } from "@/assets/meshStorage";
 import { useEditStore } from "@/store/editStore";
 import { useImportStore } from "@/store/importStore";
 import { useSceneStore } from "@/store/sceneStore";
-import { commitMesh } from "./commitMeshEdit";
+import { commitMesh, commitMeshPositions } from "./commitMeshEdit";
 import { buildTopology, createModifier } from "@sceneroom/shared";
 import { buildMeshGeometry } from "@/components/viewport/shapeGeometry";
 import {
@@ -21,6 +21,13 @@ import {
   changeExtrude,
   changeLoopCut,
   bevelSelectedEdges,
+  unwrapMesh,
+  unwrapMeshAlongSeams,
+  seamSelectedEdges,
+  changeDivide,
+  commitDivide,
+  divideSelectedFaces,
+  previewDivide,
   bridgeSelectedLoops,
   fillSelectedHole,
   flipSelectedNormals,
@@ -716,5 +723,188 @@ describe("deleting a face and filling the hole again", () => {
     // the hole has one ring of four edges; with nothing selected the only hole is filled
     expect(await fillSelectedHole()).toBe(true);
     expect((await mesh()).indices.length / 3).toBeGreaterThan(before - 2);
+  });
+});
+
+describe("divide faces", () => {
+  const triangleTotal = async () => (await mesh()).indices.length / 3;
+
+  it("pressing Divide cuts nothing and adds no undo step: only the panel opens", async () => {
+    const steps = get().history.past.length;
+    expect(await divideSelectedFaces()).toBe(true);
+    expect(await triangleTotal()).toBe(12);
+    expect(get().history.past.length).toBe(steps);
+    expect(useEditStore.getState().divide!.cuts).toBe(0);
+  });
+
+  it("moving the slider divides the whole cube (12 triangles become 48) as ONE undo step, however often it moves", async () => {
+    const steps = get().history.past.length;
+    await divideSelectedFaces();
+    expect(await changeDivide(1)).toBe(true);
+    expect(await triangleTotal()).toBe(48);
+    expect(get().history.past.length).toBe(steps + 1);
+    expect(get().history.past.at(-1)?.label).toBe("Divide");
+    expect(await changeDivide(2)).toBe(true);
+    expect(await triangleTotal()).toBe(6 * 18);
+    expect(get().history.past.length).toBe(steps + 1);
+    get().undo();
+    expect(await triangleTotal()).toBe(12);
+  });
+
+  it("dragging only previews; letting go stores once", async () => {
+    await divideSelectedFaces();
+    const asset = node("a").assetId;
+    for (const cuts of [1, 2, 3]) expect(previewDivide(cuts)).toBe(true);
+    expect(node("a").assetId).toBe(asset);
+    expect(await commitDivide()).toBe(true);
+    expect(node("a").assetId).not.toBe(asset);
+  });
+
+  it("dragging back to 0 before letting go stores nothing", async () => {
+    await divideSelectedFaces();
+    const steps = get().history.past.length;
+    previewDivide(2);
+    previewDivide(0);
+    expect(await commitDivide()).toBe(true);
+    expect(get().history.past.length).toBe(steps);
+    expect(await triangleTotal()).toBe(12);
+  });
+
+  it("going back to 0 after cutting brings the mesh back as it was", async () => {
+    await divideSelectedFaces();
+    await changeDivide(2);
+    expect(await changeDivide(0)).toBe(true);
+    expect(await triangleTotal()).toBe(12);
+  });
+
+  it("is refused, saying why, once something else was done", async () => {
+    await divideSelectedFaces();
+    get().addPrimitive("cone");
+    expect(await changeDivide(2)).toBe(false);
+    expect(message()).toContain("right after dividing");
+  });
+});
+
+describe("UVs of an edited mesh", () => {
+  it("a cube made into a mesh keeps the UVs of the built-in cube", async () => {
+    const m = await mesh();
+    expect(m.uvs?.length).toBe((m.positions.length / 3) * 2);
+  });
+
+  it("moving points keeps the map: the surface moved, the UVs did not", async () => {
+    const before = await mesh();
+    const moved = Float32Array.from(before.positions, (v, i) =>
+      i % 3 === 0 ? v + 1 : v,
+    );
+    expect(await commitMeshPositions("a", moved, "Move points")).toBe(true);
+    const after = await mesh();
+    expect(Array.from(after.uvs ?? [])).toEqual(Array.from(before.uvs ?? []));
+  });
+
+  it("a tool that does not know UVs removes them and says so, once", async () => {
+    expect(await divideSelectedFaces()).toBe(true);
+    expect(await changeDivide(1)).toBe(true);
+    expect((await mesh()).uvs).toBeUndefined();
+    expect(message()).toContain("removed the UV map");
+    expect(message()).toContain("Divide");
+    // the next change has no map left to lose, so nothing more is said
+    useImportStore.setState({ message: null });
+    expect(await changeDivide(2)).toBe(true);
+    expect(message()).toBe("");
+  });
+});
+
+describe("seams", () => {
+  async function selectAnEdge() {
+    const t = buildTopology(await mesh());
+    const [a, b] = [t.vertexPoints[t.edges[0]!]!, t.vertexPoints[t.edges[1]!]!];
+    useEditStore.getState().setSelected([...a, ...b]);
+  }
+
+  it("marks the selected edge: stored with the mesh, one undo step, the UV map kept, and Undo takes it away", async () => {
+    await selectAnEdge();
+    const steps = get().history.past.length;
+    expect(await seamSelectedEdges(true)).toBe(true);
+    expect(get().history.past.length).toBe(steps + 1);
+    expect(get().history.past.at(-1)?.label).toBe("Mark seam");
+    const m = await mesh();
+    expect(m.seams).toHaveLength(1);
+    expect(m.uvs).toBeDefined();
+    get().undo();
+    expect((await mesh()).seams).toBeUndefined();
+  });
+
+  it("clears it again, and marking the same edge twice adds no undo step", async () => {
+    await selectAnEdge();
+    await seamSelectedEdges(true);
+    const steps = get().history.past.length;
+    expect(await seamSelectedEdges(true)).toBe(true);
+    expect(get().history.past.length).toBe(steps);
+    expect(await seamSelectedEdges(false)).toBe(true);
+    expect((await mesh()).seams).toBeUndefined();
+    expect(get().history.past.at(-1)?.label).toBe("Clear seam");
+  });
+
+  it("asks for an edge when nothing is selected", async () => {
+    expect(await seamSelectedEdges(true)).toBe(false);
+    expect(message()).toContain("Select an edge");
+  });
+});
+
+describe("unwrap", () => {
+  it("gives the cube a map of six pieces as one undo step, keeps the shape, and says what it did", async () => {
+    const before = await mesh();
+    const steps = get().history.past.length;
+    expect(await unwrapMesh()).toBe(true);
+    expect(get().history.past.length).toBe(steps + 1);
+    expect(get().history.past.at(-1)?.label).toBe("Unwrap");
+    const after = await mesh();
+    expect(after.uvs).toBeDefined();
+    expect(after.indices.length).toBe(before.indices.length);
+    expect(useEditStore.getState().selected).toEqual([]);
+    expect(message()).toContain("Unwrapped into 6 pieces");
+    get().undo();
+    // the cube's own map is back
+    expect((await mesh()).uvs).toEqual(before.uvs);
+  });
+
+  it("unwrapping again replaces the map and adds one more undo step", async () => {
+    await unwrapMesh();
+    const steps = get().history.past.length;
+    await unwrapMesh();
+    expect(get().history.past.length).toBe(steps);
+  });
+
+  it("a seam is respected: a cube with no seam on its sides still has six pieces, a seam only adds cuts", async () => {
+    const t = buildTopology(await mesh());
+    const [a, b] = [t.vertexPoints[t.edges[0]!]!, t.vertexPoints[t.edges[1]!]!];
+    useEditStore.getState().setSelected([...a, ...b]);
+    await seamSelectedEdges(true);
+    expect(await unwrapMesh()).toBe(true);
+    expect((await mesh()).uvs).toBeDefined();
+  });
+});
+
+describe("unwrap along seams", () => {
+  it("a closed cube with no seams is refused, saying to cut it open first", async () => {
+    expect(await unwrapMeshAlongSeams()).toBe(false);
+    expect(message()).toContain("closed");
+  });
+
+  it("with a seam on every edge the cube becomes six undistorted pieces, as one undo step", async () => {
+    // select every point, so every edge is selected, and mark them all as seams
+    const total = (await mesh()).positions.length / 3;
+    useEditStore
+      .getState()
+      .setSelected(Array.from({ length: total }, (_, i) => i));
+    await seamSelectedEdges(true);
+    const steps = get().history.past.length;
+    expect(await unwrapMeshAlongSeams()).toBe(true);
+    expect(get().history.past.length).toBe(steps + 1);
+    expect(get().history.past.at(-1)?.label).toBe("Unwrap along seams");
+    expect(message()).toContain("6 pieces");
+    expect((await mesh()).uvs).toBeDefined();
+    get().undo();
+    expect((await mesh()).seams).toBeDefined();
   });
 });

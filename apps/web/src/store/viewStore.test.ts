@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { DEFAULT_PEEK_TILES } from "@sceneroom/shared";
 import { useViewStore } from "./viewStore";
 
 beforeEach(() => {
@@ -78,5 +79,85 @@ describe("the four-view peek", () => {
     expect(useViewStore.getState().bigView).toBe("right");
     useViewStore.getState().setBigView("perspective");
     expect(useViewStore.getState().bigView).toBe("perspective");
+  });
+});
+
+/** A tiny stand-in for the browser's storage (the tests run without a browser). */
+function stubStorage(initial: Record<string, string> = {}) {
+  const data = new Map(Object.entries(initial));
+  const storage = {
+    getItem: (key: string) => data.get(key) ?? null,
+    setItem: (key: string, value: string) => void data.set(key, value),
+  };
+  (globalThis as unknown as { window: unknown }).window = {
+    localStorage: storage,
+  };
+  return data;
+}
+
+afterEach(() => {
+  delete (globalThis as unknown as { window?: unknown }).window;
+});
+
+describe("the four-view choices are remembered", () => {
+  it("saves a change of a tile, and reads it back the next time", () => {
+    const data = stubStorage();
+    useViewStore.getState().setPeekTile(1, "left");
+    expect(JSON.parse(data.get("sceneroom.peekTiles.v1")!)).toEqual([
+      "top",
+      "left",
+      "right",
+      "perspective",
+    ]);
+    useViewStore.setState({ peekTiles: DEFAULT_PEEK_TILES });
+    useViewStore.getState().hydratePeekTiles();
+    expect(useViewStore.getState().peekTiles[1]).toBe("left");
+  });
+
+  it("keeps the starting views when the saved text is damaged or missing", () => {
+    stubStorage({ "sceneroom.peekTiles.v1": "garbage" });
+    useViewStore.getState().hydratePeekTiles();
+    expect(useViewStore.getState().peekTiles).toEqual(DEFAULT_PEEK_TILES);
+    stubStorage();
+    useViewStore.getState().hydratePeekTiles();
+    expect(useViewStore.getState().peekTiles).toEqual(DEFAULT_PEEK_TILES);
+  });
+
+  it("still works when the browser refuses to store anything", () => {
+    (globalThis as unknown as { window: unknown }).window = {
+      localStorage: {
+        getItem: () => {
+          throw new Error("blocked");
+        },
+        setItem: () => {
+          throw new Error("blocked");
+        },
+      },
+    };
+    useViewStore.getState().setPeekTile(0, "back");
+    expect(useViewStore.getState().peekTiles[0]).toBe("back");
+    expect(() => useViewStore.getState().hydratePeekTiles()).not.toThrow();
+  });
+});
+
+describe("the UV checker", () => {
+  it("is off for every object at first, and each object has its own switch", () => {
+    const store = useViewStore.getState();
+    expect(store.checkerIds.size).toBe(0);
+    store.setChecker("cube", true);
+    expect(useViewStore.getState().checkerIds.has("cube")).toBe(true);
+    // another object (a new plane) is not affected, and the cube keeps it when something else is selected
+    expect(useViewStore.getState().checkerIds.has("plane")).toBe(false);
+    useViewStore.getState().setChecker("plane", true);
+    useViewStore.getState().setChecker("plane", false);
+    expect(useViewStore.getState().checkerIds.has("cube")).toBe(true);
+    expect(useViewStore.getState().checkerIds.has("plane")).toBe(false);
+  });
+
+  it("turning on what is on changes nothing (no needless update)", () => {
+    useViewStore.getState().setChecker("cube", true);
+    const before = useViewStore.getState().checkerIds;
+    useViewStore.getState().setChecker("cube", true);
+    expect(useViewStore.getState().checkerIds).toBe(before);
   });
 });

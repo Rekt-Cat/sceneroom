@@ -46,3 +46,8 @@ export * from "./solidify";
 export * from "./projectOverview";
 export * from "./projectIndex";
 export * from "./meshTools";
+export * from "./selectionOps";
+export * from "./divide";
+export * from "./seams";
+export * from "./unwrap";
+export * from "./lscm";

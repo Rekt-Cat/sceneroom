@@ -5,6 +5,8 @@ import {
   selectedEdges,
   selectedFaces,
   setCreases,
+  setSeams,
+  sameSeams,
   buildTopology,
   edgeBetween,
   loopCut,
@@ -23,6 +25,10 @@ import {
   extrudeFaces,
   extrudeEdges,
   bridgeLoops,
+  smartUnwrap,
+  unwrapAlongSeams,
+  divideFaces,
+  MAX_DIVIDE_CUTS,
   deleteFaces,
   fillHole,
   flipNormals,
@@ -674,6 +680,89 @@ export async function changeBevel(change: BevelChange): Promise<boolean> {
   return commitBevel();
 }
 
+// ---- Unwrap ----
+
+/**
+ * Unwrap: gives the mesh a UV map (see `smartUnwrap`): the surface is cut into flat pieces, which are packed into the
+ * 0 to 1 square. Needs no seams, but marked seams are respected. Replaces an earlier map. One undo step. The points
+ * are renumbered (those on a cut are doubled), so the selection is cleared.
+ */
+export async function unwrapMesh(): Promise<boolean> {
+  const edited = await editedMesh();
+  if (!edited) return false;
+  const result = smartUnwrap(edited.mesh);
+  if (!result.ok) {
+    say(result.reason);
+    return false;
+  }
+  if (!(await commitMesh(edited.nodeId, result.mesh, "Unwrap"))) return false;
+  useEditStore.getState().setSelected([]);
+  useImportStore.getState().setMessage({
+    tone: "info",
+    text: `Unwrapped into ${result.islands} piece${result.islands === 1 ? "" : "s"}. Turn on the Checker to see how the map lies on the object, and the UV window to see the map itself.`,
+  });
+  return true;
+}
+
+/**
+ * Unwrap along seams: lays every piece of the surface (the faces joined without crossing a seam) flat, keeping angles
+ * (see `unwrapAlongSeams`), so a texture does not shear. Each piece must be open: cut the shape along seams first.
+ * Says why if it cannot, and how many faces fold over themselves if the map is not clean. One undo step.
+ */
+export async function unwrapMeshAlongSeams(): Promise<boolean> {
+  const edited = await editedMesh();
+  if (!edited) return false;
+  const result = unwrapAlongSeams(edited.mesh);
+  if (!result.ok) {
+    say(result.reason);
+    return false;
+  }
+  if (!(await commitMesh(edited.nodeId, result.mesh, "Unwrap along seams"))) {
+    return false;
+  }
+  useEditStore.getState().setSelected([]);
+  const pieces = `${result.islands} piece${result.islands === 1 ? "" : "s"}`;
+  useImportStore.getState().setMessage(
+    result.folded > 0
+      ? {
+          tone: "error",
+          text: `Unwrapped along the seams into ${pieces}, but ${result.folded} face${result.folded === 1 ? " folds" : "s fold"} over itself (red in the UV window's Stretch view). Add a seam to cut that piece open further.`,
+        }
+      : {
+          tone: "info",
+          text: `Unwrapped along the seams into ${pieces}. Switch the UV window to Stretch to see how even the map is.`,
+        },
+  );
+  return true;
+}
+
+// ---- Seams ----
+
+/**
+ * Marks the selected edges as seams (the cuts along which the surface is laid flat for a UV map), or clears them. An
+ * edge is selected when both its ends are (click an edge, Alt-click a loop, or select a face for all its sides).
+ * One undo step. Says why in the bar over the 3D view if no edge is selected. The UV map the mesh has is kept.
+ */
+export async function seamSelectedEdges(on: boolean): Promise<boolean> {
+  const edited = await editedMesh();
+  if (!edited) return false;
+  const topology = buildTopology(edited.mesh);
+  const edges = selectedEdges(topology, edited.selected);
+  if (edges.length === 0) {
+    say(
+      "Select an edge first: press 2 for edge mode, then click an edge (Alt-click selects a whole loop).",
+    );
+    return false;
+  }
+  const seams = setSeams(edited.mesh, topology, edges, on);
+  if (sameSeams(topology, seams, edited.mesh.seams)) return true; // nothing changes
+  return commitMesh(
+    edited.nodeId,
+    { ...edited.mesh, seams: seams.length > 0 ? seams : undefined },
+    on ? "Mark seam" : "Clear seam",
+  );
+}
+
 // ---- Fixing up a mesh: merge, weld, flip, fill, bridge ----
 
 /** Weld joins selected points closer than this share of the mesh's biggest side (a tenth of a percent). */
@@ -722,4 +811,157 @@ export function fillSelectedHole(): Promise<boolean> {
 /** Bridge: joins two selected open rims with a strip of faces. */
 export function bridgeSelectedLoops(): Promise<boolean> {
   return run(bridgeLoops, () => "Bridge");
+}
+
+// ---- Divide faces ----
+
+/** The cuts of a Divide from the slider: a whole number from 0 (nothing is cut) to the most. */
+function sliderCuts(cuts: number): number {
+  return Number.isFinite(cuts)
+    ? Math.min(MAX_DIVIDE_CUTS, Math.max(0, Math.round(cuts)))
+    : 0;
+}
+
+/**
+ * Opens Divide: the panel with the Cuts slider appears, and NOTHING is cut yet (cuts start at 0). Dragging the
+ * slider cuts the selected faces (or, with nothing selected, the whole mesh) into smaller ones without changing
+ * the shape (see `divideFaces`). Says why if there is nothing that could be divided.
+ */
+export async function divideSelectedFaces(): Promise<boolean> {
+  const edited = await editedMesh();
+  if (!edited) return false;
+  const groups = weldGroups(edited.mesh.positions);
+  const selectedBefore = expandToWelded(groups, edited.selected);
+  // Try it once, so a selection that cannot be divided is said right away instead of when the slider moves
+  const trial = divideFaces(edited.mesh, selectedBefore, 1);
+  if (!trial.ok) {
+    say(trial.reason);
+    return false;
+  }
+  live.original = null;
+  useEditStore.getState().setDivide({
+    before: edited.mesh,
+    selectedBefore,
+    cuts: 0,
+    applied: false,
+    pastLength: useSceneStore.getState().history.past.length,
+  });
+  return true;
+}
+
+/** Shows the divide with another number of cuts right away, without storing it (a slider being dragged). */
+export function previewDivide(cuts: number): boolean {
+  const edit = useEditStore.getState();
+  const session = edit.divide;
+  if (!session || !edit.nodeId) return false;
+  if (useSceneStore.getState().history.past.length !== session.pastLength) {
+    return false;
+  }
+  const clean = sliderCuts(cuts);
+  if (clean === 0) {
+    // Back to no cuts: the mesh as it was before
+    if (session.applied) showOnScreen(edit.nodeId, session.before);
+    else restoreOriginal(edit.nodeId);
+    edit.setSelected(
+      expandToWelded(
+        weldGroups(session.before.positions),
+        session.selectedBefore,
+      ),
+    );
+    edit.setDivide({ ...session, cuts: 0 });
+    return true;
+  }
+  const result = divideFaces(session.before, session.selectedBefore, clean);
+  if (!result.ok) return false;
+  showOnScreen(edit.nodeId, result.mesh);
+  selectCap(result);
+  edit.setDivide({ ...session, cuts: clean });
+  return true;
+}
+
+let divideCommitting = false;
+let divideCommitAgain = false;
+
+/**
+ * Stores the divide with the cuts it has now (called when the slider is let go). The first time it is a new undo
+ * step; after that it replaces that step, so the whole Divide stays ONE step however often the slider moves.
+ */
+export async function commitDivide(): Promise<boolean> {
+  if (divideCommitting) {
+    divideCommitAgain = true;
+    return false;
+  }
+  divideCommitting = true;
+  try {
+    let ok = true;
+    do {
+      divideCommitAgain = false;
+      ok = await storeDivide();
+    } while (divideCommitAgain);
+    return ok;
+  } finally {
+    divideCommitting = false;
+  }
+}
+
+async function storeDivide(): Promise<boolean> {
+  const edit = useEditStore.getState();
+  const session = edit.divide;
+  if (!session || !edit.nodeId) return false;
+  if (useSceneStore.getState().history.past.length !== session.pastLength) {
+    restoreOriginal(edit.nodeId);
+    edit.setDivide(null);
+    say(
+      "The number of cuts can only be changed right after dividing. Undo, or divide again.",
+    );
+    return false;
+  }
+  // No cuts and nothing stored yet: there is nothing to store
+  if (session.cuts === 0 && !session.applied) {
+    restoreOriginal(edit.nodeId);
+    return true;
+  }
+  let mesh = session.before;
+  let result: { mesh: typeof mesh; selected: number[] } | null = null;
+  if (session.cuts > 0) {
+    const made = divideFaces(
+      session.before,
+      session.selectedBefore,
+      session.cuts,
+    );
+    if (!made.ok) {
+      say(made.reason);
+      restoreOriginal(edit.nodeId);
+      return false;
+    }
+    mesh = made.mesh;
+    result = made;
+  }
+  const stored = await commitMesh(edit.nodeId, mesh, "Divide", session.applied);
+  if (!stored) {
+    restoreOriginal(edit.nodeId);
+    return false;
+  }
+  if (result) selectCap(result);
+  live.original = null;
+  const now = useEditStore.getState().divide;
+  if (now) {
+    edit.setDivide({
+      ...now,
+      applied: true,
+      pastLength: useSceneStore.getState().history.past.length,
+    });
+  }
+  return true;
+}
+
+/** Changes the cuts and stores the result at once (for a typed number or the reset button). */
+export async function changeDivide(cuts: number): Promise<boolean> {
+  const edit = useEditStore.getState();
+  if (!edit.divide) return false;
+  if (useSceneStore.getState().history.past.length !== edit.divide.pastLength) {
+    return commitDivide();
+  }
+  if (!previewDivide(cuts)) return false;
+  return commitDivide();
 }

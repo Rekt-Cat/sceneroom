@@ -1,4 +1,5 @@
 import { MAX_CREASES, checkCreases, type Crease } from "./creases";
+import { MAX_SEAMS, checkSeams, type Seam } from "./seams";
 import type { ShapeMesh } from "./modifiers";
 
 /**
@@ -20,6 +21,14 @@ import type { ShapeMesh } from "./modifiers";
  *   after the corners:  C * 4 first points, C * 4 second points (32-bit whole numbers), then C * 1 values
  *                       (0 to 255 for 0 to 1)
  *
+ * Version 3 adds UVs (see docs/UVS-AND-SEAMS.md) and is only written for a mesh that has them. It has a longer
+ * header with a set of flags, so seams can be added later without another version:
+ *   bytes 16 to 19   C, the number of creases (0 for none)
+ *   bytes 20 to 23   flags: bit 0 = the mesh has UVs
+ *   bit 1 = the mesh has seams
+ *   after the corners:  the creases as in version 2, then (bit 0) P * 8 bytes of UVs (u, v as 32-bit floats), then
+ *                       (bit 1) S, the number of seams (32-bit), S * 4 first points and S * 4 second points
+ *
  * A mesh is stored under the fingerprint (SHA-256) of exactly these bytes, so the same mesh is stored once,
  * and an edit makes a NEW stored mesh (the old one stays, which is what makes Undo cheap).
  */
@@ -27,6 +36,7 @@ export const MESH_MAGIC = "SRMH";
 /** The version written for a mesh without creases, and the one with them. Both can be read. */
 export const MESH_FORMAT_VERSION = 1;
 export const MESH_FORMAT_VERSION_CREASES = 2;
+export const MESH_FORMAT_VERSION_UVS = 3;
 
 /** Most points and triangles a mesh may have. A bigger one is refused rather than freezing the editor. */
 export const MAX_MESH_POINTS = 1_000_000;
@@ -34,6 +44,9 @@ export const MAX_MESH_TRIANGLES = 1_000_000;
 
 const HEADER_BYTES = 16;
 const HEADER_BYTES_V2 = 20;
+const HEADER_BYTES_V3 = 24;
+const FLAG_UVS = 1;
+const FLAG_SEAMS = 2;
 
 /**
  * Letters to bytes, without a text library: the magic is plain ASCII. (This package is built without
@@ -48,23 +61,42 @@ export function encodeMeshData(mesh: ShapeMesh): Uint8Array {
   const points = mesh.positions.length / 3;
   const creases = mesh.creases ?? [];
   const withCreases = creases.length > 0;
-  const header = withCreases ? HEADER_BYTES_V2 : HEADER_BYTES;
+  const withUvs = mesh.uvs !== undefined;
+  const seams = mesh.seams ?? [];
+  const withSeams = seams.length > 0;
+  // Version 3 has the flags, so it is used for UVs and for seams
+  const v3 = withUvs || withSeams;
+  const version = v3
+    ? MESH_FORMAT_VERSION_UVS
+    : withCreases
+      ? MESH_FORMAT_VERSION_CREASES
+      : MESH_FORMAT_VERSION;
+  const header = v3
+    ? HEADER_BYTES_V3
+    : withCreases
+      ? HEADER_BYTES_V2
+      : HEADER_BYTES;
   const bytes = new Uint8Array(
     header +
       mesh.positions.length * 4 +
       mesh.indices.length * 4 +
-      creases.length * 9,
+      creases.length * 9 +
+      (withUvs ? points * 8 : 0) +
+      (withSeams ? 4 + seams.length * 8 : 0),
   );
   bytes.set(ascii(MESH_MAGIC), 0);
   const view = new DataView(bytes.buffer);
-  view.setUint32(
-    4,
-    withCreases ? MESH_FORMAT_VERSION_CREASES : MESH_FORMAT_VERSION,
-    true,
-  );
+  view.setUint32(4, version, true);
   view.setUint32(8, points, true);
   view.setUint32(12, mesh.indices.length, true);
-  if (withCreases) view.setUint32(16, creases.length, true);
+  if (withCreases || v3) view.setUint32(16, creases.length, true);
+  if (v3) {
+    view.setUint32(
+      20,
+      (withUvs ? FLAG_UVS : 0) | (withSeams ? FLAG_SEAMS : 0),
+      true,
+    );
+  }
   let offset = header;
   for (let i = 0; i < mesh.positions.length; i++, offset += 4) {
     view.setFloat32(offset, mesh.positions[i]!, true);
@@ -83,6 +115,23 @@ export function encodeMeshData(mesh: ShapeMesh): Uint8Array {
   for (const crease of creases) {
     view.setUint8(offset, Math.round(crease.value * 255));
     offset += 1;
+  }
+  if (mesh.uvs) {
+    for (let i = 0; i < mesh.uvs.length; i++, offset += 4) {
+      view.setFloat32(offset, mesh.uvs[i]!, true);
+    }
+  }
+  if (withSeams) {
+    view.setUint32(offset, seams.length, true);
+    offset += 4;
+    for (const seam of seams) {
+      view.setUint32(offset, seam.a, true);
+      offset += 4;
+    }
+    for (const seam of seams) {
+      view.setUint32(offset, seam.b, true);
+      offset += 4;
+    }
   }
   return bytes;
 }
@@ -114,7 +163,21 @@ export function checkMesh(mesh: ShapeMesh): string | null {
       return "a triangle uses a point that does not exist.";
     }
   }
-  return mesh.creases ? checkCreases(mesh.creases, points) : null;
+  if (mesh.uvs) {
+    if (mesh.uvs.length !== points * 2) {
+      return "its UVs do not match its points (two numbers for every point).";
+    }
+    for (let i = 0; i < mesh.uvs.length; i++) {
+      if (!Number.isFinite(mesh.uvs[i]!)) {
+        return "a UV has a number that is not finite.";
+      }
+    }
+  }
+  const creaseProblem = mesh.creases
+    ? checkCreases(mesh.creases, points)
+    : null;
+  if (creaseProblem) return creaseProblem;
+  return mesh.seams ? checkSeams(mesh.seams, points) : null;
 }
 
 export type DecodedMesh =
@@ -137,21 +200,31 @@ export function decodeMeshData(bytes: Uint8Array): DecodedMesh {
   const version = view.getUint32(4, true);
   if (
     version !== MESH_FORMAT_VERSION &&
-    version !== MESH_FORMAT_VERSION_CREASES
+    version !== MESH_FORMAT_VERSION_CREASES &&
+    version !== MESH_FORMAT_VERSION_UVS
   ) {
     return {
       ok: false,
-      reason: `The mesh uses version ${version} of the format; only versions ${MESH_FORMAT_VERSION} and ${MESH_FORMAT_VERSION_CREASES} are supported.`,
+      reason: `The mesh uses version ${version} of the format; only versions ${MESH_FORMAT_VERSION} to ${MESH_FORMAT_VERSION_UVS} are supported.`,
     };
   }
-  const withCreases = version === MESH_FORMAT_VERSION_CREASES;
-  const header = withCreases ? HEADER_BYTES_V2 : HEADER_BYTES;
+  const withCreases = version >= MESH_FORMAT_VERSION_CREASES;
+  const header =
+    version === MESH_FORMAT_VERSION_UVS
+      ? HEADER_BYTES_V3
+      : withCreases
+        ? HEADER_BYTES_V2
+        : HEADER_BYTES;
   if (bytes.length < header) {
     return { ok: false, reason: "This is not mesh data (it is too small)." };
   }
   const points = view.getUint32(8, true);
   const corners = view.getUint32(12, true);
   const creaseCount = withCreases ? view.getUint32(16, true) : 0;
+  const flags =
+    version === MESH_FORMAT_VERSION_UVS ? view.getUint32(20, true) : 0;
+  const withUvs = (flags & FLAG_UVS) !== 0;
+  const withSeams = (flags & FLAG_SEAMS) !== 0;
   // Sizes are checked before anything is allocated, so a lying header cannot ask for gigabytes
   if (
     points > MAX_MESH_POINTS ||
@@ -160,7 +233,27 @@ export function decodeMeshData(bytes: Uint8Array): DecodedMesh {
   ) {
     return { ok: false, reason: "The mesh is bigger than the allowed size." };
   }
-  if (bytes.length !== header + points * 12 + corners * 4 + creaseCount * 9) {
+  const beforeSeams =
+    header +
+    points * 12 +
+    corners * 4 +
+    creaseCount * 9 +
+    (withUvs ? points * 8 : 0);
+  // The number of seams is read from the data itself, so it is checked to be inside the data first
+  let seamCount = 0;
+  if (withSeams) {
+    if (bytes.length < beforeSeams + 4) {
+      return {
+        ok: false,
+        reason: "The mesh data is damaged (its size does not match).",
+      };
+    }
+    seamCount = view.getUint32(beforeSeams, true);
+    if (seamCount > MAX_SEAMS) {
+      return { ok: false, reason: "The mesh is bigger than the allowed size." };
+    }
+  }
+  if (bytes.length !== beforeSeams + (withSeams ? 4 + seamCount * 8 : 0)) {
     return {
       ok: false,
       reason: "The mesh data is damaged (its size does not match).",
@@ -189,9 +282,33 @@ export function decodeMeshData(bytes: Uint8Array): DecodedMesh {
       });
     }
   }
-  const mesh: ShapeMesh = creases
-    ? { positions, indices, creases }
-    : { positions, indices };
+  let uvs: Float32Array | undefined;
+  if (withUvs) {
+    uvs = new Float32Array(points * 2);
+    offset += creaseCount * 9;
+    for (let i = 0; i < uvs.length; i++, offset += 4) {
+      uvs[i] = view.getFloat32(offset, true);
+    }
+  }
+  let seams: Seam[] | undefined;
+  if (withSeams && seamCount > 0) {
+    seams = [];
+    const firsts = beforeSeams + 4;
+    const seconds = firsts + seamCount * 4;
+    for (let i = 0; i < seamCount; i++) {
+      seams.push({
+        a: view.getUint32(firsts + i * 4, true),
+        b: view.getUint32(seconds + i * 4, true),
+      });
+    }
+  }
+  const mesh: ShapeMesh = {
+    positions,
+    indices,
+    ...(creases ? { creases } : {}),
+    ...(seams ? { seams } : {}),
+    ...(uvs ? { uvs } : {}),
+  };
   const problem = checkMesh(mesh);
   return problem
     ? { ok: false, reason: `The mesh data is damaged: ${problem}` }

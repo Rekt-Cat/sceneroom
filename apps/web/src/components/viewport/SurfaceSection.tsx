@@ -9,6 +9,8 @@ import {
   type SceneNode,
 } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
+import { useViewStore } from "@/store/viewStore";
+import { setChecker } from "./checkerView";
 import { Icon } from "./icons";
 import { MaterialSlider } from "./InspectorFields";
 
@@ -89,6 +91,7 @@ export default function SurfaceSection({
             />
           </>
         )}
+        {!isModel && <CheckerRow nodeId={node.id} />}
         {flags.map(({ key, label, hint }) => (
           <FlagRow
             key={key}
@@ -258,6 +261,40 @@ function FlagRow({
         title={`Reset to ${defaultValue ? "on" : "off"}`}
         disabled={disabled || value === defaultValue}
         onClick={() => setNodeMaterial(node.id, { [flag]: defaultValue })}
+        className={RESET_BUTTON}
+      >
+        <Icon name="reset" />
+      </button>
+    </div>
+  );
+}
+
+/**
+ * "UV checker": draws a checkerboard on this object, to see how the flat texture map lies on it. Each object has its
+ * own switch (a view setting, not saved with the scene), with its reset button like every other value.
+ */
+function CheckerRow({ nodeId }: { nodeId: string }) {
+  const on = useViewStore((state) => state.checkerIds.has(nodeId));
+  return (
+    <div className="grid grid-cols-[1fr_26px] items-center gap-2">
+      <label
+        title="Draw a checkerboard on this object instead of its colour. If the squares are equal and not stretched, the UV map is good."
+        className="flex cursor-pointer items-center gap-2 text-xs text-ed-text-2"
+      >
+        <input
+          type="checkbox"
+          checked={on}
+          onChange={(event) => setChecker(nodeId, event.target.checked)}
+          className="size-4 cursor-pointer accent-ed-accent"
+        />
+        UV checker
+      </label>
+      <button
+        type="button"
+        aria-label="Reset the UV checker to off"
+        title="Reset to off"
+        disabled={!on}
+        onClick={() => setChecker(nodeId, false)}
         className={RESET_BUTTON}
       >
         <Icon name="reset" />

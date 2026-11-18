@@ -1,14 +1,24 @@
 "use client";
 
-import { useEditStore, type SelectMode } from "@/store/editStore";
+import {
+  activeOperation,
+  useEditStore,
+  type SelectMode,
+} from "@/store/editStore";
 import { useSceneStore } from "@/store/sceneStore";
+import { useViewStore } from "@/store/viewStore";
+import { setChecker } from "./checkerView";
 import {
   CREASE_SHARP,
   CREASE_SOFT,
   creaseSelectedEdges,
+  seamSelectedEdges,
+  unwrapMesh,
+  unwrapMeshAlongSeams,
   deleteSelectedPoints,
   extrudeSelectedFaces,
   bevelSelectedEdges,
+  divideSelectedFaces,
   bridgeSelectedLoops,
   fillSelectedHole,
   flipSelectedNormals,
@@ -16,9 +26,17 @@ import {
   weldSelectedPoints,
   insetSelectedFaces,
 } from "@/meshEdit/editOperations";
-import { selectLoopOrRing } from "@/meshEdit/selectionTools";
+import {
+  invertPointSelection,
+  selectLess,
+  selectLoopOrRing,
+  selectMore,
+  selectOutline,
+  selectSimilarToSelection,
+} from "@/meshEdit/selectionTools";
 import ExtrudePanel from "./ExtrudePanel";
 import BevelPanel from "./BevelPanel";
+import DividePanel from "./DividePanel";
 import LoopCutPanel from "./LoopCutPanel";
 import { stopEditing } from "@/meshEdit/startEditing";
 
@@ -65,6 +83,11 @@ export default function EditTools() {
   const selectMode = useEditStore((state) => state.selectMode);
   const setSelectMode = useEditStore((state) => state.setSelectMode);
   const xray = useEditStore((state) => state.xray);
+  const uvWindow = useEditStore((state) => state.uvWindow);
+  const setUvWindow = useEditStore((state) => state.setUvWindow);
+  const checker = useViewStore((state) =>
+    nodeId ? state.checkerIds.has(nodeId) : false,
+  );
   const setXray = useEditStore((state) => state.setXray);
   const loopCutMode = useEditStore((state) => state.loopCutMode);
   const setLoopCutMode = useEditStore((state) => state.setLoopCutMode);
@@ -73,9 +96,7 @@ export default function EditTools() {
   );
   // A settings panel is open until something else is done (the undo history grew)
   const pastLength = useSceneStore((state) => state.history.past.length);
-  const session = useEditStore(
-    (state) => state.loopCut ?? state.bevel ?? state.extrude,
-  );
+  const session = useEditStore(activeOperation);
   if (!nodeId || !node) return null;
 
   /** Loop and Ring work on edges, so pressing them switches to edge mode (and says what to do if nothing is selected). */
@@ -121,6 +142,54 @@ export default function EditTools() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <span className="text-ed-text-3">Adjust</span>
+          <button
+            type="button"
+            onClick={() => selectMore()}
+            disabled={selected.length === 0}
+            title="More: grow the selection by one step along the edges (])"
+            className={ACTION}
+          >
+            More
+          </button>
+          <button
+            type="button"
+            onClick={() => selectLess()}
+            disabled={selected.length === 0}
+            title="Less: shrink the selection by one step ([)"
+            className={ACTION}
+          >
+            Less
+          </button>
+          <button
+            type="button"
+            onClick={() => invertPointSelection()}
+            title="Invert: select what is not selected, and unselect what is"
+            className={ACTION}
+          >
+            Invert
+          </button>
+          <button
+            type="button"
+            onClick={() => selectOutline()}
+            disabled={selected.length === 0}
+            title="Outline: select the edges round the selected faces. To get the rim of a lid: press 3, Alt-click the lid, then press Outline."
+            className={ACTION}
+          >
+            Outline
+          </button>
+          <button
+            type="button"
+            onClick={() => selectSimilarToSelection()}
+            disabled={selected.length === 0}
+            title="Similar: select everything like what is selected: faces facing the same way (Faces mode), edges of the same length (Edges mode), points where as many edges meet (Points mode)"
+            className={ACTION}
+          >
+            Similar
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-ed-text-3">View</span>
           <button
             type="button"
@@ -138,6 +207,19 @@ export default function EditTools() {
             }`}
           >
             X-ray
+          </button>
+          <button
+            type="button"
+            aria-pressed={checker}
+            onClick={() => nodeId && setChecker(nodeId, !checker)}
+            title="UV checker: draw a checkerboard on the object instead of its colour, to see how the texture map lies on it. Equal, square cells mean a good map."
+            className={`rounded-md border px-2.5 py-1 font-medium focus-visible:outline-2 focus-visible:outline-ed-accent ${
+              checker
+                ? "border-ed-select/60 bg-ed-select/25 text-ed-select"
+                : "border-ed-line-strong hover:bg-ed-field"
+            }`}
+          >
+            Checker
           </button>
         </div>
 
@@ -193,6 +275,57 @@ export default function EditTools() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <span className="text-ed-text-3">UV</span>
+          <button
+            type="button"
+            onClick={() => void unwrapMesh()}
+            title="Unwrap: lay the surface flat, like a sewing pattern, and give the mesh a UV map. Needs no seams (marked seams are respected). Replaces an earlier map."
+            className={ACTION}
+          >
+            Unwrap
+          </button>
+          <button
+            type="button"
+            onClick={() => void unwrapMeshAlongSeams()}
+            title="Unwrap along seams: lay each piece of the surface flat along the seams you marked, keeping angles so a texture does not shear. Cut the shape open with Mark seam first: a closed shape cannot be laid flat (a cylinder with lids needs a seam round its top edge, round its bottom edge and one down its side)."
+            className={ACTION}
+          >
+            Along seams
+          </button>
+          <button
+            type="button"
+            aria-pressed={uvWindow}
+            onClick={() => setUvWindow(!uvWindow)}
+            title="UV window: show the flat map of the mesh in the corner of the 3D view"
+            className={`rounded-md border px-2.5 py-1 font-medium focus-visible:outline-2 focus-visible:outline-ed-accent ${
+              uvWindow
+                ? "border-ed-select/60 bg-ed-select/25 text-ed-select"
+                : "border-ed-line-strong hover:bg-ed-field"
+            }`}
+          >
+            UV window
+          </button>
+          <button
+            type="button"
+            onClick={() => void seamSelectedEdges(true)}
+            disabled={selected.length < 2}
+            title="Mark seam: mark the selected edges as seams, the cuts along which the surface will be laid flat for a UV map (drawn in red). Select an edge first."
+            className={ACTION}
+          >
+            Mark seam
+          </button>
+          <button
+            type="button"
+            onClick={() => void seamSelectedEdges(false)}
+            disabled={selected.length < 2}
+            title="Clear seam: take the seam off the selected edges"
+            className={ACTION}
+          >
+            Clear seam
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-ed-text-3">Change</span>
           <button
             type="button"
@@ -206,6 +339,14 @@ export default function EditTools() {
             }`}
           >
             Loop cut
+          </button>
+          <button
+            type="button"
+            onClick={() => void divideSelectedFaces()}
+            title="Divide: cut the selected faces into smaller ones, evenly, without changing the shape. With nothing selected the whole object is divided. This is the way to add segments to a mesh."
+            className={ACTION}
+          >
+            Divide
           </button>
           <button
             type="button"
@@ -297,6 +438,7 @@ export default function EditTools() {
         <div>
           <LoopCutPanel />
           <BevelPanel />
+          <DividePanel />
           <ExtrudePanel />
         </div>
       ) : (

@@ -25,6 +25,7 @@ import {
   type SceneNode,
   type TreeNode,
 } from "@sceneroom/shared";
+import { useViewStore } from "@/store/viewStore";
 import { useSceneStore } from "@/store/sceneStore";
 import LightObject from "./LightObject";
 import { loadMeshData, peekMeshData } from "@/assets/meshStorage";
@@ -167,6 +168,7 @@ function NodeMesh({
 }) {
   const select = useSceneStore((state) => state.select);
   const toggleSelect = useSceneStore((state) => state.toggleSelect);
+  const checker = useViewStore((state) => state.checkerIds.has(node.id));
   const { position, rotation, scale } = node.transform;
   const material = node.material;
 
@@ -322,7 +324,12 @@ function NodeMesh({
           modifiers={node.modifiers}
         />
       )}
-      <SurfaceMaterial color={node.color} material={material} cut={cut} />
+      <SurfaceMaterial
+        color={node.color}
+        material={material}
+        cut={cut}
+        checker={checker}
+      />
       {selected && (
         <Outlines color={OUTLINE_COLOR} thickness={OUTLINE_THICKNESS} />
       )}
@@ -383,6 +390,7 @@ function NodeTree({
 export default function SceneNodes() {
   const scene = useSceneStore((state) => state.scene);
   const selectedIds = useSceneStore((state) => state.selectedIds);
+  const peekActive = useViewStore((state) => state.peekActive);
   const [soleObject, setSoleObject] = useState<Object3D | null>(null);
 
   const tree = useMemo(() => buildSceneTree(scene), [scene]);
@@ -407,13 +415,17 @@ export default function SceneNodes() {
           cutIds={cutIds}
         />
       ))}
-      {soleId &&
+      {/* The four-view peek only looks: no handles in its tiles */}
+      {!peekActive &&
+        soleId &&
         soleObject &&
         soleId !== editingId &&
         !isEffectivelyLocked(scene, soleId) && (
           <SelectionGizmo object={soleObject} nodeId={soleId} />
         )}
-      {selectedIds.length > 1 && <MultiSelectionGizmo ids={selectedIds} />}
+      {!peekActive && selectedIds.length > 1 && (
+        <MultiSelectionGizmo ids={selectedIds} />
+      )}
     </>
   );
 }

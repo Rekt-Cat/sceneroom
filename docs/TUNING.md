@@ -605,3 +605,58 @@ value and what it does.
 | ---------- | ------------------------------------------------------------ | --------- | ------------------------------------------------------------------------------------------- |
 | Weld reach | `WELD_FRACTION` in `apps/web/src/meshEdit/editOperations.ts` | 0.001     | Weld joins selected points closer than this share of the mesh's biggest side (0.1 percent). |
 | Weld limit | `MAX_WELD_POINTS` in `packages/shared/src/meshTools.ts`      | 200 000   | The most selected points one Weld looks at.                                                 |
+
+## Selection tools and Divide
+
+| What                 | Where                                                             | Our value | What it does                                                                                             |
+| -------------------- | ----------------------------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------- |
+| Similar direction    | `SIMILAR_NORMAL_DEGREES` in `packages/shared/src/selectionOps.ts` | 8         | Select similar (Faces): faces turned less than this many degrees from a selected face count as the same. |
+| Similar length       | `SIMILAR_LENGTH_SHARE` in `selectionOps.ts`                       | 0.05      | Select similar (Edges): edges within this share of the longer length count as the same.                  |
+| Most cuts            | `MAX_DIVIDE_CUTS` in `packages/shared/src/divide.ts`              | 10        | The most lines one Divide cuts across a face.                                                            |
+| Starting cuts        | `DEFAULT_DIVIDE_CUTS` in `divide.ts`                              | 1         | The cuts a new Divide starts with (and its reset button).                                                |
+| Triangle limit       | `MAX_DIVIDED_TRIANGLES` in `divide.ts`                            | 400 000   | Divide refuses when the result would be bigger than this.                                                |
+| Grow and shrink keys | `useEditorShortcuts.ts`                                           | ] and [   | Select more and select less.                                                                             |
+
+## Four-view peek
+
+| What           | Where                                                  | Our value                      | What it does                                                                                     |
+| -------------- | ------------------------------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------ |
+| Starting tiles | `DEFAULT_PEEK_TILES` in `packages/shared/src/views.ts` | Top, Front, Right, Perspective | The four views before a choice is saved (and when saved text is damaged).                        |
+| Saved choices  | `PEEK_TILES_KEY` in `apps/web/src/store/viewStore.ts`  | `sceneroom.peekTiles.v1`       | The browser storage key of the remembered tiles; change the number to forget everyone's choices. |
+
+## UV checker
+
+| What         | Where                                                      | Our value            | What it does                                                             |
+| ------------ | ---------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------ |
+| Cells        | `CHECKER_CELLS` in `components/viewport/checkerTexture.ts` | 8 by 8               | How many squares the checkerboard has along each side of the 0 to 1 map. |
+| Colours      | `LIGHT` and `DARK` in `checkerTexture.ts`                  | `#d9dee3`, `#59636d` | The two colours of the squares.                                          |
+| Picture size | `PICTURE_SIZE` in `checkerTexture.ts`                      | 512 px               | The size of the checkerboard picture (sharper squares when bigger).      |
+
+## Seams
+
+| What        | Where                                                 | Our value      | What it does                                              |
+| ----------- | ----------------------------------------------------- | -------------- | --------------------------------------------------------- |
+| Seam colour | `seamLines` in `apps/web/src/meshEdit/editOverlay.ts` | red `0xf0434a` | The colour of seam lines in edit mode (creases are pink). |
+| Most seams  | `MAX_SEAMS` in `packages/shared/src/seams.ts`         | 200 000        | The most seams one mesh may have.                         |
+
+## Unwrap
+
+| What        | Where                                                                  | Our value | What it does                                                                                                                                   |
+| ----------- | ---------------------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chart angle | `DEFAULT_CHART_ANGLE_DEGREES` in `packages/shared/src/unwrap.ts`       | 66        | Neighbouring faces join one flat piece while they point within this many degrees of the piece's average. Bigger: fewer, more distorted pieces. |
+| Margin      | `DEFAULT_UV_MARGIN` in `unwrap.ts`                                     | 0.02      | The empty strip between pieces and round the edge of the 0 to 1 square (a share of its side).                                                  |
+| Smooth cuts | `SPLIT_POINT_SMOOTH_DEGREES` in `components/viewport/shapeGeometry.ts` | 40        | Points split by an unwrap share their shading when their surfaces differ by less than this many degrees.                                       |
+| UV window   | `SIZE` in `components/viewport/UvWindow.tsx`                           | 232 px    | The size of the map picture.                                                                                                                   |
+
+## Unwrap along seams
+
+| What          | Where                                                 | Our value  | What it does                                                                                           |
+| ------------- | ----------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------ |
+| Largest mesh  | `MAX_LSCM_TRIANGLES` in `packages/shared/src/lscm.ts` | 60 000     | Unwrap along seams refuses a bigger mesh (it solves a large system of equations); Unwrap has no limit. |
+| Solver rounds | `MAX_ITERATIONS` and `TOLERANCE` in `lscm.ts`         | 4000, 1e-9 | The solver stops after this many rounds or when the answer stops improving.                            |
+
+## Outline
+
+| What   | Where                                                                                             | Our value | What it does                                |
+| ------ | ------------------------------------------------------------------------------------------------- | --------- | ------------------------------------------- |
+| Button | `selectOutline` in `apps/web/src/meshEdit/selectionTools.ts`, the Adjust row of `EditModeBar.tsx` | no key    | Selects the edges round the selected faces. |

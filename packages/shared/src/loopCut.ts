@@ -1,5 +1,6 @@
 import type { EditMesh } from "./meshEdit";
 import { edgeCreaseValues, type Crease } from "./creases";
+import { edgeSeams, seamsOf, type Seam } from "./seams";
 import { edgeBetween, edgeRing, edgeVertices, type Topology } from "./topology";
 
 /**
@@ -314,12 +315,54 @@ export function loopCut(
       ...extra,
     ];
   }
+  // A seam that the cut crosses is in pieces too, and every piece stays a seam
+  let seams = mesh.seams;
+  if (seams && seams.length > 0) {
+    const marked = edgeSeams(topology, seams);
+    const extra: Seam[] = [];
+    const seen = new Set<string>();
+    for (const cell of planned.cells) {
+      for (const [from, to] of [
+        [cell.a1, cell.b1],
+        [cell.a2, cell.b2],
+      ] as const) {
+        const edge = edgeBetween(
+          topology,
+          topology.vertexOf[from]!,
+          topology.vertexOf[to]!,
+        );
+        const key = `${from}-${to}`;
+        if (edge === -1 || !marked[edge] || seen.has(key)) continue;
+        seen.add(key);
+        const chain = [
+          from,
+          ...ts.map((_, k) => made.get(`${from}-${to}-${k}`)!),
+          to,
+        ];
+        for (let k = 0; k + 1 < chain.length; k++) {
+          extra.push({ a: chain[k]!, b: chain[k + 1]! });
+        }
+      }
+    }
+    seams = [
+      ...seams.filter((s) => {
+        const e = edgeBetween(
+          topology,
+          topology.vertexOf[s.a]!,
+          topology.vertexOf[s.b]!,
+        );
+        return !(e !== -1 && crossed.has(e));
+      }),
+      ...extra,
+    ];
+  }
   return {
     ok: true,
     mesh: {
       positions: Float32Array.from(positions),
       indices: Uint32Array.from(indices),
       creases,
+      ...seamsOf(seams),
     },
     selected,
   };

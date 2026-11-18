@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createModifier, type Modifier } from "@sceneroom/shared";
-import { buildShapeGeometry } from "./shapeGeometry";
+import {
+  buildMeshGeometry,
+  buildShapeGeometry,
+  geometryToMesh,
+} from "./shapeGeometry";
 
 const count = (
   kind: Parameters<typeof buildShapeGeometry>[0],
@@ -77,8 +81,15 @@ describe("buildShapeGeometry", () => {
       plain.getAttribute("position").count * 2,
     );
     expect(mirrored.index!.count).toBe(plain.index!.count * 2);
-    // the old picture coordinates no longer fit, so they are dropped
-    expect(mirrored.getAttribute("uv")).toBeUndefined();
+    // the copy has the same map, so the picture coordinates still fit
+    expect(mirrored.getAttribute("uv").count).toBe(
+      mirrored.getAttribute("position").count,
+    );
+    // Smooth cuts every face into new points the map does not know yet, so it drops the coordinates
+    const smoothed = buildShapeGeometry("cube", 1, [
+      createModifier("s", "subdivide"),
+    ]);
+    expect(smoothed.getAttribute("uv")).toBeUndefined();
     expect(mirrored.getAttribute("normal").count).toBe(
       mirrored.getAttribute("position").count,
     );
@@ -144,5 +155,89 @@ describe("buildShapeGeometry", () => {
     ]);
     const plain = buildShapeGeometry("cube", 4, [createModifier("b", "bend")]);
     expect(bent.index!.count).toBeGreaterThan(plain.index!.count);
+  });
+});
+
+describe("UVs of an editable mesh", () => {
+  it("a mesh with UVs gets them on its geometry, and a converted shape keeps its own", () => {
+    const mesh = {
+      positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+      indices: new Uint32Array([0, 1, 2]),
+      uvs: new Float32Array([0, 0, 1, 0, 0, 1]),
+    };
+    const geometry = buildMeshGeometry(mesh, []);
+    expect(Array.from(geometry.getAttribute("uv").array)).toEqual([
+      0, 0, 1, 0, 0, 1,
+    ]);
+    // converting a built-in shape to a mesh brings its UVs along
+    const cube = geometryToMesh(buildShapeGeometry("cube", 1, []));
+    expect(cube.uvs?.length).toBe((cube.positions.length / 3) * 2);
+    // and a mesh without UVs has none on its geometry
+    expect(
+      buildMeshGeometry(
+        { positions: mesh.positions, indices: mesh.indices },
+        [],
+      ).getAttribute("uv"),
+    ).toBeUndefined();
+  });
+
+  it("modifiers that move points keep the map of a built-in shape", () => {
+    const bent = buildShapeGeometry("plane", 4, [
+      { ...createModifier("b", "bend"), angle: 90 } as Modifier,
+    ]);
+    expect(bent.getAttribute("uv").count).toBe(
+      bent.getAttribute("position").count,
+    );
+  });
+});
+
+describe("shading across a cut in the UV map", () => {
+  /** Two triangles meeting along an edge, each with its own points (as after an unwrap), bent by `degrees`. */
+  function bent(degrees: number) {
+    const r = (degrees * Math.PI) / 180;
+    // The shared edge runs from (0, 0, 0) to (0, 1, 0); one wing goes left in the plane, one turns away by `degrees`
+    const left = [0, 0, 0, 0, 1, 0, -1, 0, 0];
+    const right = [0, 0, 0, Math.cos(r), 0, Math.sin(r), 0, 1, 0];
+    return {
+      positions: new Float32Array([...left, ...right]),
+      indices: new Uint32Array([0, 1, 2, 3, 4, 5]),
+      uvs: new Float32Array(12),
+    };
+  }
+  const normalAt = (g: ReturnType<typeof buildMeshGeometry>, i: number) => [
+    g.getAttribute("normal").getX(i),
+    g.getAttribute("normal").getY(i),
+    g.getAttribute("normal").getZ(i),
+  ];
+
+  it("a gentle bend is shaded as one surface: the two copies of a point share a normal", () => {
+    const g = buildMeshGeometry(bent(20), []);
+    // points 0 and 3 sit on the same spot (0, 0, 0)
+    const a = normalAt(g, 0);
+    const b = normalAt(g, 3);
+    expect(a[0]).toBeCloseTo(b[0]!, 5);
+    expect(a[1]).toBeCloseTo(b[1]!, 5);
+    expect(a[2]).toBeCloseTo(b[2]!, 5);
+  });
+
+  it("a real corner keeps its two normals", () => {
+    const g = buildMeshGeometry(bent(90), []);
+    const a = normalAt(g, 0);
+    const b = normalAt(g, 3);
+    const same =
+      Math.abs(a[0]! - b[0]!) +
+        Math.abs(a[1]! - b[1]!) +
+        Math.abs(a[2]! - b[2]!) <
+      1e-4;
+    expect(same).toBe(false);
+  });
+
+  it("a mesh without UVs is shaded exactly as before (nothing is averaged)", () => {
+    const { uvs, ...plain } = bent(20);
+    void uvs;
+    const g = buildMeshGeometry(plain, []);
+    const a = normalAt(g, 0);
+    const b = normalAt(g, 3);
+    expect(Math.abs(a[2]! - b[2]!)).toBeGreaterThan(1e-3);
   });
 });

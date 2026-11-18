@@ -1,4 +1,5 @@
 import { remapCreases } from "./creases";
+import { remapSeams, seamsOf } from "./seams";
 import {
   expandToWelded,
   selectedFaces,
@@ -71,6 +72,7 @@ function applyMerge(
       positions: Float32Array.from(out),
       indices: Uint32Array.from(indices),
       creases: remapCreases(mesh.creases, table),
+      ...seamsOf(remapSeams(mesh.seams, table)),
     },
     selected,
   };
@@ -240,7 +242,12 @@ export function flipNormals(
   }
   return {
     ok: true,
-    mesh: { positions: mesh.positions, indices, creases: mesh.creases },
+    mesh: {
+      positions: mesh.positions,
+      indices,
+      creases: mesh.creases,
+      ...seamsOf(mesh.seams),
+    },
     selected: [...selected],
   };
 }
@@ -395,6 +402,7 @@ export function fillHole(
       positions: Float32Array.from(positions),
       indices: Uint32Array.from(indices),
       creases: mesh.creases,
+      ...seamsOf(mesh.seams),
     },
     selected: centres,
   };
@@ -464,6 +472,7 @@ export function bridgeLoops(
       positions: mesh.positions,
       indices: Uint32Array.from(indices),
       creases: mesh.creases,
+      ...seamsOf(mesh.seams),
     },
     selected: [],
   };
@@ -522,6 +531,7 @@ export function deleteFaces(
       positions: Float32Array.from(positions),
       indices: Uint32Array.from(indices),
       creases: remapCreases(mesh.creases, renumber),
+      ...seamsOf(remapSeams(mesh.seams, renumber)),
     },
     selected: [],
   };

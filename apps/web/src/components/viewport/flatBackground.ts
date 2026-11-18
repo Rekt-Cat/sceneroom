@@ -77,3 +77,18 @@ export function withRealBackground(scene: Scene, draw: () => void): void {
     scene.background = flatMemory.mine;
   }
 }
+
+/** The name of the ground grid object in the scene, so the flat tiles of the four-view peek can leave it out. */
+export const GROUND_GRID_NAME = "ground-grid";
+
+/** Draws without the ground grid (it would lie over the objects in a flat view from above or the side), then puts it back. */
+export function withoutGrid(scene: Scene, draw: () => void): void {
+  const grid = scene.getObjectByName(GROUND_GRID_NAME);
+  const was = grid?.visible ?? false;
+  if (grid) grid.visible = false;
+  try {
+    draw();
+  } finally {
+    if (grid) grid.visible = was;
+  }
+}

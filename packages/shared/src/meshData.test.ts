@@ -3,6 +3,7 @@ import {
   MAX_MESH_POINTS,
   MESH_FORMAT_VERSION,
   MESH_FORMAT_VERSION_CREASES,
+  MESH_FORMAT_VERSION_UVS,
   checkMesh,
   decodeMeshData,
   encodeMeshData,
@@ -120,11 +121,7 @@ describe("mesh data: refusing bad meshes and bad bytes", () => {
       return result.ok ? "" : result.reason;
     };
     const newer = encodeMeshData(square());
-    new DataView(newer.buffer).setUint32(
-      4,
-      MESH_FORMAT_VERSION_CREASES + 1,
-      true,
-    );
+    new DataView(newer.buffer).setUint32(4, MESH_FORMAT_VERSION_UVS + 1, true);
     expect(reason(newer)).toContain("version");
 
     const cut = encodeMeshData(square()).slice(0, 40);
@@ -228,5 +225,68 @@ describe("edge creases in mesh data", () => {
     const lying = Uint8Array.from(bytes);
     new DataView(lying.buffer).setUint32(16, 0xffffff, true);
     expect(reason(lying)).toContain("bigger than the allowed size");
+  });
+});
+
+describe("mesh data with UVs (version 3)", () => {
+  const withUvs = () => ({
+    ...square(),
+    uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
+  });
+
+  it("stores and gives back the UVs exactly, as version 3", () => {
+    const bytes = encodeMeshData(withUvs());
+    expect(new DataView(bytes.buffer).getUint32(4, true)).toBe(
+      MESH_FORMAT_VERSION_UVS,
+    );
+    const result = decodeMeshData(bytes);
+    expect(result.ok && Array.from(result.mesh.uvs ?? [])).toEqual([
+      0, 0, 1, 0, 1, 1, 0, 1,
+    ]);
+  });
+
+  it("keeps the creases along with the UVs", () => {
+    const mesh = { ...withUvs(), creases: [{ a: 0, b: 1, value: 1 }] };
+    const result = decodeMeshData(encodeMeshData(mesh));
+    expect(result.ok && result.mesh.creases).toEqual([
+      { a: 0, b: 1, value: 1 },
+    ]);
+    expect(result.ok && result.mesh.uvs?.length).toBe(8);
+  });
+
+  it("a mesh without UVs keeps its old bytes (and fingerprint): version 1, or 2 with creases", () => {
+    const plain = encodeMeshData(square());
+    expect(new DataView(plain.buffer).getUint32(4, true)).toBe(
+      MESH_FORMAT_VERSION,
+    );
+    const creased = encodeMeshData({
+      ...square(),
+      creases: [{ a: 0, b: 1, value: 1 }],
+    });
+    expect(new DataView(creased.buffer).getUint32(4, true)).toBe(
+      MESH_FORMAT_VERSION_CREASES,
+    );
+    const back = decodeMeshData(plain);
+    expect(back.ok && back.mesh.uvs).toBeUndefined();
+  });
+
+  it("refuses UVs that do not match the points, or that are not numbers", () => {
+    expect(
+      checkMesh({ ...square(), uvs: new Float32Array([0, 0, 1, 1]) }),
+    ).toContain("UVs");
+    expect(
+      checkMesh({
+        ...square(),
+        uvs: new Float32Array([0, 0, 1, 0, 1, NaN, 0, 1]),
+      }),
+    ).toContain("UV");
+    expect(() =>
+      encodeMeshData({ ...square(), uvs: new Float32Array(3) }),
+    ).toThrow(/Cannot store/);
+  });
+
+  it("refuses version 3 data whose size does not match", () => {
+    const bytes = encodeMeshData(withUvs());
+    expect(decodeMeshData(bytes.slice(0, bytes.length - 4)).ok).toBe(false);
   });
 });
