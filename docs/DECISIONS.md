@@ -880,3 +880,18 @@ The design from 2026-11-16 (above) was built on `feature/four-view`; not yet tri
 - **Unique names:** new, copied, renamed and imported projects get a name no other project has ("Untitled project (2)").
 - **Open file makes a NEW project** (nothing is replaced, so no question is asked).
 - **Share is a disabled menu item** with the reason, until accounts exist.
+
+## Fix-up tools: Merge, Weld, Flip, Fill hole, Bridge
+
+- **Pure functions in `packages/shared/src/meshTools.ts`** that take the mesh and the selected points and return a new mesh and a selection, so they run through the same `run` helper as Delete (one undo step each, selection set after the points are renumbered). A "Fix up" row in the edit panel; no keys assigned yet (the bar was already crowded).
+- **Merge** joins the selected points at their middle; faces that collapse are removed; creases follow the merged points. **Weld** joins selected points closer than 0.1 percent of the mesh's biggest side. Welding a cube's separate sides makes them share points, so the surface shades smoothly across the join; the tooltip says so.
+- **Flip** turns selected faces (or the whole mesh, with nothing selected) inside out.
+- **Fill hole** closes the hole that has a selected border edge with a fan from the middle (one triangle for a three-sided hole). With nothing selected, a mesh with exactly one hole gets it closed. Rings that touch themselves are refused with a reason.
+- **Bridge** joins two open rims that have the same number of edges, lined up so the strip is as short as possible and wound the same way as both rims (tested on two stacked tubes). Bridging the two ends of ONE tube lays the strip over its own wall, so it is not a useful case.
+- **Dissolve is not built.** Faces are worked out from triangles (the topology layer is derived and never stored), so a dissolved edge would simply reappear as the diagonal of the triangles. It needs a stored polygon mesh; that is a bigger change, to be decided with sculpting.
+
+- **Found in the first browser check of the fix-up tools:** (1) Delete in Faces mode removed every face touching the face's corner points, leaving a ragged hole; it now deletes only the selected faces (`deleteFaces`), so the hole has a clean edge. In Points and Edges mode Delete still removes every face that uses a selected point. (2) Fill hole gave up where two parts of a hole border meet at one point; border rings are now found by the shortest way round (breadth first), so the ring of the selected edge is closed and the other is left alone.
+
+- **Found in browser checks of the pinned side views:** (1) clicking empty space (deselecting) re-framed the view on the whole scene and zoomed far out; now only choosing another object frames it again, and deselecting keeps the view (the depth slice widens to the whole scene). (2) An object turned with the gizmo was cut away (looked see-through) because the near and far planes only followed the scene data, which changes after the drag; while something is selected they are now measured every frame from the objects as drawn, with 5 percent room. (3) The Perspective tile of the four-view peek was drawn with the flat colour of a pinned view; it is now drawn with the real sky (`withRealBackground`).
+
+- **Deselecting keeps the pinned view as it is** (second browser check): measuring the whole scene when nothing is selected opened the depth slice and let the objects in front of the old target back in. Now nothing is measured or re-framed while nothing is selected; the slice of the last selection stays until another object is chosen. Entering a side view with nothing selected still frames the whole scene.

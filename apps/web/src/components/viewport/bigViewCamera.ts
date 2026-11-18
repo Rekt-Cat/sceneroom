@@ -47,6 +47,9 @@ export function fitToSize(
   camera.updateProjectionMatrix();
 }
 
+/** How much room the live depth slice leaves round the selection, as a share of its depth. */
+const SLAB_ROOM = Math.max(SIDE_VIEW_NEAR_ROOM, 0.05);
+
 /**
  * Moves the near and far planes of a flat camera that stays where it is, so they hug what is selected NOW (or the
  * whole scene): called when objects move, turn or change size while the big side view is open. Without it the
@@ -66,7 +69,8 @@ export function updateSlab(camera: OrthographicCamera): void {
       }
     }
   }
-  const room = Math.max(farthest - nearest, 1) * SIDE_VIEW_NEAR_ROOM;
+  // A little room, so an object that turns between two measurements is never cut
+  const room = Math.max(farthest - nearest, 1) * SLAB_ROOM;
   camera.near = Math.max(0.01, nearest - room);
   camera.far = Math.max(camera.near + 0.01, farthest + room);
   camera.updateProjectionMatrix();

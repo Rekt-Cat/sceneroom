@@ -21,6 +21,11 @@ import {
   changeExtrude,
   changeLoopCut,
   bevelSelectedEdges,
+  bridgeSelectedLoops,
+  fillSelectedHole,
+  flipSelectedNormals,
+  mergeSelectedPoints,
+  weldSelectedPoints,
   changeBevel,
   commitBevel,
   previewBevel,
@@ -653,5 +658,63 @@ describe("extruding an edge", () => {
     expect(await changeExtrude({ divisions: 3 })).toBe(true);
     expect((await mesh()).indices.length / 3).toBe(before + 6);
     expect(get().history.past.length).toBe(steps + 1);
+  });
+});
+
+describe("fixing up a mesh", () => {
+  const pointTotal = async () => (await mesh()).positions.length / 3;
+
+  it("flipping with nothing selected turns the whole cube inside out, as one undo step", async () => {
+    const before = Array.from((await mesh()).indices);
+    const steps = get().history.past.length;
+    expect(await flipSelectedNormals()).toBe(true);
+    expect(get().history.past.length).toBe(steps + 1);
+    expect(get().history.past.at(-1)?.label).toBe("Flip all faces");
+    expect(Array.from((await mesh()).indices)).not.toEqual(before);
+    get().undo();
+    expect(Array.from((await mesh()).indices)).toEqual(before);
+  });
+
+  it("welding every point of the cube joins its separate sides: 24 points become 8", async () => {
+    expect(await pointTotal()).toBe(24);
+    useEditStore
+      .getState()
+      .setSelected(Array.from({ length: 24 }, (_, i) => i));
+    expect(await weldSelectedPoints()).toBe(true);
+    expect(await pointTotal()).toBe(8);
+    expect(get().history.past.at(-1)?.label).toBe("Weld points");
+  });
+
+  it("merging two points of the cube leaves one point there and selects it", async () => {
+    const t = buildTopology(await mesh());
+    const a = t.vertexPoints[t.edges[0]!]!;
+    const b = t.vertexPoints[t.edges[1]!]!;
+    useEditStore.getState().setSelected([...a, ...b]);
+    expect(await mergeSelectedPoints()).toBe(true);
+    expect(useEditStore.getState().selected.length).toBeGreaterThan(0);
+    expect(get().history.past.at(-1)?.label).toBe("Merge points");
+  });
+
+  it("says why when it cannot: nothing to merge, no hole to fill, nothing to bridge", async () => {
+    expect(await mergeSelectedPoints()).toBe(false);
+    expect(message()).toContain("two separate points");
+    expect(await fillSelectedHole()).toBe(false);
+    expect(message()).toContain("no holes");
+    expect(await bridgeSelectedLoops()).toBe(false);
+    expect(message()).toContain("two open rims");
+  });
+});
+
+describe("deleting a face and filling the hole again", () => {
+  it("in Faces mode only that face goes, and Fill hole closes it", async () => {
+    useEditStore.getState().setSelectMode("face");
+    const before = (await mesh()).indices.length / 3;
+    useEditStore.getState().setSelected(await sideSelection(0));
+    expect(await deleteSelectedPoints()).toBe(true);
+    expect((await mesh()).indices.length / 3).toBe(before - 2);
+    expect(get().history.past.at(-1)?.label).toBe("Delete faces");
+    // the hole has one ring of four edges; with nothing selected the only hole is filled
+    expect(await fillSelectedHole()).toBe(true);
+    expect((await mesh()).indices.length / 3).toBeGreaterThan(before - 2);
   });
 });

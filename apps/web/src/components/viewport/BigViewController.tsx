@@ -7,10 +7,7 @@ import { isSideView } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
 import { useViewStore } from "@/store/viewStore";
 import { fitToSize, placeSideCamera, updateSlab } from "./bigViewCamera";
-import {
-  syncFlatBackground,
-  type FlatBackgroundMemory,
-} from "./flatBackground";
+import { flatMemory, syncFlatBackground } from "./flatBackground";
 import { getPerspectiveCamera, setPerspectiveCamera } from "./cameraRegistry";
 
 type Controls = { target: Vector3; update: () => void };
@@ -65,42 +62,40 @@ export default function BigViewController() {
     controls.update();
   }, [controls, bigView, camera]);
 
-  // Objects that move, turn or change while a side view is open: the near and far planes follow what is selected,
-  // and another selection is framed again (the view cannot be panned to it by hand)
-  const change = useRef<"none" | "slab" | "frame">("none");
-  const settled = useRef(false);
+  // Objects that move, turn or change while a side view is open: the near and far planes follow what is selected
+  // (every frame while something is selected, because a gizmo moves the object on screen before the scene data
+  // changes), and another selection is framed again (the view cannot be panned to it by hand). Deselecting changes
+  // nothing: the view keeps showing the slice it had, so clicking empty space neither throws the view away nor
+  // lets the objects in front of the one you were looking at back in.
+  const framePending = useRef(false);
   useEffect(
     () =>
       useSceneStore.subscribe((state, before) => {
-        if (state.selectedIds !== before.selectedIds) change.current = "frame";
-        else if (
-          state.scene.nodes !== before.scene.nodes &&
-          change.current === "none"
+        if (
+          state.selectedIds !== before.selectedIds &&
+          state.selectedIds.length > 0
         ) {
-          change.current = "slab";
+          framePending.current = true;
         }
       }),
     [],
   );
   useFrame(() => {
-    const todo = change.current;
-    if (todo === "none") return;
-    // One frame is drawn first, so the objects' world matrices are up to date when they are measured
-    if (!settled.current) {
-      settled.current = true;
+    const side = flat.current;
+    if (!side || camera !== side || !isSideView(bigView)) {
+      framePending.current = false;
       return;
     }
-    settled.current = false;
-    change.current = "none";
-    const side = flat.current;
-    if (!side || camera !== side || !isSideView(bigView)) return;
-    if (todo === "frame") {
+    if (useSceneStore.getState().selectedIds.length === 0) return;
+    if (framePending.current) {
+      framePending.current = false;
       target.current = placeSideCamera(side, bigView, sizeRef.current);
       if (controls) {
         controls.target.set(...target.current);
         controls.update();
       }
     } else {
+      // The boxes are measured from the objects as they are drawn now (their world matrices are refreshed first)
       updateSlab(side);
     }
   });
@@ -108,12 +103,11 @@ export default function BigViewController() {
   // The flat side views draw a plain background (the sky picture looks like a stray box through a flat camera).
   // The scene's own background is kept and put back when the normal view returns.
   const scene = useThree((state) => state.scene);
-  const memory = useRef<FlatBackgroundMemory>({ mine: null, original: null });
   useFrame(() => {
     syncFlatBackground(
       scene,
       flat.current !== null && camera === flat.current,
-      memory.current,
+      flatMemory,
     );
   });
 
