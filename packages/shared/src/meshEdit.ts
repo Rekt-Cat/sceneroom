@@ -1,5 +1,6 @@
 import type { ShapeMesh } from "./modifiers";
 import { remapCreases } from "./creases";
+import { remapSeams, seamsOf } from "./seams";
 import type { Rect } from "./screenRect";
 import type { Vec3 } from "./index";
 
@@ -341,6 +342,7 @@ export function deletePoints(
       indices: Uint32Array.from(indices),
       // Points are renumbered; creases follow them, and those on deleted points go
       creases: remapCreases(mesh.creases, renumberTable),
+      ...seamsOf(remapSeams(mesh.seams, renumberTable)),
     },
     selected: [],
   };
@@ -611,6 +613,7 @@ export function extrudeFaces(
       indices: Uint32Array.from(indices),
       // The old points keep their numbers, so the creases on the old edges are still right
       creases: mesh.creases,
+      ...(mesh.seams ? { seams: mesh.seams } : {}),
     },
     selected: capPoints,
   };

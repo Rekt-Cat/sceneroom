@@ -161,6 +161,7 @@ export function extrudeEdges(
       positions: Float32Array.from(positions),
       indices: Uint32Array.from(indices),
       creases: mesh.creases,
+      ...(mesh.seams ? { seams: mesh.seams } : {}),
     },
     selected: [...capPoints],
   };

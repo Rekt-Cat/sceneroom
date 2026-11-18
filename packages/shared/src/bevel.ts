@@ -1,4 +1,5 @@
 import { remapCreases } from "./creases";
+import { remapSeams, seamsOf } from "./seams";
 import type { EditMesh } from "./meshEdit";
 import { edgeBetween, edgeVertices, type Topology } from "./topology";
 
@@ -410,6 +411,9 @@ export function bevelEdges(
       creases: remapCreases(
         mesh.creases,
         renumber.subarray(0, mesh.positions.length / 3),
+      ),
+      ...seamsOf(
+        remapSeams(mesh.seams, renumber.subarray(0, mesh.positions.length / 3)),
       ),
     },
     selected: [...strip]

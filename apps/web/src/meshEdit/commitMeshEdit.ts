@@ -87,6 +87,7 @@ export async function commitMeshPositions(
         positions,
         indices: before.indices,
         creases: before.creases,
+        ...(before.seams ? { seams: before.seams } : {}),
         // The points moved, the map did not
         ...(before.uvs ? { uvs: before.uvs } : {}),
       },

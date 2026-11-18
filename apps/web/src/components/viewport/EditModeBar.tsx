@@ -12,6 +12,7 @@ import {
   CREASE_SHARP,
   CREASE_SOFT,
   creaseSelectedEdges,
+  seamSelectedEdges,
   deleteSelectedPoints,
   extrudeSelectedFaces,
   bevelSelectedEdges,
@@ -256,6 +257,28 @@ export default function EditTools() {
             className={ACTION}
           >
             Clear
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-ed-text-3">UV</span>
+          <button
+            type="button"
+            onClick={() => void seamSelectedEdges(true)}
+            disabled={selected.length < 2}
+            title="Mark seam: mark the selected edges as seams, the cuts along which the surface will be laid flat for a UV map (drawn in red). Select an edge first."
+            className={ACTION}
+          >
+            Mark seam
+          </button>
+          <button
+            type="button"
+            onClick={() => void seamSelectedEdges(false)}
+            disabled={selected.length < 2}
+            title="Clear seam: take the seam off the selected edges"
+            className={ACTION}
+          >
+            Clear seam
           </button>
         </div>
 

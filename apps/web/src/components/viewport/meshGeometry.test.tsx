@@ -295,7 +295,8 @@ describe("editing the points of a mesh", () => {
     overlay.dispose();
     const next = buildEditOverlay(geometry());
     block().add(next.group);
-    expect(next.group.children).toHaveLength(7);
+    // lines, points, selected lines and dots, the loop cut preview, soft and sharp creases, and the seams
+    expect(next.group.children).toHaveLength(8);
     expect(problems(scene)).toEqual([]);
   });
 });

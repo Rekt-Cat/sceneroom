@@ -1,4 +1,5 @@
 import type { Crease } from "./creases";
+import { seamsOf, type Seam } from "./seams";
 import type { EditMesh, EditResult } from "./meshEdit";
 import { buildTopology } from "./topology";
 
@@ -275,12 +276,41 @@ export function divideFaces(
     creases = [...creases!, ...extra];
   }
 
+  // A seam on a divided edge goes on to every piece of it, the same way
+  let seams: Seam[] | undefined = mesh.seams ? [...mesh.seams] : undefined;
+  if (mesh.seams && mesh.seams.length > 0) {
+    const pieces = new Map<string, number[]>();
+    for (const [key, chain] of along) {
+      const [low, high] = key.split(",").map(Number) as [number, number];
+      const va = topology.vertexOf[low]!;
+      const vb = topology.vertexOf[high]!;
+      pieces.set(va < vb ? `${va},${vb}` : `${vb},${va}`, [
+        low,
+        ...chain,
+        high,
+      ]);
+    }
+    const extra: Seam[] = [];
+    for (const seam of mesh.seams) {
+      const va = topology.vertexOf[seam.a];
+      const vb = topology.vertexOf[seam.b];
+      if (va === undefined || vb === undefined) continue;
+      const chain = pieces.get(va < vb ? `${va},${vb}` : `${vb},${va}`);
+      if (!chain) continue;
+      for (let k = 0; k + 1 < chain.length; k++) {
+        extra.push({ a: chain[k]!, b: chain[k + 1]! });
+      }
+    }
+    seams = [...seams!, ...extra];
+  }
+
   return {
     ok: true,
     mesh: {
       positions: Float32Array.from(positions),
       indices: Uint32Array.from(indices),
       creases,
+      ...seamsOf(seams),
     },
     selected: [...touched].sort((a, b) => a - b),
   };

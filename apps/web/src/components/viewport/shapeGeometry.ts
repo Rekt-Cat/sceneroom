@@ -74,11 +74,15 @@ export function buildMeshGeometry(
   geometry.computeBoundingSphere();
   // The creases ride along: the modifiers read them (Smooth), and edit mode draws them
   if (mesh.creases) geometry.userData[CREASES_KEY] = mesh.creases;
+  // The seams ride along too (edit mode draws them; they are not changed by the modifiers)
+  if (mesh.seams) geometry.userData[SEAMS_KEY] = mesh.seams;
   return withModifiers(geometry, modifiers);
 }
 
 /** Where a geometry keeps the creases of the mesh it was made from. */
 export const CREASES_KEY = "creases";
+/** Where a geometry keeps the seams of the mesh it was made from. */
+export const SEAMS_KEY = "seams";
 
 /** The points and triangles of a geometry, copied out (to store as a mesh). */
 export function geometryToMesh(geometry: BufferGeometry): ShapeMesh {
@@ -136,6 +140,7 @@ function withModifiers(
   );
   // After the modifiers the creases (if any survive) belong to the new points; the editor only edits unmodified meshes
   delete geometry.userData[CREASES_KEY];
+  delete geometry.userData[SEAMS_KEY];
   geometry.setAttribute("position", new BufferAttribute(result.positions, 3));
   geometry.setIndex(new BufferAttribute(result.indices, 1));
   // The pieces of the old index (used for several materials) no longer line up

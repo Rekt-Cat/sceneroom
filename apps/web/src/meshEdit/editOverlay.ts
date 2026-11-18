@@ -8,7 +8,7 @@ import {
   Points,
   PointsMaterial,
 } from "three";
-import { meshEdges, type Crease } from "@sceneroom/shared";
+import { meshEdges, type Crease, type Seam } from "@sceneroom/shared";
 import type { SelectMode } from "@/store/editStore";
 
 /** The size of a point dot, in screen pixels. */
@@ -32,6 +32,8 @@ export type EditOverlay = {
   setXray: (xray: boolean) => void;
   /** Draws the creased edges (sharp ones in strong pink, softer ones paler); pass the mesh's creases. */
   setCreases: (creases: readonly Crease[] | undefined) => void;
+  /** Draws the seams (the cuts for the UV map) in red; pass the mesh's seams. */
+  setSeams: (seams: readonly Seam[] | undefined) => void;
   /** Shows (or, with null, hides) the lines a loop cut would make: pairs of spots (x, y, z, x, y, z, ...) in the mesh's space. */
   setCutPreview: (lines: Float32Array | null) => void;
   /** Frees what the overlay made (the points it shares with the mesh are the mesh's own). */
@@ -162,6 +164,8 @@ export function buildEditOverlay(geometry: BufferGeometry): EditOverlay {
   };
   const softCrease = makeCreaseLines(0xf3a6cf, 12);
   const sharpCrease = makeCreaseLines(0xff3d9a, 12);
+  // Seams are red, drawn over everything else so they can be followed round the shape
+  const seamLines = makeCreaseLines(0xf0434a, 13);
 
   group.add(
     lines,
@@ -171,6 +175,7 @@ export function buildEditOverlay(geometry: BufferGeometry): EditOverlay {
     cutLines,
     softCrease.object,
     sharpCrease.object,
+    seamLines.object,
   );
 
   const setSelected = (selected: readonly number[]) => {
@@ -224,6 +229,17 @@ export function buildEditOverlay(geometry: BufferGeometry): EditOverlay {
     );
   };
 
+  const setSeams = (seams: readonly Seam[] | undefined) => {
+    const pairs: number[] = [];
+    for (const seam of seams ?? []) {
+      if (seam.a >= position.count || seam.b >= position.count) continue;
+      pairs.push(seam.a, seam.b);
+    }
+    seamLines.geometry.setIndex(
+      new BufferAttribute(Uint32Array.from(pairs), 1),
+    );
+  };
+
   const setCutPreview = (positions: Float32Array | null) => {
     if (!positions || positions.length === 0) {
       cutLines.visible = false;
@@ -258,6 +274,7 @@ export function buildEditOverlay(geometry: BufferGeometry): EditOverlay {
     setXray,
     setCutPreview,
     setCreases,
+    setSeams,
     dispose: () => {
       group.removeFromParent();
       pointGeometry.dispose();
@@ -270,6 +287,8 @@ export function buildEditOverlay(geometry: BufferGeometry): EditOverlay {
       softCrease.material.dispose();
       sharpCrease.geometry.dispose();
       sharpCrease.material.dispose();
+      seamLines.geometry.dispose();
+      seamLines.material.dispose();
       pointMaterial.dispose();
       lineMaterial.dispose();
       selectedLineMaterial.dispose();

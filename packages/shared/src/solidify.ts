@@ -184,5 +184,6 @@ export function solidifyMesh(
     indices: Uint32Array.from(indices),
     // The first points keep their numbers, so creases on the surface are still right
     creases: mesh.creases,
+    ...(mesh.seams ? { seams: mesh.seams } : {}),
   };
 }

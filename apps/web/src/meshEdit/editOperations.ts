@@ -5,6 +5,8 @@ import {
   selectedEdges,
   selectedFaces,
   setCreases,
+  setSeams,
+  sameSeams,
   buildTopology,
   edgeBetween,
   loopCut,
@@ -674,6 +676,33 @@ export async function changeBevel(change: BevelChange): Promise<boolean> {
   }
   if (!previewBevel(change)) return false;
   return commitBevel();
+}
+
+// ---- Seams ----
+
+/**
+ * Marks the selected edges as seams (the cuts along which the surface is laid flat for a UV map), or clears them. An
+ * edge is selected when both its ends are (click an edge, Alt-click a loop, or select a face for all its sides).
+ * One undo step. Says why in the bar over the 3D view if no edge is selected. The UV map the mesh has is kept.
+ */
+export async function seamSelectedEdges(on: boolean): Promise<boolean> {
+  const edited = await editedMesh();
+  if (!edited) return false;
+  const topology = buildTopology(edited.mesh);
+  const edges = selectedEdges(topology, edited.selected);
+  if (edges.length === 0) {
+    say(
+      "Select an edge first: press 2 for edge mode, then click an edge (Alt-click selects a whole loop).",
+    );
+    return false;
+  }
+  const seams = setSeams(edited.mesh, topology, edges, on);
+  if (sameSeams(topology, seams, edited.mesh.seams)) return true; // nothing changes
+  return commitMesh(
+    edited.nodeId,
+    { ...edited.mesh, seams: seams.length > 0 ? seams : undefined },
+    on ? "Mark seam" : "Clear seam",
+  );
 }
 
 // ---- Fixing up a mesh: merge, weld, flip, fill, bridge ----

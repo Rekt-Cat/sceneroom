@@ -120,6 +120,11 @@ function EditSession({ nodeId }: { nodeId: string }) {
     if (!bound) return;
     overlayRef.current?.setCreases(editMeshOf(bound.geometry)?.creases);
   }, [bound]);
+  // The seams of the mesh (drawn in red)
+  useEffect(() => {
+    if (!bound) return;
+    overlayRef.current?.setSeams(editMeshOf(bound.geometry)?.seams);
+  }, [bound]);
 
   // Without X-ray the lines and dots on the far side are hidden by the mesh itself. The mesh is pushed back a
   // little in the depth buffer so the lines lying on its surface are not hidden by it too.

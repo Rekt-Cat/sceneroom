@@ -21,6 +21,7 @@ import {
   changeExtrude,
   changeLoopCut,
   bevelSelectedEdges,
+  seamSelectedEdges,
   changeDivide,
   commitDivide,
   divideSelectedFaces,
@@ -808,5 +809,42 @@ describe("UVs of an edited mesh", () => {
     useImportStore.setState({ message: null });
     expect(await changeDivide(2)).toBe(true);
     expect(message()).toBe("");
+  });
+});
+
+describe("seams", () => {
+  async function selectAnEdge() {
+    const t = buildTopology(await mesh());
+    const [a, b] = [t.vertexPoints[t.edges[0]!]!, t.vertexPoints[t.edges[1]!]!];
+    useEditStore.getState().setSelected([...a, ...b]);
+  }
+
+  it("marks the selected edge: stored with the mesh, one undo step, the UV map kept, and Undo takes it away", async () => {
+    await selectAnEdge();
+    const steps = get().history.past.length;
+    expect(await seamSelectedEdges(true)).toBe(true);
+    expect(get().history.past.length).toBe(steps + 1);
+    expect(get().history.past.at(-1)?.label).toBe("Mark seam");
+    const m = await mesh();
+    expect(m.seams).toHaveLength(1);
+    expect(m.uvs).toBeDefined();
+    get().undo();
+    expect((await mesh()).seams).toBeUndefined();
+  });
+
+  it("clears it again, and marking the same edge twice adds no undo step", async () => {
+    await selectAnEdge();
+    await seamSelectedEdges(true);
+    const steps = get().history.past.length;
+    expect(await seamSelectedEdges(true)).toBe(true);
+    expect(get().history.past.length).toBe(steps);
+    expect(await seamSelectedEdges(false)).toBe(true);
+    expect((await mesh()).seams).toBeUndefined();
+    expect(get().history.past.at(-1)?.label).toBe("Clear seam");
+  });
+
+  it("asks for an edge when nothing is selected", async () => {
+    expect(await seamSelectedEdges(true)).toBe(false);
+    expect(message()).toContain("Select an edge");
   });
 });

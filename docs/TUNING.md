@@ -631,3 +631,10 @@ value and what it does.
 | Cells        | `CHECKER_CELLS` in `components/viewport/checkerTexture.ts` | 8 by 8               | How many squares the checkerboard has along each side of the 0 to 1 map. |
 | Colours      | `LIGHT` and `DARK` in `checkerTexture.ts`                  | `#d9dee3`, `#59636d` | The two colours of the squares.                                          |
 | Picture size | `PICTURE_SIZE` in `checkerTexture.ts`                      | 512 px               | The size of the checkerboard picture (sharper squares when bigger).      |
+
+## Seams
+
+| What        | Where                                                 | Our value      | What it does                                              |
+| ----------- | ----------------------------------------------------- | -------------- | --------------------------------------------------------- |
+| Seam colour | `seamLines` in `apps/web/src/meshEdit/editOverlay.ts` | red `0xf0434a` | The colour of seam lines in edit mode (creases are pink). |
+| Most seams  | `MAX_SEAMS` in `packages/shared/src/seams.ts`         | 200 000        | The most seams one mesh may have.                         |

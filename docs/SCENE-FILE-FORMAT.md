@@ -59,6 +59,10 @@ byte 24. After the corners come the creases (as in version 2) and then `P * 8` b
 as 32-bit floats. All three versions are read. UVs that do not match the points (two numbers for each) or are not finite
 numbers are refused, as is a size that does not match. See `docs/UVS-AND-SEAMS.md`.
 
+**Seams** use bit 1 of the same flags (so a mesh with seams but no UVs is also version 3). After the UVs (if any) come `S`, the number of
+seams (32-bit), then `S * 4` bytes of first points and `S * 4` bytes of second points: the two ends of each seam edge. A seam on a
+point that does not exist, a seam joining a point to itself and a header that claims too many seams are refused.
+
 The id of a mesh is the SHA-256 of exactly these bytes. Normals are not stored; they are worked out from the triangles.
 A mesh that no object uses is not saved (the editor keeps old versions in memory only so Undo can bring them back).
 Opening checks a mesh like a model: the layout, the sizes against the header (before allocating anything), that every

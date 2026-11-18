@@ -6,6 +6,7 @@ import type {
   SceneNode,
 } from "./scene";
 import type { Crease } from "./creases";
+import type { Seam } from "./seams";
 import { solidifyMesh } from "./solidify";
 import { subdivideMesh } from "./subdivide";
 import {
@@ -411,6 +412,8 @@ export type ShapeMesh = {
   indices: Uint32Array;
   /** Edges marked as sharp for smoothing (see creases.ts). Most meshes have none. */
   creases?: readonly Crease[];
+  /** Edges marked as the cuts for flattening the surface into a UV map (see seams.ts). Most meshes have none. */
+  seams?: readonly Seam[];
   /**
    * Where each point lies on the flat texture map: u, v for every point (so twice as many numbers as points), or none.
    * Tools that do not know about UVs leave them out (see docs/UVS-AND-SEAMS.md).
@@ -462,6 +465,7 @@ export function deformMesh(
         positions: new Float32Array(mesh.positions),
         indices: new Uint32Array(mesh.indices),
         creases: mesh.creases,
+        ...(mesh.seams ? { seams: mesh.seams } : {}),
         ...(mesh.uvs ? { uvs: new Float32Array(mesh.uvs) } : {}),
       }
     : current;
@@ -498,6 +502,7 @@ function applyModifier(mesh: ShapeMesh, modifier: Modifier): ShapeMesh {
         positions: movePoints(mesh.positions, modifier),
         indices: mesh.indices,
         creases: mesh.creases,
+        ...(mesh.seams ? { seams: mesh.seams } : {}),
         // The surface bends, the map does not
         ...(mesh.uvs ? { uvs: mesh.uvs } : {}),
       };
@@ -541,7 +546,18 @@ function mirror(mesh: ShapeMesh, along: number, offset: number): ShapeMesh {
     uvs.set(mesh.uvs);
     uvs.set(mesh.uvs, mesh.uvs.length);
   }
-  return { positions, indices, creases, ...(uvs ? { uvs } : {}) };
+  // ... and the same seams, on its own points
+  const seams = mesh.seams && [
+    ...mesh.seams,
+    ...mesh.seams.map((s) => ({ a: s.a + count, b: s.b + count })),
+  ];
+  return {
+    positions,
+    indices,
+    creases,
+    ...(seams ? { seams } : {}),
+    ...(uvs ? { uvs } : {}),
+  };
 }
 
 /** Repeats the shape `copies` times along one axis, `spacing` shape-lengths apart (1 = touching). */
@@ -585,7 +601,18 @@ function array(
     uvs = new Float32Array(mesh.uvs.length * copies);
     for (let k = 0; k < copies; k++) uvs.set(mesh.uvs, k * mesh.uvs.length);
   }
-  return { positions, indices, creases, ...(uvs ? { uvs } : {}) };
+  const seams =
+    mesh.seams &&
+    Array.from({ length: copies }, (_, k) =>
+      mesh.seams!.map((s) => ({ a: s.a + k * count, b: s.b + k * count })),
+    ).flat();
+  return {
+    positions,
+    indices,
+    creases,
+    ...(seams ? { seams } : {}),
+    ...(uvs ? { uvs } : {}),
+  };
 }
 
 /** The modifiers that only move the points. */
