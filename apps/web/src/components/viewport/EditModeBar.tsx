@@ -96,7 +96,7 @@ export default function EditTools() {
   );
   // A settings panel is open until something else is done (the undo history grew)
   const pastLength = useSceneStore((state) => state.history.past.length);
-  const session = useEditStore(activeOperation);
+  const session = useEditStore((state) => activeOperation(state, pastLength));
   if (!nodeId || !node) return null;
 
   /** Loop and Ring work on edges, so pressing them switches to edge mode (and says what to do if nothing is selected). */
@@ -434,7 +434,7 @@ export default function EditTools() {
       </div>
 
       {/* The settings of the last operation take the place of the hint, in a narrow column, so the bar stays small */}
-      {session && session.pastLength === pastLength ? (
+      {session ? (
         <div>
           <LoopCutPanel />
           <BevelPanel />

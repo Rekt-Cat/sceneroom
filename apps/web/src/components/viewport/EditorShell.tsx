@@ -95,7 +95,8 @@ export default function EditorShell({ projectId }: { projectId: string }) {
         <HierarchyPanel />
         {/* Same colour as the 3D background (Viewport.tsx) so there is no flash while it loads */}
         <main
-          className="relative min-w-0 flex-1 overflow-hidden bg-[#14191d]"
+          // A container: the Controls card moves up when this view is too narrow to sit beside the tool dock
+          className="@container relative min-w-0 flex-1 overflow-hidden bg-[#14191d]"
           onDragEnter={(event) => {
             if (carriesFiles(event)) setDropping(true);
             if (carriesAsset(event)) setDroppingAsset(true);

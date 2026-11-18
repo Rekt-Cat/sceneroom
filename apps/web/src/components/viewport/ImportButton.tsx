@@ -17,10 +17,12 @@ export default function ImportButton() {
         disabled={busy}
         onClick={() => inputRef.current?.click()}
         title="Import a .glb model (or drop one onto the 3D view)"
-        className="flex h-7 items-center gap-1.5 rounded-md border border-ed-line-strong bg-ed-raised px-2.5 text-sm font-medium transition-colors hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ed-accent disabled:cursor-wait disabled:opacity-60"
+        aria-label="Import"
+        // In a narrow panel only the icon shows, so the Add button beside it is not pushed out of sight
+        className="flex h-7 items-center gap-1.5 rounded-md border border-ed-line-strong bg-ed-raised px-2 @min-[340px]:px-2.5 text-sm font-medium transition-colors hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ed-accent disabled:cursor-wait disabled:opacity-60"
       >
         <Icon name="import" />
-        Import
+        <span className="hidden @min-[340px]:inline">Import</span>
       </button>
       <input
         ref={inputRef}

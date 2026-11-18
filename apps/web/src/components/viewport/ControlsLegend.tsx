@@ -58,7 +58,8 @@ export default function ControlsLegend() {
     <section
       aria-label="Mouse and keyboard controls"
       // The card lets clicks through to the 3D view, except on its own button
-      className="pointer-events-none absolute bottom-5 left-4 rounded-[10px] border border-ed-line bg-ed-panel/85 px-3 py-2 text-xs text-ed-text-2 backdrop-blur"
+      // In a narrow view the tool dock is centred over this corner, so the card stands above the dock instead
+      className="pointer-events-none absolute bottom-5 left-4 @max-[1080px]:bottom-[88px] rounded-[10px] border border-ed-line bg-ed-panel/85 px-3 py-2 text-xs text-ed-text-2 backdrop-blur"
     >
       <button
         type="button"
