@@ -359,6 +359,46 @@ describe("exporting an editable mesh", () => {
     expect(accessor.count).toBe(4);
   });
 
+  it("the UV map of a mesh is exported as TEXCOORD_0, and a mesh without one has none", async () => {
+    const square = {
+      positions: new Float32Array([0, 0, 0, 2, 0, 0, 2, 3, 0, 0, 3, 0]),
+      indices: new Uint32Array([0, 1, 2, 0, 2, 3]),
+    };
+    const exportMesh = async (mesh: typeof square & { uvs?: Float32Array }) => {
+      let scene = createEmptyScene();
+      scene = addAsset(scene, {
+        id: "m1",
+        name: "Panel",
+        type: "mesh",
+        bytes: 1,
+        triangles: 2,
+        boundsMin: [0, 0, 0],
+        boundsMax: [2, 3, 0],
+        note: "",
+      });
+      scene = addNode(scene, {
+        ...createNode("p", "cube"),
+        kind: "mesh",
+        assetId: "m1",
+        name: "Panel",
+      });
+      const { root } = buildExportScene(
+        scene,
+        () => undefined,
+        () => mesh,
+      );
+      const gltf = readGlb(await sceneToGlb(root));
+      disposeExportScene(root);
+      return gltf.meshes[named(gltf, "Panel")!.mesh!]!.primitives[0]!;
+    };
+    const mapped = await exportMesh({
+      ...square,
+      uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
+    });
+    expect(mapped.attributes["TEXCOORD_0"]).toBeDefined();
+    expect((await exportMesh(square)).attributes["TEXCOORD_0"]).toBeUndefined();
+  });
+
   it("a mesh whose data is not available is left out and reported", () => {
     let scene = createEmptyScene();
     scene = addNode(scene, {

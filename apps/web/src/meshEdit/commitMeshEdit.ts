@@ -20,6 +20,7 @@ export async function commitMesh(
   const old = node?.assetId ? scene.assets[node.assetId] : undefined;
   if (!node || node.kind !== "mesh" || !node.assetId || !old) return false;
   try {
+    await sayIfUvsRemoved(node.name, node.assetId, mesh, label);
     const stored = await storeMesh(mesh);
     // Nothing changed (the same mesh was stored again): no undo step
     if (stored.id === node.assetId) return true;
@@ -45,6 +46,30 @@ export async function commitMesh(
   }
 }
 
+/**
+ * Tools that do not know about UVs leave them out of the mesh they make. Wrong UVs are worse than none, so the
+ * map is dropped, and the person is told (once: the next version has no UVs to lose).
+ */
+async function sayIfUvsRemoved(
+  name: string,
+  oldAssetId: string,
+  mesh: ShapeMesh,
+  label: string,
+): Promise<void> {
+  if (mesh.uvs) return;
+  let had = false;
+  try {
+    had = (await loadMeshData(oldAssetId)).uvs !== undefined;
+  } catch {
+    return; // the old mesh cannot be read; storing the new one goes on and reports its own problems
+  }
+  if (!had) return;
+  useImportStore.getState().setMessage({
+    tone: "info",
+    text: `${label} removed the UV map of "${name}" (this tool does not keep UVs yet). Unwrap again when you need one.`,
+  });
+}
+
 /** Stores edited points of a mesh whose triangles did not change. */
 export async function commitMeshPositions(
   nodeId: string,
@@ -58,7 +83,13 @@ export async function commitMeshPositions(
     // The points moved, the triangles and the creases did not
     return commitMesh(
       nodeId,
-      { positions, indices: before.indices, creases: before.creases },
+      {
+        positions,
+        indices: before.indices,
+        creases: before.creases,
+        // The points moved, the map did not
+        ...(before.uvs ? { uvs: before.uvs } : {}),
+      },
       label,
     );
   } catch (error) {

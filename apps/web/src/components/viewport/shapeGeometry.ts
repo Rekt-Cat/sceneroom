@@ -62,6 +62,13 @@ export function buildMeshGeometry(
     new BufferAttribute(new Float32Array(mesh.positions), 3),
   );
   geometry.setIndex(new BufferAttribute(new Uint32Array(mesh.indices), 1));
+  // The map of the surface on the flat texture, when the mesh has one (the checker view and GLB export use it)
+  if (mesh.uvs) {
+    geometry.setAttribute(
+      "uv",
+      new BufferAttribute(new Float32Array(mesh.uvs), 2),
+    );
+  }
   geometry.computeVertexNormals();
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
@@ -86,7 +93,23 @@ export function geometryToMesh(geometry: BufferGeometry): ShapeMesh {
   const indices = index
     ? Uint32Array.from(index.array)
     : Uint32Array.from({ length: position.count }, (_, i) => i);
-  return { positions, indices };
+  const uvs = uvsOf(geometry, position.count);
+  return { positions, indices, ...(uvs ? { uvs } : {}) };
+}
+
+/** The UVs of a geometry (u, v for every point), or undefined if it has none or they do not fit the points. */
+function uvsOf(
+  geometry: BufferGeometry,
+  points: number,
+): Float32Array | undefined {
+  const uv = geometry.getAttribute("uv");
+  if (!uv || uv.count !== points || uv.itemSize !== 2) return undefined;
+  const uvs = new Float32Array(points * 2);
+  for (let i = 0; i < points; i++) {
+    uvs[i * 2] = uv.getX(i);
+    uvs[i * 2 + 1] = uv.getY(i);
+  }
+  return uvs;
 }
 
 /** Applies the active modifiers to a geometry (made here, so it may be changed) and refreshes what depends on its points. */
@@ -107,6 +130,7 @@ function withModifiers(
       positions: position.array as Float32Array,
       indices,
       creases: geometry.userData[CREASES_KEY] as readonly Crease[] | undefined,
+      uvs: uvsOf(geometry, before),
     },
     modifiers,
   );
@@ -116,8 +140,13 @@ function withModifiers(
   geometry.setIndex(new BufferAttribute(result.indices, 1));
   // The pieces of the old index (used for several materials) no longer line up
   geometry.clearGroups();
-  // Mirror and array change how many points there are, so the old picture coordinates no longer fit
-  if (result.positions.length / 3 !== before) geometry.deleteAttribute("uv");
+  // Modifiers that keep the map (bend, twist, mirror, array ...) hand it back; the others change how many points
+  // there are, so the old picture coordinates no longer fit and are dropped
+  if (result.uvs) {
+    geometry.setAttribute("uv", new BufferAttribute(result.uvs, 2));
+  } else if (result.positions.length / 3 !== before) {
+    geometry.deleteAttribute("uv");
+  }
   // The old normals no longer match the new shape; click detection also needs fresh bounds
   geometry.deleteAttribute("normal");
   geometry.computeVertexNormals();

@@ -6,6 +6,8 @@ import {
   type SelectMode,
 } from "@/store/editStore";
 import { useSceneStore } from "@/store/sceneStore";
+import { useViewStore } from "@/store/viewStore";
+import { setChecker } from "./checkerView";
 import {
   CREASE_SHARP,
   CREASE_SOFT,
@@ -77,6 +79,9 @@ export default function EditTools() {
   const selectMode = useEditStore((state) => state.selectMode);
   const setSelectMode = useEditStore((state) => state.setSelectMode);
   const xray = useEditStore((state) => state.xray);
+  const checker = useViewStore((state) =>
+    nodeId ? state.checkerIds.has(nodeId) : false,
+  );
   const setXray = useEditStore((state) => state.setXray);
   const loopCutMode = useEditStore((state) => state.loopCutMode);
   const setLoopCutMode = useEditStore((state) => state.setLoopCutMode);
@@ -187,6 +192,19 @@ export default function EditTools() {
             }`}
           >
             X-ray
+          </button>
+          <button
+            type="button"
+            aria-pressed={checker}
+            onClick={() => nodeId && setChecker(nodeId, !checker)}
+            title="UV checker: draw a checkerboard on the object instead of its colour, to see how the texture map lies on it. Equal, square cells mean a good map."
+            className={`rounded-md border px-2.5 py-1 font-medium focus-visible:outline-2 focus-visible:outline-ed-accent ${
+              checker
+                ? "border-ed-select/60 bg-ed-select/25 text-ed-select"
+                : "border-ed-line-strong hover:bg-ed-field"
+            }`}
+          >
+            Checker
           </button>
         </div>
 

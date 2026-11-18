@@ -43,6 +43,12 @@ type ViewState = {
   /** The tile the pointer is over, or -1. */
   peekHover: number;
   setPeekHover: (tile: number) => void;
+  /**
+   * The objects that show the UV checker: a checkerboard instead of their colour, to see how the flat texture map
+   * lies on them (equal, square cells mean a good map). Screen state, not saved. Each object has its own switch.
+   */
+  checkerIds: ReadonlySet<string>;
+  setChecker: (nodeId: string, on: boolean) => void;
   /** What the big view shows: the normal 3D view, or a pinned flat side view. */
   bigView: ViewKind;
   setBigView: (view: ViewKind) => void;
@@ -81,6 +87,15 @@ export const useViewStore = create<ViewState>()((set) => ({
   },
   peekHover: -1,
   setPeekHover: (peekHover) => set({ peekHover }),
+  checkerIds: new Set<string>(),
+  setChecker: (nodeId, on) =>
+    set((state) => {
+      if (state.checkerIds.has(nodeId) === on) return state;
+      const checkerIds = new Set(state.checkerIds);
+      if (on) checkerIds.add(nodeId);
+      else checkerIds.delete(nodeId);
+      return { checkerIds };
+    }),
   bigView: "perspective",
   setBigView: (bigView) => set({ bigView }),
 }));

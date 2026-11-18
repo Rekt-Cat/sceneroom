@@ -12,7 +12,7 @@ import { clearMeshCache, loadMeshData } from "@/assets/meshStorage";
 import { useEditStore } from "@/store/editStore";
 import { useImportStore } from "@/store/importStore";
 import { useSceneStore } from "@/store/sceneStore";
-import { commitMesh } from "./commitMeshEdit";
+import { commitMesh, commitMeshPositions } from "./commitMeshEdit";
 import { buildTopology, createModifier } from "@sceneroom/shared";
 import { buildMeshGeometry } from "@/components/viewport/shapeGeometry";
 import {
@@ -779,5 +779,34 @@ describe("divide faces", () => {
     get().addPrimitive("cone");
     expect(await changeDivide(2)).toBe(false);
     expect(message()).toContain("right after dividing");
+  });
+});
+
+describe("UVs of an edited mesh", () => {
+  it("a cube made into a mesh keeps the UVs of the built-in cube", async () => {
+    const m = await mesh();
+    expect(m.uvs?.length).toBe((m.positions.length / 3) * 2);
+  });
+
+  it("moving points keeps the map: the surface moved, the UVs did not", async () => {
+    const before = await mesh();
+    const moved = Float32Array.from(before.positions, (v, i) =>
+      i % 3 === 0 ? v + 1 : v,
+    );
+    expect(await commitMeshPositions("a", moved, "Move points")).toBe(true);
+    const after = await mesh();
+    expect(Array.from(after.uvs ?? [])).toEqual(Array.from(before.uvs ?? []));
+  });
+
+  it("a tool that does not know UVs removes them and says so, once", async () => {
+    expect(await divideSelectedFaces()).toBe(true);
+    expect(await changeDivide(1)).toBe(true);
+    expect((await mesh()).uvs).toBeUndefined();
+    expect(message()).toContain("removed the UV map");
+    expect(message()).toContain("Divide");
+    // the next change has no map left to lose, so nothing more is said
+    useImportStore.setState({ message: null });
+    expect(await changeDivide(2)).toBe(true);
+    expect(message()).toBe("");
   });
 });

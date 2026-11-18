@@ -168,6 +168,7 @@ function NodeMesh({
 }) {
   const select = useSceneStore((state) => state.select);
   const toggleSelect = useSceneStore((state) => state.toggleSelect);
+  const checker = useViewStore((state) => state.checkerIds.has(node.id));
   const { position, rotation, scale } = node.transform;
   const material = node.material;
 
@@ -323,7 +324,12 @@ function NodeMesh({
           modifiers={node.modifiers}
         />
       )}
-      <SurfaceMaterial color={node.color} material={material} cut={cut} />
+      <SurfaceMaterial
+        color={node.color}
+        material={material}
+        cut={cut}
+        checker={checker}
+      />
       {selected && (
         <Outlines color={OUTLINE_COLOR} thickness={OUTLINE_THICKNESS} />
       )}

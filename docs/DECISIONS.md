@@ -910,3 +910,15 @@ The design from 2026-11-16 (above) was built on `feature/four-view`; not yet tri
 - **The peek only looks:** while Space is held the selection gizmo is not drawn (it is unmounted while `peekActive`), and the flat tiles are drawn without the ground grid (`withoutGrid`, found by the name `ground-grid`, put back after each tile). The big pinned side view keeps both, because moving and turning objects there is the point of a flat view.
 - **The FPS counter no longer covers the first tile's drop-down:** that drop-down sits beside the counter.
 - **Tile choices are remembered** in this browser (`sceneroom.peekTiles.v1` in localStorage, read after the first render, checked with `parsePeekTiles`; damaged or blocked storage falls back to Top, Front, Right, Perspective). A per-person convenience, so not saved in the project.
+
+## UVs and seams: plan written (2026-11-18)
+
+- The plan is in `docs/UVS-AND-SEAMS.md`: one-button Unwrap (smart projection first, conformal maps along seams second), a checker view, a read-only UV window, seams like creases, mesh format version 3 with optional UVs and seams, tools that do not know UVs remove them with a message at first, and difference-based undo as step 8b. Five decisions are open for the owner (first method, tools and UVs, where the UV window lives, when UVs are made, order against sculpting).
+
+## UVs, sub-step 1: the checker view and UV data
+
+- **Mesh format version 3** (see SCENE-FILE-FORMAT.md): a 24-byte header with flags (bit 0 = UVs; the other bits are reserved so seams can be added without a version 4) and P * 8 bytes of UVs. Written only for a mesh that has UVs, so every existing mesh keeps its bytes and fingerprint. `ShapeMesh` gets an optional `uvs`.
+- **Making a mesh from a built-in shape keeps its UVs** (`geometryToMesh` reads the geometry's `uv`), so the checker works on converted shapes and cubes already have a usable (per-face) map. Meshes with UVs put a `uv` attribute on their geometry, so GLB export writes `TEXCOORD_0` (tested both ways).
+- **Modifiers:** bend, twist, taper, stretch, noise keep the map; Mirror and Array copy it; Smooth and Thicken drop it for now (they will interpolate it in step 5 of the UV plan).
+- **Tools that do not know UVs drop them, and say so once** ("Divide removed the UV map of Cube ..."): wrong UVs are worse than none. Moving points keeps the map (the surface moved, the map did not). Teaching the tools UVs one by one is sub-step 5.
+- **UV checker:** a view setting (not saved) with its own switch PER OBJECT: a checkbox with a reset button in the Inspector's Surface section and a Checker button in the edit panel's View group. It draws a checkerboard (8 by 8 cells, one picture over the whole 0 to 1 map) in place of the object's colour. (First version: one global switch applied to the selected objects; found in the first browser check to be confusing, because a newly added plane showed the checker and the cube lost it when deselected.) Turning it on says so when that object has no UV map, because it cannot be shown on it.

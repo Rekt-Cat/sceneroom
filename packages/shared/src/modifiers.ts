@@ -411,6 +411,11 @@ export type ShapeMesh = {
   indices: Uint32Array;
   /** Edges marked as sharp for smoothing (see creases.ts). Most meshes have none. */
   creases?: readonly Crease[];
+  /**
+   * Where each point lies on the flat texture map: u, v for every point (so twice as many numbers as points), or none.
+   * Tools that do not know about UVs leave them out (see docs/UVS-AND-SEAMS.md).
+   */
+  uvs?: Float32Array;
 };
 
 /** The most points a shape may have after its modifiers; a modifier that would go past this is skipped. */
@@ -457,6 +462,7 @@ export function deformMesh(
         positions: new Float32Array(mesh.positions),
         indices: new Uint32Array(mesh.indices),
         creases: mesh.creases,
+        ...(mesh.uvs ? { uvs: new Float32Array(mesh.uvs) } : {}),
       }
     : current;
 }
@@ -492,6 +498,8 @@ function applyModifier(mesh: ShapeMesh, modifier: Modifier): ShapeMesh {
         positions: movePoints(mesh.positions, modifier),
         indices: mesh.indices,
         creases: mesh.creases,
+        // The surface bends, the map does not
+        ...(mesh.uvs ? { uvs: mesh.uvs } : {}),
       };
   }
 }
@@ -526,7 +534,14 @@ function mirror(mesh: ShapeMesh, along: number, offset: number): ShapeMesh {
     ...mesh.creases,
     ...mesh.creases.map((c) => ({ ...c, a: c.a + count, b: c.b + count })),
   ];
-  return { positions, indices, creases };
+  // ... and the same map
+  let uvs: Float32Array | undefined;
+  if (mesh.uvs) {
+    uvs = new Float32Array(mesh.uvs.length * 2);
+    uvs.set(mesh.uvs);
+    uvs.set(mesh.uvs, mesh.uvs.length);
+  }
+  return { positions, indices, creases, ...(uvs ? { uvs } : {}) };
 }
 
 /** Repeats the shape `copies` times along one axis, `spacing` shape-lengths apart (1 = touching). */
@@ -565,7 +580,12 @@ function array(
         b: c.b + k * count,
       })),
     ).flat();
-  return { positions, indices, creases };
+  let uvs: Float32Array | undefined;
+  if (mesh.uvs) {
+    uvs = new Float32Array(mesh.uvs.length * copies);
+    for (let k = 0; k < copies; k++) uvs.set(mesh.uvs, k * mesh.uvs.length);
+  }
+  return { positions, indices, creases, ...(uvs ? { uvs } : {}) };
 }
 
 /** The modifiers that only move the points. */

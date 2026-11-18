@@ -623,3 +623,11 @@ value and what it does.
 | -------------- | ------------------------------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------ |
 | Starting tiles | `DEFAULT_PEEK_TILES` in `packages/shared/src/views.ts` | Top, Front, Right, Perspective | The four views before a choice is saved (and when saved text is damaged).                        |
 | Saved choices  | `PEEK_TILES_KEY` in `apps/web/src/store/viewStore.ts`  | `sceneroom.peekTiles.v1`       | The browser storage key of the remembered tiles; change the number to forget everyone's choices. |
+
+## UV checker
+
+| What         | Where                                                      | Our value            | What it does                                                             |
+| ------------ | ---------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------ |
+| Cells        | `CHECKER_CELLS` in `components/viewport/checkerTexture.ts` | 8 by 8               | How many squares the checkerboard has along each side of the 0 to 1 map. |
+| Colours      | `LIGHT` and `DARK` in `checkerTexture.ts`                  | `#d9dee3`, `#59636d` | The two colours of the squares.                                          |
+| Picture size | `PICTURE_SIZE` in `checkerTexture.ts`                      | 512 px               | The size of the checkerboard picture (sharper squares when bigger).      |

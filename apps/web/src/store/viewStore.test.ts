@@ -139,3 +139,25 @@ describe("the four-view choices are remembered", () => {
     expect(() => useViewStore.getState().hydratePeekTiles()).not.toThrow();
   });
 });
+
+describe("the UV checker", () => {
+  it("is off for every object at first, and each object has its own switch", () => {
+    const store = useViewStore.getState();
+    expect(store.checkerIds.size).toBe(0);
+    store.setChecker("cube", true);
+    expect(useViewStore.getState().checkerIds.has("cube")).toBe(true);
+    // another object (a new plane) is not affected, and the cube keeps it when something else is selected
+    expect(useViewStore.getState().checkerIds.has("plane")).toBe(false);
+    useViewStore.getState().setChecker("plane", true);
+    useViewStore.getState().setChecker("plane", false);
+    expect(useViewStore.getState().checkerIds.has("cube")).toBe(true);
+    expect(useViewStore.getState().checkerIds.has("plane")).toBe(false);
+  });
+
+  it("turning on what is on changes nothing (no needless update)", () => {
+    useViewStore.getState().setChecker("cube", true);
+    const before = useViewStore.getState().checkerIds;
+    useViewStore.getState().setChecker("cube", true);
+    expect(useViewStore.getState().checkerIds).toBe(before);
+  });
+});
