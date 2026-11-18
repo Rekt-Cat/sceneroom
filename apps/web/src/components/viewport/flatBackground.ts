@@ -54,3 +54,26 @@ export function syncFlatBackground(
     memory.mine = null;
   }
 }
+
+/**
+ * The memory of the one scene on screen. It is shared (not kept by one component) so the four-view peek can find
+ * the scene's real background while a flat big view has put the plain colour on the scene.
+ */
+export const flatMemory: FlatBackgroundMemory = { mine: null, original: null };
+
+/**
+ * Draws with the scene's real background (the sky) even while a flat big view has the plain colour on the scene.
+ * For the perspective tile of the four-view peek, which must look like the normal view.
+ */
+export function withRealBackground(scene: Scene, draw: () => void): void {
+  if (flatMemory.mine === null || scene.background !== flatMemory.mine) {
+    draw();
+    return;
+  }
+  scene.background = flatMemory.original;
+  try {
+    draw();
+  } finally {
+    scene.background = flatMemory.mine;
+  }
+}

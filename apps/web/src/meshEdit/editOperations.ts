@@ -22,6 +22,12 @@ import {
   extrudeDistance,
   extrudeFaces,
   extrudeEdges,
+  bridgeLoops,
+  deleteFaces,
+  fillHole,
+  flipNormals,
+  mergeAtCenter,
+  weldClosePoints,
   weldGroups,
   type EditResult,
   type ShapeMesh,
@@ -97,8 +103,14 @@ async function run(
   return true;
 }
 
-/** Deletes the selected points and the triangles that use them (Delete key). */
+/**
+ * Deletes what is selected (Delete key). In Faces mode only the selected faces go, so the faces round them stay
+ * whole; in Points and Edges mode every face that uses a selected point goes with it.
+ */
 export function deleteSelectedPoints(): Promise<boolean> {
+  if (useEditStore.getState().selectMode === "face") {
+    return run(deleteFaces, () => "Delete faces");
+  }
   return run(
     (mesh, selected) => {
       // Points on the same spot go together, or a stray point would be left behind
@@ -660,4 +672,54 @@ export async function changeBevel(change: BevelChange): Promise<boolean> {
   }
   if (!previewBevel(change)) return false;
   return commitBevel();
+}
+
+// ---- Fixing up a mesh: merge, weld, flip, fill, bridge ----
+
+/** Weld joins selected points closer than this share of the mesh's biggest side (a tenth of a percent). */
+export const WELD_FRACTION = 0.001;
+
+/** The length of the longest side of the box round the mesh. */
+function meshSize(mesh: ShapeMesh): number {
+  const min = [Infinity, Infinity, Infinity];
+  const max = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < mesh.positions.length / 3; i++) {
+    for (let k = 0; k < 3; k++) {
+      const v = mesh.positions[i * 3 + k]!;
+      if (v < min[k]!) min[k] = v;
+      if (v > max[k]!) max[k] = v;
+    }
+  }
+  return Math.max(max[0]! - min[0]!, max[1]! - min[1]!, max[2]! - min[2]!);
+}
+
+/** Merge: the selected points become one point in the middle of them. */
+export function mergeSelectedPoints(): Promise<boolean> {
+  return run(mergeAtCenter, () => "Merge points");
+}
+
+/** Weld: selected points that are almost on top of each other become one. */
+export function weldSelectedPoints(): Promise<boolean> {
+  return run(
+    (mesh, selected) =>
+      weldClosePoints(mesh, selected, meshSize(mesh) * WELD_FRACTION),
+    () => "Weld points",
+  );
+}
+
+/** Flip: turns the selected faces (or, with nothing selected, the whole mesh) inside out. */
+export function flipSelectedNormals(): Promise<boolean> {
+  return run(flipNormals, (count) =>
+    count === 0 ? "Flip all faces" : "Flip faces",
+  );
+}
+
+/** Fill: closes the hole that has a selected edge on its border. */
+export function fillSelectedHole(): Promise<boolean> {
+  return run(fillHole, () => "Fill hole");
+}
+
+/** Bridge: joins two selected open rims with a strip of faces. */
+export function bridgeSelectedLoops(): Promise<boolean> {
+  return run(bridgeLoops, () => "Bridge");
 }

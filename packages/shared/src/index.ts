@@ -45,3 +45,4 @@ export * from "./edgeExtrude";
 export * from "./solidify";
 export * from "./projectOverview";
 export * from "./projectIndex";
+export * from "./meshTools";

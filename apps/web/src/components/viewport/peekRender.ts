@@ -7,7 +7,7 @@ import {
 import { isSideView, peekTileRects, sideFrame } from "@sceneroom/shared";
 import { useViewStore } from "@/store/viewStore";
 import { getPerspectiveCamera } from "./cameraRegistry";
-import { withFlatBackground } from "./flatBackground";
+import { withFlatBackground, withRealBackground } from "./flatBackground";
 import { viewBox } from "./selectionBox";
 
 /** The colour behind and between the four tiles. */
@@ -79,7 +79,7 @@ export function renderPeek(
       const before = perspective.aspect;
       perspective.aspect = aspect;
       perspective.updateProjectionMatrix();
-      gl.render(scene, perspective);
+      withRealBackground(scene, () => gl.render(scene, perspective));
       perspective.aspect = before;
       perspective.updateProjectionMatrix();
     }

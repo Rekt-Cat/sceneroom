@@ -598,3 +598,10 @@ value and what it does.
 | Picture quality   | `THUMBNAIL_QUALITY` in `thumbnail.ts`                                        | 0.7        | JPEG quality (0 to 1) of the picture; lower is smaller.                      |
 | Picture rhythm    | `THUMBNAIL_EVERY_MS` in `persistence/startPersistence.ts`                    | 30 000     | At most one new picture this often while editing (also taken when leaving).  |
 | Search shows from | `SEARCH_FROM` in `components/home/HomeScreen.tsx`                            | 5 projects | The search box and the sort choice appear once there are this many projects. |
+
+## Fix-up tools (Merge, Weld, Flip, Fill hole, Bridge)
+
+| What       | Where                                                        | Our value | What it does                                                                                |
+| ---------- | ------------------------------------------------------------ | --------- | ------------------------------------------------------------------------------------------- |
+| Weld reach | `WELD_FRACTION` in `apps/web/src/meshEdit/editOperations.ts` | 0.001     | Weld joins selected points closer than this share of the mesh's biggest side (0.1 percent). |
+| Weld limit | `MAX_WELD_POINTS` in `packages/shared/src/meshTools.ts`      | 200 000   | The most selected points one Weld looks at.                                                 |

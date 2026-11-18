@@ -9,6 +9,11 @@ import {
   deleteSelectedPoints,
   extrudeSelectedFaces,
   bevelSelectedEdges,
+  bridgeSelectedLoops,
+  fillSelectedHole,
+  flipSelectedNormals,
+  mergeSelectedPoints,
+  weldSelectedPoints,
   insetSelectedFaces,
 } from "@/meshEdit/editOperations";
 import { selectLoopOrRing } from "@/meshEdit/selectionTools";
@@ -237,6 +242,52 @@ export default function EditTools() {
             className={ACTION}
           >
             Delete
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-ed-text-3">Fix up</span>
+          <button
+            type="button"
+            onClick={() => void mergeSelectedPoints()}
+            disabled={selected.length < 2}
+            title="Merge: join the selected points into one point in the middle of them. Faces between them disappear. Select two or more points first."
+            className={ACTION}
+          >
+            Merge
+          </button>
+          <button
+            type="button"
+            onClick={() => void weldSelectedPoints()}
+            disabled={selected.length < 2}
+            title="Weld: join selected points that are almost on top of each other (closes a seam, removes doubled points). The surface is then shaded smoothly across the join."
+            className={ACTION}
+          >
+            Weld
+          </button>
+          <button
+            type="button"
+            onClick={() => void flipSelectedNormals()}
+            title="Flip: turn the selected faces inside out. With nothing selected the whole object is flipped. Use it when a surface looks dark or see-through from the front."
+            className={ACTION}
+          >
+            Flip
+          </button>
+          <button
+            type="button"
+            onClick={() => void fillSelectedHole()}
+            title="Fill hole: close an opening. Select one edge on the border of the hole (2 for edge mode, click it), then press this."
+            className={ACTION}
+          >
+            Fill hole
+          </button>
+          <button
+            type="button"
+            onClick={() => void bridgeSelectedLoops()}
+            disabled={selected.length < 4}
+            title="Bridge: join two open rims with a strip of faces (the ends of two pipes). Select an edge on each rim (Shift-click the second); both need the same number of edges."
+            className={ACTION}
+          >
+            Bridge
           </button>
         </div>
       </div>
