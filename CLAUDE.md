@@ -20,6 +20,7 @@ development with this project, so correctness, clear structure and documentation
 - `pnpm install`: install everything
 - `pnpm dev`: start dev servers through Turborepo (web app at http://localhost:3000)
 - `pnpm build`, `pnpm lint`, `pnpm check-types`: run through Turborepo
+- `pnpm test:e2e`: browser tests (Playwright, `apps/web/e2e/`) against the running dev server. Set `PLAYWRIGHT_BROWSERS_PATH` first (see `docs/DECISIONS.md`); restart the dev server after installing any dependency
 - Node is pinned in `.node-version` (24, managed with fnm). pnpm is pinned in the root `package.json` via Corepack.
 
 ## How to work with the owner

@@ -4,6 +4,7 @@ import { useEffect, useState, type DragEvent } from "react";
 import { importFiles } from "@/assets/importFile";
 import { watchEditMode } from "@/meshEdit/startEditing";
 import { startPersistence } from "@/persistence/startPersistence";
+import { installTestHooks } from "@/testHooks";
 import { usePersistenceStore } from "@/store/persistenceStore";
 import ProjectNotFound from "./ProjectNotFound";
 import { startPrefabEditing } from "@/store/prefabEditing";
@@ -56,6 +57,9 @@ export default function EditorShell({ projectId }: { projectId: string }) {
 
   // Read the saved panel widths once the page is in the browser (not during the server render)
   useEffect(() => useLayoutStore.getState().hydrate(), []);
+
+  // Hooks for the browser tests (Playwright); not installed in a production build
+  useEffect(() => installTestHooks(), []);
 
   // The four views chosen last time (in this browser)
   useEffect(() => useViewStore.getState().hydratePeekTiles(), []);
