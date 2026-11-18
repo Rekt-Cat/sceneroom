@@ -6,6 +6,7 @@ import BigViewController from "./BigViewController";
 import FlyController from "./FlyController";
 import PeekRenderer from "./PeekRenderer";
 import ThumbnailSource from "./ThumbnailSource";
+import { GROUND_GRID_NAME } from "./flatBackground";
 import FocusController from "./FocusController";
 import { Grid, OrbitControls, Stats } from "@react-three/drei";
 import { MOUSE, type DirectionalLight } from "three";
@@ -125,6 +126,7 @@ export default function Viewport() {
       <SceneNodes />
 
       <Grid
+        name={GROUND_GRID_NAME}
         infiniteGrid
         cellSize={1}
         sectionSize={5}

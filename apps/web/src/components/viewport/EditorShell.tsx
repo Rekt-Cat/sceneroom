@@ -9,6 +9,7 @@ import ProjectNotFound from "./ProjectNotFound";
 import { startPrefabEditing } from "@/store/prefabEditing";
 import { usePlantLibraryStore } from "@/store/plantLibraryStore";
 import { useLayoutStore } from "@/store/layoutStore";
+import { useViewStore } from "@/store/viewStore";
 import { carriesAsset } from "./assetDrag";
 import BoxSelectOverlay from "./BoxSelectOverlay";
 import ContextMenu from "./ContextMenu";
@@ -54,6 +55,9 @@ export default function EditorShell({ projectId }: { projectId: string }) {
 
   // Read the saved panel widths once the page is in the browser (not during the server render)
   useEffect(() => useLayoutStore.getState().hydrate(), []);
+
+  // The four views chosen last time (in this browser)
+  useEffect(() => useViewStore.getState().hydratePeekTiles(), []);
 
   // The FPS counter is placed by the page, outside the panels; tell it where the left panel ends
   const leftWidth = useLayoutStore((state) => state.leftWidth);

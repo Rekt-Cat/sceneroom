@@ -83,7 +83,12 @@ function Tiles() {
             hover === i ? "border-ed-accent" : "border-ed-line-strong/70"
           }`}
         >
-          <div className="pointer-events-auto absolute top-1.5 left-1.5">
+          <div
+            className={`pointer-events-auto absolute top-1.5 ${
+              // The FPS counter sits in the top-left corner of the view: the first tile's drop-down goes beside it
+              i === 0 ? "left-24" : "left-1.5"
+            }`}
+          >
             <ViewSelect
               label={`View in the ${["top left", "top right", "bottom left", "bottom right"][i]} tile`}
               value={tiles[i] ?? "perspective"}

@@ -43,6 +43,27 @@ export const SIDE_VIEWS: Record<SideView, { direction: Vec3; up: Vec3 }> = {
   left: { direction: [-1, 0, 0], up: [0, 1, 0] },
 };
 
+/**
+ * Reads what the four tiles were set to last time (saved text from the browser). Gives the four views, or null if
+ * the text is not a list of exactly four known views (damaged, or from another version): the starting views are
+ * used then.
+ */
+export function parsePeekTiles(raw: unknown): ViewKind[] | null {
+  let value = raw;
+  if (typeof raw === "string") {
+    try {
+      value = JSON.parse(raw) as unknown;
+    } catch {
+      return null;
+    }
+  }
+  if (!Array.isArray(value) || value.length !== 4) return null;
+  const known = VIEW_KINDS as readonly unknown[];
+  return value.every((view) => known.includes(view))
+    ? (value as ViewKind[])
+    : null;
+}
+
 /** True for a flat side view (not the perspective one). */
 export function isSideView(view: ViewKind): view is SideView {
   return view !== "perspective";

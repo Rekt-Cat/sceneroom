@@ -616,3 +616,10 @@ value and what it does.
 | Starting cuts        | `DEFAULT_DIVIDE_CUTS` in `divide.ts`                              | 1         | The cuts a new Divide starts with (and its reset button).                                                |
 | Triangle limit       | `MAX_DIVIDED_TRIANGLES` in `divide.ts`                            | 400 000   | Divide refuses when the result would be bigger than this.                                                |
 | Grow and shrink keys | `useEditorShortcuts.ts`                                           | ] and [   | Select more and select less.                                                                             |
+
+## Four-view peek
+
+| What           | Where                                                  | Our value                      | What it does                                                                                     |
+| -------------- | ------------------------------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------ |
+| Starting tiles | `DEFAULT_PEEK_TILES` in `packages/shared/src/views.ts` | Top, Front, Right, Perspective | The four views before a choice is saved (and when saved text is damaged).                        |
+| Saved choices  | `PEEK_TILES_KEY` in `apps/web/src/store/viewStore.ts`  | `sceneroom.peekTiles.v1`       | The browser storage key of the remembered tiles; change the number to forget everyone's choices. |

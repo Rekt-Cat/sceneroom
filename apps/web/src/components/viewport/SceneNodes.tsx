@@ -25,6 +25,7 @@ import {
   type SceneNode,
   type TreeNode,
 } from "@sceneroom/shared";
+import { useViewStore } from "@/store/viewStore";
 import { useSceneStore } from "@/store/sceneStore";
 import LightObject from "./LightObject";
 import { loadMeshData, peekMeshData } from "@/assets/meshStorage";
@@ -383,6 +384,7 @@ function NodeTree({
 export default function SceneNodes() {
   const scene = useSceneStore((state) => state.scene);
   const selectedIds = useSceneStore((state) => state.selectedIds);
+  const peekActive = useViewStore((state) => state.peekActive);
   const [soleObject, setSoleObject] = useState<Object3D | null>(null);
 
   const tree = useMemo(() => buildSceneTree(scene), [scene]);
@@ -407,13 +409,17 @@ export default function SceneNodes() {
           cutIds={cutIds}
         />
       ))}
-      {soleId &&
+      {/* The four-view peek only looks: no handles in its tiles */}
+      {!peekActive &&
+        soleId &&
         soleObject &&
         soleId !== editingId &&
         !isEffectivelyLocked(scene, soleId) && (
           <SelectionGizmo object={soleObject} nodeId={soleId} />
         )}
-      {selectedIds.length > 1 && <MultiSelectionGizmo ids={selectedIds} />}
+      {!peekActive && selectedIds.length > 1 && (
+        <MultiSelectionGizmo ids={selectedIds} />
+      )}
     </>
   );
 }

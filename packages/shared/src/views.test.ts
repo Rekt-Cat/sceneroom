@@ -6,6 +6,7 @@ import {
   VIEW_KINDS,
   VIEW_LABELS,
   isSideView,
+  parsePeekTiles,
   peekOutcome,
   peekTileRects,
   sideFrame,
@@ -230,5 +231,29 @@ describe("tap or hold", () => {
     expect(peekOutcome(2000, 0)).toBe(0);
     expect(peekOutcome(2000, -1)).toBeNull();
     expect(peekOutcome(2000, 4)).toBeNull();
+  });
+});
+
+describe("parsePeekTiles", () => {
+  it("reads four known views, from text or from a list", () => {
+    expect(parsePeekTiles('["top","front","left","perspective"]')).toEqual([
+      "top",
+      "front",
+      "left",
+      "perspective",
+    ]);
+    expect(parsePeekTiles(["back", "back", "bottom", "right"])).toEqual([
+      "back",
+      "back",
+      "bottom",
+      "right",
+    ]);
+  });
+  it("gives null for anything else: wrong count, unknown view, damaged text, other types", () => {
+    expect(parsePeekTiles('["top","front"]')).toBeNull();
+    expect(parsePeekTiles(["top", "front", "right", "sideways"])).toBeNull();
+    expect(parsePeekTiles("not json")).toBeNull();
+    expect(parsePeekTiles(null)).toBeNull();
+    expect(parsePeekTiles({ 0: "top" })).toBeNull();
   });
 });

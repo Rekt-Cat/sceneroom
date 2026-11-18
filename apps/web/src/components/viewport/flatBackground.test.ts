@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { Color, Scene } from "three";
+import { Color, Object3D, Scene } from "three";
 import {
   flatMemory,
   syncFlatBackground,
   withRealBackground,
+  withoutGrid,
+  GROUND_GRID_NAME,
   withFlatBackground,
   type FlatBackgroundMemory,
 } from "./flatBackground";
@@ -76,5 +78,29 @@ describe("the perspective tile of the four-view peek", () => {
       during = scene.background;
     });
     expect(during).toBe(own);
+  });
+});
+
+describe("the ground grid in the flat tiles", () => {
+  it("is hidden while a flat tile is drawn and visible again afterwards, even if drawing fails", () => {
+    const scene = new Scene();
+    const grid = new Object3D();
+    grid.name = GROUND_GRID_NAME;
+    scene.add(grid);
+    let during: boolean | null = null;
+    withoutGrid(scene, () => {
+      during = grid.visible;
+    });
+    expect(during).toBe(false);
+    expect(grid.visible).toBe(true);
+    expect(() =>
+      withoutGrid(scene, () => {
+        throw new Error("draw failed");
+      }),
+    ).toThrow("draw failed");
+    expect(grid.visible).toBe(true);
+  });
+  it("does nothing when there is no grid", () => {
+    expect(() => withoutGrid(new Scene(), () => undefined)).not.toThrow();
   });
 });
