@@ -57,6 +57,20 @@ export type BevelSession = {
 };
 
 /**
+ * The Divide whose number of cuts is being chosen. Pressing Divide only opens it (nothing is cut); the slider
+ * makes the cuts. `selectedBefore` are the points that were selected before (none means the whole mesh).
+ */
+export type DivideSession = {
+  before: ShapeMesh;
+  selectedBefore: readonly number[];
+  /** 0 changes nothing: Divide only opens the panel, the slider does the cutting. */
+  cuts: number;
+  /** False until the slider has moved off 0 and the mesh was stored (the first store is a new undo step). */
+  applied: boolean;
+  pastLength: number;
+};
+
+/**
  * Edit mode: working on the individual points of one editable mesh. While it is on, `nodeId` is the
  * mesh being edited and `selected` are the numbers of its selected points. Edges and faces are selected
  * through their points (selecting both ends of an edge selects the edge), so every tool works on points.
@@ -76,6 +90,9 @@ type EditState = {
   /** The loop cut whose settings can still be changed, or null. */
   loopCut: LoopCutSession | null;
   setLoopCut: (session: LoopCutSession | null) => void;
+  /** The divide whose number of cuts can still be changed, or null. */
+  divide: DivideSession | null;
+  setDivide: (session: DivideSession | null) => void;
   /** The bevel whose settings can still be changed, or null. */
   bevel: BevelSession | null;
   setBevel: (session: BevelSession | null) => void;
@@ -110,6 +127,8 @@ export const useEditStore = create<EditState>()((set) => ({
   setExtrude: (extrude) => set({ extrude }),
   loopCutMode: false,
   setLoopCutMode: (loopCutMode) => set({ loopCutMode }),
+  divide: null,
+  setDivide: (divide) => set({ divide }),
   bevel: null,
   setBevel: (bevel) => set({ bevel }),
   loopCut: null,
@@ -123,6 +142,7 @@ export const useEditStore = create<EditState>()((set) => ({
       extrude: null,
       loopCut: null,
       bevel: null,
+      divide: null,
       loopCutMode: false,
     }),
   exit: () =>
@@ -133,9 +153,20 @@ export const useEditStore = create<EditState>()((set) => ({
       extrude: null,
       loopCut: null,
       bevel: null,
+      divide: null,
       loopCutMode: false,
     }),
   setSelected: (selected) => set({ selected }),
   // Points that were selected stay selected: they are the same selection seen as edges or faces
   setSelectMode: (selectMode) => set({ selectMode }),
 }));
+
+/**
+ * The settings session whose panel is shown under the edit bar (loop cut, bevel, divide or extrude), or null.
+ * Every operation with a panel must be listed here, or its panel never appears.
+ */
+export function activeOperation(
+  state: Pick<EditState, "loopCut" | "bevel" | "divide" | "extrude">,
+): { pastLength: number } | null {
+  return state.loopCut ?? state.bevel ?? state.divide ?? state.extrude;
+}

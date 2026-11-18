@@ -12,6 +12,7 @@ import {
   bevelSelectedEdges,
   insetSelectedFaces,
 } from "@/meshEdit/editOperations";
+import { selectLess, selectMore } from "@/meshEdit/selectionTools";
 import { stopEditing, toggleEditMode } from "@/meshEdit/startEditing";
 import { saveProjectToFile } from "@/sceneFile/sceneFileActions";
 import { useEditStore, type SelectMode } from "@/store/editStore";
@@ -158,6 +159,14 @@ export function useEditorShortcuts(): void {
         } else if (plain && modeForKey(event.key)) {
           // W, E, R: move, turn or scale the selected points
           store.setTransformMode(modeForKey(event.key)!);
+        } else if (plain && event.key === "]") {
+          // ]: select more
+          event.preventDefault();
+          selectMore();
+        } else if (plain && event.key === "[") {
+          // [: select less
+          event.preventDefault();
+          selectLess();
         } else if (plain && event.key.toLowerCase() === "x") {
           store.toggleSnap();
         } else if (

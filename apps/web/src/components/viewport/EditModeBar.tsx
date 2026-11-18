@@ -1,6 +1,10 @@
 "use client";
 
-import { useEditStore, type SelectMode } from "@/store/editStore";
+import {
+  activeOperation,
+  useEditStore,
+  type SelectMode,
+} from "@/store/editStore";
 import { useSceneStore } from "@/store/sceneStore";
 import {
   CREASE_SHARP,
@@ -9,6 +13,7 @@ import {
   deleteSelectedPoints,
   extrudeSelectedFaces,
   bevelSelectedEdges,
+  divideSelectedFaces,
   bridgeSelectedLoops,
   fillSelectedHole,
   flipSelectedNormals,
@@ -16,9 +21,16 @@ import {
   weldSelectedPoints,
   insetSelectedFaces,
 } from "@/meshEdit/editOperations";
-import { selectLoopOrRing } from "@/meshEdit/selectionTools";
+import {
+  invertPointSelection,
+  selectLess,
+  selectLoopOrRing,
+  selectMore,
+  selectSimilarToSelection,
+} from "@/meshEdit/selectionTools";
 import ExtrudePanel from "./ExtrudePanel";
 import BevelPanel from "./BevelPanel";
+import DividePanel from "./DividePanel";
 import LoopCutPanel from "./LoopCutPanel";
 import { stopEditing } from "@/meshEdit/startEditing";
 
@@ -73,9 +85,7 @@ export default function EditTools() {
   );
   // A settings panel is open until something else is done (the undo history grew)
   const pastLength = useSceneStore((state) => state.history.past.length);
-  const session = useEditStore(
-    (state) => state.loopCut ?? state.bevel ?? state.extrude,
-  );
+  const session = useEditStore(activeOperation);
   if (!nodeId || !node) return null;
 
   /** Loop and Ring work on edges, so pressing them switches to edge mode (and says what to do if nothing is selected). */
@@ -118,6 +128,45 @@ export default function EditTools() {
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-ed-text-3">Adjust</span>
+          <button
+            type="button"
+            onClick={() => selectMore()}
+            disabled={selected.length === 0}
+            title="More: grow the selection by one step along the edges (])"
+            className={ACTION}
+          >
+            More
+          </button>
+          <button
+            type="button"
+            onClick={() => selectLess()}
+            disabled={selected.length === 0}
+            title="Less: shrink the selection by one step ([)"
+            className={ACTION}
+          >
+            Less
+          </button>
+          <button
+            type="button"
+            onClick={() => invertPointSelection()}
+            title="Invert: select what is not selected, and unselect what is"
+            className={ACTION}
+          >
+            Invert
+          </button>
+          <button
+            type="button"
+            onClick={() => selectSimilarToSelection()}
+            disabled={selected.length === 0}
+            title="Similar: select everything like what is selected: faces facing the same way (Faces mode), edges of the same length (Edges mode), points where as many edges meet (Points mode)"
+            className={ACTION}
+          >
+            Similar
+          </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -209,6 +258,14 @@ export default function EditTools() {
           </button>
           <button
             type="button"
+            onClick={() => void divideSelectedFaces()}
+            title="Divide: cut the selected faces into smaller ones, evenly, without changing the shape. With nothing selected the whole object is divided. This is the way to add segments to a mesh."
+            className={ACTION}
+          >
+            Divide
+          </button>
+          <button
+            type="button"
             onClick={() => void bevelSelectedEdges()}
             disabled={selected.length < 2}
             title="Bevel: round off or chamfer the selected edges so they catch the light (B). Select an edge first."
@@ -297,6 +354,7 @@ export default function EditTools() {
         <div>
           <LoopCutPanel />
           <BevelPanel />
+          <DividePanel />
           <ExtrudePanel />
         </div>
       ) : (

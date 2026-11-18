@@ -605,3 +605,14 @@ value and what it does.
 | ---------- | ------------------------------------------------------------ | --------- | ------------------------------------------------------------------------------------------- |
 | Weld reach | `WELD_FRACTION` in `apps/web/src/meshEdit/editOperations.ts` | 0.001     | Weld joins selected points closer than this share of the mesh's biggest side (0.1 percent). |
 | Weld limit | `MAX_WELD_POINTS` in `packages/shared/src/meshTools.ts`      | 200 000   | The most selected points one Weld looks at.                                                 |
+
+## Selection tools and Divide
+
+| What                 | Where                                                             | Our value | What it does                                                                                             |
+| -------------------- | ----------------------------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------- |
+| Similar direction    | `SIMILAR_NORMAL_DEGREES` in `packages/shared/src/selectionOps.ts` | 8         | Select similar (Faces): faces turned less than this many degrees from a selected face count as the same. |
+| Similar length       | `SIMILAR_LENGTH_SHARE` in `selectionOps.ts`                       | 0.05      | Select similar (Edges): edges within this share of the longer length count as the same.                  |
+| Most cuts            | `MAX_DIVIDE_CUTS` in `packages/shared/src/divide.ts`              | 10        | The most lines one Divide cuts across a face.                                                            |
+| Starting cuts        | `DEFAULT_DIVIDE_CUTS` in `divide.ts`                              | 1         | The cuts a new Divide starts with (and its reset button).                                                |
+| Triangle limit       | `MAX_DIVIDED_TRIANGLES` in `divide.ts`                            | 400 000   | Divide refuses when the result would be bigger than this.                                                |
+| Grow and shrink keys | `useEditorShortcuts.ts`                                           | ] and [   | Select more and select less.                                                                             |

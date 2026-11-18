@@ -23,6 +23,8 @@ import {
   extrudeFaces,
   extrudeEdges,
   bridgeLoops,
+  divideFaces,
+  MAX_DIVIDE_CUTS,
   deleteFaces,
   fillHole,
   flipNormals,
@@ -722,4 +724,157 @@ export function fillSelectedHole(): Promise<boolean> {
 /** Bridge: joins two selected open rims with a strip of faces. */
 export function bridgeSelectedLoops(): Promise<boolean> {
   return run(bridgeLoops, () => "Bridge");
+}
+
+// ---- Divide faces ----
+
+/** The cuts of a Divide from the slider: a whole number from 0 (nothing is cut) to the most. */
+function sliderCuts(cuts: number): number {
+  return Number.isFinite(cuts)
+    ? Math.min(MAX_DIVIDE_CUTS, Math.max(0, Math.round(cuts)))
+    : 0;
+}
+
+/**
+ * Opens Divide: the panel with the Cuts slider appears, and NOTHING is cut yet (cuts start at 0). Dragging the
+ * slider cuts the selected faces (or, with nothing selected, the whole mesh) into smaller ones without changing
+ * the shape (see `divideFaces`). Says why if there is nothing that could be divided.
+ */
+export async function divideSelectedFaces(): Promise<boolean> {
+  const edited = await editedMesh();
+  if (!edited) return false;
+  const groups = weldGroups(edited.mesh.positions);
+  const selectedBefore = expandToWelded(groups, edited.selected);
+  // Try it once, so a selection that cannot be divided is said right away instead of when the slider moves
+  const trial = divideFaces(edited.mesh, selectedBefore, 1);
+  if (!trial.ok) {
+    say(trial.reason);
+    return false;
+  }
+  live.original = null;
+  useEditStore.getState().setDivide({
+    before: edited.mesh,
+    selectedBefore,
+    cuts: 0,
+    applied: false,
+    pastLength: useSceneStore.getState().history.past.length,
+  });
+  return true;
+}
+
+/** Shows the divide with another number of cuts right away, without storing it (a slider being dragged). */
+export function previewDivide(cuts: number): boolean {
+  const edit = useEditStore.getState();
+  const session = edit.divide;
+  if (!session || !edit.nodeId) return false;
+  if (useSceneStore.getState().history.past.length !== session.pastLength) {
+    return false;
+  }
+  const clean = sliderCuts(cuts);
+  if (clean === 0) {
+    // Back to no cuts: the mesh as it was before
+    if (session.applied) showOnScreen(edit.nodeId, session.before);
+    else restoreOriginal(edit.nodeId);
+    edit.setSelected(
+      expandToWelded(
+        weldGroups(session.before.positions),
+        session.selectedBefore,
+      ),
+    );
+    edit.setDivide({ ...session, cuts: 0 });
+    return true;
+  }
+  const result = divideFaces(session.before, session.selectedBefore, clean);
+  if (!result.ok) return false;
+  showOnScreen(edit.nodeId, result.mesh);
+  selectCap(result);
+  edit.setDivide({ ...session, cuts: clean });
+  return true;
+}
+
+let divideCommitting = false;
+let divideCommitAgain = false;
+
+/**
+ * Stores the divide with the cuts it has now (called when the slider is let go). The first time it is a new undo
+ * step; after that it replaces that step, so the whole Divide stays ONE step however often the slider moves.
+ */
+export async function commitDivide(): Promise<boolean> {
+  if (divideCommitting) {
+    divideCommitAgain = true;
+    return false;
+  }
+  divideCommitting = true;
+  try {
+    let ok = true;
+    do {
+      divideCommitAgain = false;
+      ok = await storeDivide();
+    } while (divideCommitAgain);
+    return ok;
+  } finally {
+    divideCommitting = false;
+  }
+}
+
+async function storeDivide(): Promise<boolean> {
+  const edit = useEditStore.getState();
+  const session = edit.divide;
+  if (!session || !edit.nodeId) return false;
+  if (useSceneStore.getState().history.past.length !== session.pastLength) {
+    restoreOriginal(edit.nodeId);
+    edit.setDivide(null);
+    say(
+      "The number of cuts can only be changed right after dividing. Undo, or divide again.",
+    );
+    return false;
+  }
+  // No cuts and nothing stored yet: there is nothing to store
+  if (session.cuts === 0 && !session.applied) {
+    restoreOriginal(edit.nodeId);
+    return true;
+  }
+  let mesh = session.before;
+  let result: { mesh: typeof mesh; selected: number[] } | null = null;
+  if (session.cuts > 0) {
+    const made = divideFaces(
+      session.before,
+      session.selectedBefore,
+      session.cuts,
+    );
+    if (!made.ok) {
+      say(made.reason);
+      restoreOriginal(edit.nodeId);
+      return false;
+    }
+    mesh = made.mesh;
+    result = made;
+  }
+  const stored = await commitMesh(edit.nodeId, mesh, "Divide", session.applied);
+  if (!stored) {
+    restoreOriginal(edit.nodeId);
+    return false;
+  }
+  if (result) selectCap(result);
+  live.original = null;
+  const now = useEditStore.getState().divide;
+  if (now) {
+    edit.setDivide({
+      ...now,
+      applied: true,
+      pastLength: useSceneStore.getState().history.past.length,
+    });
+  }
+  return true;
+}
+
+/** Changes the cuts and stores the result at once (for a typed number or the reset button). */
+export async function changeDivide(cuts: number): Promise<boolean> {
+  const edit = useEditStore.getState();
+  if (!edit.divide) return false;
+  if (useSceneStore.getState().history.past.length !== edit.divide.pastLength) {
+    return commitDivide();
+  }
+  if (!previewDivide(cuts)) return false;
+  return commitDivide();
 }

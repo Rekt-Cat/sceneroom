@@ -21,6 +21,10 @@ import {
   changeExtrude,
   changeLoopCut,
   bevelSelectedEdges,
+  changeDivide,
+  commitDivide,
+  divideSelectedFaces,
+  previewDivide,
   bridgeSelectedLoops,
   fillSelectedHole,
   flipSelectedNormals,
@@ -716,5 +720,64 @@ describe("deleting a face and filling the hole again", () => {
     // the hole has one ring of four edges; with nothing selected the only hole is filled
     expect(await fillSelectedHole()).toBe(true);
     expect((await mesh()).indices.length / 3).toBeGreaterThan(before - 2);
+  });
+});
+
+describe("divide faces", () => {
+  const triangleTotal = async () => (await mesh()).indices.length / 3;
+
+  it("pressing Divide cuts nothing and adds no undo step: only the panel opens", async () => {
+    const steps = get().history.past.length;
+    expect(await divideSelectedFaces()).toBe(true);
+    expect(await triangleTotal()).toBe(12);
+    expect(get().history.past.length).toBe(steps);
+    expect(useEditStore.getState().divide!.cuts).toBe(0);
+  });
+
+  it("moving the slider divides the whole cube (12 triangles become 48) as ONE undo step, however often it moves", async () => {
+    const steps = get().history.past.length;
+    await divideSelectedFaces();
+    expect(await changeDivide(1)).toBe(true);
+    expect(await triangleTotal()).toBe(48);
+    expect(get().history.past.length).toBe(steps + 1);
+    expect(get().history.past.at(-1)?.label).toBe("Divide");
+    expect(await changeDivide(2)).toBe(true);
+    expect(await triangleTotal()).toBe(6 * 18);
+    expect(get().history.past.length).toBe(steps + 1);
+    get().undo();
+    expect(await triangleTotal()).toBe(12);
+  });
+
+  it("dragging only previews; letting go stores once", async () => {
+    await divideSelectedFaces();
+    const asset = node("a").assetId;
+    for (const cuts of [1, 2, 3]) expect(previewDivide(cuts)).toBe(true);
+    expect(node("a").assetId).toBe(asset);
+    expect(await commitDivide()).toBe(true);
+    expect(node("a").assetId).not.toBe(asset);
+  });
+
+  it("dragging back to 0 before letting go stores nothing", async () => {
+    await divideSelectedFaces();
+    const steps = get().history.past.length;
+    previewDivide(2);
+    previewDivide(0);
+    expect(await commitDivide()).toBe(true);
+    expect(get().history.past.length).toBe(steps);
+    expect(await triangleTotal()).toBe(12);
+  });
+
+  it("going back to 0 after cutting brings the mesh back as it was", async () => {
+    await divideSelectedFaces();
+    await changeDivide(2);
+    expect(await changeDivide(0)).toBe(true);
+    expect(await triangleTotal()).toBe(12);
+  });
+
+  it("is refused, saying why, once something else was done", async () => {
+    await divideSelectedFaces();
+    get().addPrimitive("cone");
+    expect(await changeDivide(2)).toBe(false);
+    expect(message()).toContain("right after dividing");
   });
 });
