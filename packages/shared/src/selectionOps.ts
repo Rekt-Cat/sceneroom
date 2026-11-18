@@ -210,3 +210,43 @@ export function selectSimilar(
   }
   return { ok: true, points: pointsOf(topology, vertices) };
 }
+
+/**
+ * Outline: the edges round the selected faces. Selecting the lid of a cylinder (face mode, Alt-click on it) and
+ * pressing Outline selects the rim, which a loop cannot do because the lid is made of triangles. A face counts as
+ * selected when all its corners are. The result is the points of the edges that have a selected face on one side and
+ * something else (another face, or nothing) on the other.
+ */
+export function outlineSelection(
+  topology: Topology,
+  selected: readonly number[],
+): SelectionResult {
+  const chosen = selectedVertices(topology, selected);
+  const inside = new Set<number>();
+  for (let f = 0; f < topology.faces.length; f++) {
+    if (topology.faces[f]!.vertices.every((v) => chosen.has(v))) inside.add(f);
+  }
+  if (inside.size === 0) {
+    return {
+      ok: false,
+      reason:
+        "Select a face first (press 3 for face mode; Alt-click selects a whole flat area, such as a lid), then press Outline.",
+    };
+  }
+  const vertices = new Set<number>();
+  for (let e = 0; e < edgeCount(topology); e++) {
+    const faces = topology.edgeFaces[e]!;
+    if (faces.filter((f) => inside.has(f)).length !== 1) continue;
+    const [a, b] = edgeVertices(topology, e);
+    vertices.add(a);
+    vertices.add(b);
+  }
+  if (vertices.size === 0) {
+    return {
+      ok: false,
+      reason:
+        "The selected faces have no outline: they cover the whole closed shape.",
+    };
+  }
+  return { ok: true, points: pointsOf(topology, vertices) };
+}

@@ -215,3 +215,44 @@ describe("islands", () => {
     expect(uvIslands(plane(3)).count).toBe(1);
   });
 });
+
+describe("islands of a shape built with a duplicated seam column", () => {
+  it("the islands found on the map are the pieces that were made, whatever the angle limit", () => {
+    // a pipe has two points on every spot of its seam column; a piece that crosses it is still one island
+    const mesh = tube(8, 2);
+    for (const angleLimitDegrees of [30, 66, 100, 150]) {
+      const result = unwrapped(mesh, { angleLimitDegrees });
+      expect(uvIslands(result.mesh).count).toBe(result.islands);
+    }
+  });
+});
+
+describe("seams after an unwrap", () => {
+  it("each seam joins two points of one piece, so the map draws it as an edge of that piece", () => {
+    const base = tube(8, 2);
+    const topology = buildTopology(base);
+    // a seam down the line at angle 0 of the pipe (the spots (1, y, 0))
+    const at = (y: number) =>
+      topology.vertexOf[
+        allPoints(base.positions.length / 3).find(
+          (p) =>
+            Math.abs(base.positions[p * 3]! - 1) < 1e-6 &&
+            Math.abs(base.positions[p * 3 + 1]! - y) < 1e-6 &&
+            Math.abs(base.positions[p * 3 + 2]!) < 1e-6,
+        )!
+      ]!;
+    const edge = edgeBetween(topology, at(0), at(1));
+    const mesh = { ...base, seams: setSeams(base, topology, [edge], true) };
+    const result = unwrapped(mesh);
+    const { island } = uvIslands(result.mesh);
+    const pieceOfPoint = new Map<number, number>();
+    for (let t = 0; t < island.length; t++) {
+      for (let k = 0; k < 3; k++)
+        pieceOfPoint.set(result.mesh.indices[t * 3 + k]!, island[t]!);
+    }
+    expect(result.mesh.seams?.length).toBe(1);
+    for (const seam of result.mesh.seams!) {
+      expect(pieceOfPoint.get(seam.a)).toBe(pieceOfPoint.get(seam.b));
+    }
+  });
+});

@@ -50,3 +50,4 @@ export * from "./selectionOps";
 export * from "./divide";
 export * from "./seams";
 export * from "./unwrap";
+export * from "./lscm";

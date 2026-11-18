@@ -5,12 +5,13 @@ import {
   edgeBetween,
   growSelection,
   invertSelection,
+  outlineSelection,
   selectSimilar,
   shrinkSelection,
   type EditMesh,
   type SelectionResult,
 } from "./index";
-import { box, plane } from "./testMeshes";
+import { box, plane, tube } from "./testMeshes";
 
 function points(result: SelectionResult): number[] {
   if (!result.ok) throw new Error(result.reason);
@@ -123,5 +124,45 @@ describe("select similar", () => {
     expect(selectSimilar(topology, [], "face").ok).toBe(false);
     expect(selectSimilar(topology, [0], "face").ok).toBe(false);
     expect(selectSimilar(topology, [0], "edge").ok).toBe(false);
+  });
+});
+
+describe("outline", () => {
+  it("the lid of a cylinder gives its rim, without the middle of the lid", () => {
+    const mesh = tube(8, 1, true);
+    const topology = buildTopology(mesh);
+    // the top lid: every point at the top height (the middle and the rim)
+    const lid = allPoints(mesh.positions.length / 3).filter(
+      (p) => Math.abs(mesh.positions[p * 3 + 1]! - 2) < 1e-6,
+    );
+    const rim = points(outlineSelection(topology, lid));
+    // 8 spots round the edge; the middle of the lid is not among them
+    expect(spots(mesh, rim)).toBe(8);
+    expect(
+      rim.every(
+        (p) =>
+          Math.hypot(mesh.positions[p * 3]!, mesh.positions[p * 3 + 2]!) > 0.5,
+      ),
+    ).toBe(true);
+  });
+
+  it("a block in the middle of a plane gives the ring round it", () => {
+    const mesh = plane(4);
+    const topology = buildTopology(mesh);
+    const block = [0.25, 0.5, 0.75].flatMap((x) =>
+      [0.25, 0.5, 0.75].flatMap((z) => at(mesh, x, z)),
+    );
+    expect(spots(mesh, points(outlineSelection(topology, block)))).toBe(8);
+  });
+
+  it("the whole plane gives its border; a closed shape has no outline; no face selected says what to do", () => {
+    const mesh = plane(2);
+    const topology = buildTopology(mesh);
+    expect(spots(mesh, points(outlineSelection(topology, allPoints(9))))).toBe(
+      8,
+    );
+    const cube = box(1);
+    expect(outlineSelection(buildTopology(cube), allPoints(24)).ok).toBe(false);
+    expect(outlineSelection(topology, [0]).ok).toBe(false);
   });
 });

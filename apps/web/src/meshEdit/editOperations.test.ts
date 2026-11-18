@@ -22,6 +22,7 @@ import {
   changeLoopCut,
   bevelSelectedEdges,
   unwrapMesh,
+  unwrapMeshAlongSeams,
   seamSelectedEdges,
   changeDivide,
   commitDivide,
@@ -881,5 +882,29 @@ describe("unwrap", () => {
     await seamSelectedEdges(true);
     expect(await unwrapMesh()).toBe(true);
     expect((await mesh()).uvs).toBeDefined();
+  });
+});
+
+describe("unwrap along seams", () => {
+  it("a closed cube with no seams is refused, saying to cut it open first", async () => {
+    expect(await unwrapMeshAlongSeams()).toBe(false);
+    expect(message()).toContain("closed");
+  });
+
+  it("with a seam on every edge the cube becomes six undistorted pieces, as one undo step", async () => {
+    // select every point, so every edge is selected, and mark them all as seams
+    const total = (await mesh()).positions.length / 3;
+    useEditStore
+      .getState()
+      .setSelected(Array.from({ length: total }, (_, i) => i));
+    await seamSelectedEdges(true);
+    const steps = get().history.past.length;
+    expect(await unwrapMeshAlongSeams()).toBe(true);
+    expect(get().history.past.length).toBe(steps + 1);
+    expect(get().history.past.at(-1)?.label).toBe("Unwrap along seams");
+    expect(message()).toContain("6 pieces");
+    expect((await mesh()).uvs).toBeDefined();
+    get().undo();
+    expect((await mesh()).seams).toBeDefined();
   });
 });

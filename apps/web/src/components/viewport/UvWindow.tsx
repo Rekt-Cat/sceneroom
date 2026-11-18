@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { uvIslands, type ShapeMesh } from "@sceneroom/shared";
+import { uvIslands, uvStretch, type ShapeMesh } from "@sceneroom/shared";
 import { loadMeshData } from "@/assets/meshStorage";
 import { useEditStore } from "@/store/editStore";
 import { useSceneStore } from "@/store/sceneStore";
@@ -25,6 +25,8 @@ export default function UvWindow() {
 }
 
 function Window({ assetId }: { assetId: string }) {
+  const mode = useEditStore((state) => state.uvWindowMode);
+  const setMode = useEditStore((state) => state.setUvWindowMode);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [mesh, setMesh] = useState<ShapeMesh | null | "none">(null);
 
@@ -45,10 +47,11 @@ function Window({ assetId }: { assetId: string }) {
   useEffect(() => {
     const context = canvas.current?.getContext("2d");
     if (!context) return;
-    draw(context, mesh && mesh !== "none" ? mesh : null);
-  }, [mesh]);
+    draw(context, mesh && mesh !== "none" ? mesh : null, mode);
+  }, [mesh, mode]);
 
   const islands = mesh && mesh !== "none" ? uvIslands(mesh).count : 0;
+  const folded = mesh && mesh !== "none" ? uvStretch(mesh).folded : 0;
   return (
     <div
       role="group"
@@ -75,6 +78,53 @@ function Window({ assetId }: { assetId: string }) {
           This mesh has no UV map. Press Unwrap in the UV row of the edit panel.
         </p>
       )}
+      <div
+        role="group"
+        aria-label="What the map is coloured by"
+        className="mt-1.5 flex gap-1"
+      >
+        {(["pieces", "stretch"] as const).map((choice) => (
+          <button
+            key={choice}
+            type="button"
+            aria-pressed={mode === choice}
+            onClick={() => setMode(choice)}
+            title={
+              choice === "pieces"
+                ? "Give every piece of the map its own colour"
+                : "Colour each face by how stretched it is on the map: green is as it should be, red is badly stretched or turned over"
+            }
+            className={`flex-1 rounded-md border px-2 py-1 font-medium focus-visible:outline-2 focus-visible:outline-ed-accent ${
+              mode === choice
+                ? "border-ed-select/60 bg-ed-select/25 text-ed-select"
+                : "border-ed-line-strong hover:bg-ed-field"
+            }`}
+          >
+            {choice === "pieces" ? "Pieces" : "Stretch"}
+          </button>
+        ))}
+      </div>
+      {mode === "stretch" && (
+        <div className="mt-1.5">
+          <div
+            aria-hidden="true"
+            className="h-2 rounded-full"
+            style={{
+              background:
+                "linear-gradient(to right, hsl(120 70% 45%), hsl(60 70% 45%), hsl(0 70% 45%))",
+            }}
+          />
+          <div className="mt-0.5 flex justify-between text-ed-text-3">
+            <span>even</span>
+            <span>stretched</span>
+          </div>
+          {folded > 0 && (
+            <p className="mt-1 max-w-[232px] text-ed-danger">
+              {folded} face{folded === 1 ? " is" : "s are"} turned over.
+            </p>
+          )}
+        </div>
+      )}
       <p className="mt-1 max-w-[232px] text-ed-text-3">
         The square is the texture. Red lines are seams.
       </p>
@@ -83,7 +133,11 @@ function Window({ assetId }: { assetId: string }) {
 }
 
 /** Draws the map: the 0 to 1 square, then each island filled and outlined, then the seams on top. */
-function draw(context: CanvasRenderingContext2D, mesh: ShapeMesh | null) {
+function draw(
+  context: CanvasRenderingContext2D,
+  mesh: ShapeMesh | null,
+  mode: "pieces" | "stretch",
+) {
   context.clearRect(0, 0, SIZE, SIZE);
   context.fillStyle = "#14191d";
   context.fillRect(0, 0, SIZE, SIZE);
@@ -99,13 +153,15 @@ function draw(context: CanvasRenderingContext2D, mesh: ShapeMesh | null) {
     (1 - uv[point * 2 + 1]!) * SIZE,
   ];
   const { island } = uvIslands(mesh);
+  const stretch = mode === "stretch" ? uvStretch(mesh).values : null;
   for (let t = 0; t < mesh.indices.length / 3; t++) {
     const [a, b, c] = [
       at(mesh.indices[t * 3]!),
       at(mesh.indices[t * 3 + 1]!),
       at(mesh.indices[t * 3 + 2]!),
     ];
-    const hue = (island[t]! * 67) % 360;
+    // Pieces: a colour each. Stretch: green (even) to red (badly stretched)
+    const hue = stretch ? 120 * (1 - stretch[t]!) : (island[t]! * 67) % 360;
     context.beginPath();
     context.moveTo(a[0], a[1]);
     context.lineTo(b[0], b[1]);
@@ -116,10 +172,17 @@ function draw(context: CanvasRenderingContext2D, mesh: ShapeMesh | null) {
     context.strokeStyle = `hsla(${hue}, 70%, 75%, 0.9)`;
     context.stroke();
   }
+  // A seam is drawn only where its two ends are on the same piece: a line between two pieces would be a mistake
+  const pieceOfPoint = new Map<number, number>();
+  for (let t = 0; t < island.length; t++) {
+    for (let k = 0; k < 3; k++)
+      pieceOfPoint.set(mesh.indices[t * 3 + k]!, island[t]!);
+  }
   context.strokeStyle = "#f0434a";
   context.lineWidth = 2;
   for (const seam of mesh.seams ?? []) {
     if (seam.a * 2 + 1 >= uv.length || seam.b * 2 + 1 >= uv.length) continue;
+    if (pieceOfPoint.get(seam.a) !== pieceOfPoint.get(seam.b)) continue;
     const [a, b] = [at(seam.a), at(seam.b)];
     context.beginPath();
     context.moveTo(a[0], a[1]);

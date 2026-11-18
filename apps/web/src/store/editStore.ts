@@ -93,6 +93,9 @@ type EditState = {
   /** True while the UV window (the flat map of the mesh being edited) is shown. */
   uvWindow: boolean;
   setUvWindow: (on: boolean) => void;
+  /** What the UV window colours by: each piece in its own colour, or how stretched each face is. */
+  uvWindowMode: "pieces" | "stretch";
+  setUvWindowMode: (mode: "pieces" | "stretch") => void;
   /** The divide whose number of cuts can still be changed, or null. */
   divide: DivideSession | null;
   setDivide: (session: DivideSession | null) => void;
@@ -132,6 +135,8 @@ export const useEditStore = create<EditState>()((set) => ({
   setLoopCutMode: (loopCutMode) => set({ loopCutMode }),
   uvWindow: false,
   setUvWindow: (uvWindow) => set({ uvWindow }),
+  uvWindowMode: "pieces",
+  setUvWindowMode: (uvWindowMode) => set({ uvWindowMode }),
   divide: null,
   setDivide: (divide) => set({ divide }),
   bevel: null,

@@ -1,6 +1,6 @@
 import { remapCreases } from "./creases";
 import { weldGroups, type EditMesh } from "./meshEdit";
-import { remapSeams, seamsOf } from "./seams";
+import { seamsOf, type Seam } from "./seams";
 
 /** Faces whose directions differ from the chart's average by less than this many degrees go into the same chart. */
 export const DEFAULT_CHART_ANGLE_DEGREES = 66;
@@ -20,6 +20,13 @@ const length = (a: Vec) => Math.hypot(a[0], a[1], a[2]);
 const unit = (a: Vec): Vec => {
   const l = length(a);
   return l < 1e-12 ? [0, 1, 0] : [a[0] / l, a[1] / l, a[2] / l];
+};
+
+/** One flat piece: where each of its points lies (from 0, in real size), and how big the piece is. */
+export type Flat = {
+  u: Map<number, [number, number]>;
+  width: number;
+  height: number;
 };
 
 export type UnwrapOptions = {
@@ -74,6 +81,183 @@ export function packShelves(
 }
 
 /**
+ * The seams on the new points. A point used by two pieces is two points now, so a seam must name two points of the
+ * SAME piece (one it borders), or the map would draw it as a line between two unrelated places. `made` has a new point
+ * for every (old point, piece); `first` is the first new point of each old point (used when no piece has both ends).
+ */
+function seamsOnOnePiece(
+  mesh: EditMesh,
+  made: ReadonlyMap<string, number>,
+  first: Int32Array,
+): Seam[] | undefined {
+  if (!mesh.seams || mesh.seams.length === 0) return undefined;
+  const piecesOf = new Map<number, number[]>();
+  for (const key of made.keys()) {
+    const [point, piece] = key.split(":").map(Number) as [number, number];
+    const list = piecesOf.get(point);
+    if (list) list.push(piece);
+    else piecesOf.set(point, [piece]);
+  }
+  const out: Seam[] = [];
+  for (const seam of mesh.seams) {
+    const a = piecesOf.get(seam.a);
+    const b = piecesOf.get(seam.b);
+    const shared =
+      a && b ? Math.min(...a.filter((piece) => b.includes(piece))) : NaN;
+    if (Number.isFinite(shared)) {
+      out.push({
+        a: made.get(`${seam.a}:${shared}`)!,
+        b: made.get(`${seam.b}:${shared}`)!,
+      });
+      continue;
+    }
+    const x = first[seam.a];
+    const y = first[seam.b];
+    if (x !== undefined && y !== undefined && x >= 0 && y >= 0 && x !== y) {
+      out.push({ a: x, b: y });
+    }
+  }
+  return out.length > 0 ? out : undefined;
+}
+
+/**
+ * The common last steps of an unwrap: scale all pieces by ONE factor (the biggest that still packs into the 0 to 1
+ * square, so the texture is equally sharp everywhere), pack them `margin` apart and build the new mesh. `chartOf` is
+ * the piece of every triangle and `flats` how each piece lies flat. A point used by two pieces is split in two.
+ */
+export function finishUnwrap(
+  mesh: EditMesh,
+  chartOf: Int32Array,
+  flats: readonly Flat[],
+  count: number,
+  margin: number,
+): UnwrapResult {
+  const triangleCount = mesh.indices.length / 3;
+  const p = (i: number): Vec => [
+    mesh.positions[i * 3]!,
+    mesh.positions[i * 3 + 1]!,
+    mesh.positions[i * 3 + 2]!,
+  ];
+  // One scale for all charts: the biggest that still packs into the square
+  const tiny = 1e-9;
+  const sizes = flats.map((f) => ({
+    width: Math.max(f.width, tiny),
+    height: Math.max(f.height, tiny),
+  }));
+  const fits = (scale: number) =>
+    packShelves(
+      sizes.map((s) => ({ width: s.width * scale, height: s.height * scale })),
+      margin,
+    );
+  const largest = Math.max(...sizes.map((s) => Math.max(s.width, s.height)));
+  let low = 0;
+  let high = (1 - 2 * margin) / largest;
+  if (fits(high)) low = high;
+  else {
+    for (let i = 0; i < 40; i++) {
+      const middle = (low + high) / 2;
+      if (fits(middle)) low = middle;
+      else high = middle;
+    }
+  }
+  const scale = low;
+  const placed = fits(scale);
+  if (!placed || !(scale > 0)) {
+    return { ok: false, reason: "The faces could not be packed into the map." };
+  }
+
+  // The new points: one per (old point, chart)
+  const positions: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = new Array<number>(mesh.indices.length);
+  const made = new Map<string, number>();
+  const first = new Int32Array(mesh.positions.length / 3).fill(-1);
+  for (let t = 0; t < triangleCount; t++) {
+    const chart = chartOf[t]!;
+    for (let k = 0; k < 3; k++) {
+      const point = mesh.indices[t * 3 + k]!;
+      const key = `${point}:${chart}`;
+      let id = made.get(key);
+      if (id === undefined) {
+        id = positions.length / 3;
+        made.set(key, id);
+        positions.push(...p(point));
+        const uv = flats[chart]!.u.get(point)!;
+        uvs.push(
+          placed[chart]!.x + uv[0] * scale,
+          placed[chart]!.y + uv[1] * scale,
+        );
+        if (first[point] === -1) first[point] = id;
+      }
+      indices[t * 3 + k] = id;
+    }
+  }
+  // Creases and seams follow their points (points no face uses have gone)
+  return {
+    ok: true,
+    mesh: {
+      positions: Float32Array.from(positions),
+      indices: Uint32Array.from(indices),
+      creases: remapCreases(mesh.creases, first),
+      ...seamsOf(seamsOnOnePiece(mesh, made, first)),
+      uvs: Float32Array.from(uvs),
+    },
+    islands: count,
+  };
+}
+
+/**
+ * Which triangles touch across an edge. Edges are found by spot, so faces with separate points on one spot still
+ * join, and an edge marked as a seam is never crossed.
+ */
+export function faceLinks(
+  mesh: EditMesh,
+  groups: { ids: Uint32Array },
+): {
+  neighbours: (t: number) => number[];
+  edgeKey: (a: number, b: number) => string;
+} {
+  const triangleCount = mesh.indices.length / 3;
+  const seamEdges = new Set<string>();
+  const edgeKey = (a: number, b: number) =>
+    groups.ids[a]! < groups.ids[b]!
+      ? `${groups.ids[a]!}-${groups.ids[b]!}`
+      : `${groups.ids[b]!}-${groups.ids[a]!}`;
+  for (const seam of mesh.seams ?? []) {
+    if (seam.a < groups.ids.length && seam.b < groups.ids.length) {
+      seamEdges.add(edgeKey(seam.a, seam.b));
+    }
+  }
+  const onEdge = new Map<string, number[]>();
+  for (let t = 0; t < triangleCount; t++) {
+    for (let k = 0; k < 3; k++) {
+      const key = edgeKey(
+        mesh.indices[t * 3 + k]!,
+        mesh.indices[t * 3 + ((k + 1) % 3)]!,
+      );
+      const list = onEdge.get(key);
+      if (list) list.push(t);
+      else onEdge.set(key, [t]);
+    }
+  }
+  const neighbours = (t: number): number[] => {
+    const found: number[] = [];
+    for (let k = 0; k < 3; k++) {
+      const key = edgeKey(
+        mesh.indices[t * 3 + k]!,
+        mesh.indices[t * 3 + ((k + 1) % 3)]!,
+      );
+      if (seamEdges.has(key)) continue;
+      for (const other of onEdge.get(key) ?? []) {
+        if (other !== t) found.push(other);
+      }
+    }
+    return found;
+  };
+  return { neighbours, edgeKey };
+}
+
+/**
  * Gives a mesh a UV map in one step ("Unwrap"), with no seams needed:
  *  1. The faces are grouped into CHARTS: neighbouring faces join a chart while they point about the same way
  *     (within `angleLimitDegrees` of the chart's average direction). Marked seams are never crossed.
@@ -115,42 +299,7 @@ export function smartUnwrap(
     normals.push(unit(n));
   }
 
-  // Which triangles touch across an edge (by spot, so separate points on one spot still join), except at seams
-  const seamEdges = new Set<string>();
-  const edgeKey = (a: number, b: number) =>
-    groups.ids[a]! < groups.ids[b]!
-      ? `${groups.ids[a]!}-${groups.ids[b]!}`
-      : `${groups.ids[b]!}-${groups.ids[a]!}`;
-  for (const seam of mesh.seams ?? []) {
-    if (seam.a < groups.ids.length && seam.b < groups.ids.length) {
-      seamEdges.add(edgeKey(seam.a, seam.b));
-    }
-  }
-  const onEdge = new Map<string, number[]>();
-  for (let t = 0; t < triangleCount; t++) {
-    for (let k = 0; k < 3; k++) {
-      const key = edgeKey(
-        mesh.indices[t * 3 + k]!,
-        mesh.indices[t * 3 + ((k + 1) % 3)]!,
-      );
-      const list = onEdge.get(key);
-      if (list) list.push(t);
-      else onEdge.set(key, [t]);
-    }
-  }
-  const neighbours = (t: number): number[] => {
-    const found: number[] = [];
-    for (let k = 0; k < 3; k++) {
-      const key = edgeKey(
-        mesh.indices[t * 3 + k]!,
-        mesh.indices[t * 3 + ((k + 1) % 3)]!,
-      );
-      if (seamEdges.has(key)) continue;
-      for (const other of onEdge.get(key) ?? [])
-        if (other !== t) found.push(other);
-    }
-    return found;
-  };
+  const { neighbours } = faceLinks(mesh, groups);
 
   // Charts: grow from the biggest faces first, adding neighbours that point about the same way
   const limit = Math.cos((angle * Math.PI) / 180);
@@ -240,78 +389,14 @@ export function smartUnwrap(
     return { u: map, width, height };
   });
 
-  // One scale for all charts: the biggest that still packs into the square
-  const tiny = 1e-9;
-  const sizes = flats.map((f) => ({
-    width: Math.max(f.width, tiny),
-    height: Math.max(f.height, tiny),
-  }));
-  const fits = (scale: number) =>
-    packShelves(
-      sizes.map((s) => ({ width: s.width * scale, height: s.height * scale })),
-      margin,
-    );
-  const largest = Math.max(...sizes.map((s) => Math.max(s.width, s.height)));
-  let low = 0;
-  let high = (1 - 2 * margin) / largest;
-  if (fits(high)) low = high;
-  else {
-    for (let i = 0; i < 40; i++) {
-      const middle = (low + high) / 2;
-      if (fits(middle)) low = middle;
-      else high = middle;
-    }
-  }
-  const scale = low;
-  const placed = fits(scale);
-  if (!placed || !(scale > 0)) {
-    return { ok: false, reason: "The faces could not be packed into the map." };
-  }
-
-  // The new points: one per (old point, chart)
-  const positions: number[] = [];
-  const uvs: number[] = [];
-  const indices: number[] = new Array<number>(mesh.indices.length);
-  const made = new Map<string, number>();
-  const first = new Int32Array(mesh.positions.length / 3).fill(-1);
-  for (let t = 0; t < triangleCount; t++) {
-    const chart = chartOf[t]!;
-    for (let k = 0; k < 3; k++) {
-      const point = mesh.indices[t * 3 + k]!;
-      const key = `${point}:${chart}`;
-      let id = made.get(key);
-      if (id === undefined) {
-        id = positions.length / 3;
-        made.set(key, id);
-        positions.push(...p(point));
-        const uv = flats[chart]!.u.get(point)!;
-        uvs.push(
-          placed[chart]!.x + uv[0] * scale,
-          placed[chart]!.y + uv[1] * scale,
-        );
-        if (first[point] === -1) first[point] = id;
-      }
-      indices[t * 3 + k] = id;
-    }
-  }
-  // Creases and seams follow their points (points no face uses have gone)
-  return {
-    ok: true,
-    mesh: {
-      positions: Float32Array.from(positions),
-      indices: Uint32Array.from(indices),
-      creases: remapCreases(mesh.creases, first),
-      ...seamsOf(remapSeams(mesh.seams, first)),
-      uvs: Float32Array.from(uvs),
-    },
-    islands: charts.length,
-  };
+  return finishUnwrap(mesh, chartOf, flats, charts.length, margin);
 }
 
 /**
- * The island of every triangle of a mesh with UVs: triangles that share a point belong to one island (the points
- * are split where the map is cut). Numbered from 0 in the order the triangles come. Returns the numbers and how many
- * islands there are.
+ * The island of every triangle of a mesh with UVs: triangles that share a point belong to one island, and so do
+ * triangles whose points sit on the same spot of the surface AND the same spot of the map (a seam column that a
+ * shape was built with has two points on one spot, but if their UVs agree the map is not cut there). Numbered from
+ * 0 in the order the triangles come. Returns the numbers and how many islands there are.
  */
 export function uvIslands(mesh: EditMesh): {
   island: Int32Array;
@@ -326,12 +411,17 @@ export function uvIslands(mesh: EditMesh): {
     }
     return i;
   };
-  const owner = new Map<number, number>();
+  const owner = new Map<string, number>();
+  const round = (v: number) => Math.round(v * 1e5);
   for (let t = 0; t < triangles; t++) {
     for (let k = 0; k < 3; k++) {
       const point = mesh.indices[t * 3 + k]!;
-      const other = owner.get(point);
-      if (other === undefined) owner.set(point, t);
+      // A point is identified by where it is on the surface and where it is on the map
+      const key = mesh.uvs
+        ? `${round(mesh.positions[point * 3]!)},${round(mesh.positions[point * 3 + 1]!)},${round(mesh.positions[point * 3 + 2]!)}|${round(mesh.uvs[point * 2]!)},${round(mesh.uvs[point * 2 + 1]!)}`
+        : `p${point}`;
+      const other = owner.get(key);
+      if (other === undefined) owner.set(key, t);
       else parent[find(t)] = find(other);
     }
   }

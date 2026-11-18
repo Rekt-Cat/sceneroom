@@ -26,6 +26,7 @@ import {
   extrudeEdges,
   bridgeLoops,
   smartUnwrap,
+  unwrapAlongSeams,
   divideFaces,
   MAX_DIVIDE_CUTS,
   deleteFaces,
@@ -700,6 +701,38 @@ export async function unwrapMesh(): Promise<boolean> {
     tone: "info",
     text: `Unwrapped into ${result.islands} piece${result.islands === 1 ? "" : "s"}. Turn on the Checker to see how the map lies on the object, and the UV window to see the map itself.`,
   });
+  return true;
+}
+
+/**
+ * Unwrap along seams: lays every piece of the surface (the faces joined without crossing a seam) flat, keeping angles
+ * (see `unwrapAlongSeams`), so a texture does not shear. Each piece must be open: cut the shape along seams first.
+ * Says why if it cannot, and how many faces fold over themselves if the map is not clean. One undo step.
+ */
+export async function unwrapMeshAlongSeams(): Promise<boolean> {
+  const edited = await editedMesh();
+  if (!edited) return false;
+  const result = unwrapAlongSeams(edited.mesh);
+  if (!result.ok) {
+    say(result.reason);
+    return false;
+  }
+  if (!(await commitMesh(edited.nodeId, result.mesh, "Unwrap along seams"))) {
+    return false;
+  }
+  useEditStore.getState().setSelected([]);
+  const pieces = `${result.islands} piece${result.islands === 1 ? "" : "s"}`;
+  useImportStore.getState().setMessage(
+    result.folded > 0
+      ? {
+          tone: "error",
+          text: `Unwrapped along the seams into ${pieces}, but ${result.folded} face${result.folded === 1 ? " folds" : "s fold"} over itself (red in the UV window's Stretch view). Add a seam to cut that piece open further.`,
+        }
+      : {
+          tone: "info",
+          text: `Unwrapped along the seams into ${pieces}. Switch the UV window to Stretch to see how even the map is.`,
+        },
+  );
   return true;
 }
 

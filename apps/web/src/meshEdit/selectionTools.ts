@@ -2,6 +2,7 @@ import {
   growSelection,
   invertSelection,
   loopOrRingSelection,
+  outlineSelection,
   selectSimilar,
   shrinkSelection,
   type SelectionResult,
@@ -45,7 +46,7 @@ export function selectLoopOrRing(pick: "loop" | "ring"): boolean {
     say(
       "info",
       pick === "loop"
-        ? `This loop stops right away${why ? `: ${why}` : ""}. Try an edge in the middle of a side that has been cut into several squares (Segments 2 or more on the plain shape, before pressing Tab).`
+        ? `This loop stops right away${why ? `: ${why}` : ""}. Try an edge in the middle of a side that has been cut into several squares (Segments 2 or more on the plain shape, before pressing Tab). For the rim of a lid: select the lid (face mode, Alt-click on it) and press Outline.`
         : "This ring stops right away: a ring runs across squares and stops at triangles and at the border of the shape. Try an edge in the middle of a side that has been cut into several squares.",
     );
     return false;
@@ -94,3 +95,7 @@ export const invertPointSelection = () =>
 
 /** Select similar: everything like the selection (faces facing the same way, edges of the same length, points with as many edges). */
 export const selectSimilarToSelection = () => changeSelection(selectSimilar);
+
+/** Outline: selects the edges round the selected faces (the rim of a lid, the border of a patch). */
+export const selectOutline = () =>
+  changeSelection((topology, selected) => outlineSelection(topology, selected));

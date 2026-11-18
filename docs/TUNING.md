@@ -647,3 +647,16 @@ value and what it does.
 | Margin      | `DEFAULT_UV_MARGIN` in `unwrap.ts`                                     | 0.02      | The empty strip between pieces and round the edge of the 0 to 1 square (a share of its side).                                                  |
 | Smooth cuts | `SPLIT_POINT_SMOOTH_DEGREES` in `components/viewport/shapeGeometry.ts` | 40        | Points split by an unwrap share their shading when their surfaces differ by less than this many degrees.                                       |
 | UV window   | `SIZE` in `components/viewport/UvWindow.tsx`                           | 232 px    | The size of the map picture.                                                                                                                   |
+
+## Unwrap along seams
+
+| What          | Where                                                 | Our value  | What it does                                                                                           |
+| ------------- | ----------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------ |
+| Largest mesh  | `MAX_LSCM_TRIANGLES` in `packages/shared/src/lscm.ts` | 60 000     | Unwrap along seams refuses a bigger mesh (it solves a large system of equations); Unwrap has no limit. |
+| Solver rounds | `MAX_ITERATIONS` and `TOLERANCE` in `lscm.ts`         | 4000, 1e-9 | The solver stops after this many rounds or when the answer stops improving.                            |
+
+## Outline
+
+| What   | Where                                                                                             | Our value | What it does                                |
+| ------ | ------------------------------------------------------------------------------------------------- | --------- | ------------------------------------------- |
+| Button | `selectOutline` in `apps/web/src/meshEdit/selectionTools.ts`, the Adjust row of `EditModeBar.tsx` | no key    | Selects the edges round the selected faces. |

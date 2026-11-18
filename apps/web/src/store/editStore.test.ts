@@ -76,3 +76,15 @@ describe("the settings panel under the edit bar", () => {
     expect(activeOperation(edit())?.pastLength).toBe(7);
   });
 });
+
+describe("the UV window", () => {
+  it("starts closed, colouring by piece, and the mode can be changed", () => {
+    const edit = () => useEditStore.getState();
+    expect(edit().uvWindow).toBe(false);
+    expect(edit().uvWindowMode).toBe("pieces");
+    edit().setUvWindow(true);
+    edit().setUvWindowMode("stretch");
+    expect(edit().uvWindow).toBe(true);
+    expect(edit().uvWindowMode).toBe("stretch");
+  });
+});

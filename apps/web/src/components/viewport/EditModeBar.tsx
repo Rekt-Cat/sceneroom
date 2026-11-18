@@ -14,6 +14,7 @@ import {
   creaseSelectedEdges,
   seamSelectedEdges,
   unwrapMesh,
+  unwrapMeshAlongSeams,
   deleteSelectedPoints,
   extrudeSelectedFaces,
   bevelSelectedEdges,
@@ -30,6 +31,7 @@ import {
   selectLess,
   selectLoopOrRing,
   selectMore,
+  selectOutline,
   selectSimilarToSelection,
 } from "@/meshEdit/selectionTools";
 import ExtrudePanel from "./ExtrudePanel";
@@ -169,6 +171,15 @@ export default function EditTools() {
           </button>
           <button
             type="button"
+            onClick={() => selectOutline()}
+            disabled={selected.length === 0}
+            title="Outline: select the edges round the selected faces. To get the rim of a lid: press 3, Alt-click the lid, then press Outline."
+            className={ACTION}
+          >
+            Outline
+          </button>
+          <button
+            type="button"
             onClick={() => selectSimilarToSelection()}
             disabled={selected.length === 0}
             title="Similar: select everything like what is selected: faces facing the same way (Faces mode), edges of the same length (Edges mode), points where as many edges meet (Points mode)"
@@ -272,6 +283,14 @@ export default function EditTools() {
             className={ACTION}
           >
             Unwrap
+          </button>
+          <button
+            type="button"
+            onClick={() => void unwrapMeshAlongSeams()}
+            title="Unwrap along seams: lay each piece of the surface flat along the seams you marked, keeping angles so a texture does not shear. Cut the shape open with Mark seam first: a closed shape cannot be laid flat (a cylinder with lids needs a seam round its top edge, round its bottom edge and one down its side)."
+            className={ACTION}
+          >
+            Along seams
           </button>
           <button
             type="button"
