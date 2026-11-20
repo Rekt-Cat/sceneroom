@@ -51,11 +51,14 @@ function applyMerge(
   }
   const renumber = new Int32Array(mesh.positions.length / 3).fill(-1);
   const out: number[] = [];
+  // The map follows: a merged point keeps the place on the map of the point it became
+  const uvOut: number[] | null = mesh.uvs ? [] : null;
   let next = 0;
   const use = (p: number) => {
     if (renumber[p] === -1) {
       renumber[p] = next++;
       out.push(positions[p * 3]!, positions[p * 3 + 1]!, positions[p * 3 + 2]!);
+      if (uvOut && mesh.uvs) uvOut.push(mesh.uvs[p * 2]!, mesh.uvs[p * 2 + 1]!);
     }
     return renumber[p]!;
   };
@@ -73,6 +76,7 @@ function applyMerge(
       indices: Uint32Array.from(indices),
       creases: remapCreases(mesh.creases, table),
       ...seamsOf(remapSeams(mesh.seams, table)),
+      ...(uvOut ? { uvs: Float32Array.from(uvOut) } : {}),
     },
     selected,
   };
@@ -247,6 +251,8 @@ export function flipNormals(
       indices,
       creases: mesh.creases,
       ...seamsOf(mesh.seams),
+      // The same points keep the same map (faces turned over show as turned over in the stretch view)
+      ...(mesh.uvs ? { uvs: mesh.uvs } : {}),
     },
     selected: [...selected],
   };
@@ -372,6 +378,7 @@ export function fillHole(
     };
   }
   const positions = Array.from(mesh.positions);
+  const uvs: number[] | null = mesh.uvs ? Array.from(mesh.uvs) : null;
   const indices = Array.from(mesh.indices);
   const centres: number[] = [];
   for (const loop of chosen) {
@@ -394,6 +401,16 @@ export function fillHole(
       sum[2] / loop.length,
     );
     centres.push(centre);
+    // On the map the middle is the middle of the rim's places
+    if (uvs && mesh.uvs) {
+      let su = 0;
+      let sv = 0;
+      for (const edge of loop) {
+        su += mesh.uvs[edge.pointFrom * 2]!;
+        sv += mesh.uvs[edge.pointFrom * 2 + 1]!;
+      }
+      uvs.push(su / loop.length, sv / loop.length);
+    }
     for (const edge of loop) indices.push(edge.pointTo, edge.pointFrom, centre);
   }
   return {
@@ -403,6 +420,7 @@ export function fillHole(
       indices: Uint32Array.from(indices),
       creases: mesh.creases,
       ...seamsOf(mesh.seams),
+      ...(uvs ? { uvs: Float32Array.from(uvs) } : {}),
     },
     selected: centres,
   };
@@ -473,6 +491,7 @@ export function bridgeLoops(
       indices: Uint32Array.from(indices),
       creases: mesh.creases,
       ...seamsOf(mesh.seams),
+      ...(mesh.uvs ? { uvs: mesh.uvs } : {}),
     },
     selected: [],
   };
@@ -513,6 +532,7 @@ export function deleteFaces(
   }
   const renumber = new Int32Array(mesh.positions.length / 3).fill(-1);
   const positions: number[] = [];
+  const uvs: number[] | null = mesh.uvs ? [] : null;
   let next = 0;
   const indices = kept.map((p) => {
     if (renumber[p] === -1) {
@@ -522,6 +542,7 @@ export function deleteFaces(
         mesh.positions[p * 3 + 1]!,
         mesh.positions[p * 3 + 2]!,
       );
+      if (uvs && mesh.uvs) uvs.push(mesh.uvs[p * 2]!, mesh.uvs[p * 2 + 1]!);
     }
     return renumber[p]!;
   });
@@ -532,6 +553,7 @@ export function deleteFaces(
       indices: Uint32Array.from(indices),
       creases: remapCreases(mesh.creases, renumber),
       ...seamsOf(remapSeams(mesh.seams, renumber)),
+      ...(uvs ? { uvs: Float32Array.from(uvs) } : {}),
     },
     selected: [],
   };

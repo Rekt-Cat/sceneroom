@@ -130,6 +130,9 @@ export function solidifyMesh(
     }
   }
 
+  // The map: the inner shell is a copy, so it has the same map; a wall takes the map of the points it was copied from
+  const uvs: number[] | null = mesh.uvs ? [...mesh.uvs, ...mesh.uvs] : null;
+
   const triangles = mesh.indices.length / 3;
   // A negative thickness puts the copy on the front side: then the copy keeps the winding and the original flips
   const flip = depth < 0;
@@ -167,6 +170,10 @@ export function solidifyMesh(
           positions[point * 3 + 1]!,
           positions[point * 3 + 2]!,
         );
+        if (uvs) {
+          // Points of the first shell are numbered from 0, the copies from `count`: the map has both already
+          uvs.push(uvs[point * 2]!, uvs[point * 2 + 1]!);
+        }
         return id;
       };
       const wa = own(a);
@@ -185,5 +192,6 @@ export function solidifyMesh(
     // The first points keep their numbers, so creases on the surface are still right
     creases: mesh.creases,
     ...(mesh.seams ? { seams: mesh.seams } : {}),
+    ...(uvs ? { uvs: Float32Array.from(uvs) } : {}),
   };
 }

@@ -107,6 +107,8 @@ export function extrudeEdges(
   }
 
   const positions: number[] = Array.from(mesh.positions);
+  // The map: a new point takes the place on the map of the point it was copied from (the wall is smeared along it)
+  const uvs: number[] | null = mesh.uvs ? Array.from(mesh.uvs) : null;
   const indices: number[] = Array.from(mesh.indices);
   // One point per corner and step; step 0 is a point of the corner that is already there
   const ring = new Map<string, number>();
@@ -124,6 +126,10 @@ export function extrudeEdges(
         p[1] + d[1] * push,
         p[2] + d[2] * push,
       );
+      if (uvs && mesh.uvs) {
+        const source = topology.vertexPoints[v]![0]!;
+        uvs.push(mesh.uvs[source * 2]!, mesh.uvs[source * 2 + 1]!);
+      }
       ring.set(key, id);
     }
     return id;
@@ -162,6 +168,7 @@ export function extrudeEdges(
       indices: Uint32Array.from(indices),
       creases: mesh.creases,
       ...(mesh.seams ? { seams: mesh.seams } : {}),
+      ...(uvs ? { uvs: Float32Array.from(uvs) } : {}),
     },
     selected: [...capPoints],
   };

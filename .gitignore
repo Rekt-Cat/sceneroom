@@ -34,3 +34,6 @@ pnpm-debug.log*
 
 # --- Claude Code: personal, per-machine settings (shared config in .claude/ IS committed) ---
 .claude/settings.local.json
+
+# Files the browser tests write for people to look at (Playwright)
+apps/web/e2e-output/

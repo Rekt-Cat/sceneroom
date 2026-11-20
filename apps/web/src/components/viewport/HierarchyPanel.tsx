@@ -118,7 +118,8 @@ export default function HierarchyPanel() {
     <aside
       aria-label="Scene"
       style={{ width }}
-      className="relative flex shrink-0 flex-col border-r border-ed-line bg-ed-panel"
+      // A container, so parts of the header can shrink when the panel is narrow (see ImportButton)
+      className="@container relative flex shrink-0 flex-col border-r border-ed-line bg-ed-panel"
     >
       <PanelResizer side="left" />
       <div className="flex h-13 shrink-0 items-center gap-2 px-3.5">

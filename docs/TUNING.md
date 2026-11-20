@@ -660,3 +660,18 @@ value and what it does.
 | What   | Where                                                                                             | Our value | What it does                                |
 | ------ | ------------------------------------------------------------------------------------------------- | --------- | ------------------------------------------- |
 | Button | `selectOutline` in `apps/web/src/meshEdit/selectionTools.ts`, the Adjust row of `EditModeBar.tsx` | no key    | Selects the edges round the selected faces. |
+
+## End-to-end tests
+
+| What           | Where                                           | Our value                                  | What it does                                                                            |
+| -------------- | ----------------------------------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------- |
+| Browser folder | environment variable `PLAYWRIGHT_BROWSERS_PATH` | a folder of your choice (outside the repo) | Where Playwright keeps its Chromium. Set it before installing and before running tests. |
+| Window size    | `viewport` in `apps/web/playwright.config.ts`   | 1440 x 900                                 | The size of the browser window the tests use.                                           |
+| Test timeout   | `timeout` in `playwright.config.ts`             | 90 000 ms                                  | The most one test may take (the software 3D renderer is slow).                          |
+| Narrow panel   | `@min-[340px]` in `ImportButton.tsx`            | 340 px                                     | The left panel width from which the Import button shows its label.                      |
+
+## Messages over the 3D view
+
+| What              | Where                                                         | Our value | What it does                                                                                                           |
+| ----------------- | ------------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Info message time | `INFO_MESSAGE_SECONDS` in `apps/web/src/store/importStore.ts` | 8 seconds | How long an info message ("Cube is now an editable mesh") stays before it goes by itself. Errors stay until dismissed. |

@@ -98,8 +98,8 @@
   <!-- tools rule -->
   <rect x="32" y="606" width="896" height="132" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
   <text x="48" y="632" font-size="14" font-weight="700" fill="#13202a">What other tools do with the map (wrong UVs are worse than none)</text>
-  <text x="48" y="656" font-size="12" fill="#13202a">Kept: moving points (the surface moves, the map does not); Bend, Twist, Taper, Stretch, Noise; Mirror and Array copy it;</text>
-  <text x="48" y="674" font-size="12" fill="#13202a">a built-in shape keeps its map when it becomes a mesh. Seams ride along like creases (Divide and Loop cut split them).</text>
-  <text x="48" y="698" font-size="12" fill="#13202a">Dropped, with a message, for now: Extrude, Inset, Divide, Loop cut, Bevel, Merge, Weld, Delete, Smooth, Thicken.</text>
-  <text x="48" y="722" font-size="12" fill="#55656f">Teaching them one by one is sub-step 5. Stored as mesh format version 3 (bit 0 = UVs, bit 1 = seams); no UVs, same old bytes.</text>
+  <text x="48" y="656" font-size="12" fill="#13202a">Kept: moving points (the surface moves, the map does not); Bend, Twist, Taper, Stretch, Noise; Mirror, Array and Thicken copy it;</text>
+  <text x="48" y="674" font-size="12" fill="#13202a">Divide and Loop cut interpolate it; Extrude, Inset, Bevel, Fill hole copy or average it; Delete, Merge and Weld renumber it.</text>
+  <text x="48" y="698" font-size="12" fill="#13202a">Dropped, with a message: only Smooth, for now (it merges points that share a spot, which a UV seam cannot survive).</text>
+  <text x="48" y="722" font-size="12" fill="#55656f">New walls of an extrusion are smeared until you unwrap again (red in Stretch). Seams ride along like creases. Format version 3.</text>
 </svg>

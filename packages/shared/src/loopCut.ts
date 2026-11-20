@@ -207,6 +207,8 @@ export function loopCut(
   const ts = cutPositions(sanitizeLoopCutOptions(options));
 
   const positions: number[] = Array.from(mesh.positions);
+  // The map goes along: a new point lies on it between the two points it lies between on the surface
+  const uvs: number[] | null = mesh.uvs ? Array.from(mesh.uvs) : null;
   const made = new Map<string, number>();
   /** The new point a fraction `t` of the way from point `a` to point `b` (the same one for every square that asks). */
   const between = (a: number, b: number, k: number): number => {
@@ -216,6 +218,14 @@ export function loopCut(
       id = positions.length / 3;
       made.set(key, id);
       positions.push(...lerp(mesh, a, b, ts[k]!));
+      if (uvs && mesh.uvs) {
+        const t = ts[k]!;
+        uvs.push(
+          mesh.uvs[a * 2]! + (mesh.uvs[b * 2]! - mesh.uvs[a * 2]!) * t,
+          mesh.uvs[a * 2 + 1]! +
+            (mesh.uvs[b * 2 + 1]! - mesh.uvs[a * 2 + 1]!) * t,
+        );
+      }
     }
     return id;
   };
@@ -363,6 +373,7 @@ export function loopCut(
       indices: Uint32Array.from(indices),
       creases,
       ...seamsOf(seams),
+      ...(uvs ? { uvs: Float32Array.from(uvs) } : {}),
     },
     selected,
   };

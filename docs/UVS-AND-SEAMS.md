@@ -37,16 +37,19 @@ Under **Advanced** (folded): **Mark seam / Clear seam** (edge mode, like creases
 
 ## What other tools do with UVs (the hidden cost)
 
-Every tool that makes or moves points has to say what happens to UVs. Plan: **first version, a tool that does not know UVs removes them and says so** ("UVs were removed by Bevel; unwrap again"). Wrong UVs are worse than none. Then teach the tools in the order people use them:
+Every tool that makes or moves points has to say what happens to UVs. Plan: **first version, a tool that does not know UVs removes them and says so** ("UVs were removed by Bevel; unwrap again"). Wrong UVs are worse than none. Sub-step 5 then taught the tools one by one; this is where each one stands now. A tool that is added later and forgets the map still gets the message (the safety net is in `commitMesh`):
 
-| Tool                                       | Rule                                                                                                                      |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| Move, rotate, scale points                 | UVs unchanged (the surface moved, the map did not)                                                                        |
-| Delete faces / points, merge, flip         | remap the surviving points; flip also mirrors the faces' UVs                                                              |
-| Loop cut, Divide, Bevel                    | new points get UVs interpolated along the edge or across the face                                                         |
-| Extrude, Inset                             | the cap keeps the face's UVs; the walls are projected from the edge (stretching is possible, the stretch colours show it) |
-| Weld, Bridge, Fill hole                    | weld keeps one UV per point (islands may join); bridge and fill project a new island                                      |
-| Modifiers (Mirror, Array, Smooth, Thicken) | work on the shown shape; Mirror and Array copy UVs, Smooth and Thicken interpolate; baked by Make mesh                    |
+| Tool                               | What it does with the map (built in sub-step 5)                                                                                                |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Move, rotate, scale points         | UVs unchanged (the surface moved, the map did not)                                                                                             |
+| Delete points / faces, Merge, Weld | the points that stay keep their UVs (renumbered); a merged point keeps the UV of the point it became                                           |
+| Flip, Bridge                       | the same points keep the same UVs (flipped faces show as turned over in the Stretch view)                                                      |
+| Fill hole                          | the new middle point lies at the middle of the rim's UVs                                                                                       |
+| Loop cut, Divide                   | new points are interpolated exactly along the edge or across the face (tested with a map that is a straight-line function of position)         |
+| Bevel                              | a cut point takes the UV of its own face's corner; a strip point lies between the two faces' UVs; a corner fill point is the average           |
+| Extrude, Inset, edge extrude       | the cap and the walls copy the UV of the point they came from: the cap is right, the walls are smeared until you unwrap again (red in Stretch) |
+| Modifiers: Mirror, Array, Thicken  | Mirror and Array copy the map onto the copies; Thicken copies it to the inner shell and the walls                                              |
+| Smooth modifier                    | **still removes the map**: it merges points that share a spot, so a UV seam cannot survive it without a bigger change                          |
 
 ## Difference-based undo (step 8b, shared with sculpting)
 
@@ -59,11 +62,13 @@ Today each mesh edit stores a **whole new mesh** under its fingerprint, and the 
 
 ## Order of work (each step ends with tests, docs and a browser check)
 
-1. **Checker view and UV data** (small): the Checker switch; geometry builder keeps and writes `uv`; mesh format v3 reads and writes UVs (round-trip and old-file tests); the rule "tools that do not know UVs remove them, with a message". _Useful at once:_ the checker works on every built-in shape.
-2. **Seams:** mark and clear in edge mode, drawn in the 3D view, saved with the mesh; tests like creases.
-3. **Smart unwrap and pack, and the read-only UV window:** the one-button Unwrap works end to end.
-4. **Unwrap along seams (LSCM) and the stretch colours.**
-5. **Teach the tools UVs**, in the order of the table above.
+_Status (2026-11-20): steps 1 to 4 are built and merged, step 5 is built on `feature/uv-tools` (Smooth still drops the map), steps 6 and 7 are not started._
+
+1. **(built)** **Checker view and UV data** (small): the Checker switch; geometry builder keeps and writes `uv`; mesh format v3 reads and writes UVs (round-trip and old-file tests); the rule "tools that do not know UVs remove them, with a message". _Useful at once:_ the checker works on every built-in shape.
+2. **(built)** **Seams:** mark and clear in edge mode, drawn in the 3D view, saved with the mesh; tests like creases.
+3. **(built)** **Smart unwrap and pack, and the read-only UV window:** the one-button Unwrap works end to end.
+4. **(built)** **Unwrap along seams (LSCM) and the stretch colours.**
+5. **(built, except Smooth)** **Teach the tools UVs**, in the order of the table above.
 6. **UV window editing:** select, move, rotate and scale islands, snap, pack again.
 7. **Step 8b, difference-based undo.**
 

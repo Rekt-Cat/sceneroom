@@ -172,11 +172,19 @@ export const useEditStore = create<EditState>()((set) => ({
 }));
 
 /**
- * The settings session whose panel is shown under the edit bar (loop cut, bevel, divide or extrude), or null.
+ * The settings session whose panel is shown under the edit bar (loop cut, bevel, divide or extrude), or null. `pastLength`
+ * is how long the undo history is now.
  * Every operation with a panel must be listed here, or its panel never appears.
  */
 export function activeOperation(
   state: Pick<EditState, "loopCut" | "bevel" | "divide" | "extrude">,
+  pastLength: number,
 ): { pastLength: number } | null {
-  return state.loopCut ?? state.bevel ?? state.divide ?? state.extrude;
+  // Old sessions are not cleared when another tool starts, so more than one can be around: the live one is the one
+  // whose undo-history length is the history's length now (anything done since ends a session)
+  return (
+    [state.loopCut, state.bevel, state.divide, state.extrude].find(
+      (session) => session !== null && session.pastLength === pastLength,
+    ) ?? null
+  );
 }

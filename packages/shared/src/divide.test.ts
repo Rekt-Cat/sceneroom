@@ -5,6 +5,7 @@ import {
   buildTopology,
   divideFaces,
   sanitizeDivideCuts,
+  weldClosePoints,
   weldGroups,
   type EditMesh,
   type EditResult,
@@ -110,7 +111,8 @@ describe("divide faces", () => {
         mesh.positions[p * 3 + 2]! <= 0.5 + 1e-6,
     );
     const result = ok(divideFaces(mesh, cell, 1));
-    expect(triangles(result.mesh)).toBe(triangles(mesh) + 6);
+    // the cell gives 8 triangles for its 2 (+6) and each of its two neighbours becomes a fan through the new edge point (+3 each)
+    expect(triangles(result.mesh)).toBe(triangles(mesh) + 6 + 3 + 3);
   });
 
   it("neighbouring selected faces share the points on their common edge (no doubled points)", () => {
@@ -139,5 +141,57 @@ describe("divide faces", () => {
     expect(sanitizeDivideCuts(2.6)).toBe(3);
     expect(sanitizeDivideCuts(99)).toBe(MAX_DIVIDE_CUTS);
     expect(sanitizeDivideCuts(NaN)).toBe(1);
+  });
+});
+
+describe("dividing only one face keeps the surface closed", () => {
+  const frontOf = (mesh: EditMesh) =>
+    allPoints(mesh.positions.length / 3).filter(
+      (p) => mesh.positions[p * 3 + 2]! > 0.49,
+    );
+
+  it("a cube with separate points per side: no open edge, nothing crowded, all faces wound the same way", () => {
+    const mesh = box(1);
+    for (const cuts of [1, 4]) {
+      const result = divideFaces(mesh, frontOf(mesh), cuts);
+      expect(result.ok).toBe(true);
+      if (!result.ok) continue;
+      const faces = buildTopology(result.mesh).edgeFaces;
+      expect(faces.filter((f) => f.length === 1)).toHaveLength(0);
+      expect(faces.filter((f) => f.length > 2)).toHaveLength(0);
+      expect(closedAndConsistent(result.mesh)).toBe(true);
+    }
+  });
+
+  it("a cube whose sides share their points stays closed and keeps sharing them", () => {
+    const welded = weldClosePoints(box(1), allPoints(24), 1e-4);
+    expect(welded.ok).toBe(true);
+    if (!welded.ok) return;
+    const mesh = welded.mesh;
+    const result = divideFaces(mesh, frontOf(mesh), 3);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(
+      buildTopology(result.mesh).edgeFaces.every((f) => f.length === 2),
+    ).toBe(true);
+    expect(closedAndConsistent(result.mesh)).toBe(true);
+    // no point is doubled: the new points on the shared edges are shared by the two faces
+    expect(new Set(weldGroups(result.mesh.positions).ids).size).toBe(
+      result.mesh.positions.length / 3 - 0,
+    );
+  });
+
+  it("a face with two divided neighbours on opposite sides is also closed", () => {
+    const mesh = box(1);
+    // the top strip: the top and the two faces on its sides stay whole, the front and back are divided
+    const frontBack = allPoints(24).filter(
+      (p) => Math.abs(mesh.positions[p * 3 + 2]!) > 0.49,
+    );
+    const result = divideFaces(mesh, frontBack, 2);
+    expect(result.ok).toBe(true);
+    if (result.ok)
+      expect(
+        buildTopology(result.mesh).edgeFaces.every((f) => f.length === 2),
+      ).toBe(true);
   });
 });

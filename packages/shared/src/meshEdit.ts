@@ -319,6 +319,8 @@ export function deletePoints(
   // Renumber: only the points the remaining triangles use stay
   const renumber = new Map<number, number>();
   const positions: number[] = [];
+  // The map follows the points that stay
+  const uvs: number[] | null = mesh.uvs ? [] : null;
   const indices = kept.map((old) => {
     let next = renumber.get(old);
     if (next === undefined) {
@@ -329,6 +331,7 @@ export function deletePoints(
         mesh.positions[old * 3 + 1]!,
         mesh.positions[old * 3 + 2]!,
       );
+      if (uvs && mesh.uvs) uvs.push(mesh.uvs[old * 2]!, mesh.uvs[old * 2 + 1]!);
     }
     return next;
   });
@@ -343,6 +346,7 @@ export function deletePoints(
       // Points are renumbered; creases follow them, and those on deleted points go
       creases: remapCreases(mesh.creases, renumberTable),
       ...seamsOf(remapSeams(mesh.seams, renumberTable)),
+      ...(uvs ? { uvs: Float32Array.from(uvs) } : {}),
     },
     selected: [],
   };
@@ -532,6 +536,13 @@ export function extrudeFaces(
   };
 
   const positions: number[] = Array.from(mesh.positions);
+  // The map: every new point (the cap and the walls) takes the place on the map of the point it was copied from.
+  // The walls are smeared along it until the object is unwrapped again (the stretch view shows them red).
+  const uvs: number[] | null = mesh.uvs ? Array.from(mesh.uvs) : null;
+  const copyUv = (source: number) => {
+    if (uvs && mesh.uvs)
+      uvs.push(mesh.uvs[source * 2]!, mesh.uvs[source * 2 + 1]!);
+  };
   const indices: number[] = [];
 
   // The faces that are not extruded stay as they are
@@ -555,6 +566,7 @@ export function extrudeFaces(
       copyOf.set(point, made);
       capPoints.push(made);
       positions.push(...ringPosition(point, divisions));
+      copyUv(point);
     }
     return made;
   };
@@ -588,6 +600,7 @@ export function extrudeFaces(
   const wallPoint = (source: number, step: number) => {
     const id = positions.length / 3;
     positions.push(...ringPosition(source, step));
+    copyUv(source);
     return id;
   };
   for (const face of faces) {
@@ -614,6 +627,7 @@ export function extrudeFaces(
       // The old points keep their numbers, so the creases on the old edges are still right
       creases: mesh.creases,
       ...(mesh.seams ? { seams: mesh.seams } : {}),
+      ...(uvs ? { uvs: Float32Array.from(uvs) } : {}),
     },
     selected: capPoints,
   };
