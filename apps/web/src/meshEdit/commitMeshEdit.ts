@@ -21,7 +21,8 @@ export async function commitMesh(
   if (!node || node.kind !== "mesh" || !node.assetId || !old) return false;
   try {
     await sayIfUvsRemoved(node.name, node.assetId, mesh, label);
-    const stored = await storeMesh(mesh);
+    // A big mesh whose points only moved is stored as a patch on the mesh it came from
+    const stored = await storeMesh(mesh, node.assetId);
     // Nothing changed (the same mesh was stored again): no undo step
     if (stored.id === node.assetId) return true;
     const info = meshAssetInfo(

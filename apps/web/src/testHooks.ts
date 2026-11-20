@@ -2,11 +2,13 @@ import {
   buildTopology,
   checkMesh,
   expandToWelded,
+  isMeshPatchBytes,
   translateSelected,
   uvIslands,
   uvStretch,
   weldGroups,
 } from "@sceneroom/shared";
+import { assetStorage } from "@/assets/assetStorage";
 import { loadMeshData } from "@/assets/meshStorage";
 import { commitMeshPositions } from "@/meshEdit/commitMeshEdit";
 import type { Mesh } from "three";
@@ -60,6 +62,8 @@ export type SceneRoomHooks = {
     drawn: number;
     selected: number;
   } | null;
+  /** True if the stored mesh of the edited (or selected) object is kept as a patch on an earlier mesh (difference-based undo). */
+  meshIsPatch: () => Promise<boolean>;
   /** Sets the colour of the selected object (a hex colour). */
   setColor: (hex: string) => void;
   /** Sets the position, rotation (degrees) and scale of the selected object. */
@@ -174,6 +178,11 @@ export function installTestHooks(): () => void {
       const mesh = await loadMeshData(assetId);
       const positions = translateSelected(mesh.positions, selected, delta);
       return commitMeshPositions(nodeId, positions, "Move points");
+    },
+    async meshIsPatch() {
+      const assetId = targetAssetId();
+      const bytes = assetId ? await assetStorage.get(assetId) : undefined;
+      return bytes ? isMeshPatchBytes(new Uint8Array(bytes)) : false;
     },
     hiddenFacts() {
       const { nodeId, hidden, selected } = useEditStore.getState();

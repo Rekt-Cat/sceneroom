@@ -52,4 +52,5 @@ export * from "./seams";
 export * from "./unwrap";
 export * from "./uvEdit";
 export * from "./hiding";
+export * from "./meshPatch";
 export * from "./lscm";
