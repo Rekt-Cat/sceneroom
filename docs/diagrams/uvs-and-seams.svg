@@ -90,10 +90,10 @@
   <rect x="634" y="438" width="294" height="150" rx="12" fill="#e0f2e8" stroke="#1c7a4b" stroke-width="2.2"/>
   <text x="650" y="462" font-size="14" font-weight="700" fill="#13202a">What uses the map</text>
   <text x="650" y="486" font-size="12" fill="#13202a">UV checker: a checkerboard per object</text>
-  <text x="650" y="506" font-size="12" fill="#13202a">UV window: pieces, seams, stretch colours</text>
+  <text x="650" y="506" font-size="12" fill="#13202a">UV window: click, drag, turn, scale, pack</text>
   <text x="650" y="526" font-size="12" fill="#13202a">GLB export: written as TEXCOORD_0</text>
-  <text x="650" y="548" font-size="12" fill="#55656f">Next: painting and baking (step 10),</text>
-  <text x="650" y="564" font-size="12" fill="#55656f">materials with textures (Phase 4)</text>
+  <text x="650" y="548" font-size="12" fill="#55656f">Edits change the map only, one undo each. Next:</text>
+  <text x="650" y="564" font-size="12" fill="#55656f">painting and baking (step 10), textures (Phase 4)</text>
 
   <!-- tools rule -->
   <rect x="32" y="606" width="896" height="132" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>

@@ -90,6 +90,7 @@ export default function BoxSelectController() {
         const mesh = getMesh(editing.nodeId) as Mesh | undefined;
         const position = mesh?.geometry?.getAttribute("position");
         if (mesh && position) {
+          const hiddenNow = new Set(editing.hidden?.points ?? []);
           let inside = pointsInRect(
             projectPoints(
               mesh,
@@ -98,7 +99,7 @@ export default function BoxSelectController() {
               position.array,
             ),
             box,
-          );
+          ).filter((p) => !hiddenNow.has(p));
           // Without X-ray a box only takes the points on faces the camera can see (for a very big box the
           // test is skipped, as it would take too long)
           if (

@@ -6,6 +6,14 @@ import type {
 } from "@sceneroom/shared";
 
 /** What a click picks in edit mode: a point, an edge or a face. */
+/** What Hide took away: the triangles, the points left with nothing to show them, and the mesh shape they belong to. */
+export type HiddenParts = {
+  triangles: number[];
+  points: number[];
+  /** `topologyFingerprint` of the mesh when they were hidden: a different one means the numbers no longer fit. */
+  fingerprint: string;
+};
+
 export type SelectMode = "point" | "edge" | "face";
 
 /**
@@ -96,6 +104,15 @@ type EditState = {
   /** What the UV window colours by: each piece in its own colour, or how stretched each face is. */
   uvWindowMode: "pieces" | "stretch";
   setUvWindowMode: (mode: "pieces" | "stretch") => void;
+  /**
+   * The triangles hidden with Hide / Hide others, or null. Only drawing and picking change, never the mesh. They are
+   * remembered by triangle number, so they are dropped when an edit changes the triangles (see `fingerprint`).
+   */
+  hidden: HiddenParts | null;
+  setHidden: (hidden: HiddenParts | null) => void;
+  /** The pieces (islands) chosen in the UV window, by their number on the map. */
+  uvSelected: number[];
+  setUvSelected: (islands: number[]) => void;
   /** The divide whose number of cuts can still be changed, or null. */
   divide: DivideSession | null;
   setDivide: (session: DivideSession | null) => void;
@@ -137,6 +154,10 @@ export const useEditStore = create<EditState>()((set) => ({
   setUvWindow: (uvWindow) => set({ uvWindow }),
   uvWindowMode: "pieces",
   setUvWindowMode: (uvWindowMode) => set({ uvWindowMode }),
+  hidden: null,
+  setHidden: (hidden) => set({ hidden }),
+  uvSelected: [],
+  setUvSelected: (uvSelected) => set({ uvSelected }),
   divide: null,
   setDivide: (divide) => set({ divide }),
   bevel: null,
@@ -154,6 +175,8 @@ export const useEditStore = create<EditState>()((set) => ({
       bevel: null,
       divide: null,
       loopCutMode: false,
+      uvSelected: [],
+      hidden: null,
     }),
   exit: () =>
     set({
@@ -165,6 +188,8 @@ export const useEditStore = create<EditState>()((set) => ({
       bevel: null,
       divide: null,
       loopCutMode: false,
+      uvSelected: [],
+      hidden: null,
     }),
   setSelected: (selected) => set({ selected }),
   // Points that were selected stay selected: they are the same selection seen as edges or faces

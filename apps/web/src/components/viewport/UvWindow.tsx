@@ -1,18 +1,32 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { uvIslands, uvStretch, type ShapeMesh } from "@sceneroom/shared";
+import {
+  transformUvIslands,
+  uvIslandAt,
+  uvIslands,
+  uvStretch,
+  type ShapeMesh,
+} from "@sceneroom/shared";
 import { loadMeshData } from "@/assets/meshStorage";
+import { packUvMap, transformUvSelection } from "@/meshEdit/editOperations";
 import { useEditStore } from "@/store/editStore";
 import { useSceneStore } from "@/store/sceneStore";
 
 /** The size of the map picture, in pixels. */
 const SIZE = 232;
 
+/** Turning and growing steps of the buttons. */
+const QUARTER_TURN = Math.PI / 2;
+const SCALE_STEP = 1.25;
+/** A drag shorter than this (a share of the square) counts as a click. */
+const DRAG_THRESHOLD = 0.004;
+
 /**
  * The UV window: the flat map of the mesh being edited, drawn in the corner of the 3D view. Every island has its own
- * colour, the faces are outlined and the seams are red, inside the 0 to 1 square the texture covers. Read-only for
- * now. It shows what Unwrap made.
+ * colour, the faces are outlined and the seams are red, inside the 0 to 1 square the texture covers. Click a piece
+ * to choose it (Shift adds more), drag to move it, or use the buttons to turn, scale, mirror or pack. Every change is
+ * one undo step and only changes the map, never the shape.
  */
 export default function UvWindow() {
   const on = useEditStore((state) => state.uvWindow);
@@ -29,6 +43,16 @@ function Window({ assetId }: { assetId: string }) {
   const setMode = useEditStore((state) => state.setUvWindowMode);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [mesh, setMesh] = useState<ShapeMesh | null | "none">(null);
+  const uvSelected = useEditStore((state) => state.uvSelected);
+  const setUvSelected = useEditStore((state) => state.setUvSelected);
+  // While a piece is being dragged: how far it has moved so far, in the 0 to 1 square
+  const [drag, setDrag] = useState<[number, number] | null>(null);
+  const dragStart = useRef<{ x: number; y: number; moved: boolean } | null>(
+    null,
+  );
+  const shown = mesh && mesh !== "none" ? mesh : null;
+  const islandCount = shown ? uvIslands(shown).count : 0;
+  const chosen = uvSelected.filter((island) => island < islandCount);
 
   // The mesh (with its map) changes with every stored edit: read it again when the asset changes
   useEffect(() => {
@@ -47,10 +71,64 @@ function Window({ assetId }: { assetId: string }) {
   useEffect(() => {
     const context = canvas.current?.getContext("2d");
     if (!context) return;
-    draw(context, mesh && mesh !== "none" ? mesh : null, mode);
-  }, [mesh, mode]);
+    // While dragging, show the piece where it would land
+    const preview =
+      shown && drag && chosen.length > 0
+        ? transformUvIslands(shown, new Set(chosen), { move: drag })
+        : shown;
+    draw(context, preview, mode, chosen);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `shown` and `chosen` follow `mesh` and `uvSelected`
+  }, [mesh, mode, uvSelected, drag]);
 
-  const islands = mesh && mesh !== "none" ? uvIslands(mesh).count : 0;
+  /** Where on the map (0 to 1, v up) a pointer event happened. */
+  const spot = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    return {
+      u: (event.clientX - box.left) / box.width,
+      v: 1 - (event.clientY - box.top) / box.height,
+    };
+  };
+  const onPointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!shown) return;
+    const { u, v } = spot(event);
+    const hit = uvIslandAt(shown, u, v);
+    if (hit < 0) {
+      if (!event.shiftKey) setUvSelected([]);
+      return;
+    }
+    if (event.shiftKey) {
+      setUvSelected(
+        chosen.includes(hit)
+          ? chosen.filter((island) => island !== hit)
+          : [...chosen, hit],
+      );
+      return;
+    }
+    // Pressing on a piece that is already chosen keeps the group so it can be dragged together
+    if (!chosen.includes(hit)) setUvSelected([hit]);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragStart.current = { x: event.clientX, y: event.clientY, moved: false };
+  };
+  const onPointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const start = dragStart.current;
+    if (!start) return;
+    const box = event.currentTarget.getBoundingClientRect();
+    const du = (event.clientX - start.x) / box.width;
+    const dv = -(event.clientY - start.y) / box.height;
+    if (Math.hypot(du, dv) > DRAG_THRESHOLD) start.moved = true;
+    if (start.moved) setDrag([du, dv]);
+  };
+  const onPointerUp = () => {
+    const start = dragStart.current;
+    dragStart.current = null;
+    if (start?.moved && drag) {
+      void transformUvSelection({ move: drag }, "Move UV piece").finally(() =>
+        setDrag(null),
+      );
+    } else setDrag(null);
+  };
+
+  const islands = islandCount;
   const folded = mesh && mesh !== "none" ? uvStretch(mesh).folded : 0;
   return (
     <div
@@ -71,8 +149,77 @@ function Window({ assetId }: { assetId: string }) {
         width={SIZE}
         height={SIZE}
         aria-label="The UV map of the mesh"
-        className="block rounded"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        className="block cursor-pointer touch-none rounded"
       />
+      {shown && (
+        <div
+          role="group"
+          aria-label="Change the chosen pieces"
+          className="mt-1.5 grid grid-cols-3 gap-1"
+        >
+          {[
+            {
+              label: "Turn left",
+              hint: "Turn the chosen pieces a quarter turn counter-clockwise",
+              run: () =>
+                transformUvSelection({ rotate: QUARTER_TURN }, "Turn UV piece"),
+            },
+            {
+              label: "Turn right",
+              hint: "Turn the chosen pieces a quarter turn clockwise",
+              run: () =>
+                transformUvSelection(
+                  { rotate: -QUARTER_TURN },
+                  "Turn UV piece",
+                ),
+            },
+            {
+              label: "Mirror",
+              hint: "Mirror the chosen pieces left to right",
+              run: () =>
+                transformUvSelection({ flipU: true }, "Mirror UV piece"),
+            },
+            {
+              label: "Smaller",
+              hint: "Make the chosen pieces a quarter smaller on the map (more texture detail goes elsewhere)",
+              run: () =>
+                transformUvSelection(
+                  { scale: 1 / SCALE_STEP },
+                  "Scale UV piece",
+                ),
+            },
+            {
+              label: "Bigger",
+              hint: "Make the chosen pieces a quarter bigger on the map (a sharper texture there)",
+              run: () =>
+                transformUvSelection({ scale: SCALE_STEP }, "Scale UV piece"),
+            },
+          ].map((button) => (
+            <button
+              key={button.label}
+              type="button"
+              disabled={chosen.length === 0}
+              title={button.hint}
+              onClick={() => void button.run()}
+              className="rounded-md border border-ed-line-strong px-1 py-1 font-medium hover:bg-ed-field focus-visible:outline-2 focus-visible:outline-ed-accent disabled:opacity-40"
+            >
+              {button.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            title="Pack all pieces into the square again, as large as they fit, without overlap"
+            onClick={() => void packUvMap()}
+            className="rounded-md border border-ed-line-strong px-1 py-1 font-medium hover:bg-ed-field focus-visible:outline-2 focus-visible:outline-ed-accent"
+          >
+            Pack
+          </button>
+        </div>
+      )}
       {mesh === "none" && (
         <p className="mt-1 max-w-[232px] text-ed-text-3">
           This mesh has no UV map. Press Unwrap in the UV row of the edit panel.
@@ -126,7 +273,8 @@ function Window({ assetId }: { assetId: string }) {
         </div>
       )}
       <p className="mt-1 max-w-[232px] text-ed-text-3">
-        The square is the texture. Red lines are seams.
+        The square is the texture. Red lines are seams. Click a piece to choose
+        it (Shift adds), drag to move it.
       </p>
     </div>
   );
@@ -137,6 +285,7 @@ function draw(
   context: CanvasRenderingContext2D,
   mesh: ShapeMesh | null,
   mode: "pieces" | "stretch",
+  chosen: readonly number[] = [],
 ) {
   context.clearRect(0, 0, SIZE, SIZE);
   context.fillStyle = "#14191d";
@@ -169,8 +318,11 @@ function draw(
     context.closePath();
     context.fillStyle = `hsla(${hue}, 60%, 55%, 0.35)`;
     context.fill();
-    context.strokeStyle = `hsla(${hue}, 70%, 75%, 0.9)`;
+    const picked = chosen.includes(island[t]!);
+    context.strokeStyle = picked ? "#ffffff" : `hsla(${hue}, 70%, 75%, 0.9)`;
+    context.lineWidth = picked ? 2 : 1;
     context.stroke();
+    context.lineWidth = 1;
   }
   // A seam is drawn only where its two ends are on the same piece: a line between two pieces would be a mistake
   const pieceOfPoint = new Map<number, number>();

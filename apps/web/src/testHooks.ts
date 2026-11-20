@@ -9,6 +9,8 @@ import {
 } from "@sceneroom/shared";
 import { loadMeshData } from "@/assets/meshStorage";
 import { commitMeshPositions } from "@/meshEdit/commitMeshEdit";
+import type { Mesh } from "three";
+import { getMesh } from "@/components/viewport/meshRegistry";
 import { useEditStore } from "@/store/editStore";
 import { useSceneStore } from "@/store/sceneStore";
 
@@ -28,6 +30,8 @@ export type MeshFacts = {
   /** Pieces of the map, and faces that are turned over on it. */
   uvPieces: number;
   uvFolded: number;
+  /** How much of the 0 to 1 square the map covers (the sum of the face areas on the map). */
+  uvArea: number;
   /** The largest stretch of any face on the map, 0 (none) to 1. */
   uvWorstStretch: number;
   seams: number;
@@ -50,6 +54,12 @@ export type SceneRoomHooks = {
   ) => Promise<number>;
   /** Moves the selected points of the edited mesh by a distance (the way dragging the gizmo does: one stored change). */
   moveSelected: (delta: [number, number, number]) => Promise<boolean>;
+  /** What is hidden in edit mode: the hidden triangle count, the triangles still drawn, and how many points are selected. */
+  hiddenFacts: () => {
+    hidden: number;
+    drawn: number;
+    selected: number;
+  } | null;
   /** Sets the colour of the selected object (a hex colour). */
   setColor: (hex: string) => void;
   /** Sets the position, rotation (degrees) and scale of the selected object. */
@@ -64,6 +74,21 @@ declare global {
   interface Window {
     __sceneroom?: SceneRoomHooks;
   }
+}
+
+/** The sum of the face areas on the map (0 when there is no map). */
+function mapArea(uvs: Float32Array | undefined, indices: Uint32Array): number {
+  if (!uvs) return 0;
+  let total = 0;
+  for (let t = 0; t < indices.length; t += 3) {
+    const [a, b, c] = [indices[t]!, indices[t + 1]!, indices[t + 2]!];
+    total +=
+      Math.abs(
+        (uvs[b * 2]! - uvs[a * 2]!) * (uvs[c * 2 + 1]! - uvs[a * 2 + 1]!) -
+          (uvs[c * 2]! - uvs[a * 2]!) * (uvs[b * 2 + 1]! - uvs[a * 2 + 1]!),
+      ) / 2;
+  }
+  return total;
 }
 
 /** The mesh object the tests talk about: the one being edited, else the single selected one. */
@@ -115,6 +140,7 @@ export function installTestHooks(): () => void {
         hasUvs: mesh.uvs !== undefined,
         uvPieces: mesh.uvs ? uvIslands(mesh).count : 0,
         uvFolded: stretch?.folded ?? 0,
+        uvArea: mapArea(mesh.uvs, mesh.indices),
         uvWorstStretch: stretch
           ? stretch.values.reduce((m, v) => Math.max(m, v), 0)
           : 0,
@@ -148,6 +174,18 @@ export function installTestHooks(): () => void {
       const mesh = await loadMeshData(assetId);
       const positions = translateSelected(mesh.positions, selected, delta);
       return commitMeshPositions(nodeId, positions, "Move points");
+    },
+    hiddenFacts() {
+      const { nodeId, hidden, selected } = useEditStore.getState();
+      const geometry = nodeId
+        ? (getMesh(nodeId) as Mesh | undefined)?.geometry
+        : undefined;
+      if (!geometry) return null;
+      return {
+        hidden: hidden?.triangles.length ?? 0,
+        drawn: (geometry.index?.count ?? 0) / 3,
+        selected: selected.length,
+      };
     },
     setColor(hex) {
       const { selectedIds, setNodeColor } = useSceneStore.getState();

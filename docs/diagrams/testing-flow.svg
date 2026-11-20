@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 410" width="960" height="410" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
+  <title id="t">Testing flow: unit tests, browser tests, hooks and CI</title>
+  <desc id="d">Vitest runs fast unit tests for the shared logic and web stores. Playwright drives a real browser through the editor using a test seam that exists only in development. The pre-push hook runs the quick checks; GitHub Actions also runs the browser tests.</desc>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker></defs>
+  <rect width="960" height="410" fill="#f2f5f6"/>
+  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">Testing flow</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Fast tests guard the logic; a real browser guards the whole flow.</text>
+  <rect x="32" y="90" width="280" height="130" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="46" y="116" font-size="14" font-weight="700" fill="#13202a">Vitest (unit tests)</text>
+  <text x="46" y="138" font-size="12" fill="#13202a">Shared logic: ~820 tests</text>
+  <text x="46" y="155" font-size="12" fill="#13202a">Web stores: ~500 tests</text>
+  <text x="46" y="172" font-size="12" fill="#13202a">No browser, runs in seconds</text>
+  <text x="46" y="189" font-size="12" fill="#13202a">Pre-push hook runs them</text>
+  <rect x="340" y="90" width="280" height="130" rx="12" fill="#e9eef0" stroke="#0a6c8a" stroke-width="2"/>
+  <text x="354" y="116" font-size="14" font-weight="700" fill="#13202a">Playwright (browser)</text>
+  <text x="354" y="138" font-size="12" fill="#13202a">A real Chromium opens the editor</text>
+  <text x="354" y="155" font-size="12" fill="#13202a">Builds a cube, a hand, a person</text>
+  <text x="354" y="172" font-size="12" fill="#13202a">Saves them to e2e-output/</text>
+  <text x="354" y="189" font-size="12" fill="#13202a">Takes minutes: on demand</text>
+  <rect x="648" y="90" width="280" height="130" rx="12" fill="#fff" stroke="#e08a00" stroke-width="2"/>
+  <text x="662" y="116" font-size="14" font-weight="700" fill="#13202a">Test hooks</text>
+  <text x="662" y="138" font-size="12" fill="#13202a">window.__sceneroom (dev only)</text>
+  <text x="662" y="155" font-size="12" fill="#13202a">meshFacts, selectBox, moveSelected,</text>
+  <text x="662" y="172" font-size="12" fill="#13202a">setColor, setTransform</text>
+  <text x="662" y="189" font-size="12" fill="#13202a">Not in production builds</text>
+  <path d="M480 220 V260" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <path d="M788 220 V240 H480" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="32" y="260" width="440" height="120" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="46" y="286" font-size="14" font-weight="700" fill="#13202a">Local, before a push (hook)</text>
+  <text x="46" y="308" font-size="12" fill="#13202a">format, types, lint, unit tests, build</text>
+  <text x="46" y="325" font-size="12" fill="#13202a">Browser tests are NOT in the hook</text>
+  <text x="46" y="342" font-size="12" fill="#13202a">Run them with pnpm test:e2e</text>
+  <rect x="500" y="260" width="428" height="120" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="514" y="286" font-size="14" font-weight="700" fill="#13202a">GitHub Actions</text>
+  <text x="514" y="308" font-size="12" fill="#13202a">verify job: the five checks plus build</text>
+  <text x="514" y="325" font-size="12" fill="#13202a">e2e job: Playwright on a fresh machine,</text>
+  <text x="514" y="342" font-size="12" fill="#13202a">uploads report and screenshots on failure</text>
+</svg>

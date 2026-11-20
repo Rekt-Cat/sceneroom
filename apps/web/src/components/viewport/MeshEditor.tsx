@@ -6,7 +6,7 @@ import {
   Matrix4,
   Raycaster,
   Vector2,
-  type BufferAttribute,
+  BufferAttribute,
   type BufferGeometry,
   type Group,
   type Mesh,
@@ -26,6 +26,8 @@ import {
   selectionAfterWeldedClick,
   selectionCentroid,
   weldGroups,
+  topologyFingerprint,
+  visibleIndices,
 } from "@sceneroom/shared";
 import { commitMeshPositions } from "@/meshEdit/commitMeshEdit";
 import { buildEditOverlay, type EditOverlay } from "@/meshEdit/editOverlay";
@@ -37,6 +39,7 @@ import { pickEdge } from "@/meshEdit/pickEdge";
 import { startLoopCut } from "@/meshEdit/editOperations";
 import { visibleSpots } from "@/meshEdit/visibility";
 import { useEditStore } from "@/store/editStore";
+import { useImportStore } from "@/store/importStore";
 import { useSceneStore } from "@/store/sceneStore";
 import Gizmo from "./Gizmo";
 import { markGizmoUsed, shouldIgnoreClick } from "./gizmoGuard";
@@ -98,17 +101,42 @@ function EditSession({ nodeId }: { nodeId: string }) {
 
   // The wire lines and dots, on the mesh object itself so they move and turn with it
   const overlayRef = useRef<EditOverlay | null>(null);
+  const hidden = useEditStore((state) => state.hidden);
   useEffect(() => {
     if (!bound) return;
-    const overlay = buildEditOverlay(bound.geometry);
+    const geometry = bound.geometry;
+    const original = geometry.index;
+    let restoreIndex: (() => void) | null = null;
+    if (hidden && original) {
+      const count = geometry.getAttribute("position").count;
+      if (topologyFingerprint(original.array, count) !== hidden.fingerprint) {
+        // An edit changed the triangles, so the numbers of the hidden ones no longer fit: show everything again
+        useEditStore.getState().setHidden(null);
+        useImportStore.getState().setMessage({
+          tone: "info",
+          text: "The shape changed, so the hidden parts were shown again.",
+        });
+        return;
+      }
+      // Draw and pick from the visible triangles only (the stored mesh keeps all of them)
+      geometry.setIndex(
+        new BufferAttribute(
+          visibleIndices(original.array, new Set(hidden.triangles)),
+          1,
+        ),
+      );
+      restoreIndex = () => geometry.setIndex(original);
+    }
+    const overlay = buildEditOverlay(geometry, hidden?.points);
     bound.object.add(overlay.group);
     overlay.setSelected(useEditStore.getState().selected);
     overlayRef.current = overlay;
     return () => {
       overlay.dispose();
       overlayRef.current = null;
+      restoreIndex?.();
     };
-  }, [bound]);
+  }, [bound, hidden]);
   useEffect(() => {
     overlayRef.current?.setSelected(selected);
   }, [selected, bound]);
@@ -229,12 +257,15 @@ function EditSession({ nodeId }: { nodeId: string }) {
         bound.geometry.getAttribute("position") as BufferAttribute
       ).array as Float32Array;
       // The nearest point under the pointer; without X-ray the nearest one that can be SEEN
+      const hiddenNow = new Set(edit.hidden?.points ?? []);
       const near = pointsNear(
         projected,
         event.clientX,
         event.clientY,
         PICK_DISTANCE_PX,
-      ).slice(0, MAX_CANDIDATES);
+      )
+        .filter((p) => !hiddenNow.has(p))
+        .slice(0, MAX_CANDIDATES);
       const seen = edit.xray
         ? near.map(() => true)
         : visibleSpots(

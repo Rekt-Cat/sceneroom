@@ -118,7 +118,7 @@ export async function settled(page: Page): Promise<MeshFacts> {
   let same = 0;
   for (let i = 0; i < 80 && same < 4; i++) {
     const facts = await meshFacts(page);
-    const now = `${facts.points}/${facts.triangles}/${facts.boundsMax.join(",")}`;
+    const now = `${facts.points}/${facts.triangles}/${facts.boundsMax.join(",")}/${facts.uvArea.toFixed(5)}`;
     same = now === last ? same + 1 : 0;
     last = now;
     await page.waitForTimeout(250);
