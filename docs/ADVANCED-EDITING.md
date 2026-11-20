@@ -4,6 +4,8 @@ A roadmap for going beyond placing primitives: bending and deforming shapes, bui
 and making characters and creatures. This is a **plan**, not built code. Nothing here is verified yet (see "Still to
 research"). Keep this file up to date as decisions are made; record decisions in `DECISIONS.md` too.
 
+> **Status (2026-11-20): much of this is now built.** Edit mode with a topology layer, edge loops and rings, loop cut, Extrude (with settings), Inset, Bevel, edge extrude, Divide, creases, Merge, Weld, Flip, Fill hole, Bridge, selection tools, the Smooth and Thicken modifiers, UVs (checker, seams, Unwrap, Unwrap along seams, a UV window) and a posable character are in the editor and merged. Not built yet: knife, dissolve, mirror editing, soft selection, hiding points, UV window editing, difference-based undo, retopology, texture painting and baking, sculpting. See `docs/PLAN.md` (Phases 13 to 15) for what is built and what comes next, and `docs/DECISIONS.md` for how each tool works. The text below is the original plan and is kept as it was.
+
 ## Where we are now
 
 Every object in a scene is a **primitive** (cube, sphere, cylinder, plane, cone). Its shape is fixed; we only change its
