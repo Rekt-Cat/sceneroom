@@ -62,14 +62,14 @@ Today each mesh edit stores a **whole new mesh** under its fingerprint, and the 
 
 ## Order of work (each step ends with tests, docs and a browser check)
 
-_Status (2026-11-20): steps 1 to 4 are built and merged, step 5 is built on `feature/uv-tools` (Smooth still drops the map), steps 6 and 7 are not started._
+_Status (2026-11-20): steps 1 to 5 are built and merged (Smooth still drops the map), step 6 is built on `feature/uv-window-edit` (snap is not), step 7 is not started._
 
 1. **(built)** **Checker view and UV data** (small): the Checker switch; geometry builder keeps and writes `uv`; mesh format v3 reads and writes UVs (round-trip and old-file tests); the rule "tools that do not know UVs remove them, with a message". _Useful at once:_ the checker works on every built-in shape.
 2. **(built)** **Seams:** mark and clear in edge mode, drawn in the 3D view, saved with the mesh; tests like creases.
 3. **(built)** **Smart unwrap and pack, and the read-only UV window:** the one-button Unwrap works end to end.
 4. **(built)** **Unwrap along seams (LSCM) and the stretch colours.**
 5. **(built, except Smooth)** **Teach the tools UVs**, in the order of the table above.
-6. **UV window editing:** select, move, rotate and scale islands, snap, pack again.
+6. **(built, except snap)** **UV window editing:** click a piece to choose it (Shift adds), drag to move, buttons to turn a quarter turn, mirror, make bigger or smaller, and Pack all pieces again. Pure functions in `uvEdit.ts` (`transformUvIslands`, `packUvIslands`, `uvIslandAt`); only the map changes, one undo step each. A mirrored piece counts as turned over in the Stretch view, which is correct (the texture is reversed). Tested with a crate in Playwright.
 7. **Step 8b, difference-based undo.**
 
 ## Risks and unknowns (said honestly)
