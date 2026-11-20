@@ -1,10 +1,12 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import {
   addShape,
+  extrude,
+  inset,
+  press,
   blurFocus,
   expectGoodMesh,
   factsAfterChange,
-  meshFacts,
   moveSelected,
   newProject,
   selectBox,
@@ -14,39 +16,6 @@ import {
   setTransform,
   settled,
 } from "./helpers";
-
-/** Presses a button of the edit panel by its name. */
-const press = (page: Page, name: string) =>
-  page.getByRole("button", { name, exact: true }).click();
-
-/** Extrudes whatever is selected: the settings are typed in, then it waits for the mesh to settle. Returns the mesh facts. */
-async function extrude(
-  page: Page,
-  distance: number,
-  divisions: number,
-  scalePercent: number,
-) {
-  const before = (await meshFacts(page)).triangles;
-  await press(page, "Extrude");
-  await expect(page.getByText("Extrude settings")).toBeVisible();
-  await setNumber(page, "Distance", distance);
-  await setNumber(page, "Divisions", divisions);
-  await setNumber(page, "Scale", scalePercent);
-  await factsAfterChange(page, before);
-  const facts = await settled(page);
-  expectGoodMesh(facts);
-  return facts;
-}
-
-/** Insets whatever is selected (a smaller face inside it, with a border round it), so neighbours stay apart. */
-async function inset(page: Page, facePercent: number) {
-  const before = (await meshFacts(page)).triangles;
-  await press(page, "Inset");
-  await expect(page.getByText("Inset settings")).toBeVisible();
-  await setNumber(page, "Face size", facePercent);
-  await factsAfterChange(page, before);
-  expectGoodMesh(await settled(page));
-}
 
 /**
  * Models a hand with the real buttons, from one cube:

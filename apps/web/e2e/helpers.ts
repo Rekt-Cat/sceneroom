@@ -136,3 +136,41 @@ export async function setSliderNumber(
   await box.fill(String(value), { timeout: 10_000 });
   await box.press("Enter");
 }
+
+/** Presses a button of the edit panel by its name. */
+export const press = (page: Page, name: string) =>
+  page.getByRole("button", { name, exact: true }).click();
+
+/** Extrudes whatever is selected: the settings are typed in, then it waits for the mesh to settle. Returns the mesh facts. */
+export async function extrude(
+  page: Page,
+  distance: number,
+  divisions: number,
+  scalePercent: number,
+) {
+  const before = (await meshFacts(page)).triangles;
+  await press(page, "Extrude");
+  // The new extrusion has started when the mesh has more triangles. (The panel of the one before may still be on
+  // screen until then: typing into it would change the OLD extrusion.)
+  await factsAfterChange(page, before);
+  await settled(page);
+  await expect(page.getByText("Extrude settings")).toBeVisible();
+  await setNumber(page, "Distance", distance);
+  await setNumber(page, "Divisions", divisions);
+  await setNumber(page, "Scale", scalePercent);
+  await settled(page);
+  const facts = await settled(page);
+  expectGoodMesh(facts);
+  return facts;
+}
+
+/** Insets whatever is selected (a smaller face inside it, with a border round it), so neighbours stay apart. */
+export async function inset(page: Page, facePercent: number) {
+  const before = (await meshFacts(page)).triangles;
+  await press(page, "Inset");
+  await factsAfterChange(page, before);
+  await settled(page);
+  await expect(page.getByText("Inset settings")).toBeVisible();
+  await setNumber(page, "Face size", facePercent);
+  expectGoodMesh(await settled(page));
+}

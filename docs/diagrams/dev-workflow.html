@@ -995,7 +995,10 @@
             rx="10"
           />
           <text class="pt-ok" x="843" y="528" text-anchor="middle">
-            last seen green: b33fe6b
+            last confirmed green: b33fe6b
+          </text>
+          <text class="t-mono-sm" x="244" y="529">
+            + job 2: browser tests (e2e), not run yet
           </text>
 
           <rect class="box" x="44" y="540" width="92" height="48" rx="8" />
@@ -1192,7 +1195,9 @@
         <dl>
           <dt>What it is</dt>
           <dd>
-            Four checks, run through Turborepo (a task runner).
+            Five checks, run through Turborepo (a task runner).
+            <strong>format</strong> asks "is every file laid out the way
+            Prettier would lay it out?" (<code>pnpm format:check</code>).
             <strong>lint</strong> asks "does this look like a mistake?" (done by
             ESLint). <strong>types</strong> asks "do all the values fit
             together?" (done by TypeScript's checker, <code>tsc</code>, after
@@ -1210,12 +1215,16 @@
           </dd>
           <dt>What happens here</dt>
           <dd>
-            Run from the repo root with <code>pnpm check-types</code>,
-            <code>pnpm lint</code>, <code>pnpm test</code> and
-            <code>pnpm build</code>. They also run automatically: a git
-            <code>pre-push</code> hook (Husky, <code>.husky/pre-push</code>)
-            runs all four before every push and blocks the push if one fails.
-            Skip it once from a terminal with <code>git push --no-verify</code>.
+            Run from the repo root with <code>pnpm format:check</code>,
+            <code>pnpm check-types</code>, <code>pnpm lint</code>,
+            <code>pnpm test</code> and <code>pnpm build</code>. They also run
+            automatically: a git <code>pre-push</code> hook (Husky,
+            <code>.husky/pre-push</code>) runs all five before every push and
+            blocks the push if one fails (the format check was added to it on
+            2026-11-20, after a push failed CI only because of formatting). The
+            browser tests (<code>pnpm test:e2e</code>, Playwright) are NOT in
+            the hook: they take minutes, so they run on demand and in CI. Skip
+            it once from a terminal with <code>git push --no-verify</code>.
             Turborepo works out the order and caches results. "FULL TURBO" in
             its output means it reused an earlier result.
           </dd>
@@ -1294,7 +1303,7 @@
         <div class="card-head">
           <span class="num">7</span>
           <h3>GitHub Actions CI</h3>
-          <span class="tag ok">last seen green: b33fe6b</span>
+          <span class="tag ok">last confirmed green: b33fe6b</span>
         </div>
         <dl>
           <dt>What it is</dt>
@@ -1309,7 +1318,9 @@
             A build server such as Unity Cloud Build that builds from a clean
             checkout, so "works on my machine" problems show up.
           </dd>
-          <dt>The nine steps, in order</dt>
+          <dt>
+            The nine steps of the main job (<code>verify</code>), in order
+          </dt>
           <dd>
             <ol class="ci">
               <li>
@@ -1348,6 +1359,17 @@
                 production build.
               </li>
             </ol>
+          </dd>
+          <dt>The second job (<code>e2e</code>)</dt>
+          <dd>
+            Added 2026-11-20 and not run on GitHub yet. It starts its own fresh
+            machine, installs the same packages, downloads Playwright's Chromium
+            with the system libraries it needs, runs
+            <code>pnpm test:e2e</code> (a real browser opens the real editor and
+            clicks through it: a new project, a cube to Unwrap, a hand and a
+            person built with the edit tools) and, if a test fails, uploads the
+            report and screenshots as a downloadable file. It is a separate job
+            so the quick checks report first.
           </dd>
           <dt>If it goes wrong</dt>
           <dd>

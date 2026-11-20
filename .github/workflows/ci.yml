@@ -38,3 +38,35 @@ jobs:
       - run: pnpm check-types
       - run: pnpm test
       - run: pnpm build
+
+  # The browser tests: a real Chromium clicks through the editor (apps/web/e2e). Slower than the checks above, so it
+  # is its own job and the quick checks report first.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+
+      - run: corepack enable
+
+      - run: pnpm install --frozen-lockfile
+
+      # Playwright's own Chromium, with the system libraries it needs (nothing is kept between runs)
+      - run: pnpm --filter @sceneroom/web exec playwright install --with-deps chromium
+
+      # Starts the dev server itself (see playwright.config.ts) and runs the tests against it
+      - run: pnpm test:e2e
+
+      # What the tests saw, when one fails: the report and the screenshots
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+          retention-days: 7
