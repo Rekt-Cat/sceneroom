@@ -62,7 +62,7 @@ Today each mesh edit stores a **whole new mesh** under its fingerprint, and the 
 
 ## Order of work (each step ends with tests, docs and a browser check)
 
-_Status (2026-11-20): steps 1 to 5 are built and merged (Smooth still drops the map), step 6 is built on `feature/uv-window-edit` (snap is not), step 7 is not started._
+_Status (2026-11-20): steps 1 to 5 are built and merged (Smooth still drops the map), step 6 is built and merged (snap is not), step 7 is built on `feature/diff-undo`._
 
 1. **(built)** **Checker view and UV data** (small): the Checker switch; geometry builder keeps and writes `uv`; mesh format v3 reads and writes UVs (round-trip and old-file tests); the rule "tools that do not know UVs remove them, with a message". _Useful at once:_ the checker works on every built-in shape.
 2. **(built)** **Seams:** mark and clear in edge mode, drawn in the 3D view, saved with the mesh; tests like creases.
@@ -70,7 +70,7 @@ _Status (2026-11-20): steps 1 to 5 are built and merged (Smooth still drops the 
 4. **(built)** **Unwrap along seams (LSCM) and the stretch colours.**
 5. **(built, except Smooth)** **Teach the tools UVs**, in the order of the table above.
 6. **(built, except snap)** **UV window editing:** click a piece to choose it (Shift adds), drag to move, buttons to turn a quarter turn, mirror, make bigger or smaller, and Pack all pieces again. Pure functions in `uvEdit.ts` (`transformUvIslands`, `packUvIslands`, `uvIslandAt`); only the map changes, one undo step each. A mirrored piece counts as turned over in the Stretch view, which is correct (the texture is reversed). Tested with a crate in Playwright.
-7. **Step 8b, difference-based undo.**
+7. **(built)** **Step 8b, difference-based undo:** see `meshPatch.ts` and `meshStorage.ts`. Built for moves of points on meshes of 20 000 points or more; the budget with dropped oldest steps and the clean-up of unused stored meshes are not built.
 
 ## Risks and unknowns (said honestly)
 

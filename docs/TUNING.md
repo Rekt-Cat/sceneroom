@@ -678,3 +678,12 @@ value and what it does.
 | What              | Where                                                         | Our value | What it does                                                                                                           |
 | ----------------- | ------------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------- |
 | Info message time | `INFO_MESSAGE_SECONDS` in `apps/web/src/store/importStore.ts` | 8 seconds | How long an info message ("Cube is now an editable mesh") stays before it goes by itself. Errors stay until dismissed. |
+
+## Difference-based undo
+
+| Setting         | Where                                                   | Our value | What it does                                                                                              |
+| --------------- | ------------------------------------------------------- | --------- | --------------------------------------------------------------------------------------------------------- |
+| Patch from size | `PATCH_MIN_POINTS` in `assets/meshStorage.ts`           | 20 000    | Meshes with at least this many points are stored as a patch when an edit only moves points.               |
+| Longest chain   | `MAX_PATCH_DEPTH` in `assets/meshStorage.ts`            | 16        | After this many patches in a row a whole mesh is stored again, so reading an old step stays quick.        |
+| Memory budget   | `CACHED_BIG_POINTS` in `assets/meshStorage.ts`          | 3 000 000 | Points of big meshes kept in memory; the least recently used are forgotten and read again when needed.    |
+| Biggest patch   | `MAX_PATCH_SHARE` in `packages/shared/src/meshPatch.ts` | 0.5       | If more than this share of the points moved, a whole mesh is stored instead (it is smaller than a patch). |
