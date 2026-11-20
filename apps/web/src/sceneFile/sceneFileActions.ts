@@ -13,6 +13,7 @@ import {
   type Project,
 } from "@sceneroom/shared";
 import { assetStorage } from "@/assets/assetStorage";
+import { bytesForFile } from "@/assets/meshStorage";
 import { sha256Hex } from "@/assets/hash";
 import { getProject, useProjectStore } from "@/store/projectStore";
 import { useImportStore } from "@/store/importStore";
@@ -36,7 +37,8 @@ export async function buildProjectFile(
   const assets: Record<string, Uint8Array> = {};
   for (const id of wanted) {
     const data = await assetStorage.get(id);
-    if (data) assets[id] = new Uint8Array(data);
+    // A mesh stored as a patch is written out whole: the file does not carry the meshes it was made from
+    if (data) assets[id] = await bytesForFile(id, new Uint8Array(data));
   }
   return encodeProjectFile(project, assets);
 }
