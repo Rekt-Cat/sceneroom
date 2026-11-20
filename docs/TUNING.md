@@ -687,3 +687,11 @@ value and what it does.
 | Longest chain   | `MAX_PATCH_DEPTH` in `assets/meshStorage.ts`            | 16        | After this many patches in a row a whole mesh is stored again, so reading an old step stays quick.        |
 | Memory budget   | `CACHED_BIG_POINTS` in `assets/meshStorage.ts`          | 3 000 000 | Points of big meshes kept in memory; the least recently used are forgotten and read again when needed.    |
 | Biggest patch   | `MAX_PATCH_SHARE` in `packages/shared/src/meshPatch.ts` | 0.5       | If more than this share of the points moved, a whole mesh is stored instead (it is smaller than a patch). |
+
+## Simplify
+
+| Setting       | Where                                                           | Our value | What it does                                                                                        |
+| ------------- | --------------------------------------------------------------- | --------- | --------------------------------------------------------------------------------------------------- |
+| Keep          | `SIMPLIFY_KEEP` in `meshEdit/editOperations.ts`                 | 0.5       | The share of triangles one press of Simplify keeps.                                                 |
+| Smallest size | `MIN_SIMPLIFIED_TRIANGLES` in `packages/shared/src/simplify.ts` | 4         | Simplify never goes below this many triangles.                                                      |
+| Fold limit    | `MIN_NORMAL_DOT` in `simplify.ts`                               | 0.2       | A collapse is refused if it would turn a neighbouring face by more than this (cosine of the angle). |
