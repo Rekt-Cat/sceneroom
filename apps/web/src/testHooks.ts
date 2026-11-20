@@ -28,6 +28,8 @@ export type MeshFacts = {
   /** Pieces of the map, and faces that are turned over on it. */
   uvPieces: number;
   uvFolded: number;
+  /** How much of the 0 to 1 square the map covers (the sum of the face areas on the map). */
+  uvArea: number;
   /** The largest stretch of any face on the map, 0 (none) to 1. */
   uvWorstStretch: number;
   seams: number;
@@ -64,6 +66,21 @@ declare global {
   interface Window {
     __sceneroom?: SceneRoomHooks;
   }
+}
+
+/** The sum of the face areas on the map (0 when there is no map). */
+function mapArea(uvs: Float32Array | undefined, indices: Uint32Array): number {
+  if (!uvs) return 0;
+  let total = 0;
+  for (let t = 0; t < indices.length; t += 3) {
+    const [a, b, c] = [indices[t]!, indices[t + 1]!, indices[t + 2]!];
+    total +=
+      Math.abs(
+        (uvs[b * 2]! - uvs[a * 2]!) * (uvs[c * 2 + 1]! - uvs[a * 2 + 1]!) -
+          (uvs[c * 2]! - uvs[a * 2]!) * (uvs[b * 2 + 1]! - uvs[a * 2 + 1]!),
+      ) / 2;
+  }
+  return total;
 }
 
 /** The mesh object the tests talk about: the one being edited, else the single selected one. */
@@ -115,6 +132,7 @@ export function installTestHooks(): () => void {
         hasUvs: mesh.uvs !== undefined,
         uvPieces: mesh.uvs ? uvIslands(mesh).count : 0,
         uvFolded: stretch?.folded ?? 0,
+        uvArea: mapArea(mesh.uvs, mesh.indices),
         uvWorstStretch: stretch
           ? stretch.values.reduce((m, v) => Math.max(m, v), 0)
           : 0,

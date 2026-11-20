@@ -26,7 +26,10 @@ import {
   extrudeEdges,
   bridgeLoops,
   smartUnwrap,
+  transformUvIslands,
+  packUvIslands,
   unwrapAlongSeams,
+  type UvTransform,
   divideFaces,
   MAX_DIVIDE_CUTS,
   deleteFaces,
@@ -697,6 +700,7 @@ export async function unwrapMesh(): Promise<boolean> {
   }
   if (!(await commitMesh(edited.nodeId, result.mesh, "Unwrap"))) return false;
   useEditStore.getState().setSelected([]);
+  useEditStore.getState().setUvSelected([]);
   useImportStore.getState().setMessage({
     tone: "info",
     text: `Unwrapped into ${result.islands} piece${result.islands === 1 ? "" : "s"}. Turn on the Checker to see how the map lies on the object, and the UV window to see the map itself.`,
@@ -721,6 +725,7 @@ export async function unwrapMeshAlongSeams(): Promise<boolean> {
     return false;
   }
   useEditStore.getState().setSelected([]);
+  useEditStore.getState().setUvSelected([]);
   const pieces = `${result.islands} piece${result.islands === 1 ? "" : "s"}`;
   useImportStore.getState().setMessage(
     result.folded > 0
@@ -734,6 +739,42 @@ export async function unwrapMeshAlongSeams(): Promise<boolean> {
         },
   );
   return true;
+}
+
+// ---- Editing the UV map ----
+
+/**
+ * Moves, turns, scales or mirrors the pieces chosen in the UV window (see `transformUvIslands`). Only the map
+ * changes. One undo step named `label`.
+ */
+export async function transformUvSelection(
+  change: UvTransform,
+  label: string,
+): Promise<boolean> {
+  const edited = await editedMesh();
+  if (!edited?.mesh.uvs) return false;
+  const chosen = new Set(useEditStore.getState().uvSelected);
+  if (chosen.size === 0) {
+    say("Click a piece in the UV window first.");
+    return false;
+  }
+  const mesh = transformUvIslands(edited.mesh, chosen, change);
+  return commitMesh(edited.nodeId, mesh, label);
+}
+
+/** Packs all pieces of the map into the 0 to 1 square again (see `packUvIslands`). One undo step. */
+export async function packUvMap(): Promise<boolean> {
+  const edited = await editedMesh();
+  if (!edited?.mesh.uvs) {
+    say("This mesh has no UV map yet. Press Unwrap first.");
+    return false;
+  }
+  const mesh = packUvIslands(edited.mesh);
+  if (!mesh) {
+    say("The pieces of the map could not be packed into the square.");
+    return false;
+  }
+  return commitMesh(edited.nodeId, mesh, "Pack UV pieces");
 }
 
 // ---- Seams ----

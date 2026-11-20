@@ -96,6 +96,9 @@ type EditState = {
   /** What the UV window colours by: each piece in its own colour, or how stretched each face is. */
   uvWindowMode: "pieces" | "stretch";
   setUvWindowMode: (mode: "pieces" | "stretch") => void;
+  /** The pieces (islands) chosen in the UV window, by their number on the map. */
+  uvSelected: number[];
+  setUvSelected: (islands: number[]) => void;
   /** The divide whose number of cuts can still be changed, or null. */
   divide: DivideSession | null;
   setDivide: (session: DivideSession | null) => void;
@@ -137,6 +140,8 @@ export const useEditStore = create<EditState>()((set) => ({
   setUvWindow: (uvWindow) => set({ uvWindow }),
   uvWindowMode: "pieces",
   setUvWindowMode: (uvWindowMode) => set({ uvWindowMode }),
+  uvSelected: [],
+  setUvSelected: (uvSelected) => set({ uvSelected }),
   divide: null,
   setDivide: (divide) => set({ divide }),
   bevel: null,
@@ -154,6 +159,7 @@ export const useEditStore = create<EditState>()((set) => ({
       bevel: null,
       divide: null,
       loopCutMode: false,
+      uvSelected: [],
     }),
   exit: () =>
     set({
@@ -165,6 +171,7 @@ export const useEditStore = create<EditState>()((set) => ({
       bevel: null,
       divide: null,
       loopCutMode: false,
+      uvSelected: [],
     }),
   setSelected: (selected) => set({ selected }),
   // Points that were selected stay selected: they are the same selection seen as edges or faces

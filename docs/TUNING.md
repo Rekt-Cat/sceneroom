@@ -647,6 +647,9 @@ value and what it does.
 | Margin      | `DEFAULT_UV_MARGIN` in `unwrap.ts`                                     | 0.02      | The empty strip between pieces and round the edge of the 0 to 1 square (a share of its side).                                                  |
 | Smooth cuts | `SPLIT_POINT_SMOOTH_DEGREES` in `components/viewport/shapeGeometry.ts` | 40        | Points split by an unwrap share their shading when their surfaces differ by less than this many degrees.                                       |
 | UV window   | `SIZE` in `components/viewport/UvWindow.tsx`                           | 232 px    | The size of the map picture.                                                                                                                   |
+| UV step     | `SCALE_STEP` in `UvWindow.tsx`                                         | 1.25      | What Bigger multiplies a chosen piece by (Smaller divides by it).                                                                              |
+| UV turn     | `QUARTER_TURN` in `UvWindow.tsx`                                       | 90°       | How far Turn left / Turn right turn a chosen piece.                                                                                            |
+| UV drag     | `DRAG_THRESHOLD` in `UvWindow.tsx`                                     | 0.004     | A drag shorter than this (a share of the square) counts as a click, so choosing a piece does not nudge it.                                     |
 
 ## Unwrap along seams
 
