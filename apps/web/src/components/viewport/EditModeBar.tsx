@@ -18,6 +18,7 @@ import {
   deleteSelectedPoints,
   extrudeSelectedFaces,
   bevelSelectedEdges,
+  simplifyEditedMesh,
   divideSelectedFaces,
   bridgeSelectedLoops,
   fillSelectedHole,
@@ -376,6 +377,14 @@ export default function EditTools() {
             className={ACTION}
           >
             Divide
+          </button>
+          <button
+            type="button"
+            onClick={() => void simplifyEditedMesh()}
+            title="Simplify: cut the whole mesh down to about half its triangles, keeping the shape (flat areas lose the most). Points on open borders and hard edges stay put. Removes the UV map, creases and seams. Press again for half of that."
+            className={ACTION}
+          >
+            Simplify
           </button>
           <button
             type="button"
