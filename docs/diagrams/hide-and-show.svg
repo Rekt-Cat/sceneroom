@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" width="960" height="420" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
+  <title id="t">Hide and show: take parts out of view while editing</title>
+  <desc id="d">Hide removes the triangles around the selection from drawing and picking without changing the mesh. The hidden triangle numbers are kept in the edit store with a fingerprint of the mesh shape. Moving points keeps them hidden; an edit that changes the triangles shows everything again. Show all brings them back.</desc>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker></defs>
+  <rect width="960" height="420" fill="#f2f5f6"/>
+  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">Hide and show</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Work on what is behind a surface: hide the front, edit, show it again. Only drawing and picking change.</text>
+  <rect x="32" y="90" width="270" height="130" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="46" y="116" font-size="14" font-weight="700" fill="#13202a">1. Select, then Hide (H)</text>
+  <text x="46" y="138" font-size="12" fill="#13202a">Points mode: every triangle around</text>
+  <text x="46" y="155" font-size="12" fill="#13202a">a selected point goes.</text>
+  <text x="46" y="172" font-size="12" fill="#13202a">Edges / Faces mode: only triangles</text>
+  <text x="46" y="189" font-size="12" fill="#13202a">with all 3 corners selected go.</text>
+  <text x="46" y="206" font-size="12" fill="#13202a">Shift+H = Hide others.</text>
+  <path d="M302 155 H342" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="342" y="90" width="270" height="130" rx="12" fill="#e9eef0" stroke="#0a6c8a" stroke-width="2"/>
+  <text x="356" y="116" font-size="14" font-weight="700" fill="#13202a">2. Remembered by number</text>
+  <text x="356" y="138" font-size="12" fill="#13202a">editStore.hidden: triangle numbers,</text>
+  <text x="356" y="155" font-size="12" fill="#13202a">the points left bare, and a</text>
+  <text x="356" y="172" font-size="12" fill="#13202a">fingerprint of the mesh shape.</text>
+  <text x="356" y="189" font-size="12" fill="#13202a">The stored mesh is NOT changed;</text>
+  <text x="356" y="206" font-size="12" fill="#13202a">not an undo step.</text>
+  <path d="M612 155 H652" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="652" y="90" width="276" height="130" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="666" y="116" font-size="14" font-weight="700" fill="#13202a">3. Drawn and picked without them</text>
+  <text x="666" y="138" font-size="12" fill="#13202a">The geometry's index drops the hidden</text>
+  <text x="666" y="155" font-size="12" fill="#13202a">triangles (restored on cleanup),</text>
+  <text x="666" y="172" font-size="12" fill="#13202a">so display, wire, X-ray picking and</text>
+  <text x="666" y="189" font-size="12" fill="#13202a">box select skip them. Hidden points</text>
+  <text x="666" y="206" font-size="12" fill="#13202a">get no dot and cannot be clicked.</text>
+  <rect x="32" y="260" width="430" height="130" rx="12" fill="#fff" stroke="#e08a00" stroke-width="2"/>
+  <text x="46" y="286" font-size="14" font-weight="700" fill="#13202a">Still valid?</text>
+  <text x="46" y="308" font-size="12" fill="#13202a">Moving points keeps the same triangles,</text>
+  <text x="46" y="325" font-size="12" fill="#13202a">so the fingerprint matches: still hidden.</text>
+  <text x="46" y="342" font-size="12" fill="#13202a">Divide, Extrude, Bevel... change the</text>
+  <text x="46" y="359" font-size="12" fill="#13202a">triangles: everything is shown again</text>
+  <text x="46" y="376" font-size="12" fill="#13202a">with a message (numbers would not fit).</text>
+  <rect x="490" y="260" width="438" height="130" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="504" y="286" font-size="14" font-weight="700" fill="#13202a">Show all (Alt+H)</text>
+  <text x="504" y="308" font-size="12" fill="#13202a">Clears the hidden set and selects the</text>
+  <text x="504" y="325" font-size="12" fill="#13202a">points that were hidden.</text>
+  <text x="504" y="342" font-size="12" fill="#13202a">Leaving edit mode also shows all.</text>
+  <text x="504" y="359" font-size="12" fill="#13202a"></text>
+  <text x="504" y="376" font-size="12" fill="#13202a">Tools only ever act on what is selected.</text>
+</svg>
