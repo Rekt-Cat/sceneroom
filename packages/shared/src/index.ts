@@ -51,4 +51,5 @@ export * from "./divide";
 export * from "./seams";
 export * from "./unwrap";
 export * from "./uvEdit";
+export * from "./hiding";
 export * from "./lscm";

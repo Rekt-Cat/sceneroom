@@ -49,7 +49,11 @@ const hitNothing = () => undefined;
  * work; only the colours are the overlay's own. Everything is drawn on top of the mesh (no depth test), so
  * points on the far side can be seen and picked.
  */
-export function buildEditOverlay(geometry: BufferGeometry): EditOverlay {
+export function buildEditOverlay(
+  geometry: BufferGeometry,
+  /** Points that are hidden (Hide): they get no dot. */
+  hiddenPoints: readonly number[] = [],
+): EditOverlay {
   const position = geometry.getAttribute("position") as BufferAttribute;
   const index = geometry.index;
 
@@ -68,6 +72,12 @@ export function buildEditOverlay(geometry: BufferGeometry): EditOverlay {
     depthTest: false,
     transparent: true,
   });
+  if (hiddenPoints.length > 0) {
+    const hide = new Set(hiddenPoints);
+    const shown: number[] = [];
+    for (let p = 0; p < position.count; p++) if (!hide.has(p)) shown.push(p);
+    pointGeometry.setIndex(new BufferAttribute(Uint32Array.from(shown), 1));
+  }
   const points = new Points(pointGeometry, pointMaterial);
   points.raycast = hitNothing;
   points.renderOrder = 11;

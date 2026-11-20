@@ -12,6 +12,7 @@ import {
   bevelSelectedEdges,
   insetSelectedFaces,
 } from "@/meshEdit/editOperations";
+import { hideOthers, hideSelection, showAll } from "@/meshEdit/hideShow";
 import { selectLess, selectMore } from "@/meshEdit/selectionTools";
 import { stopEditing, toggleEditMode } from "@/meshEdit/startEditing";
 import { saveProjectToFile } from "@/sceneFile/sceneFileActions";
@@ -159,6 +160,24 @@ export function useEditorShortcuts(): void {
         } else if (plain && modeForKey(event.key)) {
           // W, E, R: move, turn or scale the selected points
           store.setTransformMode(modeForKey(event.key)!);
+        } else if (
+          event.altKey &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          event.code === "KeyH"
+        ) {
+          // Alt + H: show everything that was hidden
+          event.preventDefault();
+          showAll();
+        } else if (
+          !event.ctrlKey &&
+          !event.metaKey &&
+          !event.altKey &&
+          event.code === "KeyH"
+        ) {
+          // H: hide the selected parts; Shift + H: hide everything else
+          event.preventDefault();
+          void (event.shiftKey ? hideOthers() : hideSelection());
         } else if (plain && event.key === "]") {
           // ]: select more
           event.preventDefault();

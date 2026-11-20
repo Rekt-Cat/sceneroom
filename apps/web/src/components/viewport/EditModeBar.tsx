@@ -38,6 +38,7 @@ import ExtrudePanel from "./ExtrudePanel";
 import BevelPanel from "./BevelPanel";
 import DividePanel from "./DividePanel";
 import LoopCutPanel from "./LoopCutPanel";
+import { hideOthers, hideSelection, showAll } from "@/meshEdit/hideShow";
 import { stopEditing } from "@/meshEdit/startEditing";
 
 const ACTION =
@@ -83,6 +84,7 @@ export default function EditTools() {
   const selectMode = useEditStore((state) => state.selectMode);
   const setSelectMode = useEditStore((state) => state.setSelectMode);
   const xray = useEditStore((state) => state.xray);
+  const hidden = useEditStore((state) => state.hidden);
   const uvWindow = useEditStore((state) => state.uvWindow);
   const setUvWindow = useEditStore((state) => state.setUvWindow);
   const checker = useViewStore((state) =>
@@ -207,6 +209,33 @@ export default function EditTools() {
             }`}
           >
             X-ray
+          </button>
+          <button
+            type="button"
+            onClick={() => void hideSelection()}
+            disabled={selected.length === 0}
+            title="Hide: take the selected parts out of view and out of reach, to work on what is behind them (H). In Faces mode a whole face must be selected. The mesh is not changed."
+            className={ACTION}
+          >
+            Hide
+          </button>
+          <button
+            type="button"
+            onClick={() => void hideOthers()}
+            disabled={selected.length === 0}
+            title="Hide others: show only the selected parts (Shift + H)"
+            className={ACTION}
+          >
+            Hide others
+          </button>
+          <button
+            type="button"
+            onClick={() => showAll()}
+            disabled={!hidden}
+            title="Show all: bring back everything that was hidden, and select it (Alt + H)"
+            className={ACTION}
+          >
+            Show all
           </button>
           <button
             type="button"

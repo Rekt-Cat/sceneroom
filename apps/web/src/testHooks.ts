@@ -9,6 +9,8 @@ import {
 } from "@sceneroom/shared";
 import { loadMeshData } from "@/assets/meshStorage";
 import { commitMeshPositions } from "@/meshEdit/commitMeshEdit";
+import type { Mesh } from "three";
+import { getMesh } from "@/components/viewport/meshRegistry";
 import { useEditStore } from "@/store/editStore";
 import { useSceneStore } from "@/store/sceneStore";
 
@@ -52,6 +54,12 @@ export type SceneRoomHooks = {
   ) => Promise<number>;
   /** Moves the selected points of the edited mesh by a distance (the way dragging the gizmo does: one stored change). */
   moveSelected: (delta: [number, number, number]) => Promise<boolean>;
+  /** What is hidden in edit mode: the hidden triangle count, the triangles still drawn, and how many points are selected. */
+  hiddenFacts: () => {
+    hidden: number;
+    drawn: number;
+    selected: number;
+  } | null;
   /** Sets the colour of the selected object (a hex colour). */
   setColor: (hex: string) => void;
   /** Sets the position, rotation (degrees) and scale of the selected object. */
@@ -166,6 +174,18 @@ export function installTestHooks(): () => void {
       const mesh = await loadMeshData(assetId);
       const positions = translateSelected(mesh.positions, selected, delta);
       return commitMeshPositions(nodeId, positions, "Move points");
+    },
+    hiddenFacts() {
+      const { nodeId, hidden, selected } = useEditStore.getState();
+      const geometry = nodeId
+        ? (getMesh(nodeId) as Mesh | undefined)?.geometry
+        : undefined;
+      if (!geometry) return null;
+      return {
+        hidden: hidden?.triangles.length ?? 0,
+        drawn: (geometry.index?.count ?? 0) / 3,
+        selected: selected.length,
+      };
     },
     setColor(hex) {
       const { selectedIds, setNodeColor } = useSceneStore.getState();
