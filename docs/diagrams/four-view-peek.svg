@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" width="960" height="420" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
+  <title id="t">Four-view peek: hold Space to see Top, Front, Right and 3D at once</title>
+  <desc id="d">Select an object and hold Space. Four tiles open, each with a drop-down. Letting go over a tile opens it big. Flat views use a plain background and a depth slab so objects in front stay hidden.</desc>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker></defs>
+  <rect width="960" height="420" fill="#f2f5f6"/>
+  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">Four-view peek (hold Space)</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">See the object from four sides at once, then jump into the side you want.</text>
+  <rect x="32" y="90" width="200" height="110" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="46" y="116" font-size="14" font-weight="700" fill="#13202a">1. Select an object</text>
+  <text x="46" y="138" font-size="12" fill="#13202a">Hold Space for a moment</text>
+  <text x="46" y="155" font-size="12" fill="#13202a">(a quick tap does nothing).</text>
+  <path d="M232 145 H272" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="272" y="90" width="330" height="110" rx="12" fill="#e9eef0" stroke="#0a6c8a" stroke-width="2"/>
+  <text x="286" y="116" font-size="14" font-weight="700" fill="#13202a">2. Four tiles open</text>
+  <text x="286" y="138" font-size="12" fill="#13202a">Top, Front, Right and the normal 3D view</text>
+  <text x="286" y="155" font-size="12" fill="#13202a">Each tile has a drop-down (top-left):</text>
+  <text x="286" y="172" font-size="12" fill="#13202a">Left, Back, Bottom or Perspective.</text>
+  <path d="M602 145 H642" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="642" y="90" width="286" height="110" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="656" y="116" font-size="14" font-weight="700" fill="#13202a">3. Let go over a tile</text>
+  <text x="656" y="138" font-size="12" fill="#13202a">That tile opens big and stays.</text>
+  <text x="656" y="155" font-size="12" fill="#13202a">A pinned side view can zoom,</text>
+  <text x="656" y="172" font-size="12" fill="#13202a">not turn or pan. Perspective goes back.</text>
+  <rect x="32" y="240" width="440" height="150" rx="12" fill="#fff" stroke="#e08a00" stroke-width="2"/>
+  <text x="46" y="266" font-size="14" font-weight="700" fill="#13202a">Flat views draw differently</text>
+  <text x="46" y="288" font-size="12" fill="#13202a">Plain background colour (no sky box),</text>
+  <text x="46" y="305" font-size="12" fill="#13202a">so the scene is not tinted blue.</text>
+  <text x="46" y="322" font-size="12" fill="#13202a">The selection is cut by a depth slab that</text>
+  <text x="46" y="339" font-size="12" fill="#13202a">follows the object every frame, so things</text>
+  <text x="46" y="356" font-size="12" fill="#13202a">between the camera and the object stay hidden.</text>
+  <rect x="500" y="240" width="428" height="150" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="514" y="266" font-size="14" font-weight="700" fill="#13202a">Not done yet</text>
+  <text x="514" y="288" font-size="12" fill="#13202a">Remembering each tile's choice per project.</text>
+  <text x="514" y="305" font-size="12" fill="#13202a">A see-through box around the selection</text>
+  <text x="514" y="322" font-size="12" fill="#13202a">in the flat views.</text>
+  <text x="514" y="339" font-size="12" fill="#13202a"></text>
+  <text x="514" y="356" font-size="12" fill="#13202a">Clicking empty space keeps the view.</text>
+</svg>

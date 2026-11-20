@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 450" width="960" height="450" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
+  <title id="t">Edit tools: select, shape and fix up a mesh</title>
+  <desc id="d">Selection tools pick points, edges or faces. Shape tools (Extrude, Inset, Bevel, Loop cut, Divide, Thicken, Smooth) change the mesh. Fix-up tools merge, flip, fill and bridge. All are pure functions in the shared package; panels preview and commit as one undo step.</desc>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker></defs>
+  <rect width="960" height="450" fill="#f2f5f6"/>
+  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">Edit tools overview</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Three groups of tools, all working on the same mesh.</text>
+  <rect x="32" y="90" width="280" height="150" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="46" y="116" font-size="14" font-weight="700" fill="#13202a">Select</text>
+  <text x="46" y="138" font-size="12" fill="#13202a">Click, Shift add, box select</text>
+  <text x="46" y="155" font-size="12" fill="#13202a">Alt+click: edge loop</text>
+  <text x="46" y="172" font-size="12" fill="#13202a">Outline: rim of a lid</text>
+  <text x="46" y="189" font-size="12" fill="#13202a">Grow / Shrink, Invert</text>
+  <text x="46" y="206" font-size="12" fill="#13202a">Points, Edges or Faces mode</text>
+  <rect x="340" y="90" width="280" height="150" rx="12" fill="#e9eef0" stroke="#0a6c8a" stroke-width="2"/>
+  <text x="354" y="116" font-size="14" font-weight="700" fill="#13202a">Shape</text>
+  <text x="354" y="138" font-size="12" fill="#13202a">Extrude, Inset, edge Extrude</text>
+  <text x="354" y="155" font-size="12" fill="#13202a">Bevel, Loop cut, Thicken</text>
+  <text x="354" y="172" font-size="12" fill="#13202a">Divide: opens at Cuts = 0;</text>
+  <text x="354" y="189" font-size="12" fill="#13202a">only its slider cuts</text>
+  <text x="354" y="206" font-size="12" fill="#13202a">Smooth: modifier (creases keep edges)</text>
+  <rect x="648" y="90" width="280" height="150" rx="12" fill="#fff" stroke="#e08a00" stroke-width="2"/>
+  <text x="662" y="116" font-size="14" font-weight="700" fill="#13202a">Fix up</text>
+  <text x="662" y="138" font-size="12" fill="#13202a">Merge / Weld points</text>
+  <text x="662" y="155" font-size="12" fill="#13202a">Flip normals</text>
+  <text x="662" y="172" font-size="12" fill="#13202a">Fill hole (shortest ring)</text>
+  <text x="662" y="189" font-size="12" fill="#13202a">Delete (faces mode removes faces)</text>
+  <text x="662" y="206" font-size="12" fill="#13202a">Bridge two borders</text>
+  <path d="M172 240 V280 H480 V300" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <path d="M480 240 V300" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <path d="M788 240 V280 H480" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="260" y="300" width="440" height="120" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="274" y="326" font-size="14" font-weight="700" fill="#13202a">One mesh, one source of truth</text>
+  <text x="274" y="348" font-size="12" fill="#13202a">Pure functions in packages/shared edit the mesh.</text>
+  <text x="274" y="365" font-size="12" fill="#13202a">Live panels preview, then commit as ONE undo step.</text>
+  <text x="274" y="382" font-size="12" fill="#13202a">Tools copy the UV map and seams; Smooth drops UVs</text>
+  <text x="274" y="399" font-size="12" fill="#13202a">and says so.</text>
+</svg>
