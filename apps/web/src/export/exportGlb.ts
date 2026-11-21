@@ -1,6 +1,7 @@
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
 import type { Object3D, Texture } from "three";
-import { loadColorMap } from "@/paint/paintSession";
+import { loadMapTexture } from "@/paint/paintSession";
+import type { PaintSlot } from "@sceneroom/shared";
 import { loadModelScene } from "@/assets/loadModel";
 import { loadMeshData } from "@/assets/meshStorage";
 import {
@@ -58,11 +59,13 @@ async function loadMeshes(assetIds: readonly string[]) {
   return meshes;
 }
 
-/** Loads the painted pictures the scene uses. One that cannot be loaded is left out (the object exports with its colour). */
-async function loadTextures(assetIds: readonly string[]) {
+/** Loads the painted pictures the scene uses (colour, and roughness and metalness). One that cannot be loaded is left out. */
+async function loadTextures(
+  wanted: readonly { id: string; slot: PaintSlot }[],
+) {
   const textures = new Map<string, Texture>();
-  for (const id of assetIds) {
-    const texture = await loadColorMap(id);
+  for (const { id, slot } of wanted) {
+    const texture = await loadMapTexture(id, slot);
     if (texture) textures.set(id, texture);
   }
   return textures;
@@ -83,13 +86,16 @@ export async function buildGlb(scene: Scene = getOpenScene()): Promise<{
       node.kind === "mesh" && node.assetId ? [node.assetId] : [],
     ),
   );
-  const textures = await loadTextures([
-    ...new Set(
-      Object.values(scene.nodes).flatMap((node) =>
-        node.material.colorMap ? [node.material.colorMap] : [],
-      ),
-    ),
-  ]);
+  const wanted = new Map<string, PaintSlot>();
+  for (const node of Object.values(scene.nodes)) {
+    if (node.material.colorMap) wanted.set(node.material.colorMap, "colorMap");
+    if (node.material.surfaceMap) {
+      wanted.set(node.material.surfaceMap, "surfaceMap");
+    }
+  }
+  const textures = await loadTextures(
+    [...wanted].map(([id, slot]) => ({ id, slot })),
+  );
   const { root, report } = buildExportScene(
     scene,
     (id) => models.get(id),

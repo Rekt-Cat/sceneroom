@@ -5,6 +5,7 @@ import { useThree } from "@react-three/fiber";
 import { Raycaster, Vector2, type Object3D } from "three";
 import { isEffectivelyLocked, isEffectivelyVisible } from "@sceneroom/shared";
 import { useContextMenuStore } from "@/store/contextMenuStore";
+import { usePaintStore } from "@/store/paintStore";
 import { useViewStore } from "@/store/viewStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { getRegisteredObjects } from "./meshRegistry";
@@ -75,6 +76,8 @@ export default function ViewportContextMenuController() {
       if (moved > CLICK_MOVE_LIMIT_PX) return;
       // The button was held to fly the camera: letting go is not a right-click
       if (useViewStore.getState().flewThisHold) return;
+      // Painting: right-clicks are for turning the camera, not for the menu
+      if (usePaintStore.getState().nodeId) return;
 
       const store = useSceneStore.getState();
       const id = nodeIdAt(event.clientX, event.clientY);

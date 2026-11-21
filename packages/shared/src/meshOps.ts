@@ -90,6 +90,7 @@ export function pruneUnusedMeshAssets(scene: Scene): Scene {
   for (const node of Object.values(scene.nodes)) {
     if (node.assetId) used.add(node.assetId);
     if (node.material.colorMap) used.add(node.material.colorMap);
+    if (node.material.surfaceMap) used.add(node.material.surfaceMap);
   }
   const entries = Object.entries(scene.assets);
   const kept = entries.filter(
@@ -99,13 +100,17 @@ export function pruneUnusedMeshAssets(scene: Scene): Scene {
   return { ...scene, assets: Object.fromEntries(kept) };
 }
 
+/** The pictures an object can have painted: its colour, and its roughness and metalness. */
+export type PaintSlot = "colorMap" | "surfaceMap";
+
 /**
- * Gives an object a painted picture (a "texture" file) as its colour map, or takes it away (null). The picture's
+ * Gives an object a painted picture (a "texture" file) in one of its slots, or takes it away (null). The picture's
  * record is added to the scene's list of files.
  */
-export function setColorMap(
+export function setMaterialMap(
   scene: Scene,
   nodeId: string,
+  slot: PaintSlot,
   info: AssetInfo | null,
 ): Scene {
   const node = scene.nodes[nodeId];
@@ -120,10 +125,19 @@ export function setColorMap(
       ...withData.nodes,
       [nodeId]: {
         ...node,
-        material: { ...node.material, colorMap: info ? info.id : null },
+        material: { ...node.material, [slot]: info ? info.id : null },
       },
     },
   };
+}
+
+/** Gives an object a painted colour picture, or takes it away (null). */
+export function setColorMap(
+  scene: Scene,
+  nodeId: string,
+  info: AssetInfo | null,
+): Scene {
+  return setMaterialMap(scene, nodeId, "colorMap", info);
 }
 
 /**

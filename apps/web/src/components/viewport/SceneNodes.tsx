@@ -41,7 +41,7 @@ import SelectionGizmo from "./SelectionGizmo";
 import { shouldIgnoreClick } from "./gizmoGuard";
 import { registerMesh } from "./meshRegistry";
 import { endStroke, paintTouch } from "@/paint/paintSession";
-import { useColorMapTexture } from "@/paint/useColorMapTexture";
+import { useMapTexture } from "@/paint/useMapTexture";
 import { usePaintStore } from "@/store/paintStore";
 import { OUTLINE_COLOR, OUTLINE_THICKNESS } from "./selectionStyle";
 
@@ -172,7 +172,12 @@ function NodeMesh({
   const select = useSceneStore((state) => state.select);
   const toggleSelect = useSceneStore((state) => state.toggleSelect);
   const checker = useViewStore((state) => state.checkerIds.has(node.id));
-  const colorMap = useColorMapTexture(node.id, node.material.colorMap);
+  const colorMap = useMapTexture(node.id, "colorMap", node.material.colorMap);
+  const surfaceMap = useMapTexture(
+    node.id,
+    "surfaceMap",
+    node.material.surfaceMap,
+  );
   const painting = usePaintStore((state) => state.nodeId === node.id);
   const { position, rotation, scale } = node.transform;
   const material = node.material;
@@ -357,6 +362,7 @@ function NodeMesh({
         cut={cut}
         checker={checker}
         colorMap={colorMap}
+        surfaceMap={surfaceMap}
       />
       {selected && (
         <Outlines color={OUTLINE_COLOR} thickness={OUTLINE_THICKNESS} />

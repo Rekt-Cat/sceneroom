@@ -19,6 +19,7 @@ export default function SurfaceMaterial({
   cut = false,
   checker = false,
   colorMap = null,
+  surfaceMap = null,
 }: {
   color: string;
   material: Material;
@@ -27,6 +28,8 @@ export default function SurfaceMaterial({
   checker?: boolean;
   /** The painted picture wrapped over the surface (through the UV map). It replaces the plain colour. */
   colorMap?: Texture | null;
+  /** The painted roughness (green) and metalness (blue) of each spot. The two sliders are then multiplied by it, so they are 1 here. */
+  surfaceMap?: Texture | null;
 }) {
   const envTexture = useEnvironmentTexture((state) => state.texture);
   const reflectionStrength = useSceneStore(
@@ -40,7 +43,7 @@ export default function SurfaceMaterial({
     <meshStandardMaterial
       // A new material when the shading, the side or solid / see-through changes: three.js builds its
       // shader for these (a solid material is compiled to ignore opacity completely)
-      key={`${material.flatShading}-${material.doubleSided}-${seeThrough}-${envTexture !== null}-${map !== null}`}
+      key={`${material.flatShading}-${material.doubleSided}-${seeThrough}-${envTexture !== null}-${map !== null}-${surfaceMap !== null}`}
       // What the surface reflects. Set on each material (and not left to the scene) so that the
       // object's own Reflection strength can scale it
       envMap={envTexture}
@@ -48,8 +51,11 @@ export default function SurfaceMaterial({
       // A picture is drawn in its own colours, not tinted by the object's
       color={map ? "#ffffff" : color}
       map={map}
-      roughness={material.roughness}
-      metalness={material.metalness}
+      // A painted picture holds the values itself (the sliders would multiply them)
+      roughnessMap={surfaceMap}
+      metalnessMap={surfaceMap}
+      roughness={surfaceMap ? 1 : material.roughness}
+      metalness={surfaceMap ? 1 : material.metalness}
       emissive={material.emissiveColor}
       emissiveIntensity={material.emissiveIntensity}
       flatShading={material.flatShading}

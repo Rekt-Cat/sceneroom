@@ -9,9 +9,27 @@ import {
   syncPaintWith,
 } from "@/paint/paintSession";
 import { useEditStore } from "@/store/editStore";
-import { usePaintStore } from "@/store/paintStore";
+import {
+  LAYER_DEFAULT_VALUE,
+  usePaintStore,
+  type PaintLayer,
+} from "@/store/paintStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { Icon } from "./icons";
+
+const LAYERS: { layer: PaintLayer; label: string; hint: string }[] = [
+  { layer: "color", label: "Colour", hint: "Paint the colour of the surface" },
+  {
+    layer: "roughness",
+    label: "Roughness",
+    hint: "Paint how rough (matte, 1) or smooth (shiny, 0) each spot is",
+  },
+  {
+    layer: "metalness",
+    label: "Metalness",
+    hint: "Paint how metal (1) or plastic-like (0) each spot is",
+  },
+];
 
 const sectionTitle =
   "px-4 pt-3.5 pb-2 text-[11px] font-semibold tracking-widest text-ed-text-3 uppercase";
@@ -34,13 +52,28 @@ export default function PaintSection({
 }) {
   const active = usePaintStore((state) => state.nodeId === node.id);
   const brush = usePaintStore();
-  const setColorMap = useSceneStore((state) => state.setNodeColorMap);
+  const setNodeMap = useSceneStore((state) => state.setNodeMap);
   const colorMap = node.material.colorMap;
+  const surfaceMap = node.material.surfaceMap;
+  // Colour and the surface values are two pictures: choosing across them restarts painting on the other picture
+  function chooseLayer(layer: PaintLayer) {
+    if (layer === brush.layer) return;
+    if (layer === "color") void startPaint(node.id, "colorMap");
+    else if (brush.layer === "color") {
+      void startPaint(node.id, "surfaceMap").then(() =>
+        usePaintStore
+          .getState()
+          .setBrush({ layer, value: LAYER_DEFAULT_VALUE[layer] }),
+      );
+    } else brush.setBrush({ layer, value: LAYER_DEFAULT_VALUE[layer] });
+  }
+  // The picture being painted: the colour one, or the roughness and metalness one
+  const painted = brush.layer === "color" ? colorMap : surfaceMap;
 
   // Undo and Redo change which picture the object uses: show it in the session too
   useEffect(() => {
-    if (active) void syncPaintWith(colorMap);
-  }, [active, colorMap]);
+    if (active) void syncPaintWith(painted);
+  }, [active, painted]);
 
   // Starting to edit points ends paint mode (clicks on the surface are for picking points then)
   const editing = useEditStore((state) => state.nodeId !== null);
@@ -83,20 +116,51 @@ export default function PaintSection({
           <button
             type="button"
             disabled={disabled || colorMap === null}
-            title="Take the painting off the object (Undo brings it back)"
-            onClick={() => setColorMap(node.id, null, "Remove painting")}
+            title="Take the colour painting off the object (Undo brings it back)"
+            onClick={() =>
+              setNodeMap(node.id, "colorMap", null, "Remove painting")
+            }
             className={BUTTON}
           >
             Remove painting
           </button>
+          <button
+            type="button"
+            disabled={disabled || surfaceMap === null}
+            title="Take the painted roughness and metalness off the object, so the two sliders apply again (Undo brings it back)"
+            onClick={() =>
+              setNodeMap(node.id, "surfaceMap", null, "Remove surface painting")
+            }
+            className={BUTTON}
+          >
+            Remove surface painting
+          </button>
         </div>
         {active && (
           <>
+            <div
+              className="flex flex-wrap gap-2"
+              role="group"
+              aria-label="What to paint"
+            >
+              {LAYERS.map(({ layer, label, hint }) => (
+                <button
+                  key={layer}
+                  type="button"
+                  aria-pressed={brush.layer === layer}
+                  title={hint}
+                  onClick={() => chooseLayer(layer)}
+                  className={`${BUTTON} ${brush.layer === layer ? "border-ed-accent" : ""}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 aria-pressed={brush.erase}
-                title="The brush puts back the object's own colour, taking the paint off"
+                title="The brush puts back the object's own value for the chosen layer (Colour, Roughness or Metalness); the other layers stay"
                 onClick={() => brush.setBrush({ erase: !brush.erase })}
                 className={`${BUTTON} ${brush.erase ? "border-ed-accent" : ""}`}
               >
@@ -115,23 +179,46 @@ export default function PaintSection({
                 {brush.erase ? "Erase all" : "Fill all"}
               </button>
             </div>
-            <div className="grid grid-cols-[58px_1fr_26px] items-center gap-2">
-              <span className="text-xs text-ed-text-2">Brush colour</span>
-              <input
-                type="color"
-                value={brush.color}
-                aria-label="Brush colour"
-                onChange={(event) =>
-                  brush.setBrush({ color: event.target.value })
-                }
-                className="size-[26px] cursor-pointer appearance-none rounded-md border-2 border-ed-line-strong bg-transparent p-0 [&::-webkit-color-swatch]:rounded-sm [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0"
+            {brush.erase && (
+              <p
+                role="status"
+                className="text-[11px] leading-snug text-ed-accent"
+              >
+                {brush.layer === "color"
+                  ? "Erasing the colour paint. Roughness and metalness stay."
+                  : `Erasing the ${brush.layer} only. The colour paint stays: choose Colour to erase it.`}
+              </p>
+            )}
+            {brush.layer !== "color" && (
+              <BrushSlider
+                label={brush.layer === "roughness" ? "Roughness" : "Metalness"}
+                value={brush.value}
+                min={0}
+                max={1}
+                step={0.01}
+                defaultValue={LAYER_DEFAULT_VALUE[brush.layer]}
+                onChange={(value) => brush.setBrush({ value })}
               />
-              <ResetButton
-                label="brush colour"
-                hidden={brush.color === DEFAULT_BRUSH.color}
-                onClick={() => brush.setBrush({ color: DEFAULT_BRUSH.color })}
-              />
-            </div>
+            )}
+            {brush.layer === "color" && (
+              <div className="grid grid-cols-[58px_1fr_26px] items-center gap-2">
+                <span className="text-xs text-ed-text-2">Brush colour</span>
+                <input
+                  type="color"
+                  value={brush.color}
+                  aria-label="Brush colour"
+                  onChange={(event) =>
+                    brush.setBrush({ color: event.target.value })
+                  }
+                  className="size-[26px] cursor-pointer appearance-none rounded-md border-2 border-ed-line-strong bg-transparent p-0 [&::-webkit-color-swatch]:rounded-sm [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-0"
+                />
+                <ResetButton
+                  label="brush colour"
+                  hidden={brush.color === DEFAULT_BRUSH.color}
+                  onClick={() => brush.setBrush({ color: DEFAULT_BRUSH.color })}
+                />
+              </div>
+            )}
             <BrushSlider
               label="Brush size"
               value={brush.radius}
@@ -159,10 +246,17 @@ export default function PaintSection({
               defaultValue={DEFAULT_BRUSH.opacity}
               onChange={(opacity) => brush.setBrush({ opacity })}
             />
+            {brush.layer !== "color" && (
+              <p className="text-[11px] leading-snug text-ed-text-3">
+                Roughness is easiest to see on metal: paint Metalness first (or
+                set the Metalness slider), then paint Roughness. Erase puts the
+                object&apos;s own value back.
+              </p>
+            )}
             <p className="text-[11px] leading-snug text-ed-text-3">
               Drag with the left mouse button on the object to paint. Right-drag
               turns the camera. Esc stops. Once painted, the picture replaces
-              the object&apos;s colour.
+              the object&apos;s colour, or its Roughness and Metalness sliders.
             </p>
           </>
         )}

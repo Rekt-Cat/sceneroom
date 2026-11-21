@@ -96,6 +96,8 @@ export default function Viewport() {
       camera={{ position: [5, 4, 7], fov: 50 }}
       onPointerMissed={() => {
         if (shouldIgnoreClick()) return;
+        // Painting: a click beside the object (a right-click to turn the camera, a stray left-click) must not deselect it and end painting; Stop painting or Esc does that
+        if (usePaintStore.getState().nodeId) return;
         // Editing points: clicking empty space only deselects points (the picking in MeshEditor does that)
         if (!useEditStore.getState().nodeId) select(null);
       }}
