@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" width="960" height="420" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
+  <title id="t">Shrinkwrap: pull points onto another object's surface</title>
+  <desc id="d">In edit mode, Shrinkwrap pushes the selected points out from the middle of a chosen target object until each meets its surface. Both meshes are brought into the target's space, the mesh's middle is moved onto the target's middle, a spatial grid finds where each ray from the middle hits the target's triangles (closest spot if it misses), and the result goes back as one undo step that changes only the positions.</desc>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker></defs>
+  <rect width="960" height="420" fill="#f2f5f6"/>
+  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">Shrinkwrap (retopology, second step)</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Lay a rough, clean mesh over a dense one: every point is pushed out from the middle until it meets the target.</text>
+  <rect x="32" y="90" width="270" height="130" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="46" y="116" font-size="14" font-weight="700" fill="#13202a">1. Pick a target</text>
+  <text x="46" y="138" font-size="12" fill="#13202a">In edit mode, choose an object in</text>
+  <text x="46" y="155" font-size="12" fill="#13202a">Wrap onto (any shape, mesh or</text>
+  <text x="46" y="172" font-size="12" fill="#13202a">imported model, as it is shown now:</text>
+  <text x="46" y="189" font-size="12" fill="#13202a">modifiers, position, turn and size</text>
+  <text x="46" y="206" font-size="12" fill="#13202a">are included).</text>
+  <path d="M302 155 H342" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="342" y="90" width="270" height="130" rx="12" fill="#e9eef0" stroke="#0a6c8a" stroke-width="2"/>
+  <text x="356" y="116" font-size="14" font-weight="700" fill="#13202a">2. Same space</text>
+  <text x="356" y="138" font-size="12" fill="#13202a">Selected points (all if none) go from</text>
+  <text x="356" y="155" font-size="12" fill="#13202a">the edited mesh's space to world, then</text>
+  <text x="356" y="172" font-size="12" fill="#13202a">into the target's own space (inverse</text>
+  <text x="356" y="189" font-size="12" fill="#13202a">of its matrix), so both meshes can</text>
+  <text x="356" y="206" font-size="12" fill="#13202a">be compared whatever their transforms.</text>
+  <path d="M612 155 H652" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="652" y="90" width="276" height="130" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="666" y="116" font-size="14" font-weight="700" fill="#13202a">3. Ray from the middle hits the surface</text>
+  <text x="666" y="138" font-size="12" fill="#13202a">A uniform grid holds the target's</text>
+  <text x="666" y="155" font-size="12" fill="#13202a">triangles; each point searches its cell,</text>
+  <text x="666" y="172" font-size="12" fill="#13202a">then ring by ring, until nothing closer</text>
+  <text x="666" y="189" font-size="12" fill="#13202a">can exist. Exact (tested against brute</text>
+  <text x="666" y="206" font-size="12" fill="#13202a">force); fast for 100 000 triangles.</text>
+  <path d="M790 220 V260" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="500" y="260" width="428" height="130" rx="12" fill="#fff" stroke="#e08a00" stroke-width="2"/>
+  <text x="514" y="286" font-size="14" font-weight="700" fill="#13202a">4. Back and store</text>
+  <text x="514" y="308" font-size="12" fill="#13202a">The snapped points go back to the edited</text>
+  <text x="514" y="325" font-size="12" fill="#13202a">mesh's space. Only positions change:</text>
+  <text x="514" y="342" font-size="12" fill="#13202a">triangles, seams, creases and the UV map</text>
+  <text x="514" y="359" font-size="12" fill="#13202a">stay. One undo step (stored as a patch</text>
+  <text x="514" y="376" font-size="12" fill="#13202a">when the mesh is big).</text>
+  <rect x="32" y="260" width="430" height="130" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="46" y="286" font-size="14" font-weight="700" fill="#13202a">Not built yet</text>
+  <text x="46" y="308" font-size="12" fill="#13202a">An offset above the surface and</text>
+  <text x="46" y="325" font-size="12" fill="#13202a">a keep-distance mode.</text>
+  <text x="46" y="342" font-size="12" fill="#13202a">Snapping while you move points</text>
+  <text x="46" y="359" font-size="12" fill="#13202a">(a live Retopo mode) and the strip tool.</text>
+  <text x="46" y="376" font-size="12" fill="#13202a">Wrapping onto a model with many parts.</text>
+</svg>

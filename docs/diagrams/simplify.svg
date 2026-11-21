@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 430" width="960" height="430" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
+  <title id="t">Simplify: fewer triangles, same shape</title>
+  <desc id="d">Simplify costs every edge by the quadric error of collapsing it, collapses the cheapest first until about half the triangles are left, refuses unsafe collapses (borders, pinches, folds), and stores the result as one undo step without UVs, creases and seams.</desc>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker></defs>
+  <rect width="960" height="430" fill="#f2f5f6"/>
+  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">Simplify (retopology, first step)</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Cut a dense mesh down to fewer triangles while the shape stays as close as possible.</text>
+  <rect x="32" y="90" width="270" height="130" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="46" y="116" font-size="14" font-weight="700" fill="#13202a">1. Cost of every edge</text>
+  <text x="46" y="138" font-size="12" fill="#13202a">Each point has a quadric: the sum of</text>
+  <text x="46" y="155" font-size="12" fill="#13202a">the planes of its faces (by area).</text>
+  <text x="46" y="172" font-size="12" fill="#13202a">An edge costs how far the merged</text>
+  <text x="46" y="189" font-size="12" fill="#13202a">point drifts from those planes.</text>
+  <text x="46" y="206" font-size="12" fill="#13202a">Flat areas cost almost nothing.</text>
+  <path d="M302 155 H342" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="342" y="90" width="270" height="130" rx="12" fill="#e9eef0" stroke="#0a6c8a" stroke-width="2"/>
+  <text x="356" y="116" font-size="14" font-weight="700" fill="#13202a">2. Collapse the cheapest</text>
+  <text x="356" y="138" font-size="12" fill="#13202a">A heap picks the cheapest edge; the two</text>
+  <text x="356" y="155" font-size="12" fill="#13202a">points become one at the best of: either</text>
+  <text x="356" y="172" font-size="12" fill="#13202a">end or the middle. Neighbour costs are</text>
+  <text x="356" y="189" font-size="12" fill="#13202a">recomputed. Stops at about half</text>
+  <text x="356" y="206" font-size="12" fill="#13202a">of the triangles (SIMPLIFY_KEEP).</text>
+  <path d="M612 155 H652" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="652" y="90" width="276" height="130" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="666" y="116" font-size="14" font-weight="700" fill="#13202a">3. New mesh, one undo step</text>
+  <text x="666" y="138" font-size="12" fill="#13202a">Unused points dropped, the rest</text>
+  <text x="666" y="155" font-size="12" fill="#13202a">renumbered. UV map, creases and</text>
+  <text x="666" y="172" font-size="12" fill="#13202a">seams are removed, and the message</text>
+  <text x="666" y="189" font-size="12" fill="#13202a">says so. Press again for half of</text>
+  <text x="666" y="206" font-size="12" fill="#13202a">that; Undo brings it back.</text>
+  <rect x="32" y="260" width="430" height="140" rx="12" fill="#fff" stroke="#e08a00" stroke-width="2"/>
+  <text x="46" y="286" font-size="14" font-weight="700" fill="#13202a">Safety rules (a collapse is refused if...)</text>
+  <text x="46" y="308" font-size="12" fill="#13202a">- either end is on an open border or hard</text>
+  <text x="46" y="325" font-size="12" fill="#13202a">  edge and so is the other (both pinned)</text>
+  <text x="46" y="342" font-size="12" fill="#13202a">- the edge is not shared by exactly two</text>
+  <text x="46" y="359" font-size="12" fill="#13202a">  triangles, or the neighbours would pinch</text>
+  <text x="46" y="376" font-size="12" fill="#13202a">- a neighbouring face would turn over</text>
+  <rect x="490" y="260" width="438" height="140" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="504" y="286" font-size="14" font-weight="700" fill="#13202a">Next: the rest of retopology</text>
+  <text x="504" y="308" font-size="12" fill="#13202a">Retopo mode: draw quads over a dense</text>
+  <text x="504" y="325" font-size="12" fill="#13202a">mesh, snapping to its surface.</text>
+  <text x="504" y="342" font-size="12" fill="#13202a">Shrinkwrap: pull a rough mesh onto a</text>
+  <text x="504" y="359" font-size="12" fill="#13202a">target. A target-count slider for</text>
+  <text x="504" y="376" font-size="12" fill="#13202a">Simplify with a live preview.</text>
+</svg>

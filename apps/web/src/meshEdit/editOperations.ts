@@ -25,6 +25,7 @@ import {
   extrudeFaces,
   extrudeEdges,
   bridgeLoops,
+  simplifyMesh,
   smartUnwrap,
   transformUvIslands,
   packUvIslands,
@@ -738,6 +739,39 @@ export async function unwrapMeshAlongSeams(): Promise<boolean> {
           text: `Unwrapped along the seams into ${pieces}. Switch the UV window to Stretch to see how even the map is.`,
         },
   );
+  return true;
+}
+
+// ---- Simplify ----
+
+/** Simplify keeps this share of the triangles each time it is pressed. */
+export const SIMPLIFY_KEEP = 0.5;
+
+/**
+ * Simplify: cuts the whole mesh down to about half its triangles (see `simplifyMesh`), keeping the shape as well as it
+ * can. Points on open borders and hard edges stay where they are. The UV map, creases and seams are removed (the
+ * message says so). One undo step. The points are renumbered, so the selection is cleared.
+ */
+export async function simplifyEditedMesh(): Promise<boolean> {
+  const edited = await editedMesh();
+  if (!edited) return false;
+  const before = edited.mesh.indices.length / 3;
+  const result = simplifyMesh(edited.mesh, before * SIMPLIFY_KEEP);
+  if (!result.ok) {
+    say(result.reason);
+    return false;
+  }
+  if (!(await commitMesh(edited.nodeId, result.mesh, "Simplify"))) return false;
+  useEditStore.getState().setSelected([]);
+  useEditStore.getState().setUvSelected([]);
+  const lost = [
+    edited.mesh.creases?.length ? "creases" : "",
+    edited.mesh.seams?.length ? "seams" : "",
+  ].filter(Boolean);
+  useImportStore.getState().setMessage({
+    tone: "info",
+    text: `Simplified from ${before} to ${result.triangles} triangles.${lost.length > 0 ? ` The ${lost.join(" and ")} were removed.` : ""}`,
+  });
   return true;
 }
 

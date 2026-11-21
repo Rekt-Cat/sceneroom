@@ -53,4 +53,6 @@ export * from "./unwrap";
 export * from "./uvEdit";
 export * from "./hiding";
 export * from "./meshPatch";
+export * from "./simplify";
+export * from "./surfaceSnap";
 export * from "./lscm";
