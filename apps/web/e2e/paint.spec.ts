@@ -86,3 +86,35 @@ test("a cube with no UV map cannot be painted and says why", async ({
     await expect(page.getByText(/no UV map/)).toBeVisible();
   }
 });
+
+test("the painted picture is part of the exported GLB", async ({ page }) => {
+  test.setTimeout(120_000);
+  await newProject(page);
+  await unwrapCube(page);
+  await page.getByRole("button", { name: "Paint on surface" }).click();
+  const box = (await page.locator("canvas").first().boundingBox())!;
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  await page.mouse.move(cx - 20, cy);
+  await page.mouse.down();
+  await page.mouse.move(cx + 20, cy + 10, { steps: 8 });
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await paintFacts(page))?.paintedPixels ?? 0, {
+      timeout: 20_000,
+    })
+    .toBeGreaterThan(100);
+  await press(page, "Stop painting");
+
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  const file = await (await download).path();
+  const { readFileSync } = await import("node:fs");
+  const bytes = readFileSync(file);
+  // A GLB: 12 bytes of header, then the JSON chunk (length, type "JSON", text)
+  const jsonLength = bytes.readUInt32LE(12);
+  const gltf = JSON.parse(bytes.subarray(20, 20 + jsonLength).toString("utf8"));
+  expect(gltf.images?.length).toBe(1);
+  expect(gltf.images[0].mimeType).toBe("image/png");
+  expect(gltf.materials[0].pbrMetallicRoughness.baseColorTexture).toBeDefined();
+});

@@ -1,5 +1,6 @@
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
-import type { Object3D } from "three";
+import type { Object3D, Texture } from "three";
+import { loadColorMap } from "@/paint/paintSession";
 import { loadModelScene } from "@/assets/loadModel";
 import { loadMeshData } from "@/assets/meshStorage";
 import {
@@ -57,6 +58,16 @@ async function loadMeshes(assetIds: readonly string[]) {
   return meshes;
 }
 
+/** Loads the painted pictures the scene uses. One that cannot be loaded is left out (the object exports with its colour). */
+async function loadTextures(assetIds: readonly string[]) {
+  const textures = new Map<string, Texture>();
+  for (const id of assetIds) {
+    const texture = await loadColorMap(id);
+    if (texture) textures.set(id, texture);
+  }
+  return textures;
+}
+
 /** Builds the GLB of a scene (default: the open one). Also gives back what was exported and what was left out. */
 export async function buildGlb(scene: Scene = getOpenScene()): Promise<{
   bytes: ArrayBuffer;
@@ -72,10 +83,18 @@ export async function buildGlb(scene: Scene = getOpenScene()): Promise<{
       node.kind === "mesh" && node.assetId ? [node.assetId] : [],
     ),
   );
+  const textures = await loadTextures([
+    ...new Set(
+      Object.values(scene.nodes).flatMap((node) =>
+        node.material.colorMap ? [node.material.colorMap] : [],
+      ),
+    ),
+  ]);
   const { root, report } = buildExportScene(
     scene,
     (id) => models.get(id),
     (id) => meshes.get(id),
+    (id) => textures.get(id),
   );
   try {
     return { bytes: await sceneToGlb(root), report };

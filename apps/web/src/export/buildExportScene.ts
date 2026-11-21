@@ -10,6 +10,7 @@ import {
   Object3D,
   PointLight,
   SpotLight,
+  type Texture,
 } from "three";
 import { clone } from "three/examples/jsm/utils/SkeletonUtils.js";
 import {
@@ -41,6 +42,9 @@ export type ModelLookup = (assetId: string) => Object3D | undefined;
 /** The points and triangles of an editable mesh, or undefined if its data is not available. */
 export type MeshLookup = (assetId: string) => ShapeMesh | undefined;
 
+/** The painted picture (colour map) of a texture file, or undefined if it is not available. */
+export type TextureLookup = (assetId: string) => Texture | undefined;
+
 /** What was left out of the export, so the user can be told. */
 export type ExportReport = {
   objects: number;
@@ -61,6 +65,7 @@ export type ExportReport = {
  *   material (colour, roughness, metalness, glow, opacity, double-sided). Flat shading is exported as
  *   flat normals, because a glTF material has no flat-shading switch.
  * - models: a copy of the loaded file
+ * - a painted picture (colour map) on a mesh is exported as its base colour texture
  * - lights: sun, bulb and torch lights (the extension `KHR_lights_punctual`)
  * - hidden objects stay in the scene but are marked invisible, and the exporter skips them
  *
@@ -70,6 +75,7 @@ export function buildExportScene(
   scene: Scene,
   getModel: ModelLookup,
   getMesh: MeshLookup = () => undefined,
+  getTexture: TextureLookup = () => undefined,
 ): { root: Group; report: ExportReport } {
   const root = new Group();
   root.name = "SceneRoom scene";
@@ -81,7 +87,14 @@ export function buildExportScene(
     hidden: 0,
   };
   const add = (entry: TreeNode, parent: Object3D) => {
-    const object = buildObject(scene, entry.node, getModel, getMesh, report);
+    const object = buildObject(
+      scene,
+      entry.node,
+      getModel,
+      getMesh,
+      getTexture,
+      report,
+    );
     if (object) {
       parent.add(object);
       for (const child of entry.children) add(child, object);
@@ -96,9 +109,17 @@ function buildObject(
   node: SceneNode,
   getModel: ModelLookup,
   getMesh: MeshLookup,
+  getTexture: TextureLookup,
   report: ExportReport,
 ): Object3D | null {
-  const object = createObject(scene, node, getModel, getMesh, report);
+  const object = createObject(
+    scene,
+    node,
+    getModel,
+    getMesh,
+    getTexture,
+    report,
+  );
   if (!object) return null;
   object.name = node.name;
   object.visible = node.visible;
@@ -116,6 +137,7 @@ function createObject(
   node: SceneNode,
   getModel: ModelLookup,
   getMesh: MeshLookup,
+  getTexture: TextureLookup,
   report: ExportReport,
 ): Object3D | null {
   if (node.light) {
@@ -176,8 +198,13 @@ function createObject(
   } else {
     geometry = shapeGeometry(node);
   }
+  // A painted picture is drawn in its own colours (not tinted), like on screen
+  const colorMap = node.material.colorMap
+    ? getTexture(node.material.colorMap)
+    : undefined;
   const material = new MeshStandardMaterial({
-    color: node.color,
+    color: colorMap ? "#ffffff" : node.color,
+    map: colorMap ?? null,
     roughness: node.material.roughness,
     metalness: node.material.metalness,
     emissive: new Color(node.material.emissiveColor),
