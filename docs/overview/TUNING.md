@@ -576,6 +576,20 @@ Files: `apps/web/src/components/viewport/InspectorFields.tsx` (rows, steps, colo
 | What CI checks              | `.github/workflows/ci.yml` | The list of steps GitHub runs on every push.                                                               |
 | Node version                | `.node-version`            | The Node version the project uses. Also update the notes in `docs/overview/DECISIONS.md` if you change it. |
 
+## Collab server
+
+In `apps/collab-server/.env` (copy `.env.example`; the real file is never committed). Checked at start by `src/config.ts`.
+
+| What             | Setting                                                | Default                | What it does                                                                        |
+| ---------------- | ------------------------------------------------------ | ---------------------- | ----------------------------------------------------------------------------------- |
+| Port             | `PORT`                                                 | 1234                   | The port the server listens on.                                                     |
+| Address          | `HOST`                                                 | 127.0.0.1              | Only this computer can connect. Use `0.0.0.0` to let others on the network in.      |
+| Database file    | `DB_PATH`                                              | `./data/collab.sqlite` | Where documents are saved (the folder is created; it is git-ignored).               |
+| Token secret     | `COLLAB_SECRET`                                        | (none, required)       | Signs the link tokens; at least 32 characters. Changing it cancels every link.      |
+| Biggest message  | `MAX_MESSAGE_BYTES`                                    | 1 048 576 (1 MiB)      | A bigger message from a client closes its connection.                               |
+| Biggest document | `MAX_DOCUMENT_BYTES`                                   | 20 971 520 (20 MiB)    | A document over this is not saved (an error is logged).                             |
+| Save delay       | `debounceMs`, `maxDebounceMs` in `src/createServer.ts` | 2 000 ms and 10 000 ms | Saved this long after the last change, and at the latest this long after the first. |
+
 ## Keeping this file up to date
 
 When a new setting you might want to adjust is added to the project, it goes into this file, with where it lives, our

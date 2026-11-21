@@ -56,7 +56,7 @@ Browser B ──┘     (Yjs updates + awareness)      └── file store (mes
   server agree on the layout and both validate with the same Zod schemas.
 - **File store**: big binary files do not go through the document (see section 6).
 - **Postgres** (via Docker, later): users, projects, members and roles, and the saved documents. Until then the collab server
-  saves documents in a local file database (SQLite) so we can build and test collaboration without installing Docker.
+  saves documents in a local file database (SQLite, through Node's built-in `node:sqlite`) so we can build and test collaboration without installing Docker.
 
 ## 4. What lives in the shared document, and what does not
 
@@ -215,13 +215,13 @@ SceneRoom works with no account and no internet today, and that stays true.
 
 ## 13. Versions looked up on 2026-11-21 (npm registry)
 
-| Package                | Version | Purpose                                              |
-| ---------------------- | ------- | ---------------------------------------------------- |
-| `yjs`                  | 13.6.33 | The shared document                                  |
-| `y-protocols`          | 1.0.7   | Awareness and the sync messages                      |
-| `@hocuspocus/server`   | 4.9.0   | The collab server (needs `yjs` ^13.6.8)              |
-| `@hocuspocus/provider` | 4.9.0   | The browser side of the connection                   |
-| `y-indexeddb`          | 9.0.12  | Offline copy in the browser                          |
-| `better-sqlite3`       | 13.2.0  | Local file database for the collab server (until M8) |
+| Package                | Version | Purpose                                                                  |
+| ---------------------- | ------- | ------------------------------------------------------------------------ |
+| `yjs`                  | 13.6.33 | The shared document                                                      |
+| `y-protocols`          | 1.0.7   | Awareness and the sync messages                                          |
+| `@hocuspocus/server`   | 4.9.0   | The collab server (needs `yjs` ^13.6.8)                                  |
+| `@hocuspocus/provider` | 4.9.0   | The browser side of the connection                                       |
+| `y-indexeddb`          | 9.0.12  | Offline copy in the browser                                              |
+| ~~`better-sqlite3`~~   | 13.2.0  | Not used: `node:sqlite` (built into Node) does the job, see DECISIONS.md |
 
-Yjs is installed (M1). The others are added at M2 and later, and then recorded in `WHAT-WE-USED.md` as usual.
+Yjs (M1), `@hocuspocus/server` and `@hocuspocus/provider` (M2) are installed. The others are added at M3 and later, and then recorded in `WHAT-WE-USED.md` as usual.

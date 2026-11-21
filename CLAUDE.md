@@ -15,7 +15,8 @@ development with this project, so correctness, clear structure and documentation
 - `docs/`: documents sorted into `overview/`, `editor/`, `backend/`, `dev/` (index: `docs/README.md`); new documents go in the folder for their topic and into that index.
 - `apps/web`: Next.js 16 app (App Router, Turbopack, Tailwind 4). Read `apps/web/AGENTS.md`: Next.js docs for the installed version are in `apps/web/node_modules/next/dist/docs/`. Check them before writing Next.js code.
 - `packages/shared`: types and constants shared by the web app and (later) the collab server.
-- Planned: `apps/collab-server`, `packages/db`.
+- `apps/collab-server`: the online part's server (Hocuspocus, SQLite). Run: `pnpm --filter @sceneroom/collab-server dev` (needs `apps/collab-server/.env`, see `.env.example`).
+- Planned: `packages/db`.
 
 ## Commands (run from the repo root)
 

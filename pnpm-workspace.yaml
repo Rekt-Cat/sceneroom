@@ -4,5 +4,6 @@ packages:
 
 # Build scripts that dependencies may NOT run on install (pnpm blocks them unless allowed)
 allowBuilds:
+  esbuild: false
   sharp: false
   unrs-resolver: false

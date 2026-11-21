@@ -4,7 +4,7 @@
   <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker></defs>
   <rect width="960" height="520" fill="#f2f5f6"/>
   <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">The online part: the pieces</text>
-  <text x="32" y="60" font-size="13" fill="#55656f">Planned (dashed). The editor you have today stays whole; a sync layer is added beside the store. Detail: docs/backend/COLLABORATION.md</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Solid = built, dashed = planned. A sync layer is added beside the store. Detail: docs/backend/COLLABORATION.md</text>
 
   <rect x="32" y="84" width="300" height="300" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
   <text x="46" y="108" font-size="14" font-weight="700" fill="#13202a">Browser A (Alice)</text>
@@ -22,12 +22,12 @@
   <rect x="644" y="244" width="268" height="40" rx="8" fill="#fbeed2" stroke="#8a5a00" stroke-dasharray="6 4"/><text x="656" y="269" font-size="12" fill="#13202a">Yjs document + provider</text>
   <rect x="644" y="294" width="268" height="40" rx="8" fill="#fbeed2" stroke="#8a5a00" stroke-dasharray="6 4"/><text x="656" y="319" font-size="12" fill="#13202a">IndexedDB offline copy</text>
 
-  <rect x="372" y="84" width="216" height="210" rx="12" fill="#fbeed2" stroke="#8a5a00" stroke-width="2" stroke-dasharray="6 4"/>
+  <rect x="372" y="84" width="216" height="210" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
   <text x="386" y="108" font-size="14" font-weight="700" fill="#13202a">Collab server</text>
   <text x="386" y="126" font-size="11" fill="#55656f">apps/collab-server, Hocuspocus</text>
   <text x="386" y="152" font-size="12" fill="#13202a">1. checks the link token</text>
   <text x="386" y="172" font-size="12" fill="#13202a">2. viewer = read-only</text>
-  <text x="386" y="192" font-size="12" fill="#13202a">3. limits size and rate</text>
+  <text x="386" y="192" font-size="12" fill="#13202a">3. limits message sizes</text>
   <text x="386" y="212" font-size="12" fill="#13202a">4. checks what is saved</text>
   <text x="386" y="232" font-size="12" fill="#13202a">5. forwards updates to</text>
   <text x="386" y="248" font-size="12" fill="#13202a">    everyone in the room</text>
@@ -36,8 +36,8 @@
   <path d="M372 220 H332" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
   <path d="M588 190 H628" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
   <path d="M628 220 H588" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
-  <text x="336" y="168" font-size="10" fill="#55656f">WebSocket</text>
-  <text x="592" y="168" font-size="10" fill="#55656f">WebSocket</text>
+  <text x="339" y="168" font-size="9" fill="#55656f">socket</text>
+  <text x="593" y="168" font-size="9" fill="#55656f">socket</text>
 
   <path d="M480 294 V330" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
   <rect x="372" y="330" width="216" height="80" rx="12" fill="#fbeed2" stroke="#8a5a00" stroke-width="2" stroke-dasharray="6 4"/>
@@ -53,5 +53,5 @@
   <text x="386" y="481" font-size="11" fill="#55656f">(R2 online; a folder while developing)</text>
   <text x="190" y="448" font-size="10" fill="#55656f">upload / download (HTTPS)</text>
   <text x="640" y="448" font-size="10" fill="#55656f">upload / download (HTTPS)</text>
-  <text x="32" y="506" font-size="12" fill="#55656f">The document carries small things (objects and their settings). Big files never go through it. Dashed = planned.</text>
+  <text x="32" y="506" font-size="12" fill="#55656f">The document carries small things (objects and their settings). Big files never go through it. Solid = built (Yjs code, collab server), dashed = planned.</text>
 </svg>

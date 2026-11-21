@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" width="960" height="560" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
+  <title id="t">The collab server: what happens when someone connects (step M2, built)</title>
+  <desc id="d">A browser connects and asks for a document with a link token. The server checks the document name, the token signature and expiry, and that the token is for the same project as the document. A viewer token makes the connection read-only. The document is loaded from the store (SQLite), changes are broadcast to everyone, and saved after a short delay if the document is under the size limit. Messages over the size limit close the connection.</desc>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker><marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#b3261e"/></marker></defs>
+  <rect width="960" height="560" fill="#f2f5f6"/>
+  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">The collab server: who gets in, and what is saved</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Built in step M2 (apps/collab-server). Every check is on the server; the browser is never trusted.</text>
+
+  <rect x="32" y="84" width="130" height="86" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="44" y="108" font-size="13" font-weight="700" fill="#13202a">A browser</text>
+  <text x="44" y="128" font-size="12" fill="#13202a">asks for a document</text>
+  <text x="44" y="145" font-size="12" fill="#13202a">and shows its link</text>
+  <text x="44" y="162" font-size="12" fill="#13202a">token</text>
+  <path d="M162 127 H190" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+
+  <rect x="190" y="84" width="150" height="86" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="202" y="108" font-size="13" font-weight="700" fill="#13202a">1. Name</text>
+  <text x="202" y="128" font-size="12" fill="#13202a">project:id or</text>
+  <text x="202" y="145" font-size="12" fill="#13202a">scene:id:id, safe</text>
+  <text x="202" y="162" font-size="12" fill="#13202a">characters only</text>
+  <path d="M340 127 H368" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+
+  <rect x="368" y="84" width="170" height="86" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="380" y="108" font-size="13" font-weight="700" fill="#13202a">2. Token</text>
+  <text x="380" y="128" font-size="12" fill="#13202a">signature made with the</text>
+  <text x="380" y="145" font-size="12" fill="#13202a">server's secret, not</text>
+  <text x="380" y="162" font-size="12" fill="#13202a">expired</text>
+  <path d="M538 127 H566" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+
+  <rect x="566" y="84" width="170" height="86" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="578" y="108" font-size="13" font-weight="700" fill="#13202a">3. Same project</text>
+  <text x="578" y="128" font-size="12" fill="#13202a">the token is for the</text>
+  <text x="578" y="145" font-size="12" fill="#13202a">project the document</text>
+  <text x="578" y="162" font-size="12" fill="#13202a">belongs to</text>
+  <path d="M736 127 H764" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+
+  <rect x="764" y="84" width="164" height="86" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="776" y="108" font-size="13" font-weight="700" fill="#13202a">4. Role</text>
+  <text x="776" y="128" font-size="12" fill="#13202a">editor: read and write</text>
+  <text x="776" y="145" font-size="12" fill="#13202a">viewer: read-only, its</text>
+  <text x="776" y="162" font-size="12" fill="#13202a">changes are ignored</text>
+
+  <path d="M265 170 V214 M453 170 V214 M651 170 V214" stroke="#b3261e" stroke-width="2.2" fill="none" marker-end="url(#r)"/>
+  <rect x="190" y="216" width="546" height="40" rx="10" fill="#fdecea" stroke="#b3261e" stroke-width="2"/>
+  <text x="206" y="241" font-size="13" fill="#13202a">Any check fails: the connection is refused ("Not allowed") and the reason goes to the server log.</text>
+
+  <path d="M846 170 V281 H157 V292" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <text x="740" y="275" font-size="12" fill="#13202a">all checks pass</text>
+
+  <text x="32" y="266" font-size="13" font-weight="700" fill="#0a6c8a">THEN, WHILE CONNECTED</text>
+  <rect x="32" y="294" width="250" height="110" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="44" y="318" font-size="13" font-weight="700" fill="#13202a">5. Load</text>
+  <text x="44" y="338" font-size="12" fill="#13202a">The first person to open a</text>
+  <text x="44" y="355" font-size="12" fill="#13202a">document makes the server</text>
+  <text x="44" y="372" font-size="12" fill="#13202a">read it from the store, so it</text>
+  <text x="44" y="389" font-size="12" fill="#13202a">survives a restart.</text>
+  <path d="M282 349 H310" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="310" y="294" width="300" height="110" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="322" y="318" font-size="13" font-weight="700" fill="#13202a">6. Share</text>
+  <text x="322" y="338" font-size="12" fill="#13202a">Changes from an editor are</text>
+  <text x="322" y="355" font-size="12" fill="#13202a">sent to everyone else in the</text>
+  <text x="322" y="372" font-size="12" fill="#13202a">document. A message over the</text>
+  <text x="322" y="389" font-size="12" fill="#13202a">size limit closes the connection.</text>
+  <path d="M610 349 H638" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="638" y="294" width="290" height="110" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="650" y="318" font-size="13" font-weight="700" fill="#13202a">7. Save, a moment later</text>
+  <text x="650" y="338" font-size="12" fill="#13202a">After the last change (or at</text>
+  <text x="650" y="355" font-size="12" fill="#13202a">most every 10 s). Over the</text>
+  <text x="650" y="372" font-size="12" fill="#13202a">document size limit: not saved,</text>
+  <text x="650" y="389" font-size="12" fill="#13202a">and an error is logged.</text>
+
+  <path d="M783 404 V440" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="610" y="442" width="318" height="76" rx="12" fill="#e4f1f6" stroke="#0a6c8a" stroke-width="2"/>
+  <text x="622" y="466" font-size="13" font-weight="700" fill="#13202a">The store (a SQLite file)</text>
+  <text x="622" y="486" font-size="12" fill="#13202a">One row per document. Only this one</text>
+  <text x="622" y="503" font-size="12" fill="#13202a">file changes when Postgres arrives (M8).</text>
+
+  <rect x="32" y="442" width="550" height="76" rx="12" fill="#fff" stroke="#8a97a0" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="44" y="466" font-size="13" font-weight="700" fill="#13202a">Not yet (later steps)</text>
+  <text x="44" y="486" font-size="12" fill="#13202a">Share button that makes the tokens (M7), accounts and roles from a database (M8),</text>
+  <text x="44" y="503" font-size="12" fill="#13202a">the editor connecting to this server (M3), big files (M4), running it online (M9).</text>
+</svg>

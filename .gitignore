@@ -37,3 +37,6 @@ pnpm-debug.log*
 
 # Files the browser tests write for people to look at (Playwright)
 apps/web/e2e-output/
+
+# Collab server: the SQLite database files
+apps/collab-server/data/
