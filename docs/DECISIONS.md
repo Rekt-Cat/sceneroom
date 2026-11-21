@@ -1002,4 +1002,5 @@ Also learned: a test that clicks a button before the last change was stored race
 - **The picture replaces the colour.** The first stroke starts from a flat picture of the object's colour, so nothing jumps. After that the colour picker no longer changes the look (the map is drawn untinted); Remove painting brings the colour back.
 - **Overlapping dabs add up** (airbrush), the stroke is not flattened to one layer. Simple and fast; a "stroke opacity cap" would need a second buffer per stroke.
 - **Left button paints, right orbits.** The camera's left-drag pan is turned off while painting.
-- **Not yet:** layers, roughness/metalness maps, erase, fill, the picture in the GLB export, baking.
+- **GLB export:** the colour map goes into the export as the material's base colour texture (white base colour, so it is not tinted), read from the same texture cache the screen uses; if the file cannot be read the object exports with its plain colour. glTF flips the picture as needed (`flipY`), so the UV map still fits.
+- **Not yet:** layers, roughness/metalness maps, erase, fill, baking.
