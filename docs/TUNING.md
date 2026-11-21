@@ -706,3 +706,14 @@ value and what it does.
 | Dab spacing  | `STAMP_SPACING` in `shared/src/paint.ts`       | 0.25                       | How far apart the dabs of a stroke are, as a share of the brush size (smaller = smoother).                                                                  |
 | Longest join | `MAX_JOIN` in `shared/src/paint.ts`            | 0.25                       | A jump on the map bigger than this share of the picture is not joined by a line.                                                                            |
 | Start value  | `LAYER_DEFAULT_VALUE` in `store/paintStore.ts` | roughness 0.1, metalness 1 | The roughness or metalness the brush paints when you choose that layer (far from a normal surface so a first stroke is easy to see; it has a reset button). |
+
+## Baking
+
+| Setting       | Where                                                     | Our value          | What it does                                                                                    |
+| ------------- | --------------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------- |
+| Picture size  | `DEFAULT_BAKE_SIZE`, `BAKE_SIZES` in `store/bakeStore.ts` | 1024 (256 to 2048) | Pixels along each side of the baked picture. Bigger is sharper and slower.                      |
+| Cage size     | `DEFAULT_CAGE` in `store/bakeStore.ts`                    | 0.1                | How far above the surface the rays start, as a share of the object's size (reset button).       |
+| Smooth angle  | `SMOOTH_ANGLE_DEGREES` in `shared/src/bake.ts`            | 60                 | Faces that turn less than this share a smooth normal; sharper edges stay sharp.                 |
+| Edge spread   | `padding` in `startNormalBake` (`shared/src/bake.ts`)     | 4 pixels           | How far the picture is spread past the edge of each map piece.                                  |
+| Work per step | `TEXELS_PER_STEP` in `bake/bakeNormal.ts`                 | 20 000             | Pixels baked before the page gets a moment to redraw (smaller = smoother progress bar, slower). |
+| Leaf size     | `LEAF_SIZE` in `shared/src/rayMesh.ts`                    | 4                  | Triangles in a leaf of the ray-casting tree.                                                    |

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" width="960" height="420" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
+  <title id="t">Baking a normal map: detail from a dense mesh onto a simple one</title>
+  <desc id="d">For every pixel of the simple mesh's UV map, a ray goes from just outside the surface inwards until it meets the dense mesh, found fast with a bounding box tree. The dense surface's normal is turned into the simple surface's own frame and written into the pixel. The picture is stored as a texture file, used as the material's normal map, and exported in the GLB.</desc>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker></defs>
+  <rect width="960" height="420" fill="#f2f5f6"/>
+  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">Bake detail (texture baking, first slice)</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">The simple mesh gets the look of the dense one as a normal map: bumps painted by light direction, not by geometry.</text>
+  <rect x="32" y="90" width="270" height="130" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="46" y="116" font-size="14" font-weight="700" fill="#13202a">1. Pick and prepare</text>
+  <text x="46" y="138" font-size="12" fill="#13202a">Choose the dense object. Its points</text>
+  <text x="46" y="155" font-size="12" fill="#13202a">are brought into the simple mesh's</text>
+  <text x="46" y="172" font-size="12" fill="#13202a">own space (as it is shown now).</text>
+  <text x="46" y="189" font-size="12" fill="#13202a">A BVH (tree of boxes) is built so</text>
+  <text x="46" y="206" font-size="12" fill="#13202a">a ray tests only a few triangles.</text>
+  <path d="M302 155 H342" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="342" y="90" width="270" height="130" rx="12" fill="#e9eef0" stroke="#0a6c8a" stroke-width="2"/>
+  <text x="356" y="116" font-size="14" font-weight="700" fill="#13202a">2. A ray for every pixel</text>
+  <text x="356" y="138" font-size="12" fill="#13202a">Each pixel of the UV map is a spot</text>
+  <text x="356" y="155" font-size="12" fill="#13202a">on a triangle. The ray starts a cage</text>
+  <text x="356" y="172" font-size="12" fill="#13202a">distance above it along the smooth</text>
+  <text x="356" y="189" font-size="12" fill="#13202a">normal and looks inwards. No hit:</text>
+  <text x="356" y="206" font-size="12" fill="#13202a">the pixel stays flat (128, 128, 255).</text>
+  <path d="M612 155 H652" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="652" y="90" width="276" height="130" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="666" y="116" font-size="14" font-weight="700" fill="#13202a">3. Write the normal</text>
+  <text x="666" y="138" font-size="12" fill="#13202a">The dense surface's smooth normal is</text>
+  <text x="666" y="155" font-size="12" fill="#13202a">turned into the pixel's tangent frame</text>
+  <text x="666" y="172" font-size="12" fill="#13202a">(along u, along v, out) and stored</text>
+  <text x="666" y="189" font-size="12" fill="#13202a">as red, green, blue. Edges are then</text>
+  <text x="666" y="206" font-size="12" fill="#13202a">spread 4 pixels so seams stay clean.</text>
+  <path d="M790 220 V260" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="500" y="260" width="428" height="130" rx="12" fill="#fff" stroke="#e08a00" stroke-width="2"/>
+  <text x="514" y="286" font-size="14" font-weight="700" fill="#13202a">4. Store and show</text>
+  <text x="514" y="308" font-size="12" fill="#13202a">PNG, SHA-256 as its id, a "texture" asset,</text>
+  <text x="514" y="325" font-size="12" fill="#13202a">material.normalMap = id: one undo step.</text>
+  <text x="514" y="342" font-size="12" fill="#13202a">three.js draws it as bumps; the GLB export</text>
+  <text x="514" y="359" font-size="12" fill="#13202a">writes it as the normal texture. Done in slices</text>
+  <text x="514" y="376" font-size="12" fill="#13202a">of 20 000 pixels, with a progress bar and Cancel.</text>
+  <rect x="32" y="260" width="430" height="130" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="46" y="286" font-size="14" font-weight="700" fill="#13202a">Not built yet</text>
+  <text x="46" y="308" font-size="12" fill="#13202a">Ambient occlusion and colour bakes.</text>
+  <text x="46" y="325" font-size="12" fill="#13202a">A Web Worker for very dense meshes.</text>
+  <text x="46" y="342" font-size="12" fill="#13202a">Baking the simple mesh's modifiers.</text>
+  <text x="46" y="359" font-size="12" fill="#13202a">Several objects at once, a cage mesh.</text>
+</svg>
