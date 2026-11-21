@@ -95,6 +95,11 @@ export const materialSchema = z.object({
   castShadow: z.boolean().default(true),
   /** Do shadows fall on the object? */
   receiveShadow: z.boolean().default(true),
+  /**
+   * A painted picture wrapped over the surface through its UV map: the id of a "texture" file (a key of
+   * `scene.assets`). null = no picture, only the colour. Older scenes load with null.
+   */
+  colorMap: z.string().min(1).nullable().default(null),
 });
 
 export type Material = z.infer<typeof materialSchema>;
@@ -448,8 +453,8 @@ export const assetInfoSchema = z.object({
   id: z.string().min(1),
   /** Shown in the Inspector; from the file name. */
   name: z.string().min(1).max(NODE_NAME_MAX_LENGTH),
-  /** "model": an imported GLB file. "mesh": the points and triangles of an editable mesh made in the editor. */
-  type: z.enum(["model", "mesh"]),
+  /** "model": an imported GLB file. "mesh": the points and triangles of an editable mesh made in the editor. "texture": a painted picture (PNG). */
+  type: z.enum(["model", "mesh", "texture"]),
   bytes: z.number().int().nonnegative(),
   triangles: z.number().int().nonnegative(),
   /** Corners of the box around the model, in the model's own units, measured when it was imported. */

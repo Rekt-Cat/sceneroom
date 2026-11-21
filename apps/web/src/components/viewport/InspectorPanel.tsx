@@ -6,6 +6,7 @@ import CharacterSection from "./CharacterSection";
 import LightSection from "./LightSection";
 import PlantSection from "./PlantSection";
 import { MakePrefabButton, PrefabStrip } from "./PrefabSection";
+import PaintSection from "./PaintSection";
 import SurfaceSection from "./SurfaceSection";
 import { useState } from "react";
 import {
@@ -236,6 +237,9 @@ function SingleObject({ node }: { node: SceneNode }) {
               <ModifiersSection node={node} disabled={locked} />
             )}
             <SurfaceSection node={node} disabled={locked} />
+            {node.kind === "mesh" && (
+              <PaintSection node={node} disabled={locked} />
+            )}
           </>
         )}
       </div>

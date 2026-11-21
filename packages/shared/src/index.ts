@@ -4,6 +4,7 @@ export const APP_NAME = "SceneRoom";
 
 export type Vec3 = [number, number, number];
 
+export * from "./paint";
 export * from "./scene";
 export * from "./sceneOps";
 export * from "./selection";

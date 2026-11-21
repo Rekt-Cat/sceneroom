@@ -7,6 +7,7 @@ import {
   bakeToMesh,
   meshAssetInfo,
   pruneUnusedMeshAssets,
+  setColorMap,
 } from "./meshOps";
 
 const square = {
@@ -232,5 +233,43 @@ describe("bakePlantToMeshes", () => {
         null,
       ),
     ).toThrow("not a mesh");
+  });
+});
+
+describe("setColorMap", () => {
+  const texture = (id: string): AssetInfo => ({
+    ...info(id),
+    type: "texture",
+  });
+  const sceneWithCube = () =>
+    addNode(createEmptyScene(), {
+      ...createNode("a", "cube"),
+      kind: "mesh",
+      assetId: "m",
+    });
+
+  it("gives the object a painted picture and records the file", () => {
+    const scene = setColorMap(sceneWithCube(), "a", texture("t1"));
+    expect(scene.nodes["a"]!.material.colorMap).toBe("t1");
+    expect(scene.assets["t1"]?.type).toBe("texture");
+  });
+
+  it("takes the picture off again, and refuses data that is not a texture", () => {
+    const painted = setColorMap(sceneWithCube(), "a", texture("t1"));
+    expect(
+      setColorMap(painted, "a", null).nodes["a"]!.material.colorMap,
+    ).toBeNull();
+    expect(() => setColorMap(painted, "a", info("mesh"))).toThrow(
+      "not a texture",
+    );
+    expect(() => setColorMap(painted, "nope", null)).toThrow("does not exist");
+  });
+
+  it("prunes pictures no object uses and keeps the one in use", () => {
+    let scene = setColorMap(sceneWithCube(), "a", texture("t1"));
+    scene = setColorMap(scene, "a", texture("t2"));
+    const pruned = pruneUnusedMeshAssets(scene);
+    expect(Object.keys(pruned.assets)).toContain("t2");
+    expect(Object.keys(pruned.assets)).not.toContain("t1");
   });
 });

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { checkGlbBytes } from "./assets";
 import { decodeMeshData } from "./meshData";
 import { pruneUnusedMeshAssets } from "./meshOps";
+import { isPngBytes } from "./paint";
 import { parseSavedScene } from "./persistence";
 import type { Scene } from "./scene";
 import { createProject, parseProject, type Project } from "./project";
@@ -239,7 +240,7 @@ export function decodeProjectFile(bytes: Uint8Array): DecodedProjectFile {
     if (!info) continue;
     const problem = checkAssetBytes(info.type, data);
     if (problem) {
-      const what = info.type === "mesh" ? "mesh" : "model";
+      const what = info.type;
       return fail(
         `The ${what} "${info.name}" in this file is not usable: ${problem}`,
       );
@@ -254,9 +255,12 @@ export function decodeProjectFile(bytes: Uint8Array): DecodedProjectFile {
 
 /** What is wrong with the stored bytes of a model (a GLB file) or a mesh, or null if they are fine. */
 function checkAssetBytes(
-  type: "model" | "mesh",
+  type: "model" | "mesh" | "texture",
   data: Uint8Array,
 ): string | null {
+  if (type === "texture") {
+    return isPngBytes(data) ? null : "it is not a PNG picture.";
+  }
   if (type === "mesh") {
     const mesh = decodeMeshData(data);
     return mesh.ok ? null : mesh.reason;

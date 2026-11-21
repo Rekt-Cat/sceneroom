@@ -166,7 +166,7 @@ describe("model objects and assets in the scene schema", () => {
       { ...info, id: "" },
       { ...info, bytes: -1 },
       { ...info, triangles: 1.5 },
-      { ...info, type: "texture" },
+      { ...info, type: "sound" },
       { ...info, boundsMin: [0, 0] },
     ]) {
       expect(
