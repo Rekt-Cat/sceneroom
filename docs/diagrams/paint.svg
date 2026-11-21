@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" width="960" height="420" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
+  <title id="t">Painting on a mesh: from the brush to a texture file</title>
+  <desc id="d">In paint mode the left mouse button paints. The pointer ray finds the spot on the surface and its UV coordinates, the brush draws into a block of pixels kept in memory and shown live through a canvas texture, and at the end of each stroke the picture is saved as a PNG texture file in asset storage, which the object's material points to by id: one undo step per stroke.</desc>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker></defs>
+  <rect width="960" height="420" fill="#f2f5f6"/>
+  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">Painting on a mesh (texture painting, first slice)</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Paint on surface, then drag the left mouse button over the object. Each stroke is one undo step.</text>
+  <rect x="32" y="90" width="270" height="130" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="46" y="116" font-size="14" font-weight="700" fill="#13202a">1. The pointer finds a spot</text>
+  <text x="46" y="138" font-size="12" fill="#13202a">three.js shoots a ray from the mouse</text>
+  <text x="46" y="155" font-size="12" fill="#13202a">at the mesh and returns the UV</text>
+  <text x="46" y="172" font-size="12" fill="#13202a">coordinate (u, v) of the hit: where</text>
+  <text x="46" y="189" font-size="12" fill="#13202a">on the flat picture that spot lives.</text>
+  <text x="46" y="206" font-size="12" fill="#13202a">No UV map: it says to Unwrap first.</text>
+  <path d="M302 155 H342" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="342" y="90" width="270" height="130" rx="12" fill="#e9eef0" stroke="#0a6c8a" stroke-width="2"/>
+  <text x="356" y="116" font-size="14" font-weight="700" fill="#13202a">2. The brush draws pixels</text>
+  <text x="356" y="138" font-size="12" fill="#13202a">paintSegment (shared, tested) stamps</text>
+  <text x="356" y="155" font-size="12" fill="#13202a">soft round dabs along the line from</text>
+  <text x="356" y="172" font-size="12" fill="#13202a">the last touch, into a 1024 x 1024</text>
+  <text x="356" y="189" font-size="12" fill="#13202a">block of RGBA bytes. A jump to</text>
+  <text x="356" y="206" font-size="12" fill="#13202a">another piece of the map is not joined.</text>
+  <path d="M612 155 H652" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="652" y="90" width="276" height="130" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="666" y="116" font-size="14" font-weight="700" fill="#13202a">3. Shown live</text>
+  <text x="666" y="138" font-size="12" fill="#13202a">Only the changed rectangle is copied</text>
+  <text x="666" y="155" font-size="12" fill="#13202a">to a canvas; a CanvasTexture on the</text>
+  <text x="666" y="172" font-size="12" fill="#13202a">object's material shows it at once.</text>
+  <text x="666" y="189" font-size="12" fill="#13202a">The left button is the brush, so it</text>
+  <text x="666" y="206" font-size="12" fill="#13202a">does not pan; right-drag still orbits.</text>
+  <path d="M790 220 V260" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="500" y="260" width="428" height="130" rx="12" fill="#fff" stroke="#e08a00" stroke-width="2"/>
+  <text x="514" y="286" font-size="14" font-weight="700" fill="#13202a">4. End of the stroke: store it</text>
+  <text x="514" y="308" font-size="12" fill="#13202a">The canvas becomes a PNG, its SHA-256 is the id,</text>
+  <text x="514" y="325" font-size="12" fill="#13202a">the bytes go to asset storage, the scene gets a</text>
+  <text x="514" y="342" font-size="12" fill="#13202a">"texture" record and material.colorMap = id.</text>
+  <text x="514" y="359" font-size="12" fill="#13202a">Undo only changes that id (and the live picture</text>
+  <text x="514" y="376" font-size="12" fill="#13202a">reloads). Saving packs the PNG; unused ones are dropped.</text>
+  <rect x="32" y="260" width="430" height="130" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="46" y="286" font-size="14" font-weight="700" fill="#13202a">Not built yet</text>
+  <text x="46" y="308" font-size="12" fill="#13202a">Layers, roughness and metalness painting, erase,</text>
+  <text x="46" y="325" font-size="12" fill="#13202a">fill, a picture in the GLB export, mirror painting.</text>
+  <text x="46" y="342" font-size="12" fill="#13202a">Baking (normal, ambient occlusion and colour maps)</text>
+  <text x="46" y="359" font-size="12" fill="#13202a">in a worker with a progress bar.</text>
+  <text x="46" y="376" font-size="12" fill="#13202a">Painting on built-in shapes (they need Edit points first).</text>
+</svg>

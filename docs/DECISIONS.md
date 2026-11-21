@@ -994,3 +994,12 @@ Also learned: a test that clicks a button before the last change was stored race
 - **How it reaches the screen:** `MeshEditor` swaps the edited geometry's index for the visible triangles (and puts the original back on cleanup), then builds the wire overlay from it. Display, wire lines, the X-ray depth test, edge and face picking all read that geometry, so they skip hidden parts without changes. Point clicks and box select filter the hidden points explicitly, and the overlay gives them no dot. Tools read the stored mesh and act only on the selection, which never contains hidden points.
 - **Fingerprint rule:** hidden parts are numbers, so they are valid only while the triangles are the same. `topologyFingerprint` (point count, index length, FNV hash of the triangle list) is stored with them; when a new geometry arrives with a different fingerprint (Divide, Extrude, Bevel, Delete ...) everything is shown again with a message. Moving points keeps the fingerprint, so you can edit behind hidden parts. Leaving edit mode shows everything. Not done: keeping hidden parts hidden through topology-changing tools.
 - **Keys:** H hide, Shift+H hide others, Alt+H show all. Show all selects the points that were hidden.
+
+## Texture painting (first slice)
+
+- **A texture is an asset, like a mesh.** The painted picture is a PNG stored in asset storage under its SHA-256, listed in `scene.assets` with type `texture`, and an object points to it with `material.colorMap` (an id, or null). Undo only changes that id, so strokes cost one PNG each in storage and nothing in the undo history; saving drops pictures that no object uses (`pruneUnusedMeshAssets`).
+- **Painting works on editable meshes with a UV map.** Built-in shapes become meshes through Edit points; a mesh without a map gets a plain message to Unwrap. Painting is not allowed while editing points (both want the clicks).
+- **The picture replaces the colour.** The first stroke starts from a flat picture of the object's colour, so nothing jumps. After that the colour picker no longer changes the look (the map is drawn untinted); Remove painting brings the colour back.
+- **Overlapping dabs add up** (airbrush), the stroke is not flattened to one layer. Simple and fast; a "stroke opacity cap" would need a second buffer per stroke.
+- **Left button paints, right orbits.** The camera's left-drag pan is turned off while painting.
+- **Not yet:** layers, roughness/metalness maps, erase, fill, the picture in the GLB export, baking.
