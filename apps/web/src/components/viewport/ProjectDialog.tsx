@@ -23,7 +23,7 @@ function tellProblem(text: string | null) {
 /**
  * The project at a glance: its name, every scene with what it holds, and the imported models nothing uses (which
  * can be removed). Opened from the project name in the top bar. Units and default looks for new scenes are still
- * to come (docs/PLAN.md, Phase 5b step 4).
+ * to come (docs/overview/PLAN.md, Phase 5b step 4).
  */
 export default function ProjectDialog({ onClose }: { onClose: () => void }) {
   const name = useProjectStore((s) => s.name);

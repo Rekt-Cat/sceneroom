@@ -5,13 +5,14 @@ development with this project, so correctness, clear structure and documentation
 
 ## Read first in a new session
 
-1. `docs/PLAN.md` ("Current status" block at the top = where we are and the next action)
-2. `docs/DECISIONS.md` (why things are the way they are)
-3. `docs/WHAT-WE-USED.md` (running list of tools and libraries) and `docs/WHY-THESE-TOOLS.md` (why each tool and not its alternatives)
-4. Working on the online part: `docs/COLLABORATION.md` (design and build steps M1 to M9)
+1. `docs/overview/PLAN.md` ("Current status" block at the top = where we are and the next action)
+2. `docs/overview/DECISIONS.md` (why things are the way they are)
+3. `docs/overview/WHAT-WE-USED.md` (running list of tools and libraries) and `docs/overview/WHY-THESE-TOOLS.md` (why each tool and not its alternatives)
+4. Working on the online part: `docs/backend/COLLABORATION.md` (design and build steps M1 to M9)
 
 ## Repo layout
 
+- `docs/`: documents sorted into `overview/`, `editor/`, `backend/`, `dev/` (index: `docs/README.md`); new documents go in the folder for their topic and into that index.
 - `apps/web`: Next.js 16 app (App Router, Turbopack, Tailwind 4). Read `apps/web/AGENTS.md`: Next.js docs for the installed version are in `apps/web/node_modules/next/dist/docs/`. Check them before writing Next.js code.
 - `packages/shared`: types and constants shared by the web app and (later) the collab server.
 - Planned: `apps/collab-server`, `packages/db`.
@@ -21,20 +22,20 @@ development with this project, so correctness, clear structure and documentation
 - `pnpm install`: install everything
 - `pnpm dev`: start dev servers through Turborepo (web app at http://localhost:3000)
 - `pnpm build`, `pnpm lint`, `pnpm check-types`: run through Turborepo
-- `pnpm test:e2e`: browser tests (Playwright, `apps/web/e2e/`) against the running dev server. Set `PLAYWRIGHT_BROWSERS_PATH` first (see `docs/DECISIONS.md`); restart the dev server after installing any dependency
+- `pnpm test:e2e`: browser tests (Playwright, `apps/web/e2e/`) against the running dev server. Set `PLAYWRIGHT_BROWSERS_PATH` first (see `docs/overview/DECISIONS.md`); restart the dev server after installing any dependency
 - Node is pinned in `.node-version` (24, managed with fnm). pnpm is pinned in the root `package.json` via Corepack.
 
 ## How to work with the owner
 
 - **Implement first, keep replies short.** Do not explain every tool after each step. Instead, append new tools,
-  libraries and concepts to `docs/WHAT-WE-USED.md` (name, version, purpose, where used) using the
+  libraries and concepts to `docs/overview/WHAT-WE-USED.md` (name, version, purpose, where used) using the
   `/update-what-we-used` skill whenever something new is added. Explain in full only when asked
   ("what did we use?" or "explain X"): simple words, a Unity comparison (the owner knows Unity), a tiny example,
   caveats, why chosen vs alternatives, likely interview questions.
 - **Tunable settings** the owner can adjust themselves (speeds, colours, sizes, ports, config values) are listed in
-  `docs/TUNING.md` with the file, our value and what it does. Add a row whenever you introduce one, and only state a
+  `docs/overview/TUNING.md` with the file, our value and what it does. Add a row whenever you introduce one, and only state a
   library default after reading it in the library source or docs.
-- **Research before choosing versions or APIs**: official docs and the real latest version from the npm registry. Say what is verified and what is uncertain. Record choices in `docs/DECISIONS.md`.
+- **Research before choosing versions or APIs**: official docs and the real latest version from the npm registry. Say what is verified and what is uncertain. Record choices in `docs/overview/DECISIONS.md`.
 - **Ask before** risky or machine-level actions (installing software, editing files outside the repo, force-pushing, deleting).
 - **Commits**: small, clear messages, **no `Co-Authored-By` or "Generated with" lines**. Never commit secrets (`.env*` is ignored; `.env.example` is the template). Pushing is done by the owner with GitHub Desktop.
 - The repo is **public**: keep personal or employer information out of committed files.
@@ -53,7 +54,7 @@ development with this project, so correctness, clear structure and documentation
 
 ## Diagrams
 
-When a tool or library is added, also add its "why this and not the alternatives" row to `docs/WHY-THESE-TOOLS.md` and update `docs/diagrams/overview/stack-map.svg`.
+When a tool or library is added, also add its "why this and not the alternatives" row to `docs/overview/WHY-THESE-TOOLS.md` and update `docs/diagrams/overview/stack-map.svg`.
 
 After a tool or feature is implemented and working (not after every step), draw a whiteboard-style diagram of its flow
 and save it in `docs/diagrams/` (self-contained SVG or HTML), in the folder for its topic: `overview/` (whole app and

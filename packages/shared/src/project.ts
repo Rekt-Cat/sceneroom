@@ -14,7 +14,7 @@ import { MAX_PREFABS, prefabSchema, type Prefab } from "./prefab";
  * A project is the unit people work on: a name and several scenes (one for NPCs, one for buildings,
  * one that puts everything together, and so on). Each scene is an ordinary `Scene`. The model files are
  * not inside the scenes: they are kept once, by fingerprint, and every scene that uses one refers to it.
- * (Members, roles and the shared library come with the backend; see docs/PLAN.md, Phase 5b.)
+ * (Members, roles and the shared library come with the backend; see docs/overview/PLAN.md, Phase 5b.)
  */
 export const PROJECT_SCHEMA_VERSION = 1;
 export const MAX_PROJECT_SCENES = 50;

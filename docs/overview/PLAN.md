@@ -57,8 +57,8 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 - [x] Tools: Node 24 (fnm), pnpm via Corepack, git
 - [x] GitHub repo, `.gitignore`, README
 - [x] Monorepo with `apps/web` and `packages/shared`
-- [x] `docs/WHAT-WE-USED.md`, `docs/DECISIONS.md`, `CLAUDE.md`
-- [ ] `docs/SETUP-SECOND-PC.md` verified on the second PC, `.env.example`
+- [x] `docs/overview/WHAT-WE-USED.md`, `docs/overview/DECISIONS.md`, `CLAUDE.md`
+- [ ] `docs/dev/SETUP-SECOND-PC.md` verified on the second PC, `.env.example`
 - [x] Prettier, GitHub Actions workflow (format check + lint + type-check + build); green on GitHub
 - [x] First Claude Code hook (Prettier after edits) written and pipe-tested; firing still to confirm after `/hooks` reload
 - [x] Skill to update WHAT-WE-USED.md (`/update-what-we-used`); loading still to confirm after `/reload-skills`
@@ -67,7 +67,7 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 ### Phase 1: 3D viewport
 
 - [x] Three.js + React Three Fiber + drei; canvas, grid, lights, cube, orbit controls, FPS overlay (confirmed in a browser; drag feel tuned)
-- [x] `docs/TUNING.md`: settings the owner can adjust
+- [x] `docs/overview/TUNING.md`: settings the owner can adjust
 - [x] Deploy the early version to Vercel: https://sceneroom.vercel.app (HTTP 200, served by Vercel)
 - [x] Architecture diagram (built parts solid, planned parts dashed): `docs/diagrams/overview/architecture.html`
 - [ ] Optional: `/code-review` pass on the Phase 0-1 diffs
@@ -160,13 +160,13 @@ Today the app opens straight into one project. A home screen comes first: it lis
 
 ### Phase 6: Docker, database, project backend
 
-_Order changed (2026-11-21): collaboration (Phase 7) is built first, against a local file database, because two windows editing one scene is the core value. This phase becomes step M8 of `docs/COLLABORATION.md`._
+_Order changed (2026-11-21): collaboration (Phase 7) is built first, against a local file database, because two windows editing one scene is the core value. This phase becomes step M8 of `docs/backend/COLLABORATION.md`._
 
 - [ ] docker-compose with Postgres; Prisma schema (User, Project, ProjectMember with a role, **Scene**, Asset, **Component**, Version); API routes with Zod; seed script. The data model is the Phase 5b project model, stored on a server
 
 ### Phase 7: Real-time collaboration
 
-_Designed in `docs/COLLABORATION.md` (steps M1 to M7 are this phase). Diagrams: `docs/diagrams/backend/collab-architecture.svg`, `docs/diagrams/backend/collab-sync-flow.svg`._
+_Designed in `docs/backend/COLLABORATION.md` (steps M1 to M7 are this phase). Diagrams: `docs/diagrams/backend/collab-architecture.svg`, `docs/diagrams/backend/collab-sync-flow.svg`._
 
 - [ ] Yjs document as the source of truth, **one document per scene plus one for the project** (members, scene list, library); `apps/collab-server` (Hocuspocus, Dockerfile); persistence to Postgres
 - [ ] Presence (names, colors, live 3D cursors, selections) **and who is in which scene**; per-user undo/redo
@@ -214,7 +214,7 @@ _Designed in `docs/COLLABORATION.md` (steps M1 to M7 are this phase). Diagrams: 
 - [x] **Inset and pushing in** (`feature/edge-loops`, merged): the Inset button (key I) makes a smaller copy of the selected faces inside them, with a flat border; a Depth setting pushes it out or in; Extrude's Distance can also go negative (a recess)
 - [ ] **Step 6: more modelling tools.** Built and merged: Bevel, edge extrude, Merge, Weld (by distance), Flip normals, Fill hole, Bridge (the "Fix up" row), Divide faces. Still to do: bevel of single points, knife, dissolve edges and points (needs a stored polygon mesh, see DECISIONS), mirror editing (one half edited, the other follows), soft selection (proportional editing), merge "at last" and "at first"
 - [ ] **Step 7: selection power tools.** Built and merged: More ( ] ), Less ( [ ), Invert, Similar and Outline (the "Adjust" row); "select visible only" is the X-ray toggle (off picks only what the camera sees). Hide and show (H, Shift+H, Alt+H) is built on `feature/hide-show`. Still to do: select by loop or ring from a face selection, selection sets
-- [ ] **Step 8: UVs and seams** and **difference-based undo** for big meshes (shared with sculpting). Planned in detail in `docs/UVS-AND-SEAMS.md`. Built: sub-steps 1 to 5 (merged: UV checker and data in the mesh format, seams, Unwrap with packing and the UV window, Unwrap along seams with the Stretch view, the edit tools keep the map; Smooth still drops it) and 6 (on `feature/uv-window-edit`: choose, move, turn, mirror, scale and pack pieces in the UV window; snap not done). Still to do: difference-based undo (7 / 8b)
+- [ ] **Step 8: UVs and seams** and **difference-based undo** for big meshes (shared with sculpting). Planned in detail in `docs/editor/UVS-AND-SEAMS.md`. Built: sub-steps 1 to 5 (merged: UV checker and data in the mesh format, seams, Unwrap with packing and the UV window, Unwrap along seams with the Stretch view, the edit tools keep the map; Smooth still drops it) and 6 (on `feature/uv-window-edit`: choose, move, turn, mirror, scale and pack pieces in the UV window; snap not done). Still to do: difference-based undo (7 / 8b)
 
 - [ ] **Step 9: retopology helpers.** _Built so far: Simplify (edit mode, halves the triangles each press, on `feature/retopo`); and Shrinkwrap (edit mode, a Wrap onto list and a button, on `feature/shrinkwrap`); not built: the live Retopo mode (snap while moving), the strip tool, an offset for Shrinkwrap, a target-count slider for Simplify._ Draw a clean new mesh over a dense one (a sculpt or a scan): a "Retopo" mode where points and quads snap to the surface of the high-poly object (shown see-through), click to place points, a strip tool that lays quad rows along a drag, and a Shrinkwrap modifier that pulls a rough mesh onto a target. Also an automatic "Simplify to N faces" (quick, for non-animated objects). Beginner view: pick the dense object, press Retopo, click points, a live face count; the snapping and the see-through target are set up for them
 - [ ] **Step 10: texture baking and painting.** _Built so far (on `feature/paint`): Paint on surface for meshes with a UV map, one round brush, a colour map stored as a PNG; not built: layers, roughness and metalness painting, ambient occlusion and colour baking. Baking a normal map is built (on `feature/bake`). Erase and Fill all are built, and so is roughness and metalness painting (on `feature/paint-surface`). The GLB export carries the picture (on `feature/paint-export`)._ Needs UVs (step 8). _Painting_: brush colours straight onto the surface (colour, roughness, metalness) with a layer list, undo per stroke; saved as ordinary texture images in the asset pool. _Baking_: copy the detail of a dense object onto a low-poly one as a normal map, plus ambient occlusion and colour maps, in a background worker with a progress bar. Beginner view: one "Bake detail" button with sensible defaults (size 1024, low to high object chosen from a list); options such as ray distance and cage hidden under "Advanced"

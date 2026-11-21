@@ -57,7 +57,7 @@ bytes and its id. Its header is 24 bytes: `C`, the number of creases (0 for none
 at bytes 20 to 23 (bit 0: the mesh has UVs; the other bits are free for seams, which come next). The points start at
 byte 24. After the corners come the creases (as in version 2) and then `P * 8` bytes: the UV of every point, `u` and `v`
 as 32-bit floats. All three versions are read. UVs that do not match the points (two numbers for each) or are not finite
-numbers are refused, as is a size that does not match. See `docs/UVS-AND-SEAMS.md`.
+numbers are refused, as is a size that does not match. See `docs/editor/UVS-AND-SEAMS.md`.
 
 **Seams** use bit 1 of the same flags (so a mesh with seams but no UVs is also version 3). After the UVs (if any) come `S`, the number of
 seams (32-bit), then `S * 4` bytes of first points and `S * 4` bytes of second points: the two ends of each seam edge. A seam on a

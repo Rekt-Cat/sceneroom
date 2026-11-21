@@ -1,7 +1,7 @@
 # Why these tools and not the others
 
 For every tool in SceneRoom: what it is for, what else could have done the same job, why we picked this one, and when the
-other one would be the better pick. A map of the layers: `diagrams/overview/stack-map.svg`. The list of versions and where each tool is
+other one would be the better pick. A map of the layers: `docs/diagrams/overview/stack-map.svg`. The list of versions and where each tool is
 used: `WHAT-WE-USED.md`.
 
 **How to read the "why".** Reasons marked **(decision)** come from choices recorded in `DECISIONS.md` when they were made.

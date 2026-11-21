@@ -21,7 +21,7 @@ import type { ShapeMesh } from "./modifiers";
  *   after the corners:  C * 4 first points, C * 4 second points (32-bit whole numbers), then C * 1 values
  *                       (0 to 255 for 0 to 1)
  *
- * Version 3 adds UVs (see docs/UVS-AND-SEAMS.md) and is only written for a mesh that has them. It has a longer
+ * Version 3 adds UVs (see docs/editor/UVS-AND-SEAMS.md) and is only written for a mesh that has them. It has a longer
  * header with a set of flags, so seams can be added later without another version:
  *   bytes 16 to 19   C, the number of creases (0 for none)
  *   bytes 20 to 23   flags: bit 0 = the mesh has UVs

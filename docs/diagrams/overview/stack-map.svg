@@ -3,7 +3,7 @@
   <desc id="d">Four layers of tools. Editor: Next.js, React, three.js with react-three-fiber, Zustand, Zod, Tailwind. Code and tests: TypeScript, pnpm, Turborepo, Vitest, Playwright, Prettier and ESLint, husky, GitHub Actions. Hosting: Vercel. Online part, planned and drawn dashed: Yjs, Hocuspocus, y-indexeddb, Postgres with Prisma and Docker, Cloudflare R2, login not decided yet. Under each tool in grey is what else could do the same job.</desc>
   <rect width="960" height="560" fill="#f2f5f6"/>
   <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">The tool stack, and what each one was chosen over</text>
-  <text x="32" y="60" font-size="13" fill="#55656f">Solid = in use. Dashed = planned. Grey line = what else does the same job. Reasons: docs/WHY-THESE-TOOLS.md</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Solid = in use. Dashed = planned. Grey line = what else does the same job. Reasons: docs/overview/WHY-THESE-TOOLS.md</text>
 
   <text x="32" y="92" font-size="13" font-weight="700" fill="#0a6c8a">THE EDITOR (in the browser)</text>
   <rect x="32" y="100" width="140" height="64" rx="10" fill="#fff" stroke="#13202a" stroke-width="2"/>

@@ -290,7 +290,7 @@ In the Inspector's "Shape" section for the built-in shapes. Each value has its o
 
 ## Saving and opening scene files
 
-Details of the file: `docs/SCENE-FILE-FORMAT.md`.
+Details of the file: `docs/editor/SCENE-FILE-FORMAT.md`.
 
 | What           | Setting                                                      | Our value                    | What it does                                                            |
 | -------------- | ------------------------------------------------------------ | ---------------------------- | ----------------------------------------------------------------------- |
@@ -567,14 +567,14 @@ Files: `apps/web/src/components/viewport/InspectorFields.tsx` (rows, steps, colo
 
 ## Project settings
 
-| What                        | Where                      | What to change                                                                                      |
-| --------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------- |
-| Dev server port             | `apps/web/package.json`    | The `dev` script is `next dev`, which uses port 3000. Add `-p 3100` to use another port.            |
-| Code style (quotes, widths) | `.prettierrc.json`         | Empty on purpose, so Prettier's defaults apply. Adding options changes how every file is formatted. |
-| Files Prettier skips        | `.prettierignore`          | Add paths you never want formatted.                                                                 |
-| Which tasks Turborepo runs  | `turbo.json`               | Task order and what is cached. Change with care: wrong `outputs` can cause stale results.           |
-| What CI checks              | `.github/workflows/ci.yml` | The list of steps GitHub runs on every push.                                                        |
-| Node version                | `.node-version`            | The Node version the project uses. Also update the notes in `docs/DECISIONS.md` if you change it.   |
+| What                        | Where                      | What to change                                                                                             |
+| --------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Dev server port             | `apps/web/package.json`    | The `dev` script is `next dev`, which uses port 3000. Add `-p 3100` to use another port.                   |
+| Code style (quotes, widths) | `.prettierrc.json`         | Empty on purpose, so Prettier's defaults apply. Adding options changes how every file is formatted.        |
+| Files Prettier skips        | `.prettierignore`          | Add paths you never want formatted.                                                                        |
+| Which tasks Turborepo runs  | `turbo.json`               | Task order and what is cached. Change with care: wrong `outputs` can cause stale results.                  |
+| What CI checks              | `.github/workflows/ci.yml` | The list of steps GitHub runs on every push.                                                               |
+| Node version                | `.node-version`            | The Node version the project uses. Also update the notes in `docs/overview/DECISIONS.md` if you change it. |
 
 ## Keeping this file up to date
 

@@ -13,4 +13,4 @@ Node.js WebSocket server, PostgreSQL, Docker, GitHub Actions.
 ## Project goals
 
 - Learn and demonstrate a modern full-stack web stack end to end.
-- Document decisions and trade-offs as the project grows (see `docs/` once it exists).
+- Document decisions and trade-offs as the project grows (see `docs/README.md`).

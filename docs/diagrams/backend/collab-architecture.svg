@@ -4,7 +4,7 @@
   <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker></defs>
   <rect width="960" height="520" fill="#f2f5f6"/>
   <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">The online part: the pieces</text>
-  <text x="32" y="60" font-size="13" fill="#55656f">Planned (dashed). The editor you have today stays whole; a sync layer is added beside the store. Detail: docs/COLLABORATION.md</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Planned (dashed). The editor you have today stays whole; a sync layer is added beside the store. Detail: docs/backend/COLLABORATION.md</text>
 
   <rect x="32" y="84" width="300" height="300" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
   <text x="46" y="108" font-size="14" font-weight="700" fill="#13202a">Browser A (Alice)</text>

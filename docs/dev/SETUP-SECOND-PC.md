@@ -63,5 +63,5 @@ and fill in the values on each computer.
 ## Note on Claude Code
 
 Claude Code's personal memory notes are stored per computer and are **not** synced. Everything important is written
-into the repo (`CLAUDE.md`, `docs/PLAN.md`, `docs/DECISIONS.md`, `docs/WHAT-WE-USED.md`), so a new session on the
+into the repo (`CLAUDE.md`, `docs/overview/PLAN.md`, `docs/overview/DECISIONS.md`, `docs/overview/WHAT-WE-USED.md`), so a new session on the
 other computer picks up from those files.

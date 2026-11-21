@@ -1,7 +1,7 @@
 import type { ShapeMesh } from "./modifiers";
 
 /**
- * A mesh stored as the DIFFERENCE from an earlier mesh (difference-based undo, see docs/UVS-AND-SEAMS.md). When an edit
+ * A mesh stored as the DIFFERENCE from an earlier mesh (difference-based undo, see docs/editor/UVS-AND-SEAMS.md). When an edit
  * only moves points (a sculpt stroke, a move of a big selection) the triangles, creases, seams and map stay as they
  * were, so only the changed points need to be kept: their numbers and new positions.
  */

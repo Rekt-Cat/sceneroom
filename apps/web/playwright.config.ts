@@ -5,7 +5,7 @@ import { defineConfig, devices } from "@playwright/test";
  * `pnpm test:e2e` from the repo root. They are not part of `pnpm test` (those are fast tests without a browser).
  *
  * The browser is Playwright's own Chromium, kept wherever PLAYWRIGHT_BROWSERS_PATH points (set it before running
- * `npx playwright install chromium` and before running the tests; see docs/WHAT-WE-USED.md). The 3D view needs WebGL,
+ * `npx playwright install chromium` and before running the tests; see docs/overview/WHAT-WE-USED.md). The 3D view needs WebGL,
  * so Chromium is started with a software renderer (slower than a graphics card, but works with no screen).
  */
 export default defineConfig({

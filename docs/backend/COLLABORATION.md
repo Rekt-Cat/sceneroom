@@ -1,7 +1,7 @@
 # Collaboration and the online part: design
 
 Written 2026-11-21, before any of it is built. This is the plan to check, and the place to come back to when something here
-is unclear. Diagrams: `diagrams/backend/collab-architecture.svg` (the pieces) and `diagrams/backend/collab-sync-flow.svg` (one edit
+is unclear. Diagrams: `docs/diagrams/backend/collab-architecture.svg` (the pieces) and `docs/diagrams/backend/collab-sync-flow.svg` (one edit
 travelling from one person to another). Why each tool was chosen over the others: `WHY-THESE-TOOLS.md`.
 
 ## 1. What we are building, in plain words

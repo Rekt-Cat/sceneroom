@@ -4,7 +4,7 @@
   <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker></defs>
   <rect width="960" height="600" fill="#f2f5f6"/>
   <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">One edit, from Alice to Bob</text>
-  <text x="32" y="60" font-size="13" fill="#55656f">Alice drags the Roughness slider on a cube. Planned (steps M3 to M5 in docs/COLLABORATION.md).</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Alice drags the Roughness slider on a cube. Planned (steps M3 to M5 in docs/backend/COLLABORATION.md).</text>
 
   <text x="32" y="92" font-size="13" font-weight="700" fill="#0a6c8a">ALICE'S BROWSER</text>
   <rect x="32" y="100" width="210" height="96" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>

@@ -46,7 +46,7 @@ type Loaded =
 /**
  * The screen before a project opens: every project as a card (picture, name, last edit, scenes), a card to make a
  * new one, a way to open a file, and a menu on each card. Projects live in this browser for now; sharing with other
- * people comes with accounts (docs/PLAN.md, Phase 5c).
+ * people comes with accounts (docs/overview/PLAN.md, Phase 5c).
  */
 export default function HomeScreen() {
   const router = useRouter();

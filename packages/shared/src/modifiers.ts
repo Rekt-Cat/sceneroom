@@ -416,7 +416,7 @@ export type ShapeMesh = {
   seams?: readonly Seam[];
   /**
    * Where each point lies on the flat texture map: u, v for every point (so twice as many numbers as points), or none.
-   * Tools that do not know about UVs leave them out (see docs/UVS-AND-SEAMS.md).
+   * Tools that do not know about UVs leave them out (see docs/editor/UVS-AND-SEAMS.md).
    */
   uvs?: Float32Array;
 };

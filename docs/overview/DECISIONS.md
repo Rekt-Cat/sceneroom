@@ -294,7 +294,7 @@ A locked object cannot be edited. What "edited" means is decided in one place, t
 
 ## 2026-11-13: Proposed: advanced editing roadmap (deformers first)
 
-A plan only, in `docs/ADVANCED-EDITING.md`; nothing is built or verified yet. The key proposals:
+A plan only, in `docs/editor/ADVANCED-EDITING.md`; nothing is built or verified yet. The key proposals:
 
 - **Deformers (modifiers) come first** (Bend, Twist, Taper, Noise, Mirror, Array, Subdivide): they are non-destructive and the data is a few numbers, so they fit our undo and later collaboration with no new mesh storage.
   They also give the "bending" asked for, and "Apply" is the bridge to real mesh data.
@@ -305,7 +305,7 @@ A plan only, in `docs/ADVANCED-EDITING.md`; nothing is built or verified yet. Th
 
 ## 2026-11-13: Proposed: importing outside models and assets
 
-A plan only, in `docs/ASSETS-AND-IMPORT.md`; nothing is built or verified yet.
+A plan only, in `docs/editor/ASSETS-AND-IMPORT.md`; nothing is built or verified yet.
 
 - **GLB first.** One file holds shapes, materials, textures and animation, and most free model sites offer it. glTF with separate files, then OBJ, later; FBX probably never (closed format).
 - **A "model" object kind** that stores only an asset id plus the normal object data, so the gizmo, Inspector, undo, lock and parenting all work on it unchanged. Its inner parts stay inside the file at first (one object); showing and editing them comes with the mesh tools.
@@ -541,7 +541,7 @@ First step of Phase 11. Non-destructive: an object keeps its plain shape and a s
 
 First piece of the foundation for the editing tools (Phase 5): scenes can leave the browser.
 
-- **A container, not a zip and not one big JSON.** Layout in `docs/SCENE-FILE-FORMAT.md`: letters, version, header length, a JSON header (the scene and a list of the model files), then the model files as raw bytes. A zip would need a library (and its own security checks for odd paths and sizes); base64 inside JSON makes a 50 MB model 67 MB and slow. The container is about 60 lines, easy to check completely and easy to read from a server later.
+- **A container, not a zip and not one big JSON.** Layout in `docs/editor/SCENE-FILE-FORMAT.md`: letters, version, header length, a JSON header (the scene and a list of the model files), then the model files as raw bytes. A zip would need a library (and its own security checks for odd paths and sizes); base64 inside JSON makes a 50 MB model 67 MB and slow. The container is about 60 lines, easy to check completely and easy to read from a server later.
 - **Everything about the scene is in the header** and goes through the same `sceneSchema` as the autosave, so a file from an older version fills in new settings with defaults, and bad values are refused with the place they are wrong. Old files keep opening; a newer file in an older app says "update the app".
 - **Nothing in the file is trusted.** Size limit before reading; every length checked against the file; each model must be a real GLB; and (in the web part, because it needs a hash) each model file must match its id, which is the SHA-256 of its contents. A file that fails any check changes nothing.
 - **Open replaces the scene.** It asks first, because it cannot be undone (the undo history is cleared, like the first load); the current scene can be saved as a file first. The autosave then saves the opened scene as usual. Merging a file into the open scene is not done.
@@ -563,7 +563,7 @@ First piece of the foundation for the editing tools (Phase 5): scenes can leave 
 
 The first of the "foundation" decisions in `ADVANCED-EDITING.md`, built so that everything after it (edit mode, sculpting, the plant generator, characters) has somewhere to stand.
 
-- **A new object kind, "mesh".** Its points and triangles are NOT in the scene JSON: the object holds an `assetId` and the data is a separate binary blob (layout in `docs/SCENE-FILE-FORMAT.md`), stored by `assetStorage` (IndexedDB) next to imported model files, under the fingerprint (SHA-256) of its bytes. The asset record (`type: "mesh"`, triangles, box) is in `scene.assets`. This reuses everything the models already had: storage, the file format, fingerprint checks, copy and paste (copies share the blob), autosave.
+- **A new object kind, "mesh".** Its points and triangles are NOT in the scene JSON: the object holds an `assetId` and the data is a separate binary blob (layout in `docs/editor/SCENE-FILE-FORMAT.md`), stored by `assetStorage` (IndexedDB) next to imported model files, under the fingerprint (SHA-256) of its bytes. The asset record (`type: "mesh"`, triangles, box) is in `scene.assets`. This reuses everything the models already had: storage, the file format, fingerprint checks, copy and paste (copies share the blob), autosave.
 - **A stored mesh never changes.** An edit makes a NEW blob under a new id and the object points to it; the old one stays. That makes undo cheap with no new machinery: the undo history holds scenes, and a scene only holds the id. The price is memory: every version stays in storage. Two things limit it: meshes that no object uses are not saved in a file (`pruneUnusedMeshAssets`), and a clean-up of unused versions in the browser's storage is still to do. **Per-stroke undo by difference** (store only the points a sculpt stroke changed) is still needed for sculpting and is NOT built; the plan is unchanged.
 - **Apply modifiers and Convert to mesh** (the same action, named by whether modifiers are on): `bakeNodeToMesh` builds the geometry the object looks like now (`buildShapeGeometry`, or the mesh with its modifiers), copies out its points and triangles (`geometryToMesh`), stores them, and the store turns the object into a mesh IN PLACE (`bakeToMesh`: same id, position, parent, children, colour and surface; modifiers and segments cleared). One undo step brings back the shape and its modifiers. A mesh can get modifiers again and be applied again, making a new version.
 - **Modifiers work on meshes too** (`supportsModifiers` is true for shapes and meshes): the mesh's own points are never changed; the modifiers are applied on top, and Apply bakes them in. Segments do not apply to a mesh (it has its own points).
@@ -701,7 +701,7 @@ Not yet tried in a browser; the rules and the store are covered by tests (`proje
 
 ## 2026-11-16: Phase 5b step 2, the file is a project (built)
 
-Not yet tried in a browser; the format is covered by tests in `sceneFile.test.ts` (packing, every refusal, several scenes, a file used by two scenes stored once, version 1 files) and `sceneFileActions.test.ts` (saving and opening in a browser-like store). Format details: `docs/SCENE-FILE-FORMAT.md`.
+Not yet tried in a browser; the format is covered by tests in `sceneFile.test.ts` (packing, every refusal, several scenes, a file used by two scenes stored once, version 1 files) and `sceneFileActions.test.ts` (saving and opening in a browser-like store). Format details: `docs/editor/SCENE-FILE-FORMAT.md`.
 
 - **One format, version 2, always a project.** The header holds `project` (name, open scene, every scene) instead of `scene`. A file with ONE scene is just a project with one scene, so "Save this scene as a file" needs no second format and a scene file and a project file open the same way. Version 1 files (one scene) still open, as a project with one scene; this is tested with a hand-built version 1 file.
 - **Files are shared, so the file is small:** a model or mesh used by five scenes is in the file once (the list of files is by fingerprint, collected over all scenes). Opening checks each file against its fingerprint and against what the scenes say it is, as before. A mesh no object uses is left out of every scene.
@@ -913,7 +913,7 @@ The design from 2026-11-16 (above) was built on `feature/four-view`; not yet tri
 
 ## UVs and seams: plan written (2026-11-18)
 
-- The plan is in `docs/UVS-AND-SEAMS.md`: one-button Unwrap (smart projection first, conformal maps along seams second), a checker view, a read-only UV window, seams like creases, mesh format version 3 with optional UVs and seams, tools that do not know UVs remove them with a message at first, and difference-based undo as step 8b. Five decisions are open for the owner (first method, tools and UVs, where the UV window lives, when UVs are made, order against sculpting).
+- The plan is in `docs/editor/UVS-AND-SEAMS.md`: one-button Unwrap (smart projection first, conformal maps along seams second), a checker view, a read-only UV window, seams like creases, mesh format version 3 with optional UVs and seams, tools that do not know UVs remove them with a message at first, and difference-based undo as step 8b. Five decisions are open for the owner (first method, tools and UVs, where the UV window lives, when UVs are made, order against sculpting).
 
 ## UVs, sub-step 1: the checker view and UV data
 
@@ -1021,8 +1021,8 @@ Also learned: a test that clicks a button before the last change was stored race
 ## Online part: collaboration first, designed before built (2026-11-21)
 
 - **Order changed:** the owner chose to build collaboration (Phase 7) before the database and accounts (Phase 6 and 8). Documents are saved in a local file database (SQLite) at first; Postgres arrives with accounts at step M8, when the owner installs Docker Desktop. Reason: two windows editing one scene is the core value and the best demo; a private share link (an unguessable token with a role) is enough to try it before accounts exist.
-- **The design is in `docs/COLLABORATION.md`:** one Yjs document per scene plus one for the project; the scene is a map of objects with per-field maps for `transform` and `material`; a sync layer beside the Zustand store that writes only the difference and checks every incoming change with Zod; big files by content hash over HTTPS, never through the document; one editor per object as a courtesy lock through awareness; per-user Undo with `Y.UndoManager` instead of scene snapshots (snapshots stay for local-only projects until the new one has proved itself); two permission stages (link, then accounts), always checked on the server.
+- **The design is in `docs/backend/COLLABORATION.md`:** one Yjs document per scene plus one for the project; the scene is a map of objects with per-field maps for `transform` and `material`; a sync layer beside the Zustand store that writes only the difference and checks every incoming change with Zod; big files by content hash over HTTPS, never through the document; one editor per object as a courtesy lock through awareness; per-user Undo with `Y.UndoManager` instead of scene snapshots (snapshots stay for local-only projects until the new one has proved itself); two permission stages (link, then accounts), always checked on the server.
 - **Why compare-and-write instead of turning every store action into a document action:** the 100-plus existing actions and the pure functions keep working unchanged; only one new layer is written and tested. Cost: a compare per change (cheap for a few thousand objects; measured at step M3 before it is trusted).
-- **Why a CRDT (Yjs) and not a server that decides, and why not a hosted product (Liveblocks, Firebase):** offline work and automatic merging, data on infrastructure we own, and the owner is learning how these pieces work. Details and the alternatives: `docs/WHY-THESE-TOOLS.md`.
+- **Why a CRDT (Yjs) and not a server that decides, and why not a hosted product (Liveblocks, Firebase):** offline work and automatic merging, data on infrastructure we own, and the owner is learning how these pieces work. Details and the alternatives: `docs/overview/WHY-THESE-TOOLS.md`.
 - **Written down so it can be checked:** the unverified parts (Hocuspocus 4.x API details, Yjs with our biggest scenes) are listed in `COLLABORATION.md`, section 12, and are checked at steps M2 and M3 by reading the library docs and measuring.
 - **A new rule for the docs:** each new tool gets a "why this and not the alternatives" entry in `WHY-THESE-TOOLS.md`, and each larger feature gets a diagram in `docs/diagrams/` (already in `CLAUDE.md` for features; now also for tools).
