@@ -7,7 +7,8 @@ development with this project, so correctness, clear structure and documentation
 
 1. `docs/PLAN.md` ("Current status" block at the top = where we are and the next action)
 2. `docs/DECISIONS.md` (why things are the way they are)
-3. `docs/WHAT-WE-USED.md` (running list of tools and libraries)
+3. `docs/WHAT-WE-USED.md` (running list of tools and libraries) and `docs/WHY-THESE-TOOLS.md` (why each tool and not its alternatives)
+4. Working on the online part: `docs/COLLABORATION.md` (design and build steps M1 to M9)
 
 ## Repo layout
 
@@ -52,5 +53,9 @@ development with this project, so correctness, clear structure and documentation
 
 ## Diagrams
 
+When a tool or library is added, also add its "why this and not the alternatives" row to `docs/WHY-THESE-TOOLS.md` and update `docs/diagrams/overview/stack-map.svg`.
+
 After a tool or feature is implemented and working (not after every step), draw a whiteboard-style diagram of its flow
-and save it in `docs/diagrams/` (self-contained SVG or HTML).
+and save it in `docs/diagrams/` (self-contained SVG or HTML), in the folder for its topic: `overview/` (whole app and
+stack), `editor/` (editor features), `backend/` (online part), `dev/` (how we build and test). Add it to
+`docs/diagrams/README.md`.

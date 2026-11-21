@@ -14,8 +14,9 @@
 - **On `feature/paint-tools` (from `main`):** painting: an Erase mode for the brush and Fill all / Erase all buttons.
 - **On `feature/paint-surface` (from `main`):** painting roughness and metalness: a second picture (green = roughness, blue = metalness) with a Colour / Roughness / Metalness choice, undo per stroke, saved and exported as the glTF metallic-roughness texture.
 - **On `feature/bake` (from `main`):** baking, first slice: Bake detail copies the detail of a dense object onto a UV-mapped mesh as a normal map (BVH ray casting, progress bar, cancel, one undo step), shown on the surface and exported in the GLB.
+- **On `feature/collab-design` (on top of `feature/bake`):** the design of the online part (`COLLABORATION.md`, build steps M1 to M9), `WHY-THESE-TOOLS.md` (every tool against its alternatives) and four new diagrams (`overview/app-overview.svg`, `overview/stack-map.svg`, `backend/collab-architecture.svg`, `backend/collab-sync-flow.svg`); all diagrams are now sorted into `docs/diagrams/overview`, `editor`, `backend` and `dev`. No code yet.
 - **CI:** the `verify` job runs format check, lint, type-check, test and build on every pull request. Last confirmed green (earlier note): pull requests up to #11; one later run failed on a formatting error that was fixed. Later runs were not read from this PC (the GitHub command line tool is not installed), so check the Actions tab. The new `e2e` job (Playwright) has not run on GitHub yet; its first run is the next push.
-- **Next action:** finish texture painting (step 10: layers, layers, ambient occlusion and colour bakes, a background worker for baking), and the retopology leftovers (step 9: the live Retopo mode and the strip tool), then sculpting (Phase 14). In between: the rest of Phase 5b step 4 (units, default look for new scenes, scene thumbnails, search) and later the backend (Phases 6 to 8) for invite links. Boolean and Dissolve are on hold (Dissolve needs a stored polygon mesh). Still unconfirmed in the owner's browser: the picture on each home-screen card. Still open: test `SETUP-SECOND-PC.md` on the second PC.
+- **Next action (owner's choice, 2026-11-21): the online part, collaboration first.** Build `COLLABORATION.md` step M1 (the shared-document code in `packages/shared`, heavily tested), then M2 to M9. Docker Desktop is installed by the owner when step M8 (Postgres) starts. Older note, still true afterwards: finish texture painting (step 10: layers, layers, ambient occlusion and colour bakes, a background worker for baking), and the retopology leftovers (step 9: the live Retopo mode and the strip tool), then sculpting (Phase 14). In between: the rest of Phase 5b step 4 (units, default look for new scenes, scene thumbnails, search) and later the backend (Phases 6 to 8) for invite links. Boolean and Dissolve are on hold (Dissolve needs a stored polygon mesh). Still unconfirmed in the owner's browser: the picture on each home-screen card. Still open: test `SETUP-SECOND-PC.md` on the second PC.
 
 Update this block at the end of every sub-phase and commit it.
 
@@ -61,14 +62,14 @@ Monorepo: pnpm workspaces + Turborepo. See `WHAT-WE-USED.md` for installed versi
 - [x] Prettier, GitHub Actions workflow (format check + lint + type-check + build); green on GitHub
 - [x] First Claude Code hook (Prettier after edits) written and pipe-tested; firing still to confirm after `/hooks` reload
 - [x] Skill to update WHAT-WE-USED.md (`/update-what-we-used`); loading still to confirm after `/reload-skills`
-- [x] First diagram (repo, CI and Claude Code setup): `docs/diagrams/dev-workflow.html`
+- [x] First diagram (repo, CI and Claude Code setup): `docs/diagrams/dev/dev-workflow.html`
 
 ### Phase 1: 3D viewport
 
 - [x] Three.js + React Three Fiber + drei; canvas, grid, lights, cube, orbit controls, FPS overlay (confirmed in a browser; drag feel tuned)
 - [x] `docs/TUNING.md`: settings the owner can adjust
 - [x] Deploy the early version to Vercel: https://sceneroom.vercel.app (HTTP 200, served by Vercel)
-- [x] Architecture diagram (built parts solid, planned parts dashed): `docs/diagrams/architecture.html`
+- [x] Architecture diagram (built parts solid, planned parts dashed): `docs/diagrams/overview/architecture.html`
 - [ ] Optional: `/code-review` pass on the Phase 0-1 diffs
 
 ### Phase 2: Scene model and editing tools
@@ -159,9 +160,13 @@ Today the app opens straight into one project. A home screen comes first: it lis
 
 ### Phase 6: Docker, database, project backend
 
+_Order changed (2026-11-21): collaboration (Phase 7) is built first, against a local file database, because two windows editing one scene is the core value. This phase becomes step M8 of `docs/COLLABORATION.md`._
+
 - [ ] docker-compose with Postgres; Prisma schema (User, Project, ProjectMember with a role, **Scene**, Asset, **Component**, Version); API routes with Zod; seed script. The data model is the Phase 5b project model, stored on a server
 
 ### Phase 7: Real-time collaboration
+
+_Designed in `docs/COLLABORATION.md` (steps M1 to M7 are this phase). Diagrams: `docs/diagrams/backend/collab-architecture.svg`, `docs/diagrams/backend/collab-sync-flow.svg`._
 
 - [ ] Yjs document as the source of truth, **one document per scene plus one for the project** (members, scene list, library); `apps/collab-server` (Hocuspocus, Dockerfile); persistence to Postgres
 - [ ] Presence (names, colors, live 3D cursors, selections) **and who is in which scene**; per-user undo/redo

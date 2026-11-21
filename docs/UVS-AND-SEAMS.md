@@ -91,4 +91,4 @@ _Status (2026-11-20): steps 1 to 5 are built and merged (Smooth still drops the 
 
 Painting and baking (step 10), pinning and relaxing points in the UV window, several UV sets per mesh, UDIM tiles, and importing a picture to preview on the object (comes with materials and textures, Phase 4).
 
-Diagram of the built steps 1 to 4: `docs/diagrams/uvs-and-seams.svg`.
+Diagram of the built steps 1 to 4: `docs/diagrams/editor/uvs-and-seams.svg`.

@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 520" width="960" height="520" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
+  <title id="t">The online part: the pieces and how they connect</title>
+  <desc id="d">Two browsers, each with the editor, the Zustand store, a sync layer, a Yjs document and an offline IndexedDB copy, connect through WebSockets to the collab server built with Hocuspocus. The server checks the token and role, enforces read-only and size limits, and saves documents to SQLite first and Postgres later. Big files go over HTTPS to a file store, by content hash. All of this is planned; nothing is built yet.</desc>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker></defs>
+  <rect width="960" height="520" fill="#f2f5f6"/>
+  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">The online part: the pieces</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Planned (dashed). The editor you have today stays whole; a sync layer is added beside the store. Detail: docs/COLLABORATION.md</text>
+
+  <rect x="32" y="84" width="300" height="300" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="46" y="108" font-size="14" font-weight="700" fill="#13202a">Browser A (Alice)</text>
+  <rect x="48" y="120" width="268" height="40" rx="8" fill="#e9eef0" stroke="#13202a"/><text x="60" y="145" font-size="12" fill="#13202a">Editor: panels + 3D view (exists)</text>
+  <rect x="48" y="170" width="268" height="40" rx="8" fill="#e9eef0" stroke="#13202a"/><text x="60" y="195" font-size="12" fill="#13202a">Zustand store: the scene (exists)</text>
+  <rect x="48" y="220" width="268" height="44" rx="8" fill="#fbeed2" stroke="#8a5a00" stroke-dasharray="6 4"/><text x="60" y="240" font-size="12" fill="#13202a">Sync layer (new): compares scenes,</text><text x="60" y="256" font-size="12" fill="#13202a">writes the difference, checks what arrives</text>
+  <rect x="48" y="274" width="268" height="40" rx="8" fill="#fbeed2" stroke="#8a5a00" stroke-dasharray="6 4"/><text x="60" y="299" font-size="12" fill="#13202a">Yjs document + provider + UndoManager</text>
+  <rect x="48" y="324" width="268" height="44" rx="8" fill="#fbeed2" stroke="#8a5a00" stroke-dasharray="6 4"/><text x="60" y="344" font-size="12" fill="#13202a">IndexedDB: offline copy, so work</text><text x="60" y="360" font-size="12" fill="#13202a">survives a lost connection</text>
+
+  <rect x="628" y="84" width="300" height="300" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="642" y="108" font-size="14" font-weight="700" fill="#13202a">Browser B (Bob)</text>
+  <text x="642" y="132" font-size="12" fill="#55656f">the same pieces as Alice has:</text>
+  <rect x="644" y="144" width="268" height="40" rx="8" fill="#e9eef0" stroke="#13202a"/><text x="656" y="169" font-size="12" fill="#13202a">Editor and store</text>
+  <rect x="644" y="194" width="268" height="40" rx="8" fill="#fbeed2" stroke="#8a5a00" stroke-dasharray="6 4"/><text x="656" y="219" font-size="12" fill="#13202a">Sync layer</text>
+  <rect x="644" y="244" width="268" height="40" rx="8" fill="#fbeed2" stroke="#8a5a00" stroke-dasharray="6 4"/><text x="656" y="269" font-size="12" fill="#13202a">Yjs document + provider</text>
+  <rect x="644" y="294" width="268" height="40" rx="8" fill="#fbeed2" stroke="#8a5a00" stroke-dasharray="6 4"/><text x="656" y="319" font-size="12" fill="#13202a">IndexedDB offline copy</text>
+
+  <rect x="372" y="84" width="216" height="210" rx="12" fill="#fbeed2" stroke="#8a5a00" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="386" y="108" font-size="14" font-weight="700" fill="#13202a">Collab server</text>
+  <text x="386" y="126" font-size="11" fill="#55656f">apps/collab-server, Hocuspocus</text>
+  <text x="386" y="152" font-size="12" fill="#13202a">1. checks the link token</text>
+  <text x="386" y="172" font-size="12" fill="#13202a">2. viewer = read-only</text>
+  <text x="386" y="192" font-size="12" fill="#13202a">3. limits size and rate</text>
+  <text x="386" y="212" font-size="12" fill="#13202a">4. checks what is saved</text>
+  <text x="386" y="232" font-size="12" fill="#13202a">5. forwards updates to</text>
+  <text x="386" y="248" font-size="12" fill="#13202a">    everyone in the room</text>
+  <text x="386" y="272" font-size="12" fill="#13202a">6. saves the document</text>
+  <path d="M332 190 H372" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <path d="M372 220 H332" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <path d="M588 190 H628" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <path d="M628 220 H588" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <text x="336" y="168" font-size="10" fill="#55656f">WebSocket</text>
+  <text x="592" y="168" font-size="10" fill="#55656f">WebSocket</text>
+
+  <path d="M480 294 V330" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="372" y="330" width="216" height="80" rx="12" fill="#fbeed2" stroke="#8a5a00" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="386" y="354" font-size="14" font-weight="700" fill="#13202a">Document store</text>
+  <text x="386" y="374" font-size="12" fill="#13202a">now: SQLite file</text>
+  <text x="386" y="392" font-size="12" fill="#13202a">later: Postgres (+ users, roles)</text>
+
+  <path d="M180 384 V456 H372" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <path d="M780 384 V456 H588" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="372" y="424" width="216" height="64" rx="12" fill="#fbeed2" stroke="#8a5a00" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="386" y="448" font-size="14" font-weight="700" fill="#13202a">File store</text>
+  <text x="386" y="466" font-size="12" fill="#13202a">meshes, models, pictures by hash</text>
+  <text x="386" y="481" font-size="11" fill="#55656f">(R2 online; a folder while developing)</text>
+  <text x="190" y="448" font-size="10" fill="#55656f">upload / download (HTTPS)</text>
+  <text x="640" y="448" font-size="10" fill="#55656f">upload / download (HTTPS)</text>
+  <text x="32" y="506" font-size="12" fill="#55656f">The document carries small things (objects and their settings). Big files never go through it. Dashed = planned.</text>
+</svg>

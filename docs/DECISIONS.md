@@ -687,7 +687,7 @@ Compared with how Maya and Blender build characters and complex objects (box mod
 
 ## 2026-11-16: Phase 5b step 1, a project with several scenes (built)
 
-Not yet tried in a browser; the rules and the store are covered by tests (`project.test.ts`, `projectStore.test.ts`, the repository tests with `fake-indexeddb`). Diagram: `docs/diagrams/projects-and-scenes.svg`.
+Not yet tried in a browser; the rules and the store are covered by tests (`project.test.ts`, `projectStore.test.ts`, the repository tests with `fake-indexeddb`). Diagram: `docs/diagrams/editor/projects-and-scenes.svg`.
 
 - **The open scene stays in the scene store; the others are parked.** The scene store (and the 40 or so actions, tools, panels, edit mode and undo that use it) did not change shape. A new `projectStore` holds the list of scenes and, for every scene that is not open, its contents, selection and undo history ("parked"). Switching swaps them with one action (`restoreScene`). Alternatives weighed: a store per scene (every component would have to know which store), or a `scenes` map inside the scene store (every action would need a scene id). Parking touches no existing code, so nothing already working can break.
 - **Pure rules in `packages/shared/src/project.ts`:** the `Project` shape (Zod), add, rename, delete (never the last; a neighbour opens), move, unique names ("Town (2)"), limits, and the templates. The store only applies them.
@@ -1017,3 +1017,12 @@ Also learned: a test that clicks a button before the last change was stored race
 - **Not a worker yet:** the bake runs in slices of 20 000 pixels on the page with a progress bar and Cancel, so the page stays usable. A Web Worker is the next step for big dense meshes (plan step 10).
 - **Edges:** after baking, the picture is spread 4 pixels past the edges of each map piece so seams and filtering do not show the flat colour.
 - **Not yet:** ambient occlusion and colour bakes, a different cage per object, a "use the dense object's low-res normals" option, baking more than one object at once, and the baked mesh's modifiers (they are ignored).
+
+## Online part: collaboration first, designed before built (2026-11-21)
+
+- **Order changed:** the owner chose to build collaboration (Phase 7) before the database and accounts (Phase 6 and 8). Documents are saved in a local file database (SQLite) at first; Postgres arrives with accounts at step M8, when the owner installs Docker Desktop. Reason: two windows editing one scene is the core value and the best demo; a private share link (an unguessable token with a role) is enough to try it before accounts exist.
+- **The design is in `docs/COLLABORATION.md`:** one Yjs document per scene plus one for the project; the scene is a map of objects with per-field maps for `transform` and `material`; a sync layer beside the Zustand store that writes only the difference and checks every incoming change with Zod; big files by content hash over HTTPS, never through the document; one editor per object as a courtesy lock through awareness; per-user Undo with `Y.UndoManager` instead of scene snapshots (snapshots stay for local-only projects until the new one has proved itself); two permission stages (link, then accounts), always checked on the server.
+- **Why compare-and-write instead of turning every store action into a document action:** the 100-plus existing actions and the pure functions keep working unchanged; only one new layer is written and tested. Cost: a compare per change (cheap for a few thousand objects; measured at step M3 before it is trusted).
+- **Why a CRDT (Yjs) and not a server that decides, and why not a hosted product (Liveblocks, Firebase):** offline work and automatic merging, data on infrastructure we own, and the owner is learning how these pieces work. Details and the alternatives: `docs/WHY-THESE-TOOLS.md`.
+- **Written down so it can be checked:** the unverified parts (Hocuspocus 4.x API details, Yjs with our biggest scenes) are listed in `COLLABORATION.md`, section 12, and are checked at steps M2 and M3 by reading the library docs and measuring.
+- **A new rule for the docs:** each new tool gets a "why this and not the alternatives" entry in `WHY-THESE-TOOLS.md`, and each larger feature gets a diagram in `docs/diagrams/` (already in `CLAUDE.md` for features; now also for tools).
