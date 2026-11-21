@@ -65,7 +65,7 @@ export type ExportReport = {
  *   material (colour, roughness, metalness, glow, opacity, double-sided). Flat shading is exported as
  *   flat normals, because a glTF material has no flat-shading switch.
  * - models: a copy of the loaded file
- * - a painted picture (colour map) on a mesh is exported as its base colour texture, and a painted roughness and metalness picture as its metallic-roughness texture
+ * - a painted picture (colour map) on a mesh is exported as its base colour texture, a painted roughness and metalness picture as its metallic-roughness texture, and a baked normal map as its normal texture
  * - lights: sun, bulb and torch lights (the extension `KHR_lights_punctual`)
  * - hidden objects stay in the scene but are marked invisible, and the exporter skips them
  *
@@ -206,8 +206,13 @@ function createObject(
   const surfaceMap = node.material.surfaceMap
     ? getTexture(node.material.surfaceMap)
     : undefined;
+  // A baked normal map goes out as the glTF normal texture
+  const normalMap = node.material.normalMap
+    ? getTexture(node.material.normalMap)
+    : undefined;
   const material = new MeshStandardMaterial({
     color: colorMap ? "#ffffff" : node.color,
+    normalMap: normalMap ?? null,
     map: colorMap ?? null,
     roughnessMap: surfaceMap ?? null,
     metalnessMap: surfaceMap ?? null,

@@ -265,7 +265,7 @@ export default function PaintSection({
   );
 }
 
-function ResetButton({
+export function ResetButton({
   label,
   hidden,
   onClick,
@@ -288,7 +288,7 @@ function ResetButton({
   );
 }
 
-function BrushSlider({
+export function BrushSlider({
   label,
   value,
   min,

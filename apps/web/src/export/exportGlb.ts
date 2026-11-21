@@ -89,6 +89,9 @@ export async function buildGlb(scene: Scene = getOpenScene()): Promise<{
   const wanted = new Map<string, PaintSlot>();
   for (const node of Object.values(scene.nodes)) {
     if (node.material.colorMap) wanted.set(node.material.colorMap, "colorMap");
+    if (node.material.normalMap) {
+      wanted.set(node.material.normalMap, "normalMap");
+    }
     if (node.material.surfaceMap) {
       wanted.set(node.material.surfaceMap, "surfaceMap");
     }

@@ -30,7 +30,7 @@ export function shrinkwrapTargets(
 }
 
 /** The first three.js mesh at or under an object (an imported model is a group of meshes). */
-function firstMesh(object: Mesh | undefined | null): Mesh | null {
+export function firstMesh(object: Mesh | undefined | null): Mesh | null {
   if (!object) return null;
   if (object.isMesh) return object;
   let found: Mesh | null = null;

@@ -6,6 +6,7 @@ import CharacterSection from "./CharacterSection";
 import LightSection from "./LightSection";
 import PlantSection from "./PlantSection";
 import { MakePrefabButton, PrefabStrip } from "./PrefabSection";
+import BakeSection from "./BakeSection";
 import PaintSection from "./PaintSection";
 import SurfaceSection from "./SurfaceSection";
 import { useState } from "react";
@@ -239,6 +240,9 @@ function SingleObject({ node }: { node: SceneNode }) {
             <SurfaceSection node={node} disabled={locked} />
             {node.kind === "mesh" && (
               <PaintSection node={node} disabled={locked} />
+            )}
+            {node.kind === "mesh" && (
+              <BakeSection node={node} disabled={locked} />
             )}
           </>
         )}

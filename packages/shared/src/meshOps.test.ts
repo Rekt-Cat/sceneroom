@@ -303,3 +303,21 @@ describe("setMaterialMap for the roughness and metalness picture", () => {
     expect(ids).not.toContain("s1");
   });
 });
+
+describe("the baked normal map slot", () => {
+  it("is its own slot and survives pruning while an object uses it", () => {
+    const tex = (id: string): AssetInfo => ({ ...info(id), type: "texture" });
+    let scene = addNode(createEmptyScene(), {
+      ...createNode("a", "cube"),
+      kind: "mesh",
+      assetId: "m",
+    });
+    scene = setMaterialMap(scene, "a", "normalMap", tex("n1"));
+    scene = setMaterialMap(scene, "a", "normalMap", tex("n2"));
+    expect(scene.nodes["a"]!.material.normalMap).toBe("n2");
+    expect(scene.nodes["a"]!.material.colorMap).toBeNull();
+    const ids = Object.keys(pruneUnusedMeshAssets(scene).assets);
+    expect(ids).toContain("n2");
+    expect(ids).not.toContain("n1");
+  });
+});

@@ -254,7 +254,7 @@ export function paintTouch(uv: readonly [number, number]): void {
   session.texture.needsUpdate = true;
 }
 
-function canvasToPng(canvas: HTMLCanvasElement): Promise<ArrayBuffer> {
+export function canvasToPng(canvas: HTMLCanvasElement): Promise<ArrayBuffer> {
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (!blob) reject(new Error("The picture could not be saved."));

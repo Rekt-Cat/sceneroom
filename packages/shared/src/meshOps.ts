@@ -91,6 +91,7 @@ export function pruneUnusedMeshAssets(scene: Scene): Scene {
     if (node.assetId) used.add(node.assetId);
     if (node.material.colorMap) used.add(node.material.colorMap);
     if (node.material.surfaceMap) used.add(node.material.surfaceMap);
+    if (node.material.normalMap) used.add(node.material.normalMap);
   }
   const entries = Object.entries(scene.assets);
   const kept = entries.filter(
@@ -100,8 +101,8 @@ export function pruneUnusedMeshAssets(scene: Scene): Scene {
   return { ...scene, assets: Object.fromEntries(kept) };
 }
 
-/** The pictures an object can have painted: its colour, and its roughness and metalness. */
-export type PaintSlot = "colorMap" | "surfaceMap";
+/** The pictures an object can have: its painted colour, its painted roughness and metalness, and a baked normal map. */
+export type PaintSlot = "colorMap" | "surfaceMap" | "normalMap";
 
 /**
  * Gives an object a painted picture (a "texture" file) in one of its slots, or takes it away (null). The picture's

@@ -16,6 +16,7 @@ import { commitMeshPositions } from "@/meshEdit/commitMeshEdit";
 import type { Mesh } from "three";
 import { getMesh } from "@/components/viewport/meshRegistry";
 import { decodePng, paintSettled } from "@/paint/paintSession";
+import { useBakeStore } from "@/store/bakeStore";
 import { usePaintStore } from "@/store/paintStore";
 import { useEditStore } from "@/store/editStore";
 import { useSceneStore } from "@/store/sceneStore";
@@ -77,6 +78,12 @@ export type SceneRoomHooks = {
     surfaceMap: string | null;
     roughnessPainted: number;
     metalnessPainted: number;
+  } | null>;
+  /** The baked normal map of the selected object: its stored file and how many of its pixels lean away from "flat". */
+  bakeFacts: () => Promise<{
+    normalMap: string | null;
+    bumpyPixels: number;
+    running: boolean;
   } | null>;
   /** Sets the colour of the selected object (a hex colour). */
   setColor: (hex: string) => void;
@@ -247,6 +254,34 @@ export function installTestHooks(): () => void {
         surfaceMap: material.surfaceMap,
         roughnessPainted,
         metalnessPainted,
+      };
+    },
+    async bakeFacts() {
+      const { scene, selectedIds } = useSceneStore.getState();
+      const node =
+        selectedIds.length === 1 ? scene.nodes[selectedIds[0]!] : undefined;
+      if (!node) return null;
+      const id = node.material.normalMap;
+      const bytes = id ? await assetStorage.get(id) : undefined;
+      let bumpyPixels = 0;
+      if (bytes) {
+        const canvas = await decodePng(bytes);
+        const data = canvas
+          .getContext("2d")!
+          .getImageData(0, 0, canvas.width, canvas.height).data;
+        for (let i = 0; i < data.length; i += 4) {
+          if (
+            Math.abs(data[i]! - 128) > 10 ||
+            Math.abs(data[i + 1]! - 128) > 10
+          ) {
+            bumpyPixels++;
+          }
+        }
+      }
+      return {
+        normalMap: id,
+        bumpyPixels,
+        running: useBakeStore.getState().runningFor !== null,
       };
     },
     hiddenFacts() {

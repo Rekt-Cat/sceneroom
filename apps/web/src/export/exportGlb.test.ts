@@ -678,3 +678,49 @@ describe("a painted roughness and metalness picture on a mesh", () => {
     disposeExportScene(root);
   });
 });
+
+describe("a baked normal map on a mesh", () => {
+  it("becomes the normal map of the exported material", () => {
+    let scene = addAsset(createEmptyScene(), {
+      id: "m1",
+      name: "Panel",
+      type: "mesh",
+      bytes: 1,
+      triangles: 2,
+      boundsMin: [0, 0, 0],
+      boundsMax: [2, 3, 0],
+      note: "",
+    });
+    scene = addNode(scene, {
+      ...createNode("p", "cube"),
+      kind: "mesh",
+      assetId: "m1",
+      name: "Panel",
+    });
+    scene = setMaterialMap(scene, "p", "normalMap", {
+      id: "n1",
+      name: "Panel normal",
+      type: "texture",
+      bytes: 1,
+      triangles: 0,
+      boundsMin: [0, 0, 0],
+      boundsMax: [0, 0, 0],
+      note: "",
+    });
+    const texture = new Texture();
+    const { root } = buildExportScene(
+      scene,
+      () => undefined,
+      () => ({
+        positions: new Float32Array([0, 0, 0, 2, 0, 0, 2, 3, 0, 0, 3, 0]),
+        indices: new Uint32Array([0, 1, 2, 0, 2, 3]),
+        uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
+      }),
+      (id) => (id === "n1" ? texture : undefined),
+    );
+    const material = (root.children[0] as Mesh)
+      .material as MeshStandardMaterial;
+    expect(material.normalMap).toBe(texture);
+    disposeExportScene(root);
+  });
+});

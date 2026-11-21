@@ -173,6 +173,11 @@ function NodeMesh({
   const toggleSelect = useSceneStore((state) => state.toggleSelect);
   const checker = useViewStore((state) => state.checkerIds.has(node.id));
   const colorMap = useMapTexture(node.id, "colorMap", node.material.colorMap);
+  const normalMap = useMapTexture(
+    node.id,
+    "normalMap",
+    node.material.normalMap,
+  );
   const surfaceMap = useMapTexture(
     node.id,
     "surfaceMap",
@@ -363,6 +368,7 @@ function NodeMesh({
         checker={checker}
         colorMap={colorMap}
         surfaceMap={surfaceMap}
+        normalMap={normalMap}
       />
       {selected && (
         <Outlines color={OUTLINE_COLOR} thickness={OUTLINE_THICKNESS} />

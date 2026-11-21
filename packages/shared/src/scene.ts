@@ -106,6 +106,11 @@ export const materialSchema = z.object({
    * two sliders above apply everywhere. Older scenes load with null.
    */
   surfaceMap: z.string().min(1).nullable().default(null),
+  /**
+   * A baked normal map: the id of a "texture" file that makes the flat faces look bumpy (the detail of a dense mesh,
+   * copied onto this one by Bake). Tangent space, OpenGL style (green up), as glTF wants it. null = none.
+   */
+  normalMap: z.string().min(1).nullable().default(null),
 });
 
 export type Material = z.infer<typeof materialSchema>;
