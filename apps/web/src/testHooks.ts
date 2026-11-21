@@ -2,6 +2,7 @@ import {
   buildTopology,
   checkMesh,
   expandToWelded,
+  hexToRgb,
   isMeshPatchBytes,
   translateSelected,
   uvIslands,
@@ -13,6 +14,8 @@ import { loadMeshData } from "@/assets/meshStorage";
 import { commitMeshPositions } from "@/meshEdit/commitMeshEdit";
 import type { Mesh } from "three";
 import { getMesh } from "@/components/viewport/meshRegistry";
+import { decodePng, paintSettled } from "@/paint/paintSession";
+import { usePaintStore } from "@/store/paintStore";
 import { useEditStore } from "@/store/editStore";
 import { useSceneStore } from "@/store/sceneStore";
 
@@ -64,6 +67,12 @@ export type SceneRoomHooks = {
   } | null;
   /** True if the stored mesh of the edited (or selected) object is kept as a patch on an earlier mesh (difference-based undo). */
   meshIsPatch: () => Promise<boolean>;
+  /** The painting of the selected object: its stored colour map and how many pixels of it differ from the object's colour. Waits for strokes to be stored. */
+  paintFacts: () => Promise<{
+    colorMap: string | null;
+    paintedPixels: number;
+    paintMode: boolean;
+  } | null>;
   /** Sets the colour of the selected object (a hex colour). */
   setColor: (hex: string) => void;
   /** Sets the position, rotation (degrees) and scale of the selected object. */
@@ -183,6 +192,35 @@ export function installTestHooks(): () => void {
       const assetId = targetAssetId();
       const bytes = assetId ? await assetStorage.get(assetId) : undefined;
       return bytes ? isMeshPatchBytes(new Uint8Array(bytes)) : false;
+    },
+    async paintFacts() {
+      const { scene, selectedIds } = useSceneStore.getState();
+      const node =
+        selectedIds.length === 1 ? scene.nodes[selectedIds[0]!] : undefined;
+      if (!node) return null;
+      await paintSettled();
+      const paintMode = usePaintStore.getState().nodeId === node.id;
+      const id =
+        useSceneStore.getState().scene.nodes[node.id]?.material.colorMap ??
+        null;
+      const bytes = id ? await assetStorage.get(id) : undefined;
+      if (!bytes) return { colorMap: id, paintedPixels: 0, paintMode };
+      const canvas = await decodePng(bytes);
+      const data = canvas
+        .getContext("2d")!
+        .getImageData(0, 0, canvas.width, canvas.height).data;
+      const base = hexToRgb(node.color);
+      let paintedPixels = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        if (
+          Math.abs(data[i]! - base[0]) > 8 ||
+          Math.abs(data[i + 1]! - base[1]) > 8 ||
+          Math.abs(data[i + 2]! - base[2]) > 8
+        ) {
+          paintedPixels++;
+        }
+      }
+      return { colorMap: id, paintedPixels, paintMode };
     },
     hiddenFacts() {
       const { nodeId, hidden, selected } = useEditStore.getState();

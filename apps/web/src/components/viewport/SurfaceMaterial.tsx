@@ -1,6 +1,6 @@
 "use client";
 
-import { DoubleSide, FrontSide } from "three";
+import { DoubleSide, FrontSide, type Texture } from "three";
 import type { Material } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
 import { getCheckerTexture } from "./checkerTexture";
@@ -18,12 +18,15 @@ export default function SurfaceMaterial({
   material,
   cut = false,
   checker = false,
+  colorMap = null,
 }: {
   color: string;
   material: Material;
   cut?: boolean;
   /** Draw the UV checkerboard instead of the colour (this object is selected and the checker is on). */
   checker?: boolean;
+  /** The painted picture wrapped over the surface (through the UV map). It replaces the plain colour. */
+  colorMap?: Texture | null;
 }) {
   const envTexture = useEnvironmentTexture((state) => state.texture);
   const reflectionStrength = useSceneStore(
@@ -31,18 +34,20 @@ export default function SurfaceMaterial({
   );
   const seeThrough = cut || material.opacity < 1;
   const checkerMap = checker ? getCheckerTexture() : null;
+  // The checker wins while it is on; the painted picture replaces the colour otherwise
+  const map = checkerMap ?? colorMap;
   return (
     <meshStandardMaterial
       // A new material when the shading, the side or solid / see-through changes: three.js builds its
       // shader for these (a solid material is compiled to ignore opacity completely)
-      key={`${material.flatShading}-${material.doubleSided}-${seeThrough}-${envTexture !== null}-${checkerMap !== null}`}
+      key={`${material.flatShading}-${material.doubleSided}-${seeThrough}-${envTexture !== null}-${map !== null}`}
       // What the surface reflects. Set on each material (and not left to the scene) so that the
       // object's own Reflection strength can scale it
       envMap={envTexture}
       envMapIntensity={material.reflectionStrength * reflectionStrength}
-      // The checkerboard is drawn in its own colours, not tinted by the object's
-      color={checkerMap ? "#ffffff" : color}
-      map={checkerMap}
+      // A picture is drawn in its own colours, not tinted by the object's
+      color={map ? "#ffffff" : color}
+      map={map}
       roughness={material.roughness}
       metalness={material.metalness}
       emissive={material.emissiveColor}

@@ -47,6 +47,7 @@ import {
   redoStep,
   removeAsset,
   replaceMesh,
+  setColorMap,
   renameAsset,
   removeNodes,
   reparentNodes,
@@ -226,6 +227,12 @@ type SceneState = {
     info: AssetInfo,
     label: string,
     amend?: boolean,
+  ) => void;
+  /** Gives an object a painted picture (a texture file) as its colour map, or null to remove it. One undo step. Ignored for locked objects. */
+  setNodeColorMap: (
+    nodeId: string,
+    info: AssetInfo | null,
+    label: string,
   ) => void;
   /** Adds a character (person, child, stocky or tall) at the middle of the scene, standing at rest, and selects it. One undo step. Returns its id. */
   addCharacter: (preset: CharacterPresetName) => string;
@@ -572,6 +579,15 @@ export const useSceneStore = create<SceneState>()((set) => ({
       return {
         scene: replaceMesh(state.scene, nodeId, info),
         history: amend ? state.history : record(state, label),
+      };
+    }),
+  setNodeColorMap: (nodeId, info, label) =>
+    set((state) => {
+      const node = state.scene.nodes[nodeId];
+      if (!node || isEffectivelyLocked(state.scene, nodeId)) return state;
+      return {
+        scene: setColorMap(state.scene, nodeId, info),
+        history: record(state, label),
       };
     }),
   addPlant: (preset) => {

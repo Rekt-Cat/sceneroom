@@ -81,18 +81,49 @@ export function replaceMesh(
   };
 }
 
-/** Meshes that no object uses are not worth keeping: the scene without their records (their data is dropped when saving). */
+/**
+ * Meshes and painted pictures that no object uses are not worth keeping: the scene without their records (their data
+ * is dropped when saving). Models stay.
+ */
 export function pruneUnusedMeshAssets(scene: Scene): Scene {
   const used = new Set<string>();
   for (const node of Object.values(scene.nodes)) {
     if (node.assetId) used.add(node.assetId);
+    if (node.material.colorMap) used.add(node.material.colorMap);
   }
   const entries = Object.entries(scene.assets);
   const kept = entries.filter(
-    ([id, info]) => info.type !== "mesh" || used.has(id),
+    ([id, info]) => info.type === "model" || used.has(id),
   );
   if (kept.length === entries.length) return scene;
   return { ...scene, assets: Object.fromEntries(kept) };
+}
+
+/**
+ * Gives an object a painted picture (a "texture" file) as its colour map, or takes it away (null). The picture's
+ * record is added to the scene's list of files.
+ */
+export function setColorMap(
+  scene: Scene,
+  nodeId: string,
+  info: AssetInfo | null,
+): Scene {
+  const node = scene.nodes[nodeId];
+  if (!node) throw new Error(`Node "${nodeId}" does not exist`);
+  if (info && info.type !== "texture") {
+    throw new Error("The stored data is not a texture");
+  }
+  const withData = info ? addAsset(scene, info) : scene;
+  return {
+    ...withData,
+    nodes: {
+      ...withData.nodes,
+      [nodeId]: {
+        ...node,
+        material: { ...node.material, colorMap: info ? info.id : null },
+      },
+    },
+  };
 }
 
 /**

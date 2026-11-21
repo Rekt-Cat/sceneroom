@@ -40,6 +40,9 @@ import MultiSelectionGizmo from "./MultiSelectionGizmo";
 import SelectionGizmo from "./SelectionGizmo";
 import { shouldIgnoreClick } from "./gizmoGuard";
 import { registerMesh } from "./meshRegistry";
+import { endStroke, paintTouch } from "@/paint/paintSession";
+import { useColorMapTexture } from "@/paint/useColorMapTexture";
+import { usePaintStore } from "@/store/paintStore";
 import { OUTLINE_COLOR, OUTLINE_THICKNESS } from "./selectionStyle";
 
 function isLightKind(kind: string): kind is LightKind {
@@ -169,6 +172,8 @@ function NodeMesh({
   const select = useSceneStore((state) => state.select);
   const toggleSelect = useSceneStore((state) => state.toggleSelect);
   const checker = useViewStore((state) => state.checkerIds.has(node.id));
+  const colorMap = useColorMapTexture(node.id, node.material.colorMap);
+  const painting = usePaintStore((state) => state.nodeId === node.id);
   const { position, rotation, scale } = node.transform;
   const material = node.material;
 
@@ -189,12 +194,31 @@ function NodeMesh({
     // Only the nearest object under the pointer gets the click
     event.stopPropagation();
     if (shouldIgnoreClick()) return;
+    // Painting: the clicks are brush strokes (handled on pointer down), not selection
+    if (painting) return;
     // Editing this object's points: a click on its surface is for picking points (MeshEditor), and Shift +
     // click must not toggle the object out of the selection (that would end edit mode)
     if (useEditStore.getState().nodeId === node.id) return;
     // Shift + click adds or removes this object; a plain click selects only it
     if (event.nativeEvent.shiftKey) toggleSelect(node.id);
     else select(node.id);
+  }
+
+  // The brush: the left button paints where the pointer is on the surface (the UV map says where on the picture)
+  function handlePaintDown(event: ThreeEvent<PointerEvent>) {
+    if (event.button !== 0 || !event.uv) return;
+    event.stopPropagation();
+    (event.target as Element).setPointerCapture?.(event.pointerId);
+    paintTouch([event.uv.x, event.uv.y]);
+  }
+  function handlePaintMove(event: ThreeEvent<PointerEvent>) {
+    if (event.buttons !== 1 || !event.uv) return;
+    event.stopPropagation();
+    paintTouch([event.uv.x, event.uv.y]);
+  }
+  function handlePaintUp(event: ThreeEvent<PointerEvent>) {
+    (event.target as Element).releasePointerCapture?.(event.pointerId);
+    endStroke();
   }
 
   // A light: a group holding the light and its marker. Like a model, it only takes clicks when it can be edited.
@@ -314,6 +338,9 @@ function NodeMesh({
       castShadow={material.castShadow}
       receiveShadow={material.receiveShadow}
       onClick={handleClick}
+      onPointerDown={painting ? handlePaintDown : undefined}
+      onPointerMove={painting ? handlePaintMove : undefined}
+      onPointerUp={painting ? handlePaintUp : undefined}
     >
       {node.kind === "mesh" ? (
         <MeshGeometry assetId={node.assetId} modifiers={node.modifiers} />
@@ -329,6 +356,7 @@ function NodeMesh({
         material={material}
         cut={cut}
         checker={checker}
+        colorMap={colorMap}
       />
       {selected && (
         <Outlines color={OUTLINE_COLOR} thickness={OUTLINE_THICKNESS} />

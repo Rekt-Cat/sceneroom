@@ -14,6 +14,7 @@ import { sunPosition } from "@sceneroom/shared";
 import { useEditStore } from "@/store/editStore";
 import { isSideView } from "@sceneroom/shared";
 import { useSceneStore } from "@/store/sceneStore";
+import { usePaintStore } from "@/store/paintStore";
 import { useViewStore } from "@/store/viewStore";
 import AssetDropController from "./AssetDropController";
 import AssetPreview from "./AssetPreview";
@@ -79,6 +80,7 @@ export default function Viewport() {
   const select = useSceneStore((state) => state.select);
   const peekActive = useViewStore((state) => state.peekActive);
   const bigView = useViewStore((state) => state.bigView);
+  const painting = usePaintStore((state) => state.nodeId !== null);
   const environment = useSceneStore((state) => state.scene.environment);
   // The built-in sun stops casting its own shadow once the scene has a light of its own: two lights
   // casting shadows from different directions make a messy double shadow
@@ -146,7 +148,12 @@ export default function Viewport() {
         rotateSpeed={1.25}
         // Left-drag pans the camera, right-drag rotates it. Holding Shift swaps the two
         // (built into OrbitControls). The middle button is left unmapped, so it does nothing.
-        mouseButtons={{ LEFT: MOUSE.PAN, RIGHT: MOUSE.ROTATE }}
+        // While painting, the left button is the brush, so it does not pan
+        mouseButtons={
+          painting
+            ? { RIGHT: MOUSE.ROTATE }
+            : { LEFT: MOUSE.PAN, RIGHT: MOUSE.ROTATE }
+        }
       />
 
       {/* Double-click in the scene list, or F: the camera glides to the object */}

@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from "three";
+import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Texture } from "three";
 import {
   addAsset,
   addNode,
@@ -13,6 +13,7 @@ import {
   createModifier,
   createNode,
   createPlantNode,
+  setColorMap,
   setPlant as setPlantInScene,
   type AssetInfo,
   type Modifier,
@@ -558,5 +559,72 @@ describe("exporting a character", () => {
     const root = named(gltf, "Bruiser")!;
     expect(root.translation).toEqual([3, 0, 4]);
     expect(root.scale).toEqual([1.2, 1.2, 1.2]);
+  });
+});
+
+describe("a painted picture on a mesh", () => {
+  const square = {
+    positions: new Float32Array([0, 0, 0, 2, 0, 0, 2, 3, 0, 0, 3, 0]),
+    indices: new Uint32Array([0, 1, 2, 0, 2, 3]),
+    uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
+  };
+  function paintedScene(): Scene {
+    let scene = addAsset(createEmptyScene(), {
+      id: "m1",
+      name: "Panel",
+      type: "mesh",
+      bytes: 1,
+      triangles: 2,
+      boundsMin: [0, 0, 0],
+      boundsMax: [2, 3, 0],
+      note: "",
+    });
+    scene = addNode(scene, {
+      ...createNode("p", "cube"),
+      kind: "mesh",
+      assetId: "m1",
+      name: "Panel",
+      color: "#ff0000",
+    });
+    return setColorMap(scene, "p", {
+      id: "tex1",
+      name: "Panel paint",
+      type: "texture",
+      bytes: 1,
+      triangles: 0,
+      boundsMin: [0, 0, 0],
+      boundsMax: [0, 0, 0],
+      note: "",
+    });
+  }
+  const materialOf = (root: Group) => {
+    const mesh = root.children[0] as Mesh;
+    return mesh.material as MeshStandardMaterial;
+  };
+
+  it("becomes the base colour texture, drawn untinted", () => {
+    const texture = new Texture();
+    const { root } = buildExportScene(
+      paintedScene(),
+      () => undefined,
+      () => square,
+      (id) => (id === "tex1" ? texture : undefined),
+    );
+    const material = materialOf(root);
+    expect(material.map).toBe(texture);
+    expect(material.color.getHexString()).toBe("ffffff");
+    disposeExportScene(root);
+  });
+
+  it("falls back to the colour when the picture is not available", () => {
+    const { root } = buildExportScene(
+      paintedScene(),
+      () => undefined,
+      () => square,
+    );
+    const material = materialOf(root);
+    expect(material.map).toBeNull();
+    expect(material.color.getHexString()).toBe("ff0000");
+    disposeExportScene(root);
   });
 });

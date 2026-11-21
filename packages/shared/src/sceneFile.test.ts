@@ -17,6 +17,7 @@ import {
   projectAssetIds,
   sceneFileName,
 } from "./sceneFile";
+import { setColorMap } from "./meshOps";
 import { createPrefab, placePrefab } from "./prefab";
 import {
   addProjectScene,
@@ -564,5 +565,35 @@ describe("project file: prefabs", () => {
       Object.keys(prefabsUsedByScene(project, project.scenes[0]!.scene)),
     ).toEqual(["p1"]);
     expect(prefabsUsedByScene(project, createEmptyScene())).toEqual({});
+  });
+});
+
+describe("painted pictures in a file", () => {
+  const textureScene = () =>
+    setColorMap(
+      addNode(createEmptyScene(), {
+        ...createNode("a", "cube"),
+        kind: "mesh",
+        assetId: "gone",
+      }),
+      "a",
+      { ...info("tex", "Cube paint"), type: "texture" },
+    );
+  const png = Uint8Array.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2,
+  ]);
+
+  it("saves and reopens a PNG texture", () => {
+    const { bytes } = encodeSceneFile(textureScene(), { tex: png });
+    const result = decodeProjectFile(bytes);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.assets["tex"]).toEqual(png);
+  });
+
+  it("refuses a texture that is not a PNG", () => {
+    const { bytes } = encodeSceneFile(textureScene(), { tex: glb(4) });
+    const result = decodeProjectFile(bytes);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toContain("not a PNG");
   });
 });
