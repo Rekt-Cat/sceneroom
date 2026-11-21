@@ -8,6 +8,7 @@ import {
   meshAssetInfo,
   pruneUnusedMeshAssets,
   setColorMap,
+  setMaterialMap,
 } from "./meshOps";
 
 const square = {
@@ -271,5 +272,34 @@ describe("setColorMap", () => {
     const pruned = pruneUnusedMeshAssets(scene);
     expect(Object.keys(pruned.assets)).toContain("t2");
     expect(Object.keys(pruned.assets)).not.toContain("t1");
+  });
+});
+
+describe("setMaterialMap for the roughness and metalness picture", () => {
+  const tex = (id: string): AssetInfo => ({ ...info(id), type: "texture" });
+  const base = () =>
+    addNode(createEmptyScene(), {
+      ...createNode("a", "cube"),
+      kind: "mesh",
+      assetId: "m",
+    });
+
+  it("fills its own slot and leaves the colour picture alone", () => {
+    let scene = setMaterialMap(base(), "a", "colorMap", tex("c1"));
+    scene = setMaterialMap(scene, "a", "surfaceMap", tex("s1"));
+    expect(scene.nodes["a"]!.material.colorMap).toBe("c1");
+    expect(scene.nodes["a"]!.material.surfaceMap).toBe("s1");
+    expect(
+      setMaterialMap(scene, "a", "surfaceMap", null).nodes["a"]!.material
+        .colorMap,
+    ).toBe("c1");
+  });
+
+  it("keeps the surface picture when pruning, and drops an old one", () => {
+    let scene = setMaterialMap(base(), "a", "surfaceMap", tex("s1"));
+    scene = setMaterialMap(scene, "a", "surfaceMap", tex("s2"));
+    const ids = Object.keys(pruneUnusedMeshAssets(scene).assets);
+    expect(ids).toContain("s2");
+    expect(ids).not.toContain("s1");
   });
 });

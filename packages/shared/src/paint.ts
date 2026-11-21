@@ -9,6 +9,8 @@ export const PAINT_TEXTURE_SIZE = 1024;
 /** The brush: colour (0 to 255 each), radius in pixels, hardness (0 soft edge to 1 hard edge) and strength (0 to 1). */
 export type Brush = {
   color: readonly [number, number, number];
+  /** Which of red, green and blue the brush changes (default all three). Painting roughness changes only green. */
+  channels?: readonly [boolean, boolean, boolean];
   radius: number;
   hardness: number;
   opacity: number;
@@ -69,6 +71,39 @@ export function blankPaint(
   return pixels;
 }
 
+/**
+ * The starting picture for roughness and metalness: green is the object's roughness and blue its metalness (0 to 1
+ * as 0 to 255), so the object looks the same until something is painted. Red is unused.
+ */
+export function surfacePaint(
+  size: number,
+  roughness: number,
+  metalness: number,
+): Uint8ClampedArray {
+  return blankPaint(size, surfaceValues(roughness, metalness));
+}
+
+/** The red, green and blue of an untouched roughness and metalness picture. */
+export function surfaceValues(
+  roughness: number,
+  metalness: number,
+): [number, number, number] {
+  return [255, Math.round(roughness * 255), Math.round(metalness * 255)];
+}
+
+/** Sets the chosen channels of every pixel to the colour's values (the other channels stay). */
+export function fillChannels(
+  pixels: Uint8ClampedArray,
+  color: readonly [number, number, number],
+  channels: readonly [boolean, boolean, boolean] = [true, true, true],
+): void {
+  for (let i = 0; i < pixels.length; i += 4) {
+    for (let k = 0; k < 3; k++) {
+      if (channels[k]) pixels[i + k] = color[k]!;
+    }
+  }
+}
+
 /** How much of the brush colour a pixel at `distance` (0 to 1 of the radius) gets: 1 inside the hard core, fading to 0 at the edge. */
 function falloff(distance: number, hardness: number): number {
   if (distance >= 1) return 0;
@@ -99,6 +134,7 @@ function stamp(
       if (a <= 0) continue;
       const at = (y * size + x) * 4;
       for (let k = 0; k < 3; k++) {
+        if (brush.channels && !brush.channels[k]) continue;
         pixels[at + k] = pixels[at + k]! * (1 - a) + brush.color[k]! * a;
       }
       pixels[at + 3] = 255;

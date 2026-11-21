@@ -1,9 +1,15 @@
 import {
   blankPaint,
+  fillChannels,
   hexToRgb,
   paintSegment,
   PAINT_TEXTURE_SIZE,
+  surfacePaint,
+  surfaceValues,
   type AssetInfo,
+  type Brush,
+  type PaintSlot,
+  type SceneNode,
 } from "@sceneroom/shared";
 import { CanvasTexture, SRGBColorSpace } from "three";
 import { assetStorage } from "@/assets/assetStorage";
@@ -11,7 +17,11 @@ import { sha256Hex } from "@/assets/hash";
 import { loadMeshData } from "@/assets/meshStorage";
 import { useImportStore } from "@/store/importStore";
 import { useEditStore } from "@/store/editStore";
-import { usePaintStore } from "@/store/paintStore";
+import {
+  LAYER_DEFAULT_VALUE,
+  usePaintStore,
+  type PaintLayer,
+} from "@/store/paintStore";
 import { useSceneStore } from "@/store/sceneStore";
 
 /**
@@ -22,13 +32,15 @@ import { useSceneStore } from "@/store/sceneStore";
 
 type Session = {
   nodeId: string;
+  /** Which of the object's pictures is being painted: its colour, or its roughness and metalness. */
+  slot: PaintSlot;
   pixels: Uint8ClampedArray;
   canvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
   image: ImageData;
   texture: CanvasTexture;
-  /** The object's own colour when painting began: what the eraser puts back. */
-  baseColor: string;
+  /** What the eraser puts back: the object's own colour, roughness and metalness when painting began. */
+  base: { color: string; roughness: number; metalness: number };
   /** The texture file the object uses now (what the pixels were last stored as, or loaded from). */
   assetId: string | null;
   /** Where the last touch of the current stroke was on the map; null when no stroke is on. */
@@ -43,9 +55,45 @@ let queue: Promise<void> = Promise.resolve();
 const say = (text: string, tone: "info" | "error" = "error") =>
   useImportStore.getState().setMessage({ tone, text });
 
-/** The live picture of an object being painted, or null (not painting it). */
-export function liveTextureFor(nodeId: string): CanvasTexture | null {
-  return session?.nodeId === nodeId ? session.texture : null;
+/** The live picture of an object being painted in this slot, or null (not painting it). */
+export function liveTextureFor(
+  nodeId: string,
+  slot: PaintSlot,
+): CanvasTexture | null {
+  return session?.nodeId === nodeId && session.slot === slot
+    ? session.texture
+    : null;
+}
+
+/** A texture of a painted picture. Colour pictures are sRGB; the roughness and metalness picture holds plain numbers. */
+function makeTexture(canvas: HTMLCanvasElement, slot: PaintSlot) {
+  const texture = new CanvasTexture(canvas);
+  if (slot === "colorMap") texture.colorSpace = SRGBColorSpace;
+  texture.anisotropy = 4;
+  return texture;
+}
+
+/** The brush for the current layer, and what the eraser and Fill all use. */
+function brushFor(
+  s: Session,
+  state: ReturnType<typeof usePaintStore.getState>,
+): Pick<Brush, "color" | "channels"> {
+  const { layer, erase, color, value } = state;
+  if (s.slot === "colorMap") {
+    return { color: hexToRgb(erase ? s.base.color : color) };
+  }
+  const base = surfaceValues(s.base.roughness, s.base.metalness);
+  const gray = Math.round(value * 255);
+  if (layer === "roughness") {
+    return {
+      color: [0, erase ? base[1] : gray, 0],
+      channels: [false, true, false],
+    };
+  }
+  return {
+    color: [0, 0, erase ? base[2] : gray],
+    channels: [false, false, true],
+  };
 }
 
 /** A canvas with a stored PNG drawn on it. */
@@ -65,14 +113,21 @@ export async function decodePng(
   return canvas;
 }
 
-/** The pixels an object's picture starts from: its stored colour map, or one flat colour (its own colour). */
+/** The pixels a picture starts from: the stored one, or an even picture of the object's own colour (or roughness and metalness). */
 async function startingPixels(
   assetId: string | null,
-  fallbackColor: string,
+  slot: PaintSlot,
+  node: SceneNode,
 ): Promise<Uint8ClampedArray> {
   const bytes = assetId ? await assetStorage.get(assetId) : undefined;
   if (!bytes) {
-    return blankPaint(PAINT_TEXTURE_SIZE, hexToRgb(fallbackColor));
+    return slot === "colorMap"
+      ? blankPaint(PAINT_TEXTURE_SIZE, hexToRgb(node.color))
+      : surfacePaint(
+          PAINT_TEXTURE_SIZE,
+          node.material.roughness,
+          node.material.metalness,
+        );
   }
   const canvas = await decodePng(bytes);
   const context = canvas.getContext("2d");
@@ -97,7 +152,10 @@ function showPixels(s: Session): void {
  * Starts painting the object. Needs an editable mesh with a UV map (the map says where on the picture each spot of
  * the surface is). Says in the bar over the 3D view if it cannot. Returns whether painting started.
  */
-export async function startPaint(nodeId: string): Promise<boolean> {
+export async function startPaint(
+  nodeId: string,
+  slot: PaintSlot = "colorMap",
+): Promise<boolean> {
   const node = useSceneStore.getState().scene.nodes[nodeId];
   if (!node || node.kind !== "mesh" || !node.assetId) return false;
   if (useEditStore.getState().nodeId !== null) {
@@ -117,18 +175,17 @@ export async function startPaint(nodeId: string): Promise<boolean> {
       return false;
     }
     await stopPaint();
-    const assetId = node.material.colorMap;
-    const pixels = await startingPixels(assetId, node.color);
+    const assetId = node.material[slot];
+    const pixels = await startingPixels(assetId, slot, node);
     const canvas = document.createElement("canvas");
     canvas.width = PAINT_TEXTURE_SIZE;
     canvas.height = PAINT_TEXTURE_SIZE;
     const context = canvas.getContext("2d");
     if (!context) throw new Error("The browser cannot draw pictures.");
-    const texture = new CanvasTexture(canvas);
-    texture.colorSpace = SRGBColorSpace;
-    texture.anisotropy = 4;
+    const texture = makeTexture(canvas, slot);
     session = {
       nodeId,
+      slot,
       pixels,
       canvas,
       context,
@@ -138,13 +195,26 @@ export async function startPaint(nodeId: string): Promise<boolean> {
         PAINT_TEXTURE_SIZE,
       ),
       texture,
-      baseColor: node.color,
+      base: {
+        color: node.color,
+        roughness: node.material.roughness,
+        metalness: node.material.metalness,
+      },
       assetId,
       last: null,
       changed: false,
     };
     showPixels(session);
-    usePaintStore.getState().setNodeId(nodeId);
+    const paint = usePaintStore.getState();
+    paint.setNodeId(nodeId);
+    // The layer follows the picture: colour for the colour picture; roughness or metalness for the other
+    const layer: PaintLayer =
+      slot === "colorMap"
+        ? "color"
+        : paint.layer === "metalness"
+          ? "metalness"
+          : "roughness";
+    paint.setBrush({ layer, value: LAYER_DEFAULT_VALUE[layer] });
     return true;
   } catch (error) {
     console.error("Could not start painting:", error);
@@ -156,17 +226,17 @@ export async function startPaint(nodeId: string): Promise<boolean> {
 /** One touch of the brush at a spot of the map (u, v). The first touch of a stroke makes one dab; the next ones draw lines. */
 export function paintTouch(uv: readonly [number, number]): void {
   if (!session) return;
-  const { color, radius, hardness, opacity, erase } = usePaintStore.getState();
+  const state = usePaintStore.getState();
   const dirty = paintSegment(
     session.pixels,
     PAINT_TEXTURE_SIZE,
     session.last,
     uv,
     {
-      color: hexToRgb(erase ? session.baseColor : color),
-      radius,
-      hardness,
-      opacity,
+      ...brushFor(session, state),
+      radius: state.radius,
+      hardness: state.hardness,
+      opacity: state.opacity,
     },
   );
   session.last = [uv[0], uv[1]];
@@ -215,7 +285,7 @@ export function endStroke(label = "Paint stroke"): void {
       if (!node) return;
       const info: AssetInfo = {
         id,
-        name: `${node.name} paint`,
+        name: `${node.name} ${s.slot === "colorMap" ? "paint" : "surface"}`,
         type: "texture",
         bytes: bytes.byteLength,
         triangles: 0,
@@ -224,7 +294,7 @@ export function endStroke(label = "Paint stroke"): void {
         note: "",
       };
       s.assetId = id;
-      store.setNodeColorMap(s.nodeId, info, label);
+      store.setNodeMap(s.nodeId, s.slot, info, label);
     } catch (error) {
       console.error("Storing the painting failed:", error);
       say("Could not store the painting. Please try again.");
@@ -232,17 +302,16 @@ export function endStroke(label = "Paint stroke"): void {
   });
 }
 
-/** Covers the whole picture with the brush colour (or the object's own colour when erasing), as one undo step. */
+/** Covers the whole picture with the brush (or the object's own values when erasing), as one undo step. */
 export function fillPaint(): void {
   const s = session;
   if (!s) return;
-  const { color, erase } = usePaintStore.getState();
-  s.pixels.set(
-    blankPaint(PAINT_TEXTURE_SIZE, hexToRgb(erase ? s.baseColor : color)),
-  );
+  const state = usePaintStore.getState();
+  const { color, channels } = brushFor(s, state);
+  fillChannels(s.pixels, color, channels);
   showPixels(s);
   s.changed = true;
-  endStroke(erase ? "Erase all paint" : "Fill painting");
+  endStroke(state.erase ? "Erase all paint" : "Fill painting");
 }
 
 /** Waits until every finished stroke is stored (the browser tests and Done wait for this). */
@@ -261,7 +330,7 @@ export async function syncPaintWith(colorMap: string | null): Promise<void> {
   const node = useSceneStore.getState().scene.nodes[s.nodeId];
   if (!node) return;
   try {
-    const pixels = await startingPixels(colorMap, node.color);
+    const pixels = await startingPixels(colorMap, s.slot, node);
     if (session !== s) return;
     s.pixels.set(pixels);
     s.assetId = colorMap;
@@ -282,31 +351,40 @@ export async function stopPaint(): Promise<void> {
   if (session !== s) return;
   session = null;
   usePaintStore.getState().setNodeId(null);
-  if (s.assetId) rememberTexture(s.assetId, s.texture);
+  if (s.assetId) rememberTexture(s.assetId, s.slot, s.texture);
 }
 
-/** What the surface of every object shows from its stored colour map (kept so a repaint does not read the file again). */
+/** What the surface of every object shows from its stored pictures (kept so a repaint does not read the file again). */
 const stored = new Map<string, CanvasTexture>();
+const keyOf = (id: string, slot: PaintSlot) => `${slot}:${id}`;
 
-export function rememberTexture(id: string, texture: CanvasTexture): void {
-  stored.set(id, texture);
+export function rememberTexture(
+  id: string,
+  slot: PaintSlot,
+  texture: CanvasTexture,
+): void {
+  stored.set(keyOf(id, slot), texture);
 }
 
-export function cachedTexture(id: string): CanvasTexture | undefined {
-  return stored.get(id);
+export function cachedTexture(
+  id: string,
+  slot: PaintSlot,
+): CanvasTexture | undefined {
+  return stored.get(keyOf(id, slot));
 }
 
-/** Reads a stored colour map into a texture (and keeps it). Null if the file is missing or cannot be read. */
-export async function loadColorMap(id: string): Promise<CanvasTexture | null> {
-  const cached = stored.get(id);
+/** Reads a stored picture into a texture (and keeps it). Null if the file is missing or cannot be read. */
+export async function loadMapTexture(
+  id: string,
+  slot: PaintSlot,
+): Promise<CanvasTexture | null> {
+  const cached = stored.get(keyOf(id, slot));
   if (cached) return cached;
   try {
     const bytes = await assetStorage.get(id);
     if (!bytes) return null;
-    const texture = new CanvasTexture(await decodePng(bytes));
-    texture.colorSpace = SRGBColorSpace;
-    texture.anisotropy = 4;
-    stored.set(id, texture);
+    const texture = makeTexture(await decodePng(bytes), slot);
+    stored.set(keyOf(id, slot), texture);
     return texture;
   } catch (error) {
     console.warn("Could not read a painted picture:", error);

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   blankPaint,
+  fillChannels,
+  surfacePaint,
+  surfaceValues,
   hexToRgb,
   isPngBytes,
   paintSegment,
@@ -79,5 +82,36 @@ describe("paintSegment", () => {
       y1: 4,
     });
     expect(paintSegment(p, SIZE, null, [3, 3], RED)).toBeNull();
+  });
+});
+
+describe("painting roughness and metalness", () => {
+  it("starts from the object's own values: green is roughness, blue is metalness", () => {
+    expect(surfaceValues(0.6, 1)).toEqual([255, 153, 255]);
+    const p = surfacePaint(SIZE, 0.2, 0);
+    expect(pixel(p, 3, 3)).toEqual([255, 51, 0, 255]);
+  });
+
+  it("a brush limited to one channel leaves the others alone", () => {
+    const p = surfacePaint(SIZE, 0.2, 0.5);
+    const before = pixel(p, 32, 32);
+    paintSegment(p, SIZE, null, [0.5, 0.5], {
+      color: [0, 255, 0],
+      channels: [false, true, false],
+      radius: 4,
+      hardness: 1,
+      opacity: 1,
+    });
+    const after = pixel(p, 32, 32);
+    expect(after[1]).toBe(255);
+    expect(after[0]).toBe(before[0]);
+    expect(after[2]).toBe(before[2]);
+  });
+
+  it("fillChannels sets only the chosen channels everywhere", () => {
+    const p = surfacePaint(SIZE, 0.2, 0.5);
+    fillChannels(p, [0, 0, 200], [false, false, true]);
+    expect(pixel(p, 0, 0)).toEqual([255, 51, 200, 255]);
+    expect(pixel(p, SIZE - 1, SIZE - 1)).toEqual([255, 51, 200, 255]);
   });
 });

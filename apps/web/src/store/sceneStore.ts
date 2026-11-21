@@ -47,7 +47,8 @@ import {
   redoStep,
   removeAsset,
   replaceMesh,
-  setColorMap,
+  setMaterialMap,
+  type PaintSlot,
   renameAsset,
   removeNodes,
   reparentNodes,
@@ -228,9 +229,10 @@ type SceneState = {
     label: string,
     amend?: boolean,
   ) => void;
-  /** Gives an object a painted picture (a texture file) as its colour map, or null to remove it. One undo step. Ignored for locked objects. */
-  setNodeColorMap: (
+  /** Gives an object a painted picture (a texture file) in one of its slots (colour, or roughness and metalness), or null to remove it. One undo step. Ignored for locked objects. */
+  setNodeMap: (
     nodeId: string,
+    slot: PaintSlot,
     info: AssetInfo | null,
     label: string,
   ) => void;
@@ -581,12 +583,12 @@ export const useSceneStore = create<SceneState>()((set) => ({
         history: amend ? state.history : record(state, label),
       };
     }),
-  setNodeColorMap: (nodeId, info, label) =>
+  setNodeMap: (nodeId, slot, info, label) =>
     set((state) => {
       const node = state.scene.nodes[nodeId];
       if (!node || isEffectivelyLocked(state.scene, nodeId)) return state;
       return {
-        scene: setColorMap(state.scene, nodeId, info),
+        scene: setMaterialMap(state.scene, nodeId, slot, info),
         history: record(state, label),
       };
     }),

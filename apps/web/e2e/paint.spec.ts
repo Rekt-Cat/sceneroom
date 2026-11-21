@@ -5,6 +5,9 @@ type PaintFacts = {
   colorMap: string | null;
   paintedPixels: number;
   paintMode: boolean;
+  surfaceMap: string | null;
+  roughnessPainted: number;
+  metalnessPainted: number;
 } | null;
 
 const paintFacts = (
@@ -167,4 +170,144 @@ test("the brush in erase mode takes paint off where it is dragged", async ({
   await page.mouse.up();
   await expect.poll(painted, { timeout: 20_000 }).toBeLessThan(full - 100);
   expect(await painted()).toBeGreaterThan(0);
+});
+
+test("paint roughness and metalness: a separate picture, undo, and it goes into the GLB", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await newProject(page);
+  await unwrapCube(page);
+  await page.getByRole("button", { name: "Paint on surface" }).click();
+  const facts = async () => (await paintFacts(page))!;
+
+  // Roughness: one stroke changes only the green channel of the surface picture
+  await press(page, "Roughness");
+  const box = (await page.locator("canvas").first().boundingBox())!;
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  await page.mouse.move(cx - 20, cy);
+  await page.mouse.down();
+  await page.mouse.move(cx + 20, cy + 10, { steps: 8 });
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await facts()).roughnessPainted, { timeout: 20_000 })
+    .toBeGreaterThan(100);
+  let now = await facts();
+  expect(now.surfaceMap).not.toBeNull();
+  expect(now.colorMap).toBeNull();
+  expect(now.metalnessPainted).toBe(0);
+
+  // Metalness: Fill all changes the blue channel everywhere and keeps the roughness stroke
+  await press(page, "Metalness");
+  await press(page, "Fill all");
+  await expect
+    .poll(async () => (await facts()).metalnessPainted, { timeout: 20_000 })
+    .toBeGreaterThan(1_000_000);
+  now = await facts();
+  expect(now.roughnessPainted).toBeGreaterThan(100);
+
+  // Undo takes the fill back, and the picture goes with it
+  await page.keyboard.press("Control+z");
+  await expect
+    .poll(async () => (await facts()).metalnessPainted, { timeout: 20_000 })
+    .toBe(0);
+
+  // Redo, leave paint mode and export: the GLB has a metallic-roughness texture
+  await page.keyboard.press("Control+Shift+z");
+  await expect
+    .poll(async () => (await facts()).metalnessPainted, { timeout: 20_000 })
+    .toBeGreaterThan(1_000_000);
+  await press(page, "Stop painting");
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  const file = await (await download).path();
+  const { readFileSync } = await import("node:fs");
+  const bytes = readFileSync(file);
+  const jsonLength = bytes.readUInt32LE(12);
+  const gltf = JSON.parse(bytes.subarray(20, 20 + jsonLength).toString("utf8"));
+  expect(
+    gltf.materials[0].pbrMetallicRoughness.metallicRoughnessTexture,
+  ).toBeDefined();
+});
+
+test("turning the camera with the right button keeps painting on, and the other sides can be painted", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await newProject(page);
+  await unwrapCube(page);
+  await page.getByRole("button", { name: "Paint on surface" }).click();
+  const box = (await page.locator("canvas").first().boundingBox())!;
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+
+  // A right-click on empty space, then a right-drag that starts off the cube
+  await page.mouse.click(box.x + 40, box.y + box.height - 40, {
+    button: "right",
+  });
+  await page.mouse.move(box.x + 60, box.y + 120);
+  await page.mouse.down({ button: "right" });
+  await page.mouse.move(box.x + 260, box.y + 160, { steps: 10 });
+  await page.mouse.up({ button: "right" });
+  await expect(
+    page.getByRole("button", { name: "Stop painting" }),
+  ).toBeVisible();
+  expect((await paintFacts(page))?.paintMode).toBe(true);
+
+  // Still painting after the camera moved
+  await page.mouse.move(cx - 10, cy);
+  await page.mouse.down();
+  await page.mouse.move(cx + 10, cy + 6, { steps: 6 });
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await paintFacts(page))?.paintedPixels ?? 0, {
+      timeout: 20_000,
+    })
+    .toBeGreaterThan(50);
+});
+
+test("erase on the Roughness choice puts the object's own roughness back", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await newProject(page);
+  await unwrapCube(page);
+  await page.getByRole("button", { name: "Paint on surface" }).click();
+  await press(page, "Roughness");
+  const facts = async () => (await paintFacts(page))!;
+
+  await press(page, "Fill all");
+  await expect
+    .poll(async () => (await facts()).roughnessPainted, { timeout: 20_000 })
+    .toBeGreaterThan(1_000_000);
+
+  await page.screenshot({ path: "test-results/roughness-filled.png" });
+  // Erase all puts it back everywhere
+  await press(page, "Erase");
+  await expect(page.getByText(/Erasing the roughness only/)).toBeVisible();
+  await press(page, "Erase all");
+  await expect
+    .poll(async () => (await facts()).roughnessPainted, { timeout: 20_000 })
+    .toBe(0);
+  await page.screenshot({ path: "test-results/roughness-erased.png" });
+
+  // The erase brush takes paint off where it is dragged
+  await press(page, "Erase");
+  await press(page, "Fill all");
+  await expect
+    .poll(async () => (await facts()).roughnessPainted, { timeout: 20_000 })
+    .toBeGreaterThan(1_000_000);
+  const full = (await facts()).roughnessPainted;
+  await press(page, "Erase");
+  const box = (await page.locator("canvas").first().boundingBox())!;
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  await page.mouse.move(cx - 20, cy);
+  await page.mouse.down();
+  await page.mouse.move(cx + 20, cy + 10, { steps: 8 });
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await facts()).roughnessPainted, { timeout: 20_000 })
+    .toBeLessThan(full - 100);
 });

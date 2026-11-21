@@ -3,6 +3,7 @@ import {
   checkMesh,
   expandToWelded,
   hexToRgb,
+  surfaceValues,
   isMeshPatchBytes,
   translateSelected,
   uvIslands,
@@ -72,6 +73,10 @@ export type SceneRoomHooks = {
     colorMap: string | null;
     paintedPixels: number;
     paintMode: boolean;
+    /** The roughness and metalness picture, and how many of its pixels differ from the object's own values. */
+    surfaceMap: string | null;
+    roughnessPainted: number;
+    metalnessPainted: number;
   } | null>;
   /** Sets the colour of the selected object (a hex colour). */
   setColor: (hex: string) => void;
@@ -200,27 +205,49 @@ export function installTestHooks(): () => void {
       if (!node) return null;
       await paintSettled();
       const paintMode = usePaintStore.getState().nodeId === node.id;
-      const id =
-        useSceneStore.getState().scene.nodes[node.id]?.material.colorMap ??
-        null;
-      const bytes = id ? await assetStorage.get(id) : undefined;
-      if (!bytes) return { colorMap: id, paintedPixels: 0, paintMode };
-      const canvas = await decodePng(bytes);
-      const data = canvas
-        .getContext("2d")!
-        .getImageData(0, 0, canvas.width, canvas.height).data;
+      const material =
+        useSceneStore.getState().scene.nodes[node.id]?.material ??
+        node.material;
+      const read = async (id: string | null) => {
+        const bytes = id ? await assetStorage.get(id) : undefined;
+        if (!bytes) return null;
+        const canvas = await decodePng(bytes);
+        return canvas
+          .getContext("2d")!
+          .getImageData(0, 0, canvas.width, canvas.height).data;
+      };
+      const color = await read(material.colorMap);
       const base = hexToRgb(node.color);
       let paintedPixels = 0;
-      for (let i = 0; i < data.length; i += 4) {
-        if (
-          Math.abs(data[i]! - base[0]) > 8 ||
-          Math.abs(data[i + 1]! - base[1]) > 8 ||
-          Math.abs(data[i + 2]! - base[2]) > 8
-        ) {
-          paintedPixels++;
+      if (color) {
+        for (let i = 0; i < color.length; i += 4) {
+          if (
+            Math.abs(color[i]! - base[0]) > 8 ||
+            Math.abs(color[i + 1]! - base[1]) > 8 ||
+            Math.abs(color[i + 2]! - base[2]) > 8
+          ) {
+            paintedPixels++;
+          }
         }
       }
-      return { colorMap: id, paintedPixels, paintMode };
+      const surface = await read(material.surfaceMap);
+      let roughnessPainted = 0;
+      let metalnessPainted = 0;
+      if (surface) {
+        const [, g, b] = surfaceValues(material.roughness, material.metalness);
+        for (let i = 0; i < surface.length; i += 4) {
+          if (Math.abs(surface[i + 1]! - g) > 8) roughnessPainted++;
+          if (Math.abs(surface[i + 2]! - b) > 8) metalnessPainted++;
+        }
+      }
+      return {
+        colorMap: material.colorMap,
+        paintedPixels,
+        paintMode,
+        surfaceMap: material.surfaceMap,
+        roughnessPainted,
+        metalnessPainted,
+      };
     },
     hiddenFacts() {
       const { nodeId, hidden, selected } = useEditStore.getState();

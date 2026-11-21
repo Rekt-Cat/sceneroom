@@ -100,6 +100,12 @@ export const materialSchema = z.object({
    * `scene.assets`). null = no picture, only the colour. Older scenes load with null.
    */
   colorMap: z.string().min(1).nullable().default(null),
+  /**
+   * A painted picture for how shiny and how metal each spot is: the id of a "texture" file. Its green channel is
+   * the roughness and its blue channel the metalness (the glTF layout), each 0 to 1 of the full value. null = the
+   * two sliders above apply everywhere. Older scenes load with null.
+   */
+  surfaceMap: z.string().min(1).nullable().default(null),
 });
 
 export type Material = z.infer<typeof materialSchema>;
