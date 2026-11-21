@@ -27,6 +27,8 @@ type Session = {
   context: CanvasRenderingContext2D;
   image: ImageData;
   texture: CanvasTexture;
+  /** The object's own colour when painting began: what the eraser puts back. */
+  baseColor: string;
   /** The texture file the object uses now (what the pixels were last stored as, or loaded from). */
   assetId: string | null;
   /** Where the last touch of the current stroke was on the map; null when no stroke is on. */
@@ -136,6 +138,7 @@ export async function startPaint(nodeId: string): Promise<boolean> {
         PAINT_TEXTURE_SIZE,
       ),
       texture,
+      baseColor: node.color,
       assetId,
       last: null,
       changed: false,
@@ -153,14 +156,14 @@ export async function startPaint(nodeId: string): Promise<boolean> {
 /** One touch of the brush at a spot of the map (u, v). The first touch of a stroke makes one dab; the next ones draw lines. */
 export function paintTouch(uv: readonly [number, number]): void {
   if (!session) return;
-  const { color, radius, hardness, opacity } = usePaintStore.getState();
+  const { color, radius, hardness, opacity, erase } = usePaintStore.getState();
   const dirty = paintSegment(
     session.pixels,
     PAINT_TEXTURE_SIZE,
     session.last,
     uv,
     {
-      color: hexToRgb(color),
+      color: hexToRgb(erase ? session.baseColor : color),
       radius,
       hardness,
       opacity,
@@ -191,7 +194,7 @@ function canvasToPng(canvas: HTMLCanvasElement): Promise<ArrayBuffer> {
 }
 
 /** Ends the stroke: the picture is stored as a texture file and the object uses it, as one undo step. */
-export function endStroke(): void {
+export function endStroke(label = "Paint stroke"): void {
   const s = session;
   if (!s) return;
   s.last = null;
@@ -221,12 +224,25 @@ export function endStroke(): void {
         note: "",
       };
       s.assetId = id;
-      store.setNodeColorMap(s.nodeId, info, "Paint stroke");
+      store.setNodeColorMap(s.nodeId, info, label);
     } catch (error) {
       console.error("Storing the painting failed:", error);
       say("Could not store the painting. Please try again.");
     }
   });
+}
+
+/** Covers the whole picture with the brush colour (or the object's own colour when erasing), as one undo step. */
+export function fillPaint(): void {
+  const s = session;
+  if (!s) return;
+  const { color, erase } = usePaintStore.getState();
+  s.pixels.set(
+    blankPaint(PAINT_TEXTURE_SIZE, hexToRgb(erase ? s.baseColor : color)),
+  );
+  showPixels(s);
+  s.changed = true;
+  endStroke(erase ? "Erase all paint" : "Fill painting");
 }
 
 /** Waits until every finished stroke is stored (the browser tests and Done wait for this). */

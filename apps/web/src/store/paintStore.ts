@@ -13,12 +13,14 @@ type PaintState = {
   radius: number;
   hardness: number;
   opacity: number;
+  /** True: the brush puts back the object's own colour (it erases the paint) instead of its colour. */
+  erase: boolean;
   /** Raised when the picture in the paint session is replaced (Undo or Redo), so the surface is drawn again. */
   version: number;
   setNodeId: (nodeId: string | null) => void;
   setBrush: (
     change: Partial<
-      Pick<PaintState, "color" | "radius" | "hardness" | "opacity">
+      Pick<PaintState, "color" | "radius" | "hardness" | "opacity" | "erase">
     >,
   ) => void;
   bump: () => void;
@@ -27,6 +29,7 @@ type PaintState = {
 export const usePaintStore = create<PaintState>()((set) => ({
   nodeId: null,
   ...DEFAULT_BRUSH,
+  erase: false,
   version: 0,
   setNodeId: (nodeId) => set({ nodeId }),
   setBrush: (change) => set(change),

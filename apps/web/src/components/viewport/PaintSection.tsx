@@ -2,7 +2,12 @@
 
 import { useEffect } from "react";
 import { BRUSH_LIMITS, DEFAULT_BRUSH, type SceneNode } from "@sceneroom/shared";
-import { startPaint, stopPaint, syncPaintWith } from "@/paint/paintSession";
+import {
+  fillPaint,
+  startPaint,
+  stopPaint,
+  syncPaintWith,
+} from "@/paint/paintSession";
 import { useEditStore } from "@/store/editStore";
 import { usePaintStore } from "@/store/paintStore";
 import { useSceneStore } from "@/store/sceneStore";
@@ -87,6 +92,29 @@ export default function PaintSection({
         </div>
         {active && (
           <>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                aria-pressed={brush.erase}
+                title="The brush puts back the object's own colour, taking the paint off"
+                onClick={() => brush.setBrush({ erase: !brush.erase })}
+                className={`${BUTTON} ${brush.erase ? "border-ed-accent" : ""}`}
+              >
+                Erase
+              </button>
+              <button
+                type="button"
+                title={
+                  brush.erase
+                    ? "Take all the paint off (one undo step)"
+                    : "Cover the whole object with the brush colour (one undo step)"
+                }
+                onClick={fillPaint}
+                className={BUTTON}
+              >
+                {brush.erase ? "Erase all" : "Fill all"}
+              </button>
+            </div>
             <div className="grid grid-cols-[58px_1fr_26px] items-center gap-2">
               <span className="text-xs text-ed-text-2">Brush colour</span>
               <input
