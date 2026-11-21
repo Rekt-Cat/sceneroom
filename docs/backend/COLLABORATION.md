@@ -224,4 +224,4 @@ SceneRoom works with no account and no internet today, and that stays true.
 | `y-indexeddb`          | 9.0.12  | Offline copy in the browser                          |
 | `better-sqlite3`       | 13.2.0  | Local file database for the collab server (until M8) |
 
-None of these is installed yet. They are added at M1 and M2, and then recorded in `WHAT-WE-USED.md` as usual.
+Yjs is installed (M1). The others are added at M2 and later, and then recorded in `WHAT-WE-USED.md` as usual.

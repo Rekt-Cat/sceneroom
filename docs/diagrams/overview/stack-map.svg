@@ -41,8 +41,8 @@
   <rect x="556" y="282" width="372" height="52" rx="10" fill="#fff" stroke="#13202a" stroke-width="2"/>
   <text x="568" y="304" font-size="13" font-weight="700" fill="#13202a">.sceneroom file + GLB export</text><text x="568" y="322" font-size="10.5" fill="#6a7a84">not only glTF, FBX or USD (those are later)</text>
 
-  <text x="32" y="368" font-size="13" font-weight="700" fill="#8a5a00">THE ONLINE PART (planned, nothing installed yet)</text>
-  <rect x="32" y="376" width="140" height="64" rx="10" fill="#fbeed2" stroke="#8a5a00" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="32" y="368" font-size="13" font-weight="700" fill="#8a5a00">THE ONLINE PART (Yjs installed, the rest planned)</text>
+  <rect x="32" y="376" width="140" height="64" rx="10" fill="#fff" stroke="#13202a" stroke-width="2"/>
   <text x="44" y="400" font-size="13" font-weight="700" fill="#13202a">Yjs (CRDT)</text><text x="44" y="418" font-size="10.5" fill="#6a7a84">not Automerge, ShareDB,</text><text x="44" y="431" font-size="10.5" fill="#6a7a84">Liveblocks, Firebase</text>
   <rect x="184" y="376" width="150" height="64" rx="10" fill="#fbeed2" stroke="#8a5a00" stroke-width="2" stroke-dasharray="6 4"/>
   <text x="196" y="400" font-size="13" font-weight="700" fill="#13202a">Hocuspocus</text><text x="196" y="418" font-size="10.5" fill="#6a7a84">not y-websocket,</text><text x="196" y="431" font-size="10.5" fill="#6a7a84">PartyKit, Durable Objects</text>

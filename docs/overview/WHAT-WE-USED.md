@@ -130,13 +130,14 @@ Status column: **verified** = checked against official docs or by running it. Ve
 - **Object actions**: add / duplicate / delete / rename live in the store and call pure functions in `packages/shared`. Names are checked with Zod (`normalizeNodeName`). UI: `AddToolbar.tsx` (left), `SelectionPanel.tsx` (right, rename/duplicate/delete), shortcuts Delete or Backspace and Ctrl/Cmd + D.
 - Scene logic is **pure functions** in `packages/shared/src/sceneOps.ts` (return a new scene, never mutate); the Zustand store only calls them. `pnpm test` runs Vitest through Turborepo and in CI.
 
+- **Yjs 13.6.33** (`packages/shared/src/sceneDoc.ts`, tests in `sceneDoc.test.ts`; online step M1): a CRDT, a document type whose copies on several machines merge by themselves, whatever order the edits arrive in. A scene becomes a `Y.Doc`: `nodes` (a map of objects; `transform` and `material` are maps of their own, the rest plain values), `assets` (add-only) and `environment`. `applySceneChange(doc, previous, next)` writes only the fields that differ, in one transaction with an origin (`LOCAL_ORIGIN`), so two people changing different fields never collide. `readSceneFromDoc` rebuilds the scene and checks every object, file record and setting with the Zod schemas: anything invalid is left out and listed in `issues` (for the log), and an object whose id does not match its key is refused. Nothing in the editor uses it yet (that is step M3). Unity comparison: like a ScriptableObject that several people edit live, where each field merges instead of the last save overwriting the whole thing.
+
 ## Not used yet (planned): see docs/PLAN or the plan file
 
-The online part is designed in `COLLABORATION.md` (nothing is installed yet). Versions looked up in the npm registry on 2026-11-21:
+The online part is designed in `docs/backend/COLLABORATION.md`. Yjs is installed (step M1, see above); the rest is not yet. Versions looked up in the npm registry on 2026-11-21:
 
 | Item                           | Version     | Purpose                                                                                       | Planned for                                     |
 | ------------------------------ | ----------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| Yjs                            | 13.6.33     | The shared document (a CRDT: edits from anyone merge by themselves)                           | `packages/shared`, `apps/web`, step M1          |
 | y-protocols                    | 1.0.7       | Awareness (who is here, selections) and the sync messages                                     | steps M3, M6                                    |
 | Hocuspocus server              | 4.9.0       | The collab server: connection checks, read-only users, saving hooks                           | `apps/collab-server`, step M2                   |
 | Hocuspocus provider            | 4.9.0       | The browser side of the connection, reconnects by itself                                      | `apps/web`, step M3                             |
