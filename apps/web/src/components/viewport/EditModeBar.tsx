@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   activeOperation,
   useEditStore,
@@ -40,6 +41,7 @@ import BevelPanel from "./BevelPanel";
 import DividePanel from "./DividePanel";
 import LoopCutPanel from "./LoopCutPanel";
 import { hideOthers, hideSelection, showAll } from "@/meshEdit/hideShow";
+import { shrinkwrapTargets, shrinkwrapToObject } from "@/meshEdit/shrinkwrap";
 import { stopEditing } from "@/meshEdit/startEditing";
 
 const ACTION =
@@ -86,6 +88,11 @@ export default function EditTools() {
   const setSelectMode = useEditStore((state) => state.setSelectMode);
   const xray = useEditStore((state) => state.xray);
   const hidden = useEditStore((state) => state.hidden);
+  const scene = useSceneStore((state) => state.scene);
+  const [shrinkTarget, setShrinkTarget] = useState("");
+  const targets = nodeId ? shrinkwrapTargets(scene, nodeId) : [];
+  // A target that was deleted is no longer chosen
+  const target = targets.some((t) => t.id === shrinkTarget) ? shrinkTarget : "";
   const uvWindow = useEditStore((state) => state.uvWindow);
   const setUvWindow = useEditStore((state) => state.setUvWindow);
   const checker = useViewStore((state) =>
@@ -386,6 +393,30 @@ export default function EditTools() {
           >
             Simplify
           </button>
+          <span className="flex items-center gap-1">
+            <select
+              aria-label="Object to wrap onto"
+              value={target}
+              onChange={(event) => setShrinkTarget(event.target.value)}
+              className="max-w-[9rem] rounded-md border border-ed-line-strong bg-ed-field px-1.5 py-1"
+            >
+              <option value="">Wrap onto…</option>
+              {targets.map((target) => (
+                <option key={target.id} value={target.id}>
+                  {target.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              disabled={!target}
+              onClick={() => void shrinkwrapToObject(target)}
+              title="Shrinkwrap: stretch the mesh over the chosen object. Every selected point (all points when none are selected) is pushed straight out from the middle of the mesh until it meets the surface of the chosen object, so a small mesh covers it. A point whose line misses it goes to the closest spot instead."
+              className={ACTION}
+            >
+              Shrinkwrap
+            </button>
+          </span>
           <button
             type="button"
             onClick={() => void bevelSelectedEdges()}
