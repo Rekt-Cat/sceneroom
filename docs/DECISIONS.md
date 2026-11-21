@@ -1003,4 +1003,5 @@ Also learned: a test that clicks a button before the last change was stored race
 - **Overlapping dabs add up** (airbrush), the stroke is not flattened to one layer. Simple and fast; a "stroke opacity cap" would need a second buffer per stroke.
 - **Left button paints, right orbits.** The camera's left-drag pan is turned off while painting.
 - **GLB export:** the colour map goes into the export as the material's base colour texture (white base colour, so it is not tinted), read from the same texture cache the screen uses; if the file cannot be read the object exports with its plain colour. glTF flips the picture as needed (`flipY`), so the UV map still fits.
-- **Not yet:** layers, roughness/metalness maps, erase, fill, baking.
+- **Erase and fill:** the picture has no transparency, so Erase paints the object's own colour (the colour it had when paint mode began) and Erase all / Fill all cover the whole picture with it or with the brush colour, as one undo step each.
+- **Not yet:** layers, roughness/metalness maps, baking.
