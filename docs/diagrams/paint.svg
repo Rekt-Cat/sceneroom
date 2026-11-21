@@ -38,8 +38,8 @@
   <text x="514" y="376" font-size="12" fill="#13202a">reloads). Saving packs the PNG; unused ones are dropped.</text>
   <rect x="32" y="260" width="430" height="130" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
   <text x="46" y="286" font-size="14" font-weight="700" fill="#13202a">Not built yet</text>
-  <text x="46" y="308" font-size="12" fill="#13202a">Layers, roughness and metalness painting, erase,</text>
-  <text x="46" y="325" font-size="12" fill="#13202a">fill, mirror painting. (The GLB export carries the picture.)</text>
+  <text x="46" y="308" font-size="12" fill="#13202a">Layers, roughness and metalness painting,</text>
+  <text x="46" y="325" font-size="12" fill="#13202a">mirror painting. (Erase, Fill all and GLB export are built.)</text>
   <text x="46" y="342" font-size="12" fill="#13202a">Baking (normal, ambient occlusion and colour maps)</text>
   <text x="46" y="359" font-size="12" fill="#13202a">in a worker with a progress bar.</text>
   <text x="46" y="376" font-size="12" fill="#13202a">Painting on built-in shapes (they need Edit points first).</text>

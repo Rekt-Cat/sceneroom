@@ -118,3 +118,53 @@ test("the painted picture is part of the exported GLB", async ({ page }) => {
   expect(gltf.images[0].mimeType).toBe("image/png");
   expect(gltf.materials[0].pbrMetallicRoughness.baseColorTexture).toBeDefined();
 });
+
+test("fill covers the object, erase puts the colour back, each is one undo step", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await newProject(page);
+  await unwrapCube(page);
+  await page.getByRole("button", { name: "Paint on surface" }).click();
+  const painted = async () => (await paintFacts(page))?.paintedPixels ?? 0;
+
+  await press(page, "Fill all");
+  await expect.poll(painted, { timeout: 20_000 }).toBeGreaterThan(1_000_000);
+
+  // Erase mode: Erase all puts the object's colour back everywhere
+  await press(page, "Erase");
+  await press(page, "Erase all");
+  await expect.poll(painted, { timeout: 20_000 }).toBe(0);
+
+  // Undo the erase: the fill is back; undo again: no painting
+  await page.keyboard.press("Control+z");
+  await expect.poll(painted, { timeout: 20_000 }).toBeGreaterThan(1_000_000);
+  await page.keyboard.press("Control+z");
+  await expect
+    .poll(async () => (await paintFacts(page))?.colorMap, { timeout: 20_000 })
+    .toBeNull();
+});
+
+test("the brush in erase mode takes paint off where it is dragged", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await newProject(page);
+  await unwrapCube(page);
+  await page.getByRole("button", { name: "Paint on surface" }).click();
+  const painted = async () => (await paintFacts(page))?.paintedPixels ?? 0;
+  await press(page, "Fill all");
+  await expect.poll(painted, { timeout: 20_000 }).toBeGreaterThan(1_000_000);
+  const full = await painted();
+
+  await press(page, "Erase");
+  const box = (await page.locator("canvas").first().boundingBox())!;
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  await page.mouse.move(cx - 20, cy);
+  await page.mouse.down();
+  await page.mouse.move(cx + 20, cy + 10, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(painted, { timeout: 20_000 }).toBeLessThan(full - 100);
+  expect(await painted()).toBeGreaterThan(0);
+});
