@@ -9,6 +9,7 @@ import ThumbnailSource from "./ThumbnailSource";
 import { GROUND_GRID_NAME } from "./flatBackground";
 import FocusController from "./FocusController";
 import { Grid, OrbitControls, Stats } from "@react-three/drei";
+import PresenceLayer from "./PresenceLayer";
 import { MOUSE, type DirectionalLight } from "three";
 import { sunPosition } from "@sceneroom/shared";
 import { useEditStore } from "@/store/editStore";
@@ -128,6 +129,8 @@ export default function Viewport() {
       </mesh>
 
       <SceneNodes />
+      {/* Other people in a shared project: their selections and pointers */}
+      <PresenceLayer />
 
       <Grid
         name={GROUND_GRID_NAME}

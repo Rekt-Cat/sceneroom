@@ -22,6 +22,7 @@ import {
 } from "@/store/persistenceStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { Icon, type IconName } from "./icons";
+import PresenceBar from "./PresenceBar";
 import SceneTabs from "./SceneTabs";
 
 const historyButton =
@@ -269,6 +270,7 @@ export default function TopBar() {
       <FileButtons />
       <span className="h-5 w-px bg-ed-line-strong" aria-hidden="true" />
       <SceneTabs />
+      <PresenceBar />
       <SaveStatus />
       <CollabStatusBadge />
     </header>

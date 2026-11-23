@@ -287,3 +287,57 @@ test("one editor per object: while one person edits a mesh, the other is told an
     bob.getByRole("button", { name: "Done", exact: true }),
   ).toBeVisible();
 });
+
+test("presence: names, who selected what, and the other person's pointer", async ({
+  browser,
+}) => {
+  const alice = await person(browser);
+  const bob = await person(browser);
+  const { projectId, sceneId } = await startShared(alice);
+  await addShape(alice, "Cube");
+  await bob.goto(sharedAddress(projectId, "editor", sceneId));
+  await waitOnline(bob);
+  await expect
+    .poll(async () => Object.keys(await summary(bob)))
+    .toEqual(["Cube"]);
+
+  // Each sees one other person in the top bar, with a guest name until one is chosen
+  await expect(alice.getByTestId("presence-person")).toHaveCount(1);
+  await expect(bob.getByTestId("presence-person")).toHaveCount(1);
+
+  // Bob chooses a name; Alice sees it
+  await bob.getByTestId("presence-me").click();
+  await bob.getByLabel("Name others see").fill("Bobby");
+  await bob.getByLabel("Name others see").press("Enter");
+  await expect(alice.getByTestId("presence-person")).toHaveAttribute(
+    "aria-label",
+    "Bobby",
+  );
+
+  // Alice has the cube selected (she added it): Bob's list shows a marker, and a box is drawn
+  await expect(bob.getByTestId("selected-by")).toHaveCount(1);
+  // Alice deselects (a click on empty space): the marker goes
+  await alice.keyboard.press("Escape");
+  await alice.mouse.click(1000, 600);
+  await expect(bob.getByTestId("selected-by")).toHaveCount(0);
+
+  // Bob's pointer over his 3D view shows up in Alice's, with his name
+  const canvas = bob.locator("canvas").first();
+  const box = (await canvas.boundingBox())!;
+  for (let i = 0; i < 12; i++) {
+    await bob.mouse.move(
+      box.x + box.width / 2 + i * 6,
+      box.y + box.height / 2 + i * 3,
+    );
+    await bob.waitForTimeout(120);
+  }
+  await expect(alice.getByText("Bobby", { exact: true })).toBeVisible();
+
+  // The name is kept in Bob's browser and can be reset
+  await bob.getByTestId("presence-me").click();
+  await bob.getByRole("button", { name: "Reset name" }).click();
+  await expect(alice.getByTestId("presence-person")).not.toHaveAttribute(
+    "aria-label",
+    "Bobby",
+  );
+});

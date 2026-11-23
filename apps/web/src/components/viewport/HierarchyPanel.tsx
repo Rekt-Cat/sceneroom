@@ -361,6 +361,11 @@ function HierarchyRow({
   const { node, depth, hasChildren, expanded } = row;
   // Online: someone else is editing, painting or baking this object right now
   const heldBy = useCollabStore((state) => state.locks[node.id]);
+  // ... and who has selected it (a small circle in their colour)
+  const people = useCollabStore((state) => state.people);
+  const selectedBy = people.filter((person) =>
+    person.selection.includes(node.id),
+  );
 
   const beingDragged = drag?.ids.includes(node.id) ?? false;
   // The part of this row the pointer is over while dragging: the middle ("into"), or an edge ("before" / "after")
@@ -447,6 +452,18 @@ function HierarchyRow({
             {node.name}
           </span>
         </button>
+
+        {selectedBy.map((person) => (
+          <span
+            key={person.clientId}
+            role="img"
+            aria-label={`${person.name} has selected ${node.name}`}
+            title={`${person.name} has selected this`}
+            data-testid="selected-by"
+            style={{ backgroundColor: person.color }}
+            className="size-2 shrink-0 rounded-full"
+          />
+        ))}
 
         {heldBy && (
           <span

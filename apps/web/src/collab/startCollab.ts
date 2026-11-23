@@ -8,7 +8,10 @@ import { useProjectStore } from "@/store/projectStore";
 import { usePersistenceStore } from "@/store/persistenceStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { useCollabStore } from "./collabStore";
+import { setCursorSender } from "./activePresence";
 import { watchHistory } from "./collabHistory";
+import { loadSavedName } from "./identity";
+import { cleanName, createPresence, defaultName } from "./presence";
 import {
   createEditLocks,
   EDIT_MODE_VERB,
@@ -41,6 +44,7 @@ export function startCollab(options: {
   let stopStatusWatch: (() => void) | null = null;
   let stopHistoryWatch: (() => void) | null = null;
   let locks: ReturnType<typeof createEditLocks> | null = null;
+  let presence: ReturnType<typeof createPresence> | null = null;
   let stopEditingWatch: (() => void) | null = null;
 
   /** What this person is doing to an object right now, for the others to see. */
@@ -59,15 +63,48 @@ export function startCollab(options: {
     stopEditingWatch = null;
     locks?.destroy();
     locks = null;
+    setCursorSender(null);
+    presence?.destroy();
+    presence = null;
   };
 
-  /** Starts announcing and respecting "who is editing what" for the connection of the open scene. */
-  const shareLocks = (session: SceneSession) => {
+  /** The name shown to others: the one this person chose, else a guest name. */
+  const shownName = (clientId: number) =>
+    cleanName(useCollabStore.getState().myName ?? "") ?? defaultName(clientId);
+
+  /**
+   * Starts sharing who is here for the connection of the open scene: name, colour, selection and pointer, and "who is
+   * editing what" (the courtesy lock).
+   */
+  const shareAwareness = (session: SceneSession) => {
     releaseLocks();
-    if (!session.awareness) return;
+    const awareness = session.awareness;
+    if (!awareness) return;
+    const collab = useCollabStore.getState();
+    presence = createPresence({
+      awareness,
+      name: shownName(awareness.clientID),
+      onPeople: (people) => useCollabStore.getState().setPeople(people),
+      onCursors: (cursors) => useCollabStore.getState().setCursors(cursors),
+    });
+    collab.setMe({ clientId: awareness.clientID, color: presence.color });
+    const sharing = presence;
+    sharing.setSelection(useSceneStore.getState().selectedIds);
+    setCursorSender((position) => sharing.setCursor(position));
+    const stopWatching = [
+      useSceneStore.subscribe((state, previous) => {
+        if (state.selectedIds !== previous.selectedIds) {
+          sharing.setSelection(state.selectedIds);
+        }
+      }),
+      useCollabStore.subscribe((state, previous) => {
+        if (state.myName !== previous.myName) {
+          sharing.setName(shownName(awareness.clientID));
+        }
+      }),
+    ];
     locks = createEditLocks({
-      awareness: session.awareness,
-      name: `Guest ${session.awareness.clientID % 1000}`,
+      awareness,
       onLocks: (held) => useCollabStore.getState().setLocks(held),
       onLostLock: (mine, holder) => {
         // Two people entered at the same moment; the other one has the lower number and keeps the object
@@ -86,7 +123,10 @@ export function startCollab(options: {
       usePaintStore.subscribe(() => locks?.setEditing(currentEditing())),
       useBakeStore.subscribe(() => locks?.setEditing(currentEditing())),
     ];
-    stopEditingWatch = () => stops.forEach((stop) => stop());
+    stopEditingWatch = () => {
+      stops.forEach((stop) => stop());
+      stopWatching.forEach((stop) => stop());
+    };
   };
   let uploader: FileUploader | null = null;
   let putStorageBack: (() => void) | null = null;
@@ -105,12 +145,13 @@ export function startCollab(options: {
       scene: useSceneStore.getState().scene,
       applyRemote: (scene) => useSceneStore.getState().applyRemoteScene(scene),
     });
-    shareLocks(session);
+    shareAwareness(session);
     requestUpload();
   };
 
   const begin = () => {
     setStatus("connecting");
+    useCollabStore.setState({ myName: loadSavedName() });
     // Files: ones that come with other people's changes are downloaded when asked for; the ones this scene refers to are
     // sent. Done after the project is restored, so the storage being wrapped is the browser's own (see assetStorage.ts).
     const ownStorage = getAssetStorage();

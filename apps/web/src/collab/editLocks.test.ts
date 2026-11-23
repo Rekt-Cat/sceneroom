@@ -42,7 +42,6 @@ function setup(clientID = 500) {
   const lost: string[] = [];
   const locks = createEditLocks({
     awareness: fake.awareness,
-    name: "Me",
     onLocks: (held) => seen.push(held),
     onLostLock: (mine, holder) => lost.push(`${mine.nodeId}:${holder.name}`),
   });
@@ -52,7 +51,7 @@ function setup(clientID = 500) {
 describe("edit locks", () => {
   it("announces what I am editing, and clears it", () => {
     const { fake, locks } = setup();
-    expect(fake.states.get(500)).toMatchObject({ name: "Me", editing: null });
+    expect(fake.states.get(500)).toMatchObject({ editing: null });
     locks.setEditing({ nodeId: "cube", mode: "paint" });
     expect(fake.states.get(500)).toMatchObject({
       editing: { nodeId: "cube", mode: "paint" },

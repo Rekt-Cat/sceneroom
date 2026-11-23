@@ -46,8 +46,6 @@ const remoteStateSchema = z.object({
  */
 export function createEditLocks(options: {
   awareness: AwarenessLike;
-  /** The name shown to others. */
-  name: string;
   /** Called with the objects others hold, whenever that changes. */
   onLocks: (locks: Record<string, EditLock>) => void;
   /** I entered a mode on an object that someone with a lower client number entered at the same time. */
@@ -57,7 +55,6 @@ export function createEditLocks(options: {
   let mine: EditingState = null;
   let destroyed = false;
 
-  awareness.setLocalStateField("name", options.name);
   awareness.setLocalStateField("editing", null);
 
   function compute(): Record<string, EditLock> {

@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 520" width="960" height="520" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
+  <title id="t">Presence: how Bob sees Alice (step M6, built)</title>
+  <desc id="d">Alice's editor writes her name, colour, selection and pointer position into her awareness record, which is not saved. The collab server passes it on to Bob's browser. Bob's editor checks the record with Zod, then shows her as a coloured circle in the top bar, a marker on the scene-list rows she selected, a box in her colour round the objects she selected in the 3D view, and her pointer as a small named ball. When she disconnects the record disappears.</desc>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker></defs>
+  <rect width="960" height="520" fill="#f2f5f6"/>
+  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">Presence: how Bob sees Alice</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Built in step M6. It all travels in the awareness record: never saved, and gone when the connection is.</text>
+
+  <text x="32" y="92" font-size="13" font-weight="700" fill="#0a6c8a">ALICE'S BROWSER</text>
+  <rect x="32" y="100" width="270" height="116" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="44" y="122" font-size="13" font-weight="700" fill="#13202a">1. Her editor writes a record</text>
+  <text x="44" y="142" font-size="12" fill="#13202a">name (hers, or "Guest 42"), colour</text>
+  <text x="44" y="159" font-size="12" fill="#13202a">(by client number), selected ids (at</text>
+  <text x="44" y="176" font-size="12" fill="#13202a">most 100), pointer position (ten</text>
+  <text x="44" y="193" font-size="12" fill="#13202a">times a second), what she edits.</text>
+  <path d="M302 158 H330" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="330" y="100" width="250" height="116" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="342" y="122" font-size="13" font-weight="700" fill="#13202a">2. The collab server</text>
+  <text x="342" y="142" font-size="12" fill="#13202a">Passes it to everyone else in</text>
+  <text x="342" y="159" font-size="12" fill="#13202a">the same scene. Nothing is</text>
+  <text x="342" y="176" font-size="12" fill="#13202a">saved. If she disconnects, her</text>
+  <text x="342" y="193" font-size="12" fill="#13202a">record is removed.</text>
+  <path d="M580 158 H608" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="608" y="100" width="320" height="116" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="620" y="122" font-size="13" font-weight="700" fill="#13202a">3. Bob's editor checks it</text>
+  <text x="620" y="142" font-size="12" fill="#13202a">Zod: a name that is too long, a colour</text>
+  <text x="620" y="159" font-size="12" fill="#13202a">that is not #rrggbb, too many ids or a</text>
+  <text x="620" y="176" font-size="12" fill="#13202a">pointer far away: that record is skipped.</text>
+  <text x="620" y="193" font-size="12" fill="#13202a">The list changes only when it really did.</text>
+
+  <text x="32" y="250" font-size="13" font-weight="700" fill="#0a6c8a">WHAT BOB SEES</text>
+  <rect x="32" y="258" width="210" height="110" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <circle cx="60" cy="286" r="12" fill="#4dabf7"/><text x="55" y="291" font-size="13" font-weight="700" fill="#13202a">A</text>
+  <text x="80" y="291" font-size="13" font-weight="700" fill="#13202a">Top bar</text>
+  <text x="44" y="316" font-size="12" fill="#13202a">A circle with her initial in</text>
+  <text x="44" y="333" font-size="12" fill="#13202a">her colour (name on hover).</text>
+  <text x="44" y="350" font-size="12" fill="#13202a">Bob's own circle renames him.</text>
+  <rect x="258" y="258" width="210" height="110" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <circle cx="276" cy="286" r="5" fill="#4dabf7"/>
+  <text x="290" y="291" font-size="13" font-weight="700" fill="#13202a">Scene list</text>
+  <text x="270" y="316" font-size="12" fill="#13202a">A dot in her colour on every</text>
+  <text x="270" y="333" font-size="12" fill="#13202a">row she has selected (and her</text>
+  <text x="270" y="350" font-size="12" fill="#13202a">name if she is editing it).</text>
+  <rect x="484" y="258" width="210" height="110" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <rect x="496" y="272" width="22" height="18" fill="none" stroke="#4dabf7" stroke-width="2"/>
+  <text x="526" y="287" font-size="13" font-weight="700" fill="#13202a">3D view: box</text>
+  <text x="496" y="316" font-size="12" fill="#13202a">A box in her colour round the</text>
+  <text x="496" y="333" font-size="12" fill="#13202a">objects she selected. His own</text>
+  <text x="496" y="350" font-size="12" fill="#13202a">selection stays amber.</text>
+  <rect x="710" y="258" width="218" height="110" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <circle cx="728" cy="284" r="6" fill="#4dabf7"/>
+  <text x="742" y="289" font-size="13" font-weight="700" fill="#13202a">3D view: pointer</text>
+  <text x="722" y="316" font-size="12" fill="#13202a">A small ball with her name,</text>
+  <text x="722" y="333" font-size="12" fill="#13202a">gliding to where she points:</text>
+  <text x="722" y="350" font-size="12" fill="#13202a">the object under it, or the ground.</text>
+
+  <rect x="32" y="388" width="896" height="52" rx="12" fill="#fff8e6" stroke="#8a5a00" stroke-width="2"/>
+  <text x="44" y="410" font-size="13" font-weight="700" fill="#13202a">Names are labels, not identities</text>
+  <text x="44" y="428" font-size="12" fill="#13202a">Anyone can call themselves anything until there are accounts (step M8). Colours come from the client number, so more than eight people share some.</text>
+
+  <rect x="32" y="456" width="896" height="52" rx="12" fill="#fff" stroke="#8a97a0" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="44" y="478" font-size="13" font-weight="700" fill="#13202a">Not yet</text>
+  <text x="44" y="496" font-size="12" fill="#13202a">Who is in which scene tab (needs the project document), following someone's view, chat.</text>
+</svg>
