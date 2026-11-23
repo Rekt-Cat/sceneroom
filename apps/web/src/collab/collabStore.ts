@@ -19,6 +19,9 @@ type CollabState = {
   detail: string;
   /** Objects that someone else is editing, painting or baking right now, by object id (see editLocks.ts). */
   locks: Record<string, EditLock>;
+  /** True when the server let this connection in as a viewer: changes are not accepted and are put back. */
+  readOnly: boolean;
+  setReadOnly: (readOnly: boolean) => void;
   /** The other people in this scene: names, colours, selections (see presence.ts). */
   people: Person[];
   /** Where their pointers are in the 3D view. Changes often, so it is apart from `people`. */
@@ -45,6 +48,8 @@ export const useCollabStore = create<CollabState>()((set) => ({
   active: false,
   detail: "",
   locks: {},
+  readOnly: false,
+  setReadOnly: (readOnly) => set({ readOnly }),
   people: [],
   cursors: [],
   me: null,

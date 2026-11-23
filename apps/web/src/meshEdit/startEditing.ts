@@ -1,6 +1,6 @@
 import { isEffectivelyLocked, supportsModifiers } from "@sceneroom/shared";
 import { useCollabStore } from "@/collab/collabStore";
-import { lockMessage } from "@/collab/editLocks";
+import { editBlockedMessage } from "@/collab/editLocks";
 import { bakeNodeToMesh } from "@/mesh/bakeMesh";
 import { useEditStore } from "@/store/editStore";
 import { useImportStore } from "@/store/importStore";
@@ -27,7 +27,11 @@ export async function startEditing(nodeId: string): Promise<boolean> {
     return false;
   }
   // Online: someone else may be editing, painting or baking this object right now
-  const taken = lockMessage(useCollabStore.getState().locks, nodeId, node.name);
+  const taken = editBlockedMessage(
+    useCollabStore.getState(),
+    nodeId,
+    node.name,
+  );
   if (taken) {
     say(taken);
     return false;

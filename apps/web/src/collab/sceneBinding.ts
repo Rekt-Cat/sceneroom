@@ -30,6 +30,11 @@ export type SceneBindingOptions = {
   onIssues?: (issues: SceneDocIssue[]) => void;
   /** Tells how the first meeting of editor and document went. */
   onReconciled?: (how: "seeded" | "adopted") => void;
+  /**
+   * True when the server let this connection in as a viewer. Its changes are not accepted, so a change made in the editor is
+   * put back to what the document holds instead of being written.
+   */
+  isReadOnly?: () => boolean;
   /** Changes made within this many ms are written together. Default 50. */
   delayMs?: number;
 };
@@ -180,6 +185,12 @@ export function createSceneBinding(options: SceneBindingOptions): SceneBinding {
     localChanged(scene) {
       local = scene;
       if (!known || destroyed || scene === known) return;
+      if (options.isReadOnly?.()) {
+        // A viewer cannot change the scene: put back what the document holds
+        local = known;
+        options.applyRemote(known);
+        return;
+      }
       if (timer === null) timer = setTimeout(flush, delayMs);
     },
     isReconciled: () => known !== null,

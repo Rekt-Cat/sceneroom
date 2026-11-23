@@ -4,7 +4,8 @@ import { useEffect, useState, type DragEvent } from "react";
 import { importFiles } from "@/assets/importFile";
 import { watchEditMode } from "@/meshEdit/startEditing";
 import { parseCollabParams } from "@/collab/collabParams";
-import { startCollab } from "@/collab/startCollab";
+import { connectCollab, disconnectCollab } from "@/collab/collabController";
+import { loadConnection, saveConnection } from "@/collab/savedConnection";
 import { startPersistence } from "@/persistence/startPersistence";
 import { installTestHooks } from "@/testHooks";
 import { usePersistenceStore } from "@/store/persistenceStore";
@@ -56,13 +57,19 @@ export default function EditorShell({ projectId }: { projectId: string }) {
   // Restore the scene saved last time, then save every change (see startPersistence). A link with ?collab= also
   // goes online (below); if the project is not in this browser yet, it is created for the shared scene.
   useEffect(() => {
-    const collab = parseCollabParams(window.location.search);
-    const stopSaving = startPersistence(projectId, collab?.sceneId);
-    const stopOnline = collab
-      ? startCollab({ projectId, url: collab.url, token: collab.token })
-      : null;
+    // A link opened in this browser is remembered, so opening the project from the home screen later reconnects
+    const fromAddress = parseCollabParams(window.location.search);
+    if (fromAddress) {
+      saveConnection(projectId, {
+        url: fromAddress.url,
+        token: fromAddress.token,
+      });
+    }
+    const connection = fromAddress ?? loadConnection(projectId);
+    const stopSaving = startPersistence(projectId, fromAddress?.sceneId);
+    if (connection) connectCollab({ projectId, ...connection });
     return () => {
-      stopOnline?.();
+      disconnectCollab();
       stopSaving();
     };
   }, [projectId]);
@@ -107,7 +114,7 @@ export default function EditorShell({ projectId }: { projectId: string }) {
 
   return (
     <div className="flex h-dvh flex-col bg-ed-bg text-ed-text">
-      <TopBar />
+      <TopBar projectId={projectId} />
       <div className="flex min-h-0 flex-1">
         <HierarchyPanel />
         {/* Same colour as the 3D background (Viewport.tsx) so there is no flash while it loads */}

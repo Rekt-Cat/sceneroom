@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { corsHeaders } from "./cors";
 import { projectIdSchema } from "./documentName";
 import { FILE_ID_PATTERN, type FileStore } from "./fileStore";
 import { verifyLinkToken } from "./linkToken";
@@ -15,6 +16,8 @@ export type FileRouteOptions = {
   maxProjectBytes: number;
   /** Web pages from these origins may call the file routes (CORS). */
   allowedOrigins: readonly string[];
+  /** The generation of links that is valid for a project (links of an older one were cancelled). */
+  generationOf: (projectId: string) => number;
 };
 
 /** `/files/<projectId>/<fileId>`: the only address the file routes answer to. */
@@ -69,15 +72,11 @@ export async function handleFileRequest(
   const match = ROUTE.exec(url.pathname);
   if (!match) return false;
 
-  const origin = request.headers.origin;
-  const cors: Record<string, string> = { Vary: "Origin" };
-  if (origin && options.allowedOrigins.includes(origin)) {
-    cors["Access-Control-Allow-Origin"] = origin;
-    cors["Access-Control-Allow-Methods"] = "GET, HEAD, PUT, OPTIONS";
-    cors["Access-Control-Allow-Headers"] = "Authorization, Content-Type";
-    cors["Access-Control-Max-Age"] = "600";
-  }
-
+  const cors = corsHeaders(
+    request,
+    options.allowedOrigins,
+    "GET, HEAD, PUT, OPTIONS",
+  );
   const method = request.method ?? "GET";
   if (method === "OPTIONS") {
     response.writeHead(204, cors);
@@ -110,9 +109,12 @@ export async function handleFileRequest(
     send(response, 401, "Not allowed", cors);
     return true;
   }
-  if (check.projectId !== projectId.data) {
+  if (
+    check.projectId !== projectId.data ||
+    check.generation !== options.generationOf(projectId.data)
+  ) {
     options.logger.warn(
-      `files: refused ${method} ${url.pathname}: token is for another project`,
+      `files: refused ${method} ${url.pathname}: token is for another project or was cancelled`,
     );
     send(response, 403, "Not allowed", cors);
     return true;

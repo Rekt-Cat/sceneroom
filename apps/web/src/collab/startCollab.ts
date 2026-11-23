@@ -132,8 +132,11 @@ export function startCollab(options: {
   let putStorageBack: (() => void) | null = null;
 
   /** The files the open scene refers to are sent to the server (the ones it does not have yet). */
-  const requestUpload = () =>
+  const requestUpload = () => {
+    // A viewer cannot send files (the server would refuse them)
+    if (useCollabStore.getState().readOnly) return;
     uploader?.request(Object.keys(useSceneStore.getState().scene.assets));
+  };
 
   const bind = () => {
     session?.destroy();

@@ -4,6 +4,8 @@ import { readSceneFromDoc } from "@sceneroom/shared";
 import { parseDocumentName } from "./documentName";
 import { handleFileRequest } from "./fileRoutes";
 import type { FileStore } from "./fileStore";
+import type { OwnerStore } from "./ownerStore";
+import { handleShareRequest } from "./shareRoutes";
 import { verifyLinkToken, type LinkRole } from "./linkToken";
 import type { Logger } from "./logger";
 import type { DocumentStore } from "./store";
@@ -15,6 +17,8 @@ export type CollabServerOptions = {
   /** The secret the link tokens are signed with. */
   secret: string;
   store: DocumentStore;
+  /** Who owns each project's sharing, and which links are still valid. */
+  owners: OwnerStore;
   logger: Logger;
   /** The biggest single message a client may send. */
   maxMessageBytes: number;
@@ -45,6 +49,7 @@ export type ConnectionContext = { projectId: string; role: LinkRole };
  * - a message bigger than `maxMessageBytes` closes the connection; a document bigger than `maxDocumentBytes` is not saved
  * - documents are loaded from and saved to the store, so they survive a restart
  * - big files go through `/files/<projectId>/<fileId>` (see fileRoutes.ts), checked by the same tokens
+ * - `/share/...` makes links for a project's owner and cancels them (see shareRoutes.ts); a cancelled link is refused everywhere
  */
 export function createCollabServer(options: CollabServerOptions) {
   const { store, logger } = options;
@@ -77,6 +82,10 @@ export function createCollabServer(options: CollabServerOptions) {
         logger.warn(`refused ${documentName}: token is for another project`);
         throw new Error("Not allowed");
       }
+      if (check.generation !== options.owners.generation(check.projectId)) {
+        logger.warn(`refused ${documentName}: the link was cancelled`);
+        throw new Error("Not allowed");
+      }
       if (check.role === "viewer") connectionConfig.readOnly = true;
       return { projectId: check.projectId, role: check.role };
     },
@@ -105,20 +114,46 @@ export function createCollabServer(options: CollabServerOptions) {
     },
   });
 
-  // The file routes answer first; every other request goes to Hocuspocus as before
+  // The file and sharing routes answer first; every other request goes to Hocuspocus as before
   const hocuspocusHandler = server.requestHandler;
+  const generationOf = (projectId: string) =>
+    options.owners.generation(projectId);
+  const closeProjectConnections = (projectId: string) => {
+    for (const [name, document] of [...server.hocuspocus.documents]) {
+      if (parseDocumentName(name)?.projectId !== projectId) continue;
+      // Closing the socket (not only resetting the document) makes the browser connect again from the start, so its
+      // token is checked again, and the cancelled one is refused. A reset on the same socket would not check it.
+      for (const connection of [...document.connections.keys()]) {
+        connection.webSocket.close(
+          4403,
+          "The links of this project were cancelled",
+        );
+      }
+      server.hocuspocus.closeConnections(name);
+    }
+  };
   server.httpServer.removeAllListeners("request");
   server.httpServer.on("request", (request, response) => {
-    void handleFileRequest(request, response, {
-      store: options.files,
-      secret: options.secret,
-      logger,
-      maxFileBytes: options.maxFileBytes,
-      maxProjectBytes: options.maxProjectFileBytes,
-      allowedOrigins: options.allowedOrigins,
-    }).then((handled) => {
-      if (!handled) return hocuspocusHandler(request, response);
-    });
+    void (async () => {
+      const handled =
+        (await handleShareRequest(request, response, {
+          owners: options.owners,
+          secret: options.secret,
+          logger,
+          allowedOrigins: options.allowedOrigins,
+          closeProjectConnections,
+        })) ||
+        (await handleFileRequest(request, response, {
+          store: options.files,
+          secret: options.secret,
+          logger,
+          maxFileBytes: options.maxFileBytes,
+          maxProjectBytes: options.maxProjectFileBytes,
+          allowedOrigins: options.allowedOrigins,
+          generationOf,
+        }));
+      if (!handled) await hocuspocusHandler(request, response);
+    })();
   });
   return server;
 }

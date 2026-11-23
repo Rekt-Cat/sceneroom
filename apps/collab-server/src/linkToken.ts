@@ -12,9 +12,19 @@ const payloadSchema = z.object({
   r: z.enum(LINK_ROLES),
   /** Expiry, seconds since 1970. Missing = never expires. */
   e: z.number().int().positive().optional(),
+  /**
+   * Which generation of links this is. The project's owner can cancel every link at once by moving the project to the
+   * next generation (ownerStore.ts); a token of an older generation is no longer accepted. Missing = 0.
+   */
+  g: z.number().int().min(0).optional(),
 });
 
-export type LinkClaims = { projectId: string; role: LinkRole };
+export type LinkClaims = {
+  projectId: string;
+  role: LinkRole;
+  /** See `g` above. Default 0. */
+  generation?: number;
+};
 
 export type LinkCheck =
   ({ ok: true } & LinkClaims) | { ok: false; reason: string };
@@ -40,6 +50,7 @@ export function createLinkToken(
     p: claims.projectId,
     r: claims.role,
     e: expiresAtSeconds,
+    g: claims.generation || undefined,
   });
   const body = toBase64Url(JSON.stringify(payload));
   return `${body}.${toBase64Url(sign(body, secret))}`;
@@ -73,5 +84,10 @@ export function verifyLinkToken(
   if (parsed.data.e !== undefined && parsed.data.e <= nowSeconds) {
     return { ok: false, reason: "expired" };
   }
-  return { ok: true, projectId: parsed.data.p, role: parsed.data.r };
+  return {
+    ok: true,
+    projectId: parsed.data.p,
+    role: parsed.data.r,
+    generation: parsed.data.g ?? 0,
+  };
 }

@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { MemoryOwners, type OwnerStore } from "./ownerStore";
 
 /**
  * Where documents are kept between server runs. The server only knows this interface, so the SQLite file used
@@ -14,7 +15,10 @@ export interface DocumentStore {
 }
 
 /** Keeps documents in memory only. For tests. */
-export class MemoryStore implements DocumentStore {
+export class MemoryStore
+  extends MemoryOwners
+  implements DocumentStore, OwnerStore
+{
   readonly documents = new Map<string, Uint8Array>();
   load(name: string): Uint8Array | null {
     return this.documents.get(name) ?? null;
@@ -29,7 +33,7 @@ export class MemoryStore implements DocumentStore {
  * Keeps documents in a SQLite file, using the database built into Node (`node:sqlite`, no extra package). One
  * row per document: its name and its whole state.
  */
-export class SqliteStore implements DocumentStore {
+export class SqliteStore implements DocumentStore, OwnerStore {
   private readonly db: DatabaseSync;
 
   /** `path` is a file path, or ":memory:" for a throwaway database. */
@@ -39,7 +43,9 @@ export class SqliteStore implements DocumentStore {
     this.db.exec(
       "PRAGMA journal_mode = WAL; " +
         "CREATE TABLE IF NOT EXISTS documents (" +
-        "name TEXT PRIMARY KEY, state BLOB NOT NULL, updated_at INTEGER NOT NULL)",
+        "name TEXT PRIMARY KEY, state BLOB NOT NULL, updated_at INTEGER NOT NULL); " +
+        "CREATE TABLE IF NOT EXISTS owners (" +
+        "project_id TEXT PRIMARY KEY, key_hash TEXT NOT NULL, generation INTEGER NOT NULL DEFAULT 0)",
     );
   }
 
@@ -57,6 +63,38 @@ export class SqliteStore implements DocumentStore {
           "ON CONFLICT(name) DO UPDATE SET state = excluded.state, updated_at = excluded.updated_at",
       )
       .run(name, state, Date.now());
+  }
+
+  ownerHash(projectId: string): string | null {
+    const row = this.db
+      .prepare("SELECT key_hash FROM owners WHERE project_id = ?")
+      .get(projectId);
+    return row && typeof row["key_hash"] === "string" ? row["key_hash"] : null;
+  }
+
+  claim(projectId: string, keyHash: string): boolean {
+    const result = this.db
+      .prepare(
+        "INSERT INTO owners (project_id, key_hash, generation) VALUES (?, ?, 0) ON CONFLICT(project_id) DO NOTHING",
+      )
+      .run(projectId, keyHash);
+    return Number(result.changes) === 1;
+  }
+
+  generation(projectId: string): number {
+    const row = this.db
+      .prepare("SELECT generation FROM owners WHERE project_id = ?")
+      .get(projectId);
+    return row && typeof row["generation"] === "number" ? row["generation"] : 0;
+  }
+
+  nextGeneration(projectId: string): number {
+    this.db
+      .prepare(
+        "UPDATE owners SET generation = generation + 1 WHERE project_id = ?",
+      )
+      .run(projectId);
+    return this.generation(projectId);
   }
 
   close(): void {

@@ -23,6 +23,7 @@ import {
 import { useSceneStore } from "@/store/sceneStore";
 import { Icon, type IconName } from "./icons";
 import PresenceBar from "./PresenceBar";
+import ShareDialog from "./ShareDialog";
 import SceneTabs from "./SceneTabs";
 
 const historyButton =
@@ -126,8 +127,16 @@ const COLLAB_STATUS: Record<
 /** "Online", "Offline, changes kept" and so on, only for a shared project. */
 function CollabStatusBadge() {
   const status = useCollabStore((state) => state.status);
+  const readOnly = useCollabStore((state) => state.readOnly);
   if (status === "off") return null;
-  const { text, dot, help } = COLLAB_STATUS[status];
+  const entry = COLLAB_STATUS[status];
+  const { dot } = entry;
+  const text =
+    status === "online" && readOnly ? "Online, view only" : entry.text;
+  const help =
+    status === "online" && readOnly
+      ? "You can look but not change anything: this link is view only. A change you try to make is put back."
+      : entry.help;
   return (
     <span
       role="status"
@@ -239,8 +248,29 @@ function HomeButton() {
   );
 }
 
+/** "Share": opens the box that makes links for other people. */
+function ShareButton({ projectId }: { projectId: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        title="Make a link so other people can open this project with you"
+        className={FILE_BUTTON}
+      >
+        Share
+      </button>
+      {open && (
+        <ShareDialog projectId={projectId} onClose={() => setOpen(false)} />
+      )}
+    </div>
+  );
+}
+
 /** Bar across the top of the editor: logo, Undo and Redo, the project and its scene tabs. */
-export default function TopBar() {
+export default function TopBar({ projectId }: { projectId: string }) {
   const undoLabel = useSceneStore((state) => nextUndoLabel(state.history));
   const redoLabel = useSceneStore((state) => nextRedoLabel(state.history));
   const undo = useSceneStore((state) => state.undo);
@@ -268,6 +298,7 @@ export default function TopBar() {
       </div>
       <span className="h-5 w-px bg-ed-line-strong" aria-hidden="true" />
       <FileButtons />
+      <ShareButton projectId={projectId} />
       <span className="h-5 w-px bg-ed-line-strong" aria-hidden="true" />
       <SceneTabs />
       <PresenceBar />

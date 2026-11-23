@@ -78,6 +78,7 @@ describe("collab server", () => {
       host: "127.0.0.1",
       secret: SECRET,
       store,
+      owners: store,
       logger,
       maxMessageBytes: 1_048_576,
       maxDocumentBytes: 20_971_520,

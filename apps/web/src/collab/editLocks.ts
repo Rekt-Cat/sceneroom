@@ -116,3 +116,18 @@ export function lockMessage(
   if (!lock) return null;
   return `${lock.name} is ${EDIT_MODE_VERB[lock.mode]} "${nodeName}" right now. Wait until they are done, or work on another object.`;
 }
+
+/**
+ * Why an object cannot be edited, painted or baked now, or null if it can: the project is open as view only, or someone
+ * else holds the object (see lockMessage).
+ */
+export function editBlockedMessage(
+  online: { locks: Readonly<Record<string, EditLock>>; readOnly: boolean },
+  nodeId: string,
+  nodeName: string,
+): string | null {
+  if (online.readOnly) {
+    return "This project is open as view only, so it cannot be changed.";
+  }
+  return lockMessage(online.locks, nodeId, nodeName);
+}

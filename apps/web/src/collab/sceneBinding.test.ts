@@ -258,6 +258,34 @@ describe("editing together", () => {
     expect(bob.editor.nodes["cube"]!.name).toBe("Before leaving");
   });
 
+  it("a viewer's change is put back instead of written", () => {
+    const { alice } = pair();
+    const doc = new Y.Doc();
+    const applied: Scene[] = [];
+    let readOnly = false;
+    const viewer = createSceneBinding({
+      doc,
+      delayMs: 50,
+      applyRemote: (scene) => applied.push(scene),
+      isReadOnly: () => readOnly,
+    });
+    // The viewer joins the shared scene
+    Y.applyUpdate(doc, Y.encodeStateAsUpdate(alice.doc));
+    const start = sceneWithCube();
+    viewer.start(start);
+    viewer.serverSynced();
+    applied.length = 0;
+    readOnly = true;
+
+    // The viewer changes something in the editor
+    viewer.localChanged(updateNode(start, "cube", { name: "Sneaky" }));
+    expect(applied).toHaveLength(1);
+    expect(applied[0]!.nodes["cube"]!.name).toBe("Cube"); // put back
+    later();
+    expect(readSceneFromDoc(doc).scene.nodes["cube"]!.name).toBe("Cube"); // nothing was written
+    expect(readSceneFromDoc(alice.doc).scene.nodes["cube"]!.name).toBe("Cube");
+  });
+
   it("after destroy nothing more is written or applied", () => {
     const { alice, bob } = pair();
     bob.binding.destroy();

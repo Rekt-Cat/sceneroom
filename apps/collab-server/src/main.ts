@@ -12,6 +12,7 @@ const server = createCollabServer({
   host: config.host,
   secret: config.secret,
   store,
+  owners: store,
   logger: consoleLogger,
   maxMessageBytes: config.maxMessageBytes,
   maxDocumentBytes: config.maxDocumentBytes,

@@ -39,11 +39,13 @@ describe("file routes", () => {
       error: (m) => lines.push(`error ${m}`),
     };
     const files = options.files ?? new MemoryFileStore();
+    const ownerStore = new MemoryStore();
     const server = createCollabServer({
       port: 0,
       host: "127.0.0.1",
       secret: SECRET,
-      store: new MemoryStore(),
+      store: ownerStore,
+      owners: ownerStore,
       logger,
       maxMessageBytes: 1_048_576,
       maxDocumentBytes: 20_971_520,

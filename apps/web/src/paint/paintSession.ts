@@ -15,7 +15,7 @@ import { CanvasTexture, SRGBColorSpace } from "three";
 import { assetStorage } from "@/assets/assetStorage";
 import { sha256Hex } from "@/assets/hash";
 import { useCollabStore } from "@/collab/collabStore";
-import { lockMessage } from "@/collab/editLocks";
+import { editBlockedMessage } from "@/collab/editLocks";
 import { loadMeshData } from "@/assets/meshStorage";
 import { useImportStore } from "@/store/importStore";
 import { useEditStore } from "@/store/editStore";
@@ -168,7 +168,11 @@ export async function startPaint(
     say("This object is locked, so it cannot be painted.");
     return false;
   }
-  const taken = lockMessage(useCollabStore.getState().locks, nodeId, node.name);
+  const taken = editBlockedMessage(
+    useCollabStore.getState(),
+    nodeId,
+    node.name,
+  );
   if (taken) {
     say(taken);
     return false;

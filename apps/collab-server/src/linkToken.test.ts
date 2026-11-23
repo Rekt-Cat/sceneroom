@@ -11,6 +11,7 @@ describe("link tokens", () => {
       ok: true,
       projectId: "p1",
       role: "viewer",
+      generation: 0,
     });
   });
 
@@ -67,6 +68,22 @@ describe("link tokens", () => {
     expect(verifyLinkToken(`${body}.${signature}`, SECRET)).toEqual({
       ok: false,
       reason: "invalid claims",
+    });
+  });
+
+  it("a token carries its generation, and a missing one means 0", () => {
+    const token = createLinkToken(
+      { projectId: "p1", role: "editor", generation: 3 },
+      SECRET,
+    );
+    expect(verifyLinkToken(token, SECRET)).toMatchObject({
+      ok: true,
+      generation: 3,
+    });
+    const plain = createLinkToken({ projectId: "p1", role: "editor" }, SECRET);
+    expect(verifyLinkToken(plain, SECRET)).toMatchObject({
+      ok: true,
+      generation: 0,
     });
   });
 

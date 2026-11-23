@@ -140,7 +140,9 @@ test("a viewer sees the scene, and nothing a viewer does reaches the others", as
     .toEqual(["Cube"]);
 
   await viewer.goto(sharedAddress(projectId, "viewer", sceneId));
-  await waitOnline(viewer);
+  await expect(viewer.getByTestId("collab-status")).toHaveText(
+    "Online, view only",
+  );
   await expect
     .poll(async () => Object.keys(await summary(viewer)))
     .toEqual(Object.keys(await summary(alice)));
@@ -340,4 +342,144 @@ test("presence: names, who selected what, and the other person's pointer", async
     "aria-label",
     "Bobby",
   );
+});
+
+/** Opens the Share box, makes a link and returns it. The first link also puts the project online (the owner's own connection). */
+async function makeLink(
+  page: Page,
+  role: "editor" | "viewer" = "editor",
+): Promise<string> {
+  if (
+    !(await page
+      .getByRole("dialog", { name: "Share this project" })
+      .isVisible())
+  ) {
+    await page.getByRole("button", { name: "Share", exact: true }).click();
+  }
+  const dialog = page.getByRole("dialog", { name: "Share this project" });
+  const server = dialog.getByLabel("Collab server address");
+  if (await server.isEnabled()) {
+    await server.fill(COLLAB_TEST_URL);
+    await server.blur();
+  }
+  await dialog.getByLabel("What the link allows").selectOption(role);
+  await dialog.getByRole("button", { name: "Create link" }).click();
+  const field = dialog.getByTestId("share-link");
+  await expect(field).toHaveValue(/collab=/);
+  return field.inputValue();
+}
+
+test("Share: make a link, the other person opens it and works in the same scene; reopening reconnects", async ({
+  browser,
+}) => {
+  const alice = await person(browser);
+  const bob = await person(browser);
+  await newProject(alice);
+  await addShape(alice, "Cube");
+
+  const link = await makeLink(alice);
+  await waitOnline(alice);
+
+  await bob.goto(link);
+  await waitOnline(bob);
+  await expect
+    .poll(async () => Object.keys(await summary(bob)))
+    .toEqual(["Cube"]);
+
+  // Bob adds something; Alice sees it
+  await addShape(bob, "Sphere");
+  await expect
+    .poll(async () => Object.keys(await summary(alice)).sort())
+    .toEqual(["Cube", "Sphere"]);
+
+  // Bob later opens the project without the link in the address (as from the home screen): the saved link reconnects
+  const address = new URL(bob.url());
+  await bob.goto(address.pathname);
+  await waitOnline(bob);
+  await expect
+    .poll(async () => Object.keys(await summary(bob)).sort())
+    .toEqual(["Cube", "Sphere"]);
+});
+
+test("Share: a view-only link shows the scene, and changes are put back", async ({
+  browser,
+}) => {
+  const alice = await person(browser);
+  const viewer = await person(browser);
+  await newProject(alice);
+  await addShape(alice, "Cube");
+  const link = await makeLink(alice, "viewer");
+  await waitOnline(alice);
+
+  await viewer.goto(link);
+  await expect(viewer.getByTestId("collab-status")).toHaveText(
+    "Online, view only",
+  );
+  await expect
+    .poll(async () => Object.keys(await summary(viewer)))
+    .toEqual(["Cube"]);
+
+  // The viewer tries to add a shape: it is put back, and nothing reaches Alice
+  await addShape(viewer, "Sphere");
+  await expect
+    .poll(async () => Object.keys(await summary(viewer)))
+    .toEqual(["Cube"]);
+  await addShape(alice, "Cone");
+  await expect
+    .poll(async () => Object.keys(await summary(viewer)).sort())
+    .toEqual(["Cone", "Cube"]);
+  expect(Object.keys(await summary(alice))).not.toContain("Sphere");
+
+  // Edit points is refused with a reason
+  await viewer
+    .getByRole("button", { name: "Cube", exact: true })
+    .first()
+    .click();
+  await viewer.getByRole("button", { name: /Edit points/ }).click();
+  await expect(viewer.getByText(/open as view only/)).toBeVisible();
+});
+
+test("Share: only the person who started sharing can make links, and cancelling all links disconnects everyone", async ({
+  browser,
+}) => {
+  const alice = await person(browser);
+  const bob = await person(browser);
+  await newProject(alice);
+  await addShape(alice, "Cube");
+  const oldLink = await makeLink(alice);
+  await waitOnline(alice);
+  await bob.goto(oldLink);
+  await waitOnline(bob);
+
+  // Bob is not the owner: he cannot make links
+  await bob.getByRole("button", { name: "Share", exact: true }).click();
+  await bob.getByRole("button", { name: "Create link" }).click();
+  await expect(
+    bob.getByRole("dialog", { name: "Share this project" }).getByRole("alert"),
+  ).toContainText("did not start sharing");
+
+  // Alice cancels all links
+  await alice.getByRole("button", { name: "Cancel all links…" }).click();
+  await alice
+    .getByRole("button", { name: "Cancel all links", exact: true })
+    .click();
+  await expect(alice.getByText(/All links are cancelled/)).toBeVisible();
+
+  // Alice stays online; Bob is disconnected and cannot come back with the old link
+  await waitOnline(alice);
+  await expect(bob.getByTestId("collab-status")).not.toHaveText("Online");
+  const late = await person(browser);
+  await late.goto(oldLink);
+  await expect(late.getByTestId("collab-status")).toHaveText(
+    "Link not accepted",
+  );
+
+  // A new link works
+  const newLink = await makeLink(alice);
+  const carol = await person(browser);
+  await carol.goto(newLink);
+  await waitOnline(carol);
+  await expect
+    .poll(async () => Object.keys(await summary(carol)))
+    .toEqual(["Cube"]);
 });

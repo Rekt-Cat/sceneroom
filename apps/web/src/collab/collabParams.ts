@@ -1,8 +1,9 @@
 import { z } from "zod";
+import { isWebSocketUrl } from "./serverAddress";
 
 /**
  * What the address says about going online: `?collab=ws://server:1234&token=...` (and `&scene=<id>` to open a
- * shared scene in a browser that does not have the project yet). Share links (step M7) will make these for you.
+ * shared scene in a browser that does not have the project yet). The Share button makes these links.
  * The values come from outside, so they are checked.
  */
 const idSchema = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
@@ -11,14 +12,7 @@ const paramsSchema = z.object({
   collab: z
     .string()
     .max(500)
-    .refine((value) => {
-      try {
-        const protocol = new URL(value).protocol;
-        return protocol === "ws:" || protocol === "wss:";
-      } catch {
-        return false;
-      }
-    }, "must be a ws:// or wss:// address"),
+    .refine(isWebSocketUrl, "must be a ws:// or wss:// address"),
   token: z.string().min(1).max(2000),
   scene: idSchema.optional(),
 });

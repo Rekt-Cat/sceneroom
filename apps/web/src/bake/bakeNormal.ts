@@ -3,7 +3,7 @@ import { Box3, Matrix4, Vector3, type Mesh } from "three";
 import { assetStorage } from "@/assets/assetStorage";
 import { sha256Hex } from "@/assets/hash";
 import { useCollabStore } from "@/collab/collabStore";
-import { lockMessage } from "@/collab/editLocks";
+import { editBlockedMessage } from "@/collab/editLocks";
 import { loadMeshData } from "@/assets/meshStorage";
 import { getMesh } from "@/components/viewport/meshRegistry";
 import { firstMesh } from "@/meshEdit/shrinkwrap";
@@ -58,7 +58,11 @@ export async function bakeNormalMap(
     say("This object is locked, so it cannot be baked.");
     return false;
   }
-  const taken = lockMessage(useCollabStore.getState().locks, nodeId, node.name);
+  const taken = editBlockedMessage(
+    useCollabStore.getState(),
+    nodeId,
+    node.name,
+  );
   if (taken) {
     say(taken);
     return false;

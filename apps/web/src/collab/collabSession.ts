@@ -44,6 +44,7 @@ export function createSceneSession(options: SceneSessionOptions): SceneSession {
   const binding = createSceneBinding({
     doc,
     applyRemote: options.applyRemote,
+    isReadOnly: () => useCollabStore.getState().readOnly,
     onIssues: (issues) => {
       for (const issue of issues) {
         console.warn(
@@ -67,6 +68,10 @@ export function createSceneSession(options: SceneSessionOptions): SceneSession {
     },
     onSynced: ({ state }) => {
       if (state && !destroyed) binding.serverSynced();
+    },
+    onAuthenticated: ({ scope }) => {
+      if (!destroyed)
+        useCollabStore.getState().setReadOnly(scope === "readonly");
     },
     onAuthenticationFailed: ({ reason }) => {
       if (destroyed) return;
