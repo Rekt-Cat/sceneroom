@@ -1106,3 +1106,14 @@ Also learned: a test that clicks a button before the last change was stored race
 - **The collab server stays dumb about accounts.** The web app checks the session and the membership and signs a short-lived (1 hour) token; the collab server verifies it as it does today. Tokens are fetched by a function on every reconnect. The token code moves to `packages/link-token` because the web server now signs tokens too and it uses `node:crypto`. Removing a member is immediate for new tokens and within an hour for an open connection, or at once if the collab server is told to disconnect the person.
 - **Accounts are optional.** With no `DATABASE_URL` the app runs as today (local projects, stage A links). A cloud project reuses the local project's id. Scene data stays in collab documents, not in the tables.
 - **Full design, roles, flows, build order M8a to M8f and risks:** `docs/backend/ACCOUNTS.md`. Setup steps for the owner: `docs/dev/SETUP-ACCOUNTS.md`.
+
+## 2026-11-23: Accounts step M8a built (database package)
+
+- **`packages/db`** holds the Prisma 7.10.1 schema, the first migration (`20261123105625_init`), `createDb(url)`, the role rules and a seed script. The client is generated into `packages/db/src/generated` (ignored by git); `postinstall` runs `prisma generate`, so a fresh `pnpm install` rebuilds it.
+- **Better Auth's four core tables are written by hand for now** (`user`, `session`, `account`, `verification`, from its documented core schema). Step M8b compares them with the output of Better Auth's own CLI and fixes any difference with a new migration.
+- **Table names are lower case and singular** (`@@map`), roles are a Postgres enum (`owner`, `editor`, `commenter`, `viewer`), `ProjectMember` has the composite key (project, user), invitations store only `tokenHash` (unique).
+- **Deleting rules (tested):** deleting a project removes its members and invitations; deleting a user removes their sessions and sign-in accounts and their memberships; a user who still owns a project cannot be deleted (`Restrict`); deleting the person who accepted an invitation keeps the invitation.
+- **One place for "what may a role do":** `permissionsOf(role)` and `collabAccess(role)` in `packages/db/src/roles.ts`; routes never compare role names.
+- **Prisma needs install scripts:** `allowBuilds` in `pnpm-workspace.yaml` now allows `prisma` and `@prisma/engines` (they fetch the migration engine).
+- **Tests use the real Postgres** from `docker-compose.yml` (`docker compose up -d` first) and empty its tables, so they must only point at the development database. Without Docker running `pnpm test` fails in `packages/db` with a connection error.
+- **Node 24 needed:** Prisma 7.10.1 does not run on Node 23, so run these commands under the pinned Node 24 (`.node-version`).

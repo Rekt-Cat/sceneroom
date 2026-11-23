@@ -1,0 +1,134 @@
+// The accounts database (docs/backend/ACCOUNTS.md, section 3).
+// The first four models are Better Auth's core tables (user, session, account, verification). They are written by hand
+// from its documented core schema for now and are compared with the output of its own CLI in step M8b.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String   @id
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions        Session[]
+  accounts        Account[]
+  ownedProjects   Project[]       @relation("ProjectOwner")
+  memberships     ProjectMember[]
+  invitesCreated  Invitation[]    @relation("InvitationCreator")
+  invitesAccepted Invitation[]    @relation("InvitationAcceptor")
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+enum Role {
+  owner
+  editor
+  commenter
+  viewer
+}
+
+/// A project that is online. `id` is the local project's id (a UUID), the same one the collab server uses.
+model Project {
+  id        String   @id
+  name      String
+  createdAt DateTime @default(now())
+  ownerId   String
+  owner     User     @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+
+  members     ProjectMember[]
+  invitations Invitation[]
+
+  @@index([ownerId])
+  @@map("project")
+}
+
+/// Who may open a project, and as what. The owner is a member too (role `owner`).
+model ProjectMember {
+  projectId String
+  userId    String
+  role      Role
+  addedAt   DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, userId])
+  @@index([userId])
+  @@map("project_member")
+}
+
+/// An invitation link. Only a hash of its token is stored, never the token itself.
+model Invitation {
+  id           String    @id @default(uuid())
+  projectId    String
+  project      Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  role         Role
+  tokenHash    String    @unique
+  expiresAt    DateTime
+  createdById  String
+  createdBy    User      @relation("InvitationCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+  acceptedById String?
+  acceptedBy   User?     @relation("InvitationAcceptor", fields: [acceptedById], references: [id], onDelete: SetNull)
+  acceptedAt   DateTime?
+  revokedAt    DateTime?
+
+  @@index([projectId])
+  @@map("invitation")
+}

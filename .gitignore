@@ -40,3 +40,6 @@ apps/web/e2e-output/
 
 # Collab server: the SQLite database files
 apps/collab-server/data/
+
+# Prisma client generated from schema.prisma (pnpm --filter @sceneroom/db generate)
+packages/db/src/generated/
