@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 580" width="960" height="580" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
+  <title id="t">Accounts: sign in, membership and the collab token (step M8, designed, not built yet)</title>
+  <desc id="d">A person signs in with GitHub through Better Auth in the web app, which keeps users and sessions in Postgres. The editor asks the web app for a token for a project. The web app checks the session and the membership and role in Postgres, and signs a short-lived token. The editor gives the token to the collab server, which verifies the signature as it does for links today and makes the connection read-only for viewers and commenters. Invitations add members. The dashboard lists the projects a person belongs to.</desc>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker></defs>
+  <rect width="960" height="580" fill="#f2f5f6"/>
+  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">Accounts: who you are, what you may open</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Designed for step M8 (docs/backend/ACCOUNTS.md); not built yet. Dashed = planned. The collab server still only checks a signed token.</text>
+
+  <text x="32" y="92" font-size="13" font-weight="700" fill="#0a6c8a">1. SIGN IN</text>
+  <rect x="32" y="100" width="270" height="104" rx="12" fill="#fbeed2" stroke="#8a5a00" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="44" y="122" font-size="13" font-weight="700" fill="#13202a">The browser</text>
+  <text x="44" y="142" font-size="12" fill="#13202a">"Sign in with GitHub" in the web</text>
+  <text x="44" y="159" font-size="12" fill="#13202a">app. GitHub asks the person to</text>
+  <text x="44" y="176" font-size="12" fill="#13202a">allow it; no password is ours.</text>
+  <path d="M302 152 H330" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="330" y="100" width="270" height="104" rx="12" fill="#fbeed2" stroke="#8a5a00" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="342" y="122" font-size="13" font-weight="700" fill="#13202a">The web app (Next.js)</text>
+  <text x="342" y="142" font-size="12" fill="#13202a">Better Auth makes the user and a</text>
+  <text x="342" y="159" font-size="12" fill="#13202a">session cookie. Server routes run</text>
+  <text x="342" y="176" font-size="12" fill="#13202a">on Node and use Prisma.</text>
+  <path d="M600 152 H628" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="628" y="100" width="300" height="104" rx="12" fill="#fbeed2" stroke="#8a5a00" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="640" y="122" font-size="13" font-weight="700" fill="#13202a">Postgres (Docker)</text>
+  <text x="640" y="142" font-size="12" fill="#13202a">user, account, session (Better Auth)</text>
+  <text x="640" y="159" font-size="12" fill="#13202a">Project, ProjectMember (owner, editor,</text>
+  <text x="640" y="176" font-size="12" fill="#13202a">commenter, viewer), Invitation (hash).</text>
+
+  <text x="32" y="238" font-size="13" font-weight="700" fill="#0a6c8a">2. OPEN A PROJECT</text>
+  <rect x="32" y="246" width="210" height="116" rx="12" fill="#fbeed2" stroke="#8a5a00" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="44" y="268" font-size="13" font-weight="700" fill="#13202a">The editor asks</text>
+  <text x="44" y="288" font-size="12" fill="#13202a">POST /api/projects/id/token</text>
+  <text x="44" y="305" font-size="12" fill="#13202a">with the session cookie,</text>
+  <text x="44" y="322" font-size="12" fill="#13202a">on every (re)connect.</text>
+  <path d="M242 304 H270" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="270" y="246" width="250" height="116" rx="12" fill="#fbeed2" stroke="#8a5a00" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="282" y="268" font-size="13" font-weight="700" fill="#13202a">The web app decides</text>
+  <text x="282" y="288" font-size="12" fill="#13202a">Signed in? A member? Which role?</text>
+  <text x="282" y="305" font-size="12" fill="#13202a">Then it signs a token for the</text>
+  <text x="282" y="322" font-size="12" fill="#13202a">project and role, valid one hour.</text>
+  <path d="M520 304 H548" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="548" y="246" width="380" height="116" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="560" y="268" font-size="13" font-weight="700" fill="#13202a">The collab server (as built)</text>
+  <text x="560" y="288" font-size="12" fill="#13202a">Verifies the signature, expiry and project,</text>
+  <text x="560" y="305" font-size="12" fill="#13202a">exactly as for share links today. Owner and</text>
+  <text x="560" y="322" font-size="12" fill="#13202a">editor: read-write. Commenter and viewer:</text>
+  <text x="560" y="339" font-size="12" fill="#13202a">read-only. It never talks to the accounts.</text>
+
+  <text x="32" y="396" font-size="13" font-weight="700" fill="#0a6c8a">3. PEOPLE AND PROJECTS</text>
+  <rect x="32" y="404" width="290" height="92" rx="12" fill="#fbeed2" stroke="#8a5a00" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="44" y="426" font-size="13" font-weight="700" fill="#13202a">Invitations</text>
+  <text x="44" y="446" font-size="12" fill="#13202a">The owner invites for a role; the link</text>
+  <text x="44" y="463" font-size="12" fill="#13202a">works once, can expire or be revoked.</text>
+  <text x="44" y="480" font-size="12" fill="#13202a">Only its hash is stored.</text>
+  <rect x="334" y="404" width="290" height="92" rx="12" fill="#fbeed2" stroke="#8a5a00" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="346" y="426" font-size="13" font-weight="700" fill="#13202a">Dashboard</text>
+  <text x="346" y="446" font-size="12" fill="#13202a">Your local projects, and the ones you</text>
+  <text x="346" y="463" font-size="12" fill="#13202a">belong to with your role. Opening one</text>
+  <text x="346" y="480" font-size="12" fill="#13202a">goes through step 2.</text>
+  <rect x="636" y="404" width="292" height="92" rx="12" fill="#fbeed2" stroke="#8a5a00" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="648" y="426" font-size="13" font-weight="700" fill="#13202a">Removing someone</text>
+  <text x="648" y="446" font-size="12" fill="#13202a">No new tokens at once. An open</text>
+  <text x="648" y="463" font-size="12" fill="#13202a">connection ends within an hour, or</text>
+  <text x="648" y="480" font-size="12" fill="#13202a">now if the collab server is told.</text>
+
+  <rect x="32" y="512" width="896" height="52" rx="12" fill="#fff" stroke="#8a97a0" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="44" y="534" font-size="13" font-weight="700" fill="#13202a">Stays true</text>
+  <text x="44" y="552" font-size="12" fill="#13202a">With no database configured the app runs as today: local projects and share links. Accounts are an extra, not a requirement.</text>
+</svg>

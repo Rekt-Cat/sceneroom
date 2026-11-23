@@ -1,0 +1,25 @@
+# Development database for SceneRoom accounts (docs/backend/ACCOUNTS.md, docs/dev/SETUP-ACCOUNTS.md).
+# Start: docker compose up -d      Stop: docker compose down      Stop and delete the data: docker compose down -v
+#
+# The password below is for a throwaway local database that only this computer can reach (the port is bound to 127.0.0.1).
+# It is not a secret. A deployed database gets its own credentials (step M9).
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sceneroom
+      POSTGRES_PASSWORD: sceneroom
+      POSTGRES_DB: sceneroom
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - sceneroom-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sceneroom -d sceneroom"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  sceneroom-pgdata:
