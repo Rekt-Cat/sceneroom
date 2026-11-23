@@ -3,6 +3,8 @@
 import { useEffect, useState, type DragEvent } from "react";
 import { importFiles } from "@/assets/importFile";
 import { watchEditMode } from "@/meshEdit/startEditing";
+import { parseCollabParams } from "@/collab/collabParams";
+import { startCollab } from "@/collab/startCollab";
 import { startPersistence } from "@/persistence/startPersistence";
 import { installTestHooks } from "@/testHooks";
 import { usePersistenceStore } from "@/store/persistenceStore";
@@ -51,8 +53,19 @@ export default function EditorShell({ projectId }: { projectId: string }) {
   // Keep the copies of a prefab in step while it is being edited
   useEffect(() => startPrefabEditing(), []);
 
-  // Restore the scene saved last time, then save every change (see startPersistence)
-  useEffect(() => startPersistence(projectId), [projectId]);
+  // Restore the scene saved last time, then save every change (see startPersistence). A link with ?collab= also
+  // goes online (below); if the project is not in this browser yet, it is created for the shared scene.
+  useEffect(() => {
+    const collab = parseCollabParams(window.location.search);
+    const stopSaving = startPersistence(projectId, collab?.sceneId);
+    const stopOnline = collab
+      ? startCollab({ projectId, url: collab.url, token: collab.token })
+      : null;
+    return () => {
+      stopOnline?.();
+      stopSaving();
+    };
+  }, [projectId]);
   const missing = usePersistenceStore((state) => state.status === "missing");
 
   // Read the saved panel widths once the page is in the browser (not during the server render)

@@ -12,6 +12,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@hocuspocus/provider": "4.9.0",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
     "@sceneroom/shared": "workspace:*",
@@ -19,6 +20,9 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "three": "^0.187.0",
+    "y-indexeddb": "9.0.12",
+    "yjs": "13.6.33",
+    "zod": "4.6.7",
     "zustand": "5.1.0"
   },
   "devDependencies": {

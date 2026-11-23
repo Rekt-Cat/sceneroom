@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { useCollabStore } from "@/collab/collabStore";
 import {
   IDENTITY_TRANSFORM,
   addAsset,
@@ -332,6 +333,16 @@ type SceneState = {
   /** Renames a node. Returns the saved name, or null if the name was not allowed. */
   renameNode: (id: string, name: string) => string | null;
   /** Replaces the whole scene (for example with the one saved in the browser). Clears the selection and the undo history. */
+  /**
+   * Counts how many times the whole scene was swapped for another one (opening a project, switching scene tabs).
+   * The online sync watches it, to know that a change of `scene` is another scene and not an edit.
+   */
+  sceneEpoch: number;
+  /**
+   * Puts a scene that came from other people into the editor. Not an undo step, and not a local edit; the selection
+   * keeps what still exists.
+   */
+  applyRemoteScene: (scene: Scene) => void;
   loadScene: (scene: Scene) => void;
   /**
    * Shows another scene of the project: its scene, selection and its own undo history. Used when switching
@@ -1126,15 +1137,23 @@ export const useSceneStore = create<SceneState>()((set) => ({
     });
     return clean;
   },
+  sceneEpoch: 0,
+  applyRemoteScene: (scene) =>
+    set((state) => ({
+      scene,
+      selectedIds: resolveSelection(scene, state.selectedIds),
+    })),
   loadScene: (scene) =>
-    set({
+    set((state) => ({
       scene,
       selectedIds: [],
       history: createHistory<Snapshot>(),
       pendingEdit: null,
-    }),
+      sceneEpoch: state.sceneEpoch + 1,
+    })),
   restoreScene: (parked) =>
     set((state) => ({
+      sceneEpoch: state.sceneEpoch + 1,
       scene: parked.scene,
       selectedIds: parked.selectedIds,
       history: parked.history,
@@ -1181,6 +1200,8 @@ export const useSceneStore = create<SceneState>()((set) => ({
     set((state) => {
       // Not while an edit is still in progress (a drag): its end would record from the wrong state
       if (state.pendingEdit) return state;
+      // Online, going back to an earlier whole scene would also undo other people's work (see collabStore)
+      if (useCollabStore.getState().active) return state;
       const step = undoStep(state.history, {
         scene: state.scene,
         selectedIds: state.selectedIds,
@@ -1195,6 +1216,7 @@ export const useSceneStore = create<SceneState>()((set) => ({
   redo: () =>
     set((state) => {
       if (state.pendingEdit) return state;
+      if (useCollabStore.getState().active) return state;
       const step = redoStep(state.history, {
         scene: state.scene,
         selectedIds: state.selectedIds,

@@ -13,6 +13,7 @@ import {
   openProjectFromFile,
   saveProjectToFile,
 } from "@/sceneFile/sceneFileActions";
+import { useCollabStore, type CollabStatus } from "@/collab/collabStore";
 import { saveOpenProjectNow } from "@/persistence/startPersistence";
 import { useImportStore } from "@/store/importStore";
 import {
@@ -93,6 +94,51 @@ const SAVE_STATUS: Record<
     help: "This browser is not allowing saving, so the scene is lost when the page closes",
   },
 };
+
+/** What to show for each state of the online connection. */
+const COLLAB_STATUS: Record<
+  Exclude<CollabStatus, "off">,
+  { text: string; dot: string; help: string }
+> = {
+  connecting: {
+    text: "Connecting…",
+    dot: "bg-ed-text-3",
+    help: "Reaching the server for this shared project",
+  },
+  online: {
+    text: "Online",
+    dot: "bg-ed-y",
+    help: "Connected. Your changes are shared with everyone in this project. Undo is switched off while online (it comes back in a later step).",
+  },
+  offline: {
+    text: "Offline, changes kept",
+    dot: "bg-ed-select",
+    help: "The connection is lost. You can keep working; your changes are kept here and shared when the connection returns.",
+  },
+  refused: {
+    text: "Link not accepted",
+    dot: "bg-[#e5545f]",
+    help: "The server did not accept this link. It may be wrong or expired.",
+  },
+};
+
+/** "Online", "Offline, changes kept" and so on, only for a shared project. */
+function CollabStatusBadge() {
+  const status = useCollabStore((state) => state.status);
+  if (status === "off") return null;
+  const { text, dot, help } = COLLAB_STATUS[status];
+  return (
+    <span
+      role="status"
+      data-testid="collab-status"
+      title={help}
+      className="ml-1 flex items-center gap-1.5 text-xs text-ed-text-3"
+    >
+      <span className={`size-[7px] rounded-full ${dot}`} aria-hidden="true" />
+      {text}
+    </span>
+  );
+}
 
 /** The small "All changes saved" text with a coloured dot. */
 function SaveStatus() {
@@ -224,6 +270,7 @@ export default function TopBar() {
       <span className="h-5 w-px bg-ed-line-strong" aria-hidden="true" />
       <SceneTabs />
       <SaveStatus />
+      <CollabStatusBadge />
     </header>
   );
 }

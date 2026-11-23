@@ -196,6 +196,8 @@ SceneRoom works with no account and no internet today, and that stays true.
 | M8   | **Postgres, Docker, accounts** (Stage B), dashboard, invitations, version history. Needs Docker Desktop (installed by the owner).                           | Documents survive a server restart; roles enforced from the database.                                    |
 | M9   | **Deploy:** web on Vercel, collab server on a host that keeps WebSockets open, Postgres on Neon, files on R2; a two-context test in CI.                     | A real link works between two real devices.                                                              |
 
+**Status (2026-11-21): M1, M2 and M3 are built.** What the build changed against this design is in `DECISIONS.md` (sections "Collab server" and "Editor sync layer"): `node:sqlite` instead of `better-sqlite3`, going online by `?collab=` in the address until the Share button (M7), Undo switched off while online until M5, and only the open scene is shared until the project document exists.
+
 ## 12. Risks and open questions, stated plainly
 
 - **The compare-and-write sync layer is the heart of it.** If it has a bug, changes echo or get lost. That is why M1 is
@@ -224,4 +226,4 @@ SceneRoom works with no account and no internet today, and that stays true.
 | `y-indexeddb`          | 9.0.12  | Offline copy in the browser                                              |
 | ~~`better-sqlite3`~~   | 13.2.0  | Not used: `node:sqlite` (built into Node) does the job, see DECISIONS.md |
 
-Yjs (M1), `@hocuspocus/server` and `@hocuspocus/provider` (M2) are installed. The others are added at M3 and later, and then recorded in `WHAT-WE-USED.md` as usual.
+Yjs (M1), `@hocuspocus/server` and `@hocuspocus/provider` (M2, M3) and `y-indexeddb` (M3) are installed. `y-protocols` is used through the provider and not installed on its own. The others are added at M4 and later, and then recorded in `WHAT-WE-USED.md` as usual.

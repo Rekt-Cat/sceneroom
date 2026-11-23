@@ -590,6 +590,15 @@ In `apps/collab-server/.env` (copy `.env.example`; the real file is never commit
 | Biggest document | `MAX_DOCUMENT_BYTES`                                   | 20 971 520 (20 MiB)    | A document over this is not saved (an error is logged).                             |
 | Save delay       | `debounceMs`, `maxDebounceMs` in `src/createServer.ts` | 2 000 ms and 10 000 ms | Saved this long after the last change, and at the latest this long after the first. |
 
+## Online editing (the browser side)
+
+| What               | Where                                               | Our value              | What it does                                                                                                           |
+| ------------------ | --------------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Go online          | the address: `?collab=` `&token=` `&scene=`         | (not set)              | `ws://` or `wss://` address of the collab server, the link token, and (new browsers only) the id of the scene to open. |
+| Write delay        | `delayMs` in `apps/web/src/collab/sceneBinding.ts`  | 50 ms                  | Changes within this time are sent together (a drag becomes one message). Lower = smoother for others, more messages.   |
+| Offline copy name  | `sceneroom-collab:<document>` in `collabSession.ts` | -                      | The browser database that keeps a shared scene between visits. Clear it (browser storage) to forget the offline copy.  |
+| Test collab server | `apps/web/e2e/collabSettings.ts`                    | port 1235, test secret | What the browser tests start and talk to. Not a real secret.                                                           |
+
 ## Keeping this file up to date
 
 When a new setting you might want to adjust is added to the project, it goes into this file, with where it lives, our

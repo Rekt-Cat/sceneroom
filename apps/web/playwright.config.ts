@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { COLLAB_TEST_PORT, COLLAB_TEST_SECRET } from "./e2e/collabSettings";
 
 /**
  * End-to-end tests: a real browser opens the real editor and clicks through it (see e2e/). Run them with
@@ -38,11 +39,27 @@ export default defineConfig({
       },
     },
   ],
-  // Starts the dev server when it is not already running (and uses the one that is)
-  webServer: {
-    command: "pnpm dev",
-    url: "http://localhost:3000",
-    reuseExistingServer: true,
-    timeout: 120_000,
-  },
+  // Starts the dev server and the collab server (for the online tests) when they are not already running
+  webServer: [
+    {
+      command: "pnpm dev",
+      url: "http://localhost:3000",
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+    {
+      // Its documents are kept in memory only, so every run starts clean
+      command: "pnpm start",
+      cwd: "../collab-server",
+      url: `http://127.0.0.1:${COLLAB_TEST_PORT}`,
+      reuseExistingServer: true,
+      timeout: 60_000,
+      env: {
+        PORT: String(COLLAB_TEST_PORT),
+        COLLAB_SECRET: COLLAB_TEST_SECRET,
+        DB_PATH: ":memory:",
+        // The tests wait for the badge, not for a save: save quickly so a reload test does not wait long
+      },
+    },
+  ],
 });

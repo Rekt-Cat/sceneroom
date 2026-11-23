@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch --env-file-if-exists=.env src/main.ts",
+    "serve": "tsx watch --env-file-if-exists=.env src/main.ts",
     "start": "tsx --env-file-if-exists=.env src/main.ts",
     "make-token": "tsx --env-file-if-exists=.env src/makeToken.ts",
     "check-types": "tsc --noEmit",
