@@ -209,3 +209,81 @@ test("an edited mesh travels with the scene: the other window downloads its file
     )
     .toBe(coneFacts.points);
 });
+
+test("Undo online takes back only my own change, and Redo puts it back", async ({
+  browser,
+}) => {
+  const alice = await person(browser);
+  const bob = await person(browser);
+  const { projectId, sceneId } = await startShared(alice);
+  await bob.goto(sharedAddress(projectId, "editor", sceneId));
+  await waitOnline(bob);
+
+  // Alice adds a cube, Bob adds a sphere; both see both
+  await addShape(alice, "Cube");
+  await expect
+    .poll(async () => Object.keys(await summary(bob)))
+    .toEqual(["Cube"]);
+  await addShape(bob, "Sphere");
+  await expect
+    .poll(async () => Object.keys(await summary(alice)).sort())
+    .toEqual(["Cube", "Sphere"]);
+
+  // Alice undoes: her cube goes, Bob's sphere stays, in both windows
+  await alice.getByRole("button", { name: /^Undo add cube/i }).click();
+  await expect
+    .poll(async () => Object.keys(await summary(alice)))
+    .toEqual(["Sphere"]);
+  await expect
+    .poll(async () => Object.keys(await summary(bob)))
+    .toEqual(["Sphere"]);
+
+  // Bob's own Undo takes back his sphere (and not anything of Alice's)
+  await bob.getByRole("button", { name: /^Undo add sphere/i }).click();
+  await expect.poll(async () => Object.keys(await summary(alice))).toEqual([]);
+
+  // Alice redoes her cube; it comes back for both
+  await alice.getByRole("button", { name: /^Redo add cube/i }).click();
+  await expect
+    .poll(async () => Object.keys(await summary(bob)))
+    .toEqual(["Cube"]);
+});
+
+test("one editor per object: while one person edits a mesh, the other is told and cannot", async ({
+  browser,
+}) => {
+  const alice = await person(browser);
+  const bob = await person(browser);
+  const { projectId, sceneId } = await startShared(alice);
+  await addShape(alice, "Cube");
+  await bob.goto(sharedAddress(projectId, "editor", sceneId));
+  await waitOnline(bob);
+  await expect
+    .poll(async () => Object.keys(await summary(bob)))
+    .toEqual(["Cube"]);
+
+  // Alice enters Edit points on the cube (it is selected after she added it)
+  await alice.getByRole("button", { name: /Edit points/ }).click();
+  await expect(
+    alice.getByRole("button", { name: "Done", exact: true }),
+  ).toBeVisible();
+
+  // Bob sees who holds it
+  await expect(bob.getByTestId("edit-lock")).toBeVisible();
+
+  // Bob selects the cube and tries: he is told, and does not get in
+  await bob.getByRole("button", { name: "Cube", exact: true }).first().click();
+  await bob.getByRole("button", { name: /Edit points/ }).click();
+  await expect(bob.getByText(/is editing the points of "Cube"/)).toBeVisible();
+  await expect(
+    bob.getByRole("button", { name: "Done", exact: true }),
+  ).toHaveCount(0);
+
+  // Alice leaves; the lock goes and Bob can edit
+  await alice.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(bob.getByTestId("edit-lock")).toHaveCount(0);
+  await bob.getByRole("button", { name: /Edit points/ }).click();
+  await expect(
+    bob.getByRole("button", { name: "Done", exact: true }),
+  ).toBeVisible();
+});

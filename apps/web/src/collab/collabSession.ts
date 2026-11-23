@@ -2,6 +2,7 @@ import { HocuspocusProvider } from "@hocuspocus/provider";
 import { IndexeddbPersistence } from "y-indexeddb";
 import * as Y from "yjs";
 import type { Scene } from "@sceneroom/shared";
+import type { AwarenessLike } from "./editLocks";
 import { createSceneBinding } from "./sceneBinding";
 import { useCollabStore } from "./collabStore";
 
@@ -17,6 +18,8 @@ export type SceneSessionOptions = {
 
 /** One scene shared online: its document, its offline copy in this browser, its connection and its binding. */
 export type SceneSession = {
+  /** Who is here and what they are doing (not saved; gone when the connection is). null if the connection has none. */
+  awareness: AwarenessLike | null;
   localChanged: (scene: Scene) => void;
   /** Writes the changes still waiting into the document (and so into the browser's copy of it). */
   flush: () => void;
@@ -81,6 +84,7 @@ export function createSceneSession(options: SceneSessionOptions): SceneSession {
   });
 
   return {
+    awareness: provider.awareness,
     localChanged: binding.localChanged,
     flush: binding.flush,
     destroy() {

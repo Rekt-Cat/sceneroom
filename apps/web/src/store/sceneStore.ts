@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { redoOnline, undoOnline } from "@/collab/collabHistory";
 import { useCollabStore } from "@/collab/collabStore";
 import {
   IDENTITY_TRANSFORM,
@@ -1200,8 +1201,8 @@ export const useSceneStore = create<SceneState>()((set) => ({
     set((state) => {
       // Not while an edit is still in progress (a drag): its end would record from the wrong state
       if (state.pendingEdit) return state;
-      // Online, going back to an earlier whole scene would also undo other people's work (see collabStore)
-      if (useCollabStore.getState().active) return state;
+      // Online, only this person's own changes are taken back, not other people's (see collabHistory.ts)
+      if (useCollabStore.getState().active) return undoOnline(state);
       const step = undoStep(state.history, {
         scene: state.scene,
         selectedIds: state.selectedIds,
@@ -1216,7 +1217,7 @@ export const useSceneStore = create<SceneState>()((set) => ({
   redo: () =>
     set((state) => {
       if (state.pendingEdit) return state;
-      if (useCollabStore.getState().active) return state;
+      if (useCollabStore.getState().active) return redoOnline(state);
       const step = redoStep(state.history, {
         scene: state.scene,
         selectedIds: state.selectedIds,

@@ -596,14 +596,15 @@ In `apps/collab-server/.env` (copy `.env.example`; the real file is never commit
 
 ## Online editing (the browser side)
 
-| What               | Where                                                                        | Our value              | What it does                                                                                                           |
-| ------------------ | ---------------------------------------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Go online          | the address: `?collab=` `&token=` `&scene=`                                  | (not set)              | `ws://` or `wss://` address of the collab server, the link token, and (new browsers only) the id of the scene to open. |
-| Write delay        | `delayMs` in `apps/web/src/collab/sceneBinding.ts`                           | 50 ms                  | Changes within this time are sent together (a drag becomes one message). Lower = smoother for others, more messages.   |
-| File upload delay  | `delayMs`, `retryMs`, `concurrency` in `apps/web/src/collab/fileUploader.ts` | 300 ms, 10 000 ms, 2   | Wait after a change before sending files, wait before trying again after a failure, and how many go up at once.        |
-| Download retries   | `DEFAULT_RETRY_DELAYS_MS` in `apps/web/src/collab/onlineAssetStorage.ts`     | 0.5, 1, 2, 4, 8, 16 s  | How long to keep asking for a file the sender has not uploaded yet, before showing it as missing.                      |
-| Offline copy name  | `sceneroom-collab:<document>` in `collabSession.ts`                          | -                      | The browser database that keeps a shared scene between visits. Clear it (browser storage) to forget the offline copy.  |
-| Test collab server | `apps/web/e2e/collabSettings.ts`                                             | port 1235, test secret | What the browser tests start and talk to. Not a real secret.                                                           |
+| What                 | Where                                                                        | Our value              | What it does                                                                                                           |
+| -------------------- | ---------------------------------------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Go online            | the address: `?collab=` `&token=` `&scene=`                                  | (not set)              | `ws://` or `wss://` address of the collab server, the link token, and (new browsers only) the id of the scene to open. |
+| Write delay          | `delayMs` in `apps/web/src/collab/sceneBinding.ts`                           | 50 ms                  | Changes within this time are sent together (a drag becomes one message). Lower = smoother for others, more messages.   |
+| Lock badge and names | `createEditLocks` call in `apps/web/src/collab/startCollab.ts`               | "Guest N"              | The name others see for you in the lock badge (real names come with presence, step M6).                                |
+| File upload delay    | `delayMs`, `retryMs`, `concurrency` in `apps/web/src/collab/fileUploader.ts` | 300 ms, 10 000 ms, 2   | Wait after a change before sending files, wait before trying again after a failure, and how many go up at once.        |
+| Download retries     | `DEFAULT_RETRY_DELAYS_MS` in `apps/web/src/collab/onlineAssetStorage.ts`     | 0.5, 1, 2, 4, 8, 16 s  | How long to keep asking for a file the sender has not uploaded yet, before showing it as missing.                      |
+| Offline copy name    | `sceneroom-collab:<document>` in `collabSession.ts`                          | -                      | The browser database that keeps a shared scene between visits. Clear it (browser storage) to forget the offline copy.  |
+| Test collab server   | `apps/web/e2e/collabSettings.ts`                                             | port 1235, test secret | What the browser tests start and talk to. Not a real secret.                                                           |
 
 ## Keeping this file up to date
 

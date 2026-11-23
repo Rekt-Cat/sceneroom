@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 580" width="960" height="580" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
+  <title id="t">Undo with several people, and the one-editor-per-object lock (step M5, built)</title>
+  <desc id="d">Top: Alice moves a cube and the editor remembers the scene before and after her step. Bob recolours the same cube. When Alice presses Undo, only the position goes back, because the position still has the value her step gave it; the colour is Bob's and stays. If Bob had also moved the cube, that field would be left alone and a message would say so. Bottom: when Alice enters Edit points, Paint or Bake on an object, her awareness record says so; Bob's editor shows her name on the object and refuses to start those modes on it until she leaves or her connection closes.</desc>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker></defs>
+  <rect width="960" height="580" fill="#f2f5f6"/>
+  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">Undo with several people, and one editor per object</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Built in step M5. Nothing here is checked by the server: both are rules of the editors that share the scene.</text>
+
+  <text x="32" y="92" font-size="13" font-weight="700" fill="#0a6c8a">UNDO: ONLY WHAT MY STEP DID</text>
+  <rect x="32" y="100" width="210" height="104" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="44" y="122" font-size="13" font-weight="700" fill="#13202a">1. Alice moves the cube</text>
+  <text x="44" y="142" font-size="12" fill="#13202a">A step is recorded with the</text>
+  <text x="44" y="159" font-size="12" fill="#13202a">scene before AND after it</text>
+  <text x="44" y="176" font-size="12" fill="#13202a">(position 0 becomes 5).</text>
+  <path d="M242 152 H270" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="270" y="100" width="210" height="104" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="282" y="122" font-size="13" font-weight="700" fill="#13202a">2. Bob recolours it</text>
+  <text x="282" y="142" font-size="12" fill="#13202a">His change arrives as a</text>
+  <text x="282" y="159" font-size="12" fill="#13202a">change from outside: no step</text>
+  <text x="282" y="176" font-size="12" fill="#13202a">in Alice's history.</text>
+  <path d="M480 152 H508" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="508" y="100" width="420" height="104" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="520" y="122" font-size="13" font-weight="700" fill="#13202a">3. Alice presses Undo</text>
+  <text x="520" y="142" font-size="12" fill="#13202a">Field by field, on the scene as it is NOW: position is still 5,</text>
+  <text x="520" y="159" font-size="12" fill="#13202a">the value her step gave it, so it goes back to 0. The colour was not</text>
+  <text x="520" y="176" font-size="12" fill="#13202a">in her step, so Bob's stays. Labels, buttons and Redo work as offline.</text>
+
+  <rect x="32" y="218" width="896" height="56" rx="12" fill="#fff8e6" stroke="#8a5a00" stroke-width="2"/>
+  <text x="44" y="240" font-size="13" font-weight="700" fill="#13202a">If Bob had moved the cube too</text>
+  <text x="44" y="259" font-size="12" fill="#13202a">The position is no longer the one Alice's step set, so it is left alone (Bob's wins) and a message says so.</text>
+
+  <text x="32" y="306" font-size="13" font-weight="700" fill="#0a6c8a">THE LOCK: ONE EDITOR PER OBJECT</text>
+  <rect x="32" y="314" width="210" height="104" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="44" y="336" font-size="13" font-weight="700" fill="#13202a">4. Alice enters a mode</text>
+  <text x="44" y="356" font-size="12" fill="#13202a">Edit points, Paint or Bake</text>
+  <text x="44" y="373" font-size="12" fill="#13202a">on the cube. Her awareness</text>
+  <text x="44" y="390" font-size="12" fill="#13202a">record says which and what.</text>
+  <path d="M242 366 H270" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="270" y="314" width="250" height="104" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="282" y="336" font-size="13" font-weight="700" fill="#13202a">5. Bob's editor reads it</text>
+  <text x="282" y="356" font-size="12" fill="#13202a">The record is checked, then</text>
+  <text x="282" y="373" font-size="12" fill="#13202a">her name shows on the cube's</text>
+  <text x="282" y="390" font-size="12" fill="#13202a">row in the hierarchy.</text>
+  <path d="M520 366 H548" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="548" y="314" width="380" height="104" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="560" y="336" font-size="13" font-weight="700" fill="#13202a">6. Bob cannot enter</text>
+  <text x="560" y="356" font-size="12" fill="#13202a">"Alice is editing the points of Cube right now."</text>
+  <text x="560" y="373" font-size="12" fill="#13202a">Moving, colouring and everything else stay open.</text>
+  <text x="560" y="390" font-size="12" fill="#13202a">When she leaves, or her connection closes, it is free.</text>
+
+  <rect x="32" y="436" width="896" height="56" rx="12" fill="#fff8e6" stroke="#8a5a00" stroke-width="2"/>
+  <text x="44" y="458" font-size="13" font-weight="700" fill="#13202a">Both enter at the same moment</text>
+  <text x="44" y="477" font-size="12" fill="#13202a">Each is let in before the other's record arrives. Then the lower client number keeps the object and the other is taken out, with a message.</text>
+
+  <rect x="32" y="508" width="896" height="52" rx="12" fill="#fff" stroke="#8a97a0" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="44" y="530" font-size="13" font-weight="700" fill="#13202a">Not yet</text>
+  <text x="44" y="548" font-size="12" fill="#13202a">Real names and colours instead of "Guest N" (step M6). A lock the server enforces (it cannot see inside a file, so this stays a courtesy).</text>
+</svg>

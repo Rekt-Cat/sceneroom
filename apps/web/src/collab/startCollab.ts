@@ -1,9 +1,19 @@
 import { getAssetStorage, setAssetStorage } from "@/assets/assetStorage";
 import { bytesForFile } from "@/assets/meshStorage";
+import { useBakeStore } from "@/store/bakeStore";
+import { useEditStore } from "@/store/editStore";
+import { useImportStore } from "@/store/importStore";
+import { usePaintStore } from "@/store/paintStore";
 import { useProjectStore } from "@/store/projectStore";
 import { usePersistenceStore } from "@/store/persistenceStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { useCollabStore } from "./collabStore";
+import { watchHistory } from "./collabHistory";
+import {
+  createEditLocks,
+  EDIT_MODE_VERB,
+  type EditingState,
+} from "./editLocks";
 import { createSceneSession, type SceneSession } from "./collabSession";
 import { createFileClient } from "./fileClient";
 import { createFileUploader, type FileUploader } from "./fileUploader";
@@ -29,6 +39,55 @@ export function startCollab(options: {
   let rebindQueued = false;
   let stopStoreWatch: (() => void) | null = null;
   let stopStatusWatch: (() => void) | null = null;
+  let stopHistoryWatch: (() => void) | null = null;
+  let locks: ReturnType<typeof createEditLocks> | null = null;
+  let stopEditingWatch: (() => void) | null = null;
+
+  /** What this person is doing to an object right now, for the others to see. */
+  const currentEditing = (): EditingState => {
+    const editing = useEditStore.getState().nodeId;
+    if (editing) return { nodeId: editing, mode: "edit" };
+    const painting = usePaintStore.getState().nodeId;
+    if (painting) return { nodeId: painting, mode: "paint" };
+    const baking = useBakeStore.getState().runningFor;
+    if (baking) return { nodeId: baking, mode: "bake" };
+    return null;
+  };
+
+  const releaseLocks = () => {
+    stopEditingWatch?.();
+    stopEditingWatch = null;
+    locks?.destroy();
+    locks = null;
+  };
+
+  /** Starts announcing and respecting "who is editing what" for the connection of the open scene. */
+  const shareLocks = (session: SceneSession) => {
+    releaseLocks();
+    if (!session.awareness) return;
+    locks = createEditLocks({
+      awareness: session.awareness,
+      name: `Guest ${session.awareness.clientID % 1000}`,
+      onLocks: (held) => useCollabStore.getState().setLocks(held),
+      onLostLock: (mine, holder) => {
+        // Two people entered at the same moment; the other one has the lower number and keeps the object
+        useImportStore.getState().setMessage({
+          tone: "info",
+          text: `${holder.name} started ${EDIT_MODE_VERB[holder.mode]} this object at the same moment, so you were taken out of it.`,
+        });
+        if (mine.mode === "edit") useEditStore.getState().exit();
+        if (mine.mode === "paint")
+          void import("@/paint/paintSession").then((m) => m.stopPaint());
+      },
+    });
+    locks.setEditing(currentEditing());
+    const stops = [
+      useEditStore.subscribe(() => locks?.setEditing(currentEditing())),
+      usePaintStore.subscribe(() => locks?.setEditing(currentEditing())),
+      useBakeStore.subscribe(() => locks?.setEditing(currentEditing())),
+    ];
+    stopEditingWatch = () => stops.forEach((stop) => stop());
+  };
   let uploader: FileUploader | null = null;
   let putStorageBack: (() => void) | null = null;
 
@@ -46,6 +105,8 @@ export function startCollab(options: {
       scene: useSceneStore.getState().scene,
       applyRemote: (scene) => useSceneStore.getState().applyRemoteScene(scene),
     });
+    shareLocks(session);
+    requestUpload();
   };
 
   const begin = () => {
@@ -71,6 +132,10 @@ export function startCollab(options: {
         requestUpload();
       }
     });
+    // Undo online takes back only this person's changes, which needs the scene after each step (collabHistory.ts)
+    stopHistoryWatch = watchHistory((listener) =>
+      useSceneStore.subscribe(listener),
+    );
     bind();
     stopStoreWatch = useSceneStore.subscribe((state, previous) => {
       if (state.sceneEpoch !== previous.sceneEpoch) {
@@ -78,6 +143,7 @@ export function startCollab(options: {
         // bound once the project store has finished updating (which tab is open is set just after the scene).
         session?.destroy();
         session = null;
+        releaseLocks();
         if (!rebindQueued) {
           rebindQueued = true;
           queueMicrotask(() => {
@@ -123,6 +189,8 @@ export function startCollab(options: {
     stopWaiting?.();
     stopStoreWatch?.();
     stopStatusWatch?.();
+    stopHistoryWatch?.();
+    releaseLocks();
     uploader?.destroy();
     putStorageBack?.();
     session?.destroy();

@@ -11,6 +11,8 @@ import {
   type TreeRow,
 } from "@sceneroom/shared";
 import { useContextMenuStore } from "@/store/contextMenuStore";
+import { useCollabStore } from "@/collab/collabStore";
+import { EDIT_MODE_VERB } from "@/collab/editLocks";
 import { useLayoutStore } from "@/store/layoutStore";
 import { useSceneStore } from "@/store/sceneStore";
 import AddMenu from "./AddMenu";
@@ -357,6 +359,8 @@ function HierarchyRow({
   const setNodesLocked = useSceneStore((state) => state.setNodesLocked);
   const openContextMenu = useContextMenuStore((state) => state.open);
   const { node, depth, hasChildren, expanded } = row;
+  // Online: someone else is editing, painting or baking this object right now
+  const heldBy = useCollabStore((state) => state.locks[node.id]);
 
   const beingDragged = drag?.ids.includes(node.id) ?? false;
   // The part of this row the pointer is over while dragging: the middle ("into"), or an edge ("before" / "after")
@@ -443,6 +447,18 @@ function HierarchyRow({
             {node.name}
           </span>
         </button>
+
+        {heldBy && (
+          <span
+            role="img"
+            aria-label={`${heldBy.name} is ${EDIT_MODE_VERB[heldBy.mode]} ${node.name}`}
+            title={`${heldBy.name} is ${EDIT_MODE_VERB[heldBy.mode]} this object right now`}
+            data-testid="edit-lock"
+            className="shrink-0 truncate rounded-full bg-ed-select/20 px-1.5 text-[10px] text-ed-select"
+          >
+            {heldBy.name}
+          </span>
+        )}
 
         {lockedByParent ? (
           <span

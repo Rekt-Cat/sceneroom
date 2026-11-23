@@ -108,7 +108,7 @@ const COLLAB_STATUS: Record<
   online: {
     text: "Online",
     dot: "bg-ed-y",
-    help: "Connected. Your changes are shared with everyone in this project. Undo is switched off while online (it comes back in a later step).",
+    help: "Connected. Your changes are shared with everyone in this project. Undo takes back only your own changes.",
   },
   offline: {
     text: "Offline, changes kept",

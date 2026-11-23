@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { EditLock } from "./editLocks";
 
 /** Where the online connection stands, for the little badge in the top bar. */
 export type CollabStatus =
@@ -14,17 +15,26 @@ type CollabState = {
   active: boolean;
   /** A sentence with more detail, such as why the link was refused. */
   detail: string;
+  /** Objects that someone else is editing, painting or baking right now, by object id (see editLocks.ts). */
+  locks: Record<string, EditLock>;
+  setLocks: (locks: Record<string, EditLock>) => void;
   setStatus: (status: CollabStatus, detail?: string) => void;
 };
 
 /**
- * The online state. While `active`, Undo and Redo are switched off: they would put back a whole earlier scene,
- * which would also undo the other people's work. Per-person Undo comes with step M5 (docs/backend/COLLABORATION.md).
+ * The online state. While `active`, Undo and Redo take back only this person's own changes, field by field, and leave
+ * other people's alone (collabHistory.ts, docs/backend/COLLABORATION.md section 8).
  */
 export const useCollabStore = create<CollabState>()((set) => ({
   status: "off",
   active: false,
   detail: "",
+  locks: {},
+  setLocks: (locks) => set({ locks }),
   setStatus: (status, detail = "") =>
-    set({ status, active: status !== "off", detail }),
+    set(
+      status === "off"
+        ? { status, active: false, detail, locks: {} }
+        : { status, active: true, detail },
+    ),
 }));
