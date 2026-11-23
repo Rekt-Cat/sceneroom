@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" width="960" height="560" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
+  <title id="t">Files online: how a mesh made by Alice reaches Bob (step M4, built)</title>
+  <desc id="d">Alice makes a mesh. It is stored in her browser under the hash of its bytes, and the scene refers to it by that id. The uploader asks the server whether it has the file, and if not sends it. The server checks the token, the role, the size and that the bytes hash to the id, then stores it in a folder. The scene change reaches Bob through the shared document. When Bob's editor needs the mesh and does not have it, it downloads it by id, checks the hash again, keeps it, and shows the mesh. If the file is not on the server yet, Bob's browser asks again after a short wait.</desc>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker></defs>
+  <rect width="960" height="560" fill="#f2f5f6"/>
+  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">Files online: a mesh from Alice to Bob</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">The scene only holds the id of a big file. The bytes travel by plain HTTP, and the id (a hash) proves they are the right ones.</text>
+
+  <text x="32" y="92" font-size="13" font-weight="700" fill="#0a6c8a">ALICE'S BROWSER</text>
+  <rect x="32" y="100" width="210" height="96" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="44" y="122" font-size="13" font-weight="700" fill="#13202a">1. Makes the file</text>
+  <text x="44" y="142" font-size="12" fill="#13202a">Unwrap a cube: a new mesh,</text>
+  <text x="44" y="159" font-size="12" fill="#13202a">stored in her browser under</text>
+  <text x="44" y="176" font-size="12" fill="#13202a">its hash (the id).</text>
+  <path d="M242 148 H270" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="270" y="100" width="230" height="96" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="282" y="122" font-size="13" font-weight="700" fill="#13202a">2. The scene refers to it</text>
+  <text x="282" y="142" font-size="12" fill="#13202a">The object's assetId is the</text>
+  <text x="282" y="159" font-size="12" fill="#13202a">id. That small change goes</text>
+  <text x="282" y="176" font-size="12" fill="#13202a">through the shared document.</text>
+  <path d="M500 148 H528" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="528" y="100" width="400" height="96" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="540" y="122" font-size="13" font-weight="700" fill="#13202a">3. The uploader</text>
+  <text x="540" y="142" font-size="12" fill="#13202a">Looks at the files the scene refers to. Asks the server (HEAD):</text>
+  <text x="540" y="159" font-size="12" fill="#13202a">do you have this id? If not, sends it (PUT). A mesh kept as a patch</text>
+  <text x="540" y="176" font-size="12" fill="#13202a">is sent as the whole mesh, so the id still matches the bytes.</text>
+
+  <path d="M728 196 V226" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <text x="528" y="218" font-size="13" font-weight="700" fill="#0a6c8a">THE COLLAB SERVER</text>
+  <rect x="528" y="228" width="400" height="104" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="540" y="250" font-size="13" font-weight="700" fill="#13202a">4. Checks, then keeps</text>
+  <text x="540" y="270" font-size="12" fill="#13202a">Token valid and for this project? An editor? Small enough? Does</text>
+  <text x="540" y="287" font-size="12" fill="#13202a">the project have room? And: do the bytes hash to the id? Only then</text>
+  <text x="540" y="304" font-size="12" fill="#13202a">it is written to the project's folder. Viewers can only download.</text>
+
+  <path d="M528 280 H402 V338" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <text x="440" y="272" font-size="11" fill="#55656f">download (GET)</text>
+
+  <text x="32" y="356" font-size="13" font-weight="700" fill="#0a6c8a">BOB'S BROWSER</text>
+  <rect x="32" y="364" width="210" height="96" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="44" y="386" font-size="13" font-weight="700" fill="#13202a">5. Sees the id</text>
+  <text x="44" y="406" font-size="12" fill="#13202a">The shared document brings</text>
+  <text x="44" y="423" font-size="12" fill="#13202a">the object with its assetId.</text>
+  <text x="44" y="440" font-size="12" fill="#13202a">His editor asks for the file.</text>
+  <path d="M242 412 H270" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="270" y="364" width="270" height="96" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="282" y="386" font-size="13" font-weight="700" fill="#13202a">6. Not in his storage: download</text>
+  <text x="282" y="406" font-size="12" fill="#13202a">Hashes the bytes: must equal the id.</text>
+  <text x="282" y="423" font-size="12" fill="#13202a">Not on the server yet? Asks again</text>
+  <text x="282" y="440" font-size="12" fill="#13202a">after 0.5, 1, 2, 4, 8, 16 seconds.</text>
+  <path d="M540 412 H568" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="568" y="364" width="360" height="96" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="580" y="386" font-size="13" font-weight="700" fill="#13202a">7. Keeps it, shows it</text>
+  <text x="580" y="406" font-size="12" fill="#13202a">Stored in his own browser storage, so it is</text>
+  <text x="580" y="423" font-size="12" fill="#13202a">never downloaded twice and works offline later.</text>
+  <text x="580" y="440" font-size="12" fill="#13202a">The 3D view draws the mesh as Alice's.</text>
+
+  <rect x="32" y="480" width="896" height="52" rx="12" fill="#fff" stroke="#8a97a0" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="44" y="502" font-size="13" font-weight="700" fill="#13202a">Not yet</text>
+  <text x="44" y="520" font-size="12" fill="#13202a">Removing files nobody refers to any more, a download progress bar, Cloudflare R2 instead of a folder (M9).</text>
+</svg>

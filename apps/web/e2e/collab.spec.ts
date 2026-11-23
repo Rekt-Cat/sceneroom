@@ -7,7 +7,13 @@ import {
 } from "@playwright/test";
 import { createLinkToken } from "../../collab-server/src/linkToken";
 import { COLLAB_TEST_SECRET, COLLAB_TEST_URL } from "./collabSettings";
-import { addShape, newProject, setColor, setTransform } from "./helpers";
+import {
+  addShape,
+  meshFacts,
+  newProject,
+  setColor,
+  setTransform,
+} from "./helpers";
 
 /** The address of a shared project: the project, the server and the link token (and the scene, for a new browser). */
 function sharedAddress(
@@ -147,4 +153,59 @@ test("a viewer sees the scene, and nothing a viewer does reaches the others", as
     .poll(async () => Object.keys(await summary(viewer)).includes("Sphere"))
     .toBe(true);
   expect(Object.keys(await summary(alice))).not.toContain("Cone");
+});
+
+/** A cube turned into an editable mesh with a UV map (so it has a stored file): Edit points, Unwrap, Done. */
+async function makeUnwrappedCube(page: Page, shape = "Cube"): Promise<void> {
+  await addShape(page, shape);
+  await page.getByRole("button", { name: /Edit points/ }).click();
+  await page.getByRole("button", { name: "UV window", exact: true }).click();
+  await page.getByRole("button", { name: "Unwrap", exact: true }).click();
+  await expect(page.getByText(/Unwrapped into \d+ pieces/)).toBeVisible();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+}
+
+test("an edited mesh travels with the scene: the other window downloads its file", async ({
+  browser,
+}) => {
+  const alice = await person(browser);
+  const bob = await person(browser);
+  const { projectId, sceneId } = await startShared(alice);
+
+  // A mesh made before Bob arrives ...
+  await makeUnwrappedCube(alice);
+  const aliceFacts = await meshFacts(alice);
+  expect(aliceFacts.hasUvs).toBe(true);
+
+  await bob.goto(sharedAddress(projectId, "editor", sceneId));
+  await waitOnline(bob);
+  await expect
+    .poll(async () => Object.keys(await summary(bob)))
+    .toEqual(["Cube"]);
+  // ... Bob selects it, and its points and map are read from the file he downloaded
+  await bob.getByRole("button", { name: "Cube", exact: true }).first().click();
+  await expect
+    .poll(
+      async () =>
+        (await bob.evaluate(() => window.__sceneroom!.meshFacts()))?.hasUvs,
+    )
+    .toBe(true);
+  const bobFacts = await meshFacts(bob);
+  expect(bobFacts.points).toBe(aliceFacts.points);
+  expect(bobFacts.triangles).toBe(aliceFacts.triangles);
+  expect(bobFacts.uvPieces).toBe(aliceFacts.uvPieces);
+
+  // ... and one made while Bob is already there arrives the same way
+  await makeUnwrappedCube(alice, "Cone");
+  const coneFacts = await meshFacts(alice);
+  await expect
+    .poll(async () => Object.keys(await summary(bob)))
+    .toContain("Cone");
+  await bob.getByRole("button", { name: "Cone", exact: true }).first().click();
+  await expect
+    .poll(
+      async () =>
+        (await bob.evaluate(() => window.__sceneroom!.meshFacts()))?.points,
+    )
+    .toBe(coneFacts.points);
 });

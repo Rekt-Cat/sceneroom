@@ -1,6 +1,7 @@
 import { createCollabServer } from "./createServer";
 import { loadConfig } from "./config";
 import { consoleLogger } from "./logger";
+import { FolderFileStore } from "./fileStore";
 import { SqliteStore } from "./store";
 
 const config = loadConfig(process.env);
@@ -14,6 +15,10 @@ const server = createCollabServer({
   logger: consoleLogger,
   maxMessageBytes: config.maxMessageBytes,
   maxDocumentBytes: config.maxDocumentBytes,
+  files: new FolderFileStore(config.filesDir),
+  maxFileBytes: config.maxFileBytes,
+  maxProjectFileBytes: config.maxProjectFileBytes,
+  allowedOrigins: config.allowedOrigins,
 });
 
 await server.listen();

@@ -12,6 +12,18 @@ const envSchema = z.object({
   MAX_MESSAGE_BYTES: z.coerce.number().int().positive().default(1_048_576),
   /** The biggest a saved document may grow to, in bytes. */
   MAX_DOCUMENT_BYTES: z.coerce.number().int().positive().default(20_971_520),
+  /** The folder the big files (models, meshes, pictures) are kept in. */
+  FILES_DIR: z.string().min(1).default("./data/files"),
+  /** The biggest single file, in bytes (the editor's own limit for a model is 50 MiB). */
+  MAX_FILE_BYTES: z.coerce.number().int().positive().default(52_428_800),
+  /** The most bytes all the files of one project may take together. */
+  MAX_PROJECT_FILE_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(524_288_000),
+  /** Web pages from these origins (comma separated) may call the file routes. */
+  ALLOWED_ORIGINS: z.string().default("http://localhost:3000"),
 });
 
 export type CollabConfig = {
@@ -21,6 +33,10 @@ export type CollabConfig = {
   secret: string;
   maxMessageBytes: number;
   maxDocumentBytes: number;
+  filesDir: string;
+  maxFileBytes: number;
+  maxProjectFileBytes: number;
+  allowedOrigins: string[];
 };
 
 /** Reads and checks the environment. Throws one readable error listing everything that is wrong. */
@@ -40,5 +56,11 @@ export function loadConfig(env: NodeJS.ProcessEnv): CollabConfig {
     secret: e.COLLAB_SECRET,
     maxMessageBytes: e.MAX_MESSAGE_BYTES,
     maxDocumentBytes: e.MAX_DOCUMENT_BYTES,
+    filesDir: e.FILES_DIR,
+    maxFileBytes: e.MAX_FILE_BYTES,
+    maxProjectFileBytes: e.MAX_PROJECT_FILE_BYTES,
+    allowedOrigins: e.ALLOWED_ORIGINS.split(",")
+      .map((origin) => origin.trim())
+      .filter((origin) => origin !== ""),
   };
 }

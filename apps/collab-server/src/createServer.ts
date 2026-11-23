@@ -2,6 +2,8 @@ import { Server } from "@hocuspocus/server";
 import * as Y from "yjs";
 import { readSceneFromDoc } from "@sceneroom/shared";
 import { parseDocumentName } from "./documentName";
+import { handleFileRequest } from "./fileRoutes";
+import type { FileStore } from "./fileStore";
 import { verifyLinkToken, type LinkRole } from "./linkToken";
 import type { Logger } from "./logger";
 import type { DocumentStore } from "./store";
@@ -18,6 +20,14 @@ export type CollabServerOptions = {
   maxMessageBytes: number;
   /** The biggest a document may be when it is saved. */
   maxDocumentBytes: number;
+  /** The big files (models, meshes, pictures), served at /files/<projectId>/<fileId>. */
+  files: FileStore;
+  /** The biggest single file, in bytes. */
+  maxFileBytes: number;
+  /** The most bytes all the files of one project may take together. */
+  maxProjectFileBytes: number;
+  /** Web pages from these origins may call the file routes (CORS). */
+  allowedOrigins: readonly string[];
   /** Save a document this long after its last change (ms), and at the latest this long after the first. */
   debounceMs?: number;
   maxDebounceMs?: number;
@@ -34,10 +44,11 @@ export type ConnectionContext = { projectId: string; role: LinkRole };
  * - documents are named "project:<id>" or "scene:<projectId>:<sceneId>"; any other name is refused
  * - a message bigger than `maxMessageBytes` closes the connection; a document bigger than `maxDocumentBytes` is not saved
  * - documents are loaded from and saved to the store, so they survive a restart
+ * - big files go through `/files/<projectId>/<fileId>` (see fileRoutes.ts), checked by the same tokens
  */
 export function createCollabServer(options: CollabServerOptions) {
   const { store, logger } = options;
-  return new Server({
+  const server = new Server({
     port: options.port,
     address: options.host,
     quiet: true,
@@ -93,4 +104,21 @@ export function createCollabServer(options: CollabServerOptions) {
       }
     },
   });
+
+  // The file routes answer first; every other request goes to Hocuspocus as before
+  const hocuspocusHandler = server.requestHandler;
+  server.httpServer.removeAllListeners("request");
+  server.httpServer.on("request", (request, response) => {
+    void handleFileRequest(request, response, {
+      store: options.files,
+      secret: options.secret,
+      logger,
+      maxFileBytes: options.maxFileBytes,
+      maxProjectBytes: options.maxProjectFileBytes,
+      allowedOrigins: options.allowedOrigins,
+    }).then((handled) => {
+      if (!handled) return hocuspocusHandler(request, response);
+    });
+  });
+  return server;
 }

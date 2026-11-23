@@ -12,6 +12,10 @@ describe("loadConfig", () => {
       secret: SECRET,
       maxMessageBytes: 1_048_576,
       maxDocumentBytes: 20_971_520,
+      filesDir: "./data/files",
+      maxFileBytes: 52_428_800,
+      maxProjectFileBytes: 524_288_000,
+      allowedOrigins: ["http://localhost:3000"],
     });
   });
 
@@ -23,6 +27,17 @@ describe("loadConfig", () => {
     });
     expect(config.port).toBe(4000);
     expect(config.maxMessageBytes).toBe(5000);
+  });
+
+  it("reads the list of allowed origins", () => {
+    const config = loadConfig({
+      COLLAB_SECRET: SECRET,
+      ALLOWED_ORIGINS: "https://a.example, https://b.example ,",
+    });
+    expect(config.allowedOrigins).toEqual([
+      "https://a.example",
+      "https://b.example",
+    ]);
   });
 
   it("refuses a missing or short secret, and bad numbers, in one message", () => {

@@ -13,6 +13,7 @@ import {
 import { createCollabServer } from "./createServer";
 import { createLinkToken, type LinkRole } from "./linkToken";
 import type { Logger } from "./logger";
+import { MemoryFileStore } from "./fileStore";
 import { MemoryStore } from "./store";
 
 const SECRET = "a-test-secret-that-is-long-enough-123";
@@ -80,6 +81,10 @@ describe("collab server", () => {
       logger,
       maxMessageBytes: 1_048_576,
       maxDocumentBytes: 20_971_520,
+      files: new MemoryFileStore(),
+      maxFileBytes: 1_048_576,
+      maxProjectFileBytes: 10_485_760,
+      allowedOrigins: [],
       debounceMs: 20,
       maxDebounceMs: 100,
       ...overrides,

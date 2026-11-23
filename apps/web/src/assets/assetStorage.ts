@@ -37,6 +37,11 @@ export function setAssetStorage(storage: AssetStorage): void {
   current = storage;
 }
 
+/** The storage that is current right now (not the forwarding one below), so something can wrap it and later put it back. */
+export function getAssetStorage(): AssetStorage {
+  return current;
+}
+
 /** The storage everything else uses. It always forwards to whichever one is current. */
 export const assetStorage: AssetStorage = {
   put: (id, data) => current.put(id, data),

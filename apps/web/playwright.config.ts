@@ -1,3 +1,5 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 import { COLLAB_TEST_PORT, COLLAB_TEST_SECRET } from "./e2e/collabSettings";
 
@@ -58,6 +60,7 @@ export default defineConfig({
         PORT: String(COLLAB_TEST_PORT),
         COLLAB_SECRET: COLLAB_TEST_SECRET,
         DB_PATH: ":memory:",
+        FILES_DIR: join(tmpdir(), "sceneroom-e2e-files"),
         // The tests wait for the badge, not for a save: save quickly so a reload test does not wait long
       },
     },

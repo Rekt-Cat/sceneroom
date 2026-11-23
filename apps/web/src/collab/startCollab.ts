@@ -1,8 +1,13 @@
+import { getAssetStorage, setAssetStorage } from "@/assets/assetStorage";
+import { bytesForFile } from "@/assets/meshStorage";
 import { useProjectStore } from "@/store/projectStore";
 import { usePersistenceStore } from "@/store/persistenceStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { useCollabStore } from "./collabStore";
 import { createSceneSession, type SceneSession } from "./collabSession";
+import { createFileClient } from "./fileClient";
+import { createFileUploader, type FileUploader } from "./fileUploader";
+import { OnlineAssetStorage } from "./onlineAssetStorage";
 
 /**
  * Goes online with the project: whichever scene is open is shared through its own document, and the sharing moves
@@ -23,6 +28,13 @@ export function startCollab(options: {
   let stopped = false;
   let rebindQueued = false;
   let stopStoreWatch: (() => void) | null = null;
+  let stopStatusWatch: (() => void) | null = null;
+  let uploader: FileUploader | null = null;
+  let putStorageBack: (() => void) | null = null;
+
+  /** The files the open scene refers to are sent to the server (the ones it does not have yet). */
+  const requestUpload = () =>
+    uploader?.request(Object.keys(useSceneStore.getState().scene.assets));
 
   const bind = () => {
     session?.destroy();
@@ -38,6 +50,27 @@ export function startCollab(options: {
 
   const begin = () => {
     setStatus("connecting");
+    // Files: ones that come with other people's changes are downloaded when asked for; the ones this scene refers to are
+    // sent. Done after the project is restored, so the storage being wrapped is the browser's own (see assetStorage.ts).
+    const ownStorage = getAssetStorage();
+    const files = createFileClient({
+      url: options.url,
+      projectId: options.projectId,
+      token: options.token,
+    });
+    setAssetStorage(new OnlineAssetStorage(ownStorage, files));
+    putStorageBack = () => setAssetStorage(ownStorage);
+    uploader = createFileUploader({
+      client: files,
+      storage: ownStorage,
+      prepare: bytesForFile,
+    });
+    // Again whenever the connection comes back: files may have been made while it was down
+    stopStatusWatch = useCollabStore.subscribe((state, previous) => {
+      if (state.status === "online" && previous.status !== "online") {
+        requestUpload();
+      }
+    });
     bind();
     stopStoreWatch = useSceneStore.subscribe((state, previous) => {
       if (state.sceneEpoch !== previous.sceneEpoch) {
@@ -55,6 +88,7 @@ export function startCollab(options: {
         return;
       }
       if (state.scene !== previous.scene) session?.localChanged(state.scene);
+      if (state.scene.assets !== previous.scene.assets) requestUpload();
     });
   };
 
@@ -88,6 +122,9 @@ export function startCollab(options: {
     document.removeEventListener("visibilitychange", onHidden);
     stopWaiting?.();
     stopStoreWatch?.();
+    stopStatusWatch?.();
+    uploader?.destroy();
+    putStorageBack?.();
     session?.destroy();
     session = null;
     setStatus("off");

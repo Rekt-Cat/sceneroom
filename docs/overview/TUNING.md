@@ -580,24 +580,30 @@ Files: `apps/web/src/components/viewport/InspectorFields.tsx` (rows, steps, colo
 
 In `apps/collab-server/.env` (copy `.env.example`; the real file is never committed). Checked at start by `src/config.ts`.
 
-| What             | Setting                                                | Default                | What it does                                                                        |
-| ---------------- | ------------------------------------------------------ | ---------------------- | ----------------------------------------------------------------------------------- |
-| Port             | `PORT`                                                 | 1234                   | The port the server listens on.                                                     |
-| Address          | `HOST`                                                 | 127.0.0.1              | Only this computer can connect. Use `0.0.0.0` to let others on the network in.      |
-| Database file    | `DB_PATH`                                              | `./data/collab.sqlite` | Where documents are saved (the folder is created; it is git-ignored).               |
-| Token secret     | `COLLAB_SECRET`                                        | (none, required)       | Signs the link tokens; at least 32 characters. Changing it cancels every link.      |
-| Biggest message  | `MAX_MESSAGE_BYTES`                                    | 1 048 576 (1 MiB)      | A bigger message from a client closes its connection.                               |
-| Biggest document | `MAX_DOCUMENT_BYTES`                                   | 20 971 520 (20 MiB)    | A document over this is not saved (an error is logged).                             |
-| Save delay       | `debounceMs`, `maxDebounceMs` in `src/createServer.ts` | 2 000 ms and 10 000 ms | Saved this long after the last change, and at the latest this long after the first. |
+| What              | Setting                                                | Default                 | What it does                                                                                    |
+| ----------------- | ------------------------------------------------------ | ----------------------- | ----------------------------------------------------------------------------------------------- |
+| Port              | `PORT`                                                 | 1234                    | The port the server listens on.                                                                 |
+| Address           | `HOST`                                                 | 127.0.0.1               | Only this computer can connect. Use `0.0.0.0` to let others on the network in.                  |
+| Database file     | `DB_PATH`                                              | `./data/collab.sqlite`  | Where documents are saved (the folder is created; it is git-ignored).                           |
+| Token secret      | `COLLAB_SECRET`                                        | (none, required)        | Signs the link tokens; at least 32 characters. Changing it cancels every link.                  |
+| Biggest message   | `MAX_MESSAGE_BYTES`                                    | 1 048 576 (1 MiB)       | A bigger message from a client closes its connection.                                           |
+| Biggest document  | `MAX_DOCUMENT_BYTES`                                   | 20 971 520 (20 MiB)     | A document over this is not saved (an error is logged).                                         |
+| Files folder      | `FILES_DIR`                                            | `./data/files`          | Where the big files (models, meshes, pictures) are kept (git-ignored).                          |
+| Biggest file      | `MAX_FILE_BYTES`                                       | 52 428 800 (50 MiB)     | A bigger upload is refused.                                                                     |
+| Biggest project   | `MAX_PROJECT_FILE_BYTES`                               | 524 288 000 (500 MiB)   | The most file bytes one project may hold.                                                       |
+| Allowed web pages | `ALLOWED_ORIGINS`                                      | `http://localhost:3000` | Comma separated list of web addresses that may call the file routes. Add your deployed address. |
+| Save delay        | `debounceMs`, `maxDebounceMs` in `src/createServer.ts` | 2 000 ms and 10 000 ms  | Saved this long after the last change, and at the latest this long after the first.             |
 
 ## Online editing (the browser side)
 
-| What               | Where                                               | Our value              | What it does                                                                                                           |
-| ------------------ | --------------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Go online          | the address: `?collab=` `&token=` `&scene=`         | (not set)              | `ws://` or `wss://` address of the collab server, the link token, and (new browsers only) the id of the scene to open. |
-| Write delay        | `delayMs` in `apps/web/src/collab/sceneBinding.ts`  | 50 ms                  | Changes within this time are sent together (a drag becomes one message). Lower = smoother for others, more messages.   |
-| Offline copy name  | `sceneroom-collab:<document>` in `collabSession.ts` | -                      | The browser database that keeps a shared scene between visits. Clear it (browser storage) to forget the offline copy.  |
-| Test collab server | `apps/web/e2e/collabSettings.ts`                    | port 1235, test secret | What the browser tests start and talk to. Not a real secret.                                                           |
+| What               | Where                                                                        | Our value              | What it does                                                                                                           |
+| ------------------ | ---------------------------------------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Go online          | the address: `?collab=` `&token=` `&scene=`                                  | (not set)              | `ws://` or `wss://` address of the collab server, the link token, and (new browsers only) the id of the scene to open. |
+| Write delay        | `delayMs` in `apps/web/src/collab/sceneBinding.ts`                           | 50 ms                  | Changes within this time are sent together (a drag becomes one message). Lower = smoother for others, more messages.   |
+| File upload delay  | `delayMs`, `retryMs`, `concurrency` in `apps/web/src/collab/fileUploader.ts` | 300 ms, 10 000 ms, 2   | Wait after a change before sending files, wait before trying again after a failure, and how many go up at once.        |
+| Download retries   | `DEFAULT_RETRY_DELAYS_MS` in `apps/web/src/collab/onlineAssetStorage.ts`     | 0.5, 1, 2, 4, 8, 16 s  | How long to keep asking for a file the sender has not uploaded yet, before showing it as missing.                      |
+| Offline copy name  | `sceneroom-collab:<document>` in `collabSession.ts`                          | -                      | The browser database that keeps a shared scene between visits. Clear it (browser storage) to forget the offline copy.  |
+| Test collab server | `apps/web/e2e/collabSettings.ts`                                             | port 1235, test secret | What the browser tests start and talk to. Not a real secret.                                                           |
 
 ## Keeping this file up to date
 
