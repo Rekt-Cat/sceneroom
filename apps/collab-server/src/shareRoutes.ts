@@ -2,8 +2,8 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { z } from "zod";
 import { corsHeaders } from "./cors";
-import { projectIdSchema } from "./documentName";
-import { createLinkToken, LINK_ROLES } from "./linkToken";
+import { projectIdSchema } from "@sceneroom/link-token";
+import { createLinkToken, LINK_ROLES } from "@sceneroom/link-token";
 import type { Logger } from "./logger";
 import type { OwnerStore } from "./ownerStore";
 

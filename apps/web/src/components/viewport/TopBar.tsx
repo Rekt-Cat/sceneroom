@@ -120,7 +120,7 @@ const COLLAB_STATUS: Record<
   refused: {
     text: "Link not accepted",
     dot: "bg-[#e5545f]",
-    help: "The server did not accept this link. It may be wrong or expired.",
+    help: "The server did not accept this connection. A link may be wrong or expired, or you may not be a member of the project.",
   },
 };
 

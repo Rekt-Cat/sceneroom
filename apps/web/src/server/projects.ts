@@ -27,10 +27,12 @@ export type ProjectSummary = {
   id: string;
   name: string;
   role: Role;
+  /** The scene to open first (see the schema). null for a project put online before this was kept. */
+  entrySceneId: string | null;
   createdAt: Date;
 };
 
-async function roleOf(
+export async function roleOf(
   db: Db,
   projectId: string,
   userId: string,
@@ -56,10 +58,19 @@ export async function createProject(
     if (existing.ownerId !== actor.id) {
       return fail(409, "That project id is already used.");
     }
+    // A project put online before the entry scene was kept gets it the next time its owner puts it online
+    const entrySceneId = existing.entrySceneId ?? input.entrySceneId ?? null;
+    if (entrySceneId !== existing.entrySceneId) {
+      await db.project.update({
+        where: { id: existing.id },
+        data: { entrySceneId },
+      });
+    }
     return ok({
       id: existing.id,
       name: existing.name,
       role: "owner",
+      entrySceneId,
       createdAt: existing.createdAt,
     });
   }
@@ -75,6 +86,7 @@ export async function createProject(
       data: {
         id: input.id,
         name: input.name,
+        entrySceneId: input.entrySceneId ?? null,
         ownerId: actor.id,
         members: { create: { userId: actor.id, role: "owner" } },
       },
@@ -83,6 +95,7 @@ export async function createProject(
       id: project.id,
       name: project.name,
       role: "owner",
+      entrySceneId: project.entrySceneId,
       createdAt: project.createdAt,
     });
   } catch (error) {
@@ -111,6 +124,7 @@ export async function listMyProjects(
     id: row.project.id,
     name: row.project.name,
     role: row.role,
+    entrySceneId: row.project.entrySceneId,
     createdAt: row.project.createdAt,
   }));
 }
@@ -129,6 +143,7 @@ export async function getProject(
     id: project.id,
     name: project.name,
     role,
+    entrySceneId: project.entrySceneId,
     createdAt: project.createdAt,
   });
 }

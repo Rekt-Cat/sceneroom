@@ -4,7 +4,7 @@ import * as Y from "yjs";
 import { afterEach, describe, expect, it } from "vitest";
 import { createCollabServer } from "./createServer";
 import { MemoryFileStore } from "./fileStore";
-import { verifyLinkToken } from "./linkToken";
+import { verifyLinkToken } from "@sceneroom/link-token";
 import type { Logger } from "./logger";
 import { MemoryStore } from "./store";
 
@@ -262,7 +262,7 @@ describe("share routes", () => {
 
   it("tokens made by hand (generation 0) still work for a project nobody has claimed", async () => {
     const { connect } = await start();
-    const { createLinkToken } = await import("./linkToken");
+    const { createLinkToken } = await import("@sceneroom/link-token");
     const client = connect(
       createLinkToken({ projectId: PROJECT, role: "editor" }, SECRET),
     );

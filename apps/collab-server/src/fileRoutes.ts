@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { corsHeaders } from "./cors";
-import { projectIdSchema } from "./documentName";
+import { projectIdSchema } from "@sceneroom/link-token";
 import { FILE_ID_PATTERN, type FileStore } from "./fileStore";
-import { verifyLinkToken } from "./linkToken";
+import { verifyLinkToken } from "@sceneroom/link-token";
 import type { Logger } from "./logger";
 
 export type FileRouteOptions = {

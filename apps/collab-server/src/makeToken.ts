@@ -1,4 +1,8 @@
-import { createLinkToken, LINK_ROLES, type LinkRole } from "./linkToken";
+import {
+  createLinkToken,
+  LINK_ROLES,
+  type LinkRole,
+} from "@sceneroom/link-token";
 import { loadConfig } from "./config";
 
 /** Prints a link token, for trying the server by hand: `pnpm --filter @sceneroom/collab-server make-token <projectId> <editor|viewer>` */

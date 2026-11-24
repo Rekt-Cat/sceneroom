@@ -1,6 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
-import { projectIdSchema } from "./documentName";
+
+/** An id inside a project or document name: letters, digits, "-" and "_" only, so a name can never smuggle in a separator. */
+export const projectIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
 
 /** What a link lets you do: "editor" changes the project, "viewer" only looks (enforced on the server). */
 export const LINK_ROLES = ["editor", "viewer"] as const;
@@ -17,6 +19,11 @@ const payloadSchema = z.object({
    * next generation (ownerStore.ts); a token of an older generation is no longer accepted. Missing = 0.
    */
   g: z.number().int().min(0).optional(),
+  /**
+   * Who this token was made for, when it comes from an account (the web app). Lets the collab server close one person's
+   * connections when they are removed from a project. Links made by the Share button carry no user.
+   */
+  u: z.string().min(1).max(200).optional(),
 });
 
 export type LinkClaims = {
@@ -24,6 +31,8 @@ export type LinkClaims = {
   role: LinkRole;
   /** See `g` above. Default 0. */
   generation?: number;
+  /** See `u` above. */
+  userId?: string;
 };
 
 export type LinkCheck =
@@ -51,6 +60,7 @@ export function createLinkToken(
     r: claims.role,
     e: expiresAtSeconds,
     g: claims.generation || undefined,
+    u: claims.userId,
   });
   const body = toBase64Url(JSON.stringify(payload));
   return `${body}.${toBase64Url(sign(body, secret))}`;
@@ -89,5 +99,6 @@ export function verifyLinkToken(
     projectId: parsed.data.p,
     role: parsed.data.r,
     generation: parsed.data.g ?? 0,
+    ...(parsed.data.u ? { userId: parsed.data.u } : {}),
   };
 }

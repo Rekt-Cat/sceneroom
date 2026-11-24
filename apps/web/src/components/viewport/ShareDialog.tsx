@@ -4,7 +4,11 @@ import { useState } from "react";
 import { connectCollab, disconnectCollab } from "@/collab/collabController";
 import { useCollabStore } from "@/collab/collabStore";
 import { getOwnerKey } from "@/collab/ownerKey";
-import { loadConnection, saveConnection } from "@/collab/savedConnection";
+import {
+  isAccountConnection,
+  loadConnection,
+  saveConnection,
+} from "@/collab/savedConnection";
 import {
   collabServerUrl,
   configuredServerUrl,
@@ -19,6 +23,8 @@ import {
 } from "@/collab/shareClient";
 import { buildShareLink } from "@/collab/shareLink";
 import { useProjectStore } from "@/store/projectStore";
+import AccountMembers from "./AccountMembers";
+import AccountOnline from "./AccountOnline";
 
 /** The choices for how long a link works. The first one is what is chosen to start with. */
 const EXPIRY_CHOICES: { label: string; days: LinkExpiry }[] = [
@@ -54,6 +60,9 @@ export default function ShareDialog({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  /** Online with an account: members and invitations are shown instead of the link controls (the two are not mixed). It is read at every render, so it follows the project going online while the box is open (`online` changes then). */
+  const saved = loadConnection(projectId);
+  const accountMode = saved !== null && isAccountConnection(saved);
   /** The server address typed in the box (used while the project is not online yet). */
   const [typedServer, setTypedServer] = useState(collabServerUrl);
 
@@ -165,7 +174,11 @@ export default function ShareDialog({
         </button>
       </div>
 
-      {readOnly ? (
+      <AccountOnline projectId={projectId} />
+
+      {accountMode ? (
+        <AccountMembers projectId={projectId} />
+      ) : readOnly ? (
         <p className="text-xs text-ed-text-2">
           This project is open as view only, so it cannot make links.
         </p>

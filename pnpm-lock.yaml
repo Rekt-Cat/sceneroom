@@ -181,6 +181,9 @@ importers:
       '@hocuspocus/server':
         specifier: 4.9.0
         version: 4.9.0(y-protocols@1.0.7(yjs@13.6.33))(yjs@13.6.33)
+      '@sceneroom/link-token':
+        specifier: workspace:*
+        version: link:../../packages/link-token
       '@sceneroom/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -221,6 +224,9 @@ importers:
       '@sceneroom/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@sceneroom/link-token':
+        specifier: workspace:*
+        version: link:../../packages/link-token
       '@sceneroom/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -261,6 +267,9 @@ importers:
       '@types/node':
         specifier: ^20
         version: 20.19.43
+      '@types/pg':
+        specifier: ^8.23.1
+        version: 8.23.1
       '@types/react':
         specifier: ^19
         version: 19.3.0
@@ -279,6 +288,9 @@ importers:
       fake-indexeddb:
         specifier: 6.2.8
         version: 6.2.8
+      pg:
+        specifier: 8.23.1
+        version: 8.23.1
       tailwindcss:
         specifier: 4.3.3
         version: 4.3.3
@@ -313,6 +325,22 @@ importers:
       tsx:
         specifier: ^4
         version: 4.23.15
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: 5.1.0
+        version: 5.1.0(@types/node@24.19.2)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+
+  packages/link-token:
+    dependencies:
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@types/node':
+        specifier: ^24
+        version: 24.19.2
       typescript:
         specifier: ^5
         version: 5.9.3
@@ -4922,7 +4950,7 @@ snapshots:
 
   '@types/pg@8.23.1':
     dependencies:
-      '@types/node': 24.19.2
+      '@types/node': 20.19.43
       pg-protocol: 1.16.1
       pg-types: 2.2.0
 

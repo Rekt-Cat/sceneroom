@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@hocuspocus/server": "4.9.0",
+    "@sceneroom/link-token": "workspace:*",
     "@sceneroom/shared": "workspace:*",
     "yjs": "13.6.33",
     "zod": "4.6.7"

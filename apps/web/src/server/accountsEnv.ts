@@ -8,6 +8,14 @@ const accountsEnvSchema = z.object({
   GITHUB_CLIENT_ID: z.string().min(1),
   GITHUB_CLIENT_SECRET: z.string().min(1),
   COLLAB_SECRET: z.string().min(32, "must be at least 32 characters"),
+  /**
+   * The HTTP address of the collab server (for example http://127.0.0.1:1234), used to tell it to disconnect someone who was
+   * removed. Optional: without it a removed person is cut off at their next connect (within an hour) instead of at once.
+   */
+  COLLAB_ADMIN_URL: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.url().optional(),
+  ),
 });
 
 export type AccountsEnv = z.infer<typeof accountsEnvSchema>;

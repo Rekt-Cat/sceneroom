@@ -2,11 +2,12 @@ import { Server } from "@hocuspocus/server";
 import * as Y from "yjs";
 import { readSceneFromDoc } from "@sceneroom/shared";
 import { parseDocumentName } from "./documentName";
+import { handleAdminRequest } from "./adminRoutes";
 import { handleFileRequest } from "./fileRoutes";
 import type { FileStore } from "./fileStore";
 import type { OwnerStore } from "./ownerStore";
 import { handleShareRequest } from "./shareRoutes";
-import { verifyLinkToken, type LinkRole } from "./linkToken";
+import { verifyLinkToken, type LinkRole } from "@sceneroom/link-token";
 import type { Logger } from "./logger";
 import type { DocumentStore } from "./store";
 
@@ -38,7 +39,12 @@ export type CollabServerOptions = {
 };
 
 /** What the server remembers about a connection, from the moment its token was checked. */
-export type ConnectionContext = { projectId: string; role: LinkRole };
+export type ConnectionContext = {
+  projectId: string;
+  role: LinkRole;
+  /** Who the token was made for (tokens from accounts only), so that person can be disconnected. */
+  userId?: string;
+};
 
 /**
  * Builds the collab server (not started yet; call `listen`). The rules, all enforced here and never left to the client:
@@ -87,7 +93,11 @@ export function createCollabServer(options: CollabServerOptions) {
         throw new Error("Not allowed");
       }
       if (check.role === "viewer") connectionConfig.readOnly = true;
-      return { projectId: check.projectId, role: check.role };
+      return {
+        projectId: check.projectId,
+        role: check.role,
+        ...(check.userId ? { userId: check.userId } : {}),
+      };
     },
 
     async onLoadDocument({ document, documentName }) {
@@ -118,19 +128,32 @@ export function createCollabServer(options: CollabServerOptions) {
   const hocuspocusHandler = server.requestHandler;
   const generationOf = (projectId: string) =>
     options.owners.generation(projectId);
-  const closeProjectConnections = (projectId: string) => {
+  /**
+   * Closes the connections of a project (one person's when `userId` is given, else everybody's) and returns how many.
+   * Closing the socket (not only resetting the document) makes the browser connect again from the start, so its token is
+   * checked again, and a cancelled or removed one is refused. A reset on the same socket would not check it.
+   */
+  const closeConnections = (projectId: string, userId: string | null) => {
+    let closed = 0;
     for (const [name, document] of [...server.hocuspocus.documents]) {
       if (parseDocumentName(name)?.projectId !== projectId) continue;
-      // Closing the socket (not only resetting the document) makes the browser connect again from the start, so its
-      // token is checked again, and the cancelled one is refused. A reset on the same socket would not check it.
       for (const connection of [...document.connections.keys()]) {
+        const owner = (connection.context as Partial<ConnectionContext>).userId;
+        if (userId !== null && owner !== userId) continue;
         connection.webSocket.close(
           4403,
-          "The links of this project were cancelled",
+          userId === null
+            ? "The links of this project were cancelled"
+            : "You are no longer allowed in this project",
         );
+        closed += 1;
       }
-      server.hocuspocus.closeConnections(name);
+      if (userId === null) server.hocuspocus.closeConnections(name);
     }
+    return closed;
+  };
+  const closeProjectConnections = (projectId: string) => {
+    closeConnections(projectId, null);
   };
   server.httpServer.removeAllListeners("request");
   server.httpServer.on("request", (request, response) => {
@@ -151,6 +174,11 @@ export function createCollabServer(options: CollabServerOptions) {
           maxProjectBytes: options.maxProjectFileBytes,
           allowedOrigins: options.allowedOrigins,
           generationOf,
+        })) ||
+        (await handleAdminRequest(request, response, {
+          secret: options.secret,
+          logger,
+          disconnect: closeConnections,
         }));
       if (!handled) await hocuspocusHandler(request, response);
     })();

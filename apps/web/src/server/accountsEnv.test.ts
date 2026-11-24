@@ -10,6 +10,25 @@ const good = {
   COLLAB_SECRET: "b".repeat(64),
 };
 
+describe("the collab server's address (optional)", () => {
+  const url = (extra: Record<string, string>) => {
+    const result = readAccountsEnv({ ...good, ...extra });
+    return result.ok
+      ? { ok: true as const, url: result.env.COLLAB_ADMIN_URL }
+      : { ok: false as const };
+  };
+
+  it("is left out, empty or a real address; anything else is refused", () => {
+    expect(url({})).toEqual({ ok: true, url: undefined });
+    expect(url({ COLLAB_ADMIN_URL: "" })).toEqual({ ok: true, url: undefined });
+    expect(url({ COLLAB_ADMIN_URL: "http://127.0.0.1:1234" })).toEqual({
+      ok: true,
+      url: "http://127.0.0.1:1234",
+    });
+    expect(url({ COLLAB_ADMIN_URL: "not a url" })).toEqual({ ok: false });
+  });
+});
+
 describe("readAccountsEnv", () => {
   it("accepts a complete set", () => {
     expect(readAccountsEnv(good).ok).toBe(true);

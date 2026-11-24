@@ -5,7 +5,7 @@ import {
   type BrowserContext,
   type Page,
 } from "@playwright/test";
-import { createLinkToken } from "../../collab-server/src/linkToken";
+import { createLinkToken } from "@sceneroom/link-token";
 import { COLLAB_TEST_SECRET, COLLAB_TEST_URL } from "./collabSettings";
 import {
   addShape,

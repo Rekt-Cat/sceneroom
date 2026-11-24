@@ -5,7 +5,13 @@ import { importFiles } from "@/assets/importFile";
 import { watchEditMode } from "@/meshEdit/startEditing";
 import { parseCollabParams } from "@/collab/collabParams";
 import { connectCollab, disconnectCollab } from "@/collab/collabController";
-import { loadConnection, saveConnection } from "@/collab/savedConnection";
+import { parseAccountParams } from "@/collab/accountParams";
+import {
+  connectionToken,
+  loadConnection,
+  saveConnection,
+} from "@/collab/savedConnection";
+import { collabServerUrl } from "@/collab/serverAddress";
 import { startPersistence } from "@/persistence/startPersistence";
 import { installTestHooks } from "@/testHooks";
 import { usePersistenceStore } from "@/store/persistenceStore";
@@ -59,15 +65,34 @@ export default function EditorShell({ projectId }: { projectId: string }) {
   useEffect(() => {
     // A link opened in this browser is remembered, so opening the project from the home screen later reconnects
     const fromAddress = parseCollabParams(window.location.search);
+    // "?online=account": open it online with the signed-in person's account (no token in the address)
+    const withAccount = fromAddress
+      ? null
+      : parseAccountParams(window.location.search);
     if (fromAddress) {
       saveConnection(projectId, {
         url: fromAddress.url,
         token: fromAddress.token,
       });
+    } else if (withAccount) {
+      saveConnection(projectId, { kind: "account", url: collabServerUrl() });
     }
-    const connection = fromAddress ?? loadConnection(projectId);
-    const stopSaving = startPersistence(projectId, fromAddress?.sceneId);
-    if (connection) connectCollab({ projectId, ...connection });
+    const connection =
+      fromAddress ??
+      (withAccount
+        ? { kind: "account" as const, url: collabServerUrl() }
+        : loadConnection(projectId));
+    const stopSaving = startPersistence(
+      projectId,
+      fromAddress?.sceneId ?? withAccount?.sceneId,
+    );
+    if (connection) {
+      connectCollab({
+        projectId,
+        url: connection.url,
+        token: connectionToken(projectId, connection),
+      });
+    }
     return () => {
       disconnectCollab();
       stopSaving();

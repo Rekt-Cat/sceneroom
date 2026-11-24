@@ -48,6 +48,15 @@ export default defineConfig({
       url: "http://localhost:3000",
       reuseExistingServer: true,
       timeout: 120_000,
+      // For the account tests (e2e/accounts.spec.ts), when this server is started by the tests: a header can stand in
+      // for the GitHub sign-in, and tokens are signed with the test collab server's secret. A server that was already
+      // running without these makes those tests skip themselves. (Process variables win over .env.local.)
+      env: {
+        SCENEROOM_TEST_AUTH: "1",
+        COLLAB_SECRET: COLLAB_TEST_SECRET,
+        // So that removing a member in a test disconnects them from the test collab server at once
+        COLLAB_ADMIN_URL: `http://127.0.0.1:${COLLAB_TEST_PORT}`,
+      },
     },
     {
       // Its documents are kept in memory only, so every run starts clean

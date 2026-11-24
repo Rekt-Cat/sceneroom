@@ -5,12 +5,14 @@ import type { Scene } from "@sceneroom/shared";
 import type { AwarenessLike } from "./editLocks";
 import { createSceneBinding } from "./sceneBinding";
 import { useCollabStore } from "./collabStore";
+import type { TokenSource } from "./tokenSource";
 
 export type SceneSessionOptions = {
   projectId: string;
   sceneId: string;
   url: string;
-  token: string;
+  /** Asked at every (re)connect, so an account token is always a fresh one. */
+  token: TokenSource;
   /** The editor's scene right now. */
   scene: Scene;
   applyRemote: (scene: Scene) => void;
@@ -59,7 +61,7 @@ export function createSceneSession(options: SceneSessionOptions): SceneSession {
     url: options.url,
     name,
     document: doc,
-    token: options.token,
+    token: () => options.token.fresh(),
     onStatus: ({ status }) => {
       if (destroyed) return;
       if (status === "connected") setStatus("online");
@@ -78,7 +80,7 @@ export function createSceneSession(options: SceneSessionOptions): SceneSession {
       console.warn(`The server did not accept the link: ${reason}`);
       setStatus(
         "refused",
-        "The server did not accept this link. It may be wrong or expired.",
+        "The server did not accept this connection. A link may be wrong or expired, or you may not be a member of the project.",
       );
     },
   });

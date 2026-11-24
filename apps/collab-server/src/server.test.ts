@@ -11,7 +11,7 @@ import {
 } from "@sceneroom/shared";
 
 import { createCollabServer } from "./createServer";
-import { createLinkToken, type LinkRole } from "./linkToken";
+import { createLinkToken, type LinkRole } from "@sceneroom/link-token";
 import type { Logger } from "./logger";
 import { MemoryFileStore } from "./fileStore";
 import { MemoryStore } from "./store";

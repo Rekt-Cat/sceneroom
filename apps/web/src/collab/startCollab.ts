@@ -21,6 +21,7 @@ import { createSceneSession, type SceneSession } from "./collabSession";
 import { createFileClient } from "./fileClient";
 import { createFileUploader, type FileUploader } from "./fileUploader";
 import { OnlineAssetStorage } from "./onlineAssetStorage";
+import { asTokenSource, type TokenSource } from "./tokenSource";
 
 /**
  * Goes online with the project: whichever scene is open is shared through its own document, and the sharing moves
@@ -34,8 +35,9 @@ import { OnlineAssetStorage } from "./onlineAssetStorage";
 export function startCollab(options: {
   projectId: string;
   url: string;
-  token: string;
+  token: string | TokenSource;
 }): () => void {
+  const token = asTokenSource(options.token);
   const { setStatus } = useCollabStore.getState();
   let session: SceneSession | null = null;
   let stopped = false;
@@ -144,7 +146,7 @@ export function startCollab(options: {
       projectId: options.projectId,
       sceneId: useProjectStore.getState().activeSceneId,
       url: options.url,
-      token: options.token,
+      token,
       scene: useSceneStore.getState().scene,
       applyRemote: (scene) => useSceneStore.getState().applyRemoteScene(scene),
     });
@@ -161,7 +163,7 @@ export function startCollab(options: {
     const files = createFileClient({
       url: options.url,
       projectId: options.projectId,
-      token: options.token,
+      token,
     });
     setAssetStorage(new OnlineAssetStorage(ownStorage, files));
     putStorageBack = () => setAssetStorage(ownStorage);

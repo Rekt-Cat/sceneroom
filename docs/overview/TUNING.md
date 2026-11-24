@@ -761,3 +761,23 @@ value and what it does.
 | `MAX_ONLINE_PROJECTS_PER_USER` | 50        | The most online projects one person may own (each costs storage on the collab server).            |
 | `MAX_PROJECT_NAME_LENGTH`      | 100       | The longest an online project's name may be, in characters.                                       |
 | `MAX_REQUEST_BYTES`            | 4096      | The biggest body the project routes read (they only receive a name or a role); bigger gets a 413. |
+
+## Collab tokens from the web app
+
+| Setting                    | Where                                | Our value | What it does                                                                                                                   |
+| -------------------------- | ------------------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `COLLAB_TOKEN_TTL_SECONDS` | `apps/web/src/server/limits.ts`      | 3600      | How long a token from the web app works. Shorter = a removed member is cut off sooner; the editor asks again at every connect. |
+| `REFRESH_MARGIN_SECONDS`   | `apps/web/src/collab/tokenSource.ts` | 60        | How long before it runs out a token used for file requests is replaced.                                                        |
+
+## Invitations, members and disconnecting
+
+| Setting                   | Where                                                 | Our value               | What it does                                                                                                             |
+| ------------------------- | ----------------------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `INVITATION_DEFAULT_DAYS` | `apps/web/src/server/limits.ts`                       | 7                       | How long an invitation link works when no length is given.                                                               |
+| `INVITATION_MAX_DAYS`     | `apps/web/src/server/limits.ts`                       | 30                      | The longest an invitation may work.                                                                                      |
+| `MAX_PENDING_INVITATIONS` | `apps/web/src/server/limits.ts`                       | 20                      | The most invitations of one project that may be waiting at once.                                                         |
+| `DAY_CHOICES`             | `apps/web/src/components/viewport/AccountMembers.tsx` | 1, 7, 30                | The lengths the Share box offers.                                                                                        |
+| Members refresh           | `AccountMembers.tsx` (the interval)                   | 10 s                    | How often the open Share box reads the members and invitations again (also when someone connects or leaves).             |
+| `ADMIN_MAX_SKEW_SECONDS`  | `packages/link-token/src/adminRequest.ts`             | 60                      | How far a disconnect request's time may be from the collab server's clock.                                               |
+| Disconnect time-out       | `apps/web/src/server/collabAdmin.ts` (`TIMEOUT_MS`)   | 3000 ms                 | How long the web app waits for the collab server before giving up (the change is already made).                          |
+| `COLLAB_ADMIN_URL`        | `apps/web/.env.local`                                 | `http://127.0.0.1:1234` | Where the web app finds the collab server's internal route. Left out = removed people are cut off at their next connect. |

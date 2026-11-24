@@ -86,11 +86,14 @@ enum Role {
 
 /// A project that is online. `id` is the local project's id (a UUID), the same one the collab server uses.
 model Project {
-  id        String   @id
-  name      String
-  createdAt DateTime @default(now())
-  ownerId   String
-  owner     User     @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  id           String   @id
+  name         String
+  /// The scene a new member's browser opens first (the project's shared scene list does not exist yet). Set when the
+  /// owner puts the project online.
+  entrySceneId String?
+  createdAt    DateTime @default(now())
+  ownerId      String
+  owner        User     @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Restrict)
 
   members     ProjectMember[]
   invitations Invitation[]

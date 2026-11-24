@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { createCollabServer } from "./createServer";
 import { FolderFileStore, MemoryFileStore, type FileStore } from "./fileStore";
-import { createLinkToken, type LinkRole } from "./linkToken";
+import { createLinkToken, type LinkRole } from "@sceneroom/link-token";
 import type { Logger } from "./logger";
 import { MemoryStore } from "./store";
 

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import AccountButton from "./AccountButton";
+import OnlineProjects from "./OnlineProjects";
 import {
   APP_NAME,
   MAX_LOCAL_PROJECTS,
@@ -310,6 +311,7 @@ export default function HomeScreen() {
           No project has “{search}” in its name.
         </p>
       )}
+      <OnlineProjects />
       <div className="pointer-events-none fixed bottom-4 left-1/2 -translate-x-1/2 *:pointer-events-auto">
         <ImportBanner />
       </div>

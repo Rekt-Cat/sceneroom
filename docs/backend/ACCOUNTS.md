@@ -106,7 +106,7 @@ that way. It is not mixed with accounts for the same project.
 | M8b  | Better Auth with GitHub in the web app: sign in, sign out, who am I                                 | By hand with your GitHub app (the one flow a test cannot do); route tests with a faked session.  |
 | M8c  | Projects and members: create, list mine, members, roles, remove; all with Zod and permission checks | Route tests for every role against every action, including "not a member" and "not signed in".   |
 | M8d  | `packages/link-token`; the token route; the editor fetches tokens by function                       | Two-window browser test: sign-in is faked in tests; a viewer member gets a read-only connection. |
-| M8e  | Invitations and the dashboard; a removed member is disconnected                                     | Browser test: invite, accept, appear on the dashboard; remove, disconnected.                     |
+| M8e  | Invitations and the dashboard; a removed member is disconnected (**built 2026-11-24**)              | Browser test: invite, accept, appear on the dashboard; remove, disconnected.                     |
 | M8f  | Documents saved in Postgres instead of SQLite                                                       | Documents survive a server restart against Postgres.                                             |
 
 ## 8. Risks and open points, stated plainly

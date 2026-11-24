@@ -1,4 +1,5 @@
 import { sha256Hex } from "@/assets/hash";
+import { asTokenSource, type TokenSource } from "./tokenSource";
 
 /** The HTTP address of the collab server's file routes, from its WebSocket address (ws becomes http, wss becomes https). */
 export function fileBaseUrl(webSocketUrl: string): string {
@@ -26,7 +27,8 @@ export type FileClient = {
 export function createFileClient(options: {
   url: string;
   projectId: string;
-  token: string;
+  /** A fixed token (a link) or a source of tokens (an account). */
+  token: string | TokenSource;
   /** For tests. */
   fetchImpl?: typeof fetch;
 }): FileClient {
@@ -35,11 +37,17 @@ export function createFileClient(options: {
     options.fetchImpl ??
     ((...args: Parameters<typeof fetch>) => fetch(...args));
   const address = (id: string) => `${base}/${options.projectId}/${id}`;
-  const headers = { Authorization: `Bearer ${options.token}` };
+  const tokens = asTokenSource(options.token);
+  const authorize = async () => ({
+    Authorization: `Bearer ${await tokens.cached()}`,
+  });
 
   return {
     async has(id) {
-      const response = await call(address(id), { method: "HEAD", headers });
+      const response = await call(address(id), {
+        method: "HEAD",
+        headers: await authorize(),
+      });
       if (response.status === 404) return false;
       if (!response.ok)
         throw new Error(
@@ -51,7 +59,10 @@ export function createFileClient(options: {
     async upload(id, bytes) {
       const response = await call(address(id), {
         method: "PUT",
-        headers: { ...headers, "Content-Type": "application/octet-stream" },
+        headers: {
+          ...(await authorize()),
+          "Content-Type": "application/octet-stream",
+        },
         body: bytes as BodyInit,
       });
       if (!response.ok) {
@@ -62,7 +73,10 @@ export function createFileClient(options: {
     },
 
     async download(id) {
-      const response = await call(address(id), { method: "GET", headers });
+      const response = await call(address(id), {
+        method: "GET",
+        headers: await authorize(),
+      });
       if (response.status === 404) return null;
       if (!response.ok)
         throw new Error(

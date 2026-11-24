@@ -1,4 +1,5 @@
 import { startCollab } from "./startCollab";
+import type { TokenSource } from "./tokenSource";
 
 /**
  * Holds the one online connection of the open project, so the editor page and the Share dialog can start and stop it
@@ -10,7 +11,7 @@ let stopCurrent: (() => void) | null = null;
 export function connectCollab(options: {
   projectId: string;
   url: string;
-  token: string;
+  token: string | TokenSource;
 }): void {
   stopCurrent?.();
   stopCurrent = startCollab(options);

@@ -295,3 +295,27 @@ describe("file uploader", () => {
     expect(uploads).toEqual([]);
   });
 });
+
+describe("file client with a source of tokens", () => {
+  it("asks the source for a token on each call (the cached one), so an account token can be renewed", async () => {
+    let n = 0;
+    const seen: string[] = [];
+    const client = createFileClient({
+      url: "ws://127.0.0.1:1234",
+      projectId: "p",
+      token: {
+        fresh: async () => "unused",
+        cached: async () => `t${++n}`,
+      },
+      fetchImpl: async (_url, init) => {
+        seen.push(
+          String((init?.headers as Record<string, string>).Authorization),
+        );
+        return new Response(null, { status: 404 });
+      },
+    });
+    await client.has("a".repeat(64));
+    await client.has("b".repeat(64));
+    expect(seen).toEqual(["Bearer t1", "Bearer t2"]);
+  });
+});

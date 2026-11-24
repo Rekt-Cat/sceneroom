@@ -1,5 +1,6 @@
 import type { ZodType } from "zod";
 import type { Db } from "@sceneroom/db";
+import type { AccountsEnv } from "./accountsEnv";
 import { getAccounts } from "./auth";
 import { MAX_REQUEST_BYTES } from "./limits";
 import type { Result } from "./projects";
@@ -7,7 +8,7 @@ import { getCurrentUser, type CurrentUser } from "./session";
 
 const json = (body: unknown, status: number) => Response.json(body, { status });
 
-export type RouteContext = { db: Db; user: CurrentUser };
+export type RouteContext = { db: Db; user: CurrentUser; env: AccountsEnv };
 
 /**
  * Wraps a route that needs a signed-in person: answers 503 when accounts are not set up, 401 when nobody is signed in,
@@ -36,7 +37,7 @@ export async function withUser(
     }
     const user = await getCurrentUser();
     if (!user) return json({ error: "Sign in first." }, 401);
-    return await handler({ db: accounts.db, user });
+    return await handler({ db: accounts.db, user, env: accounts.env });
   } catch (error) {
     console.error(
       `${request.method} ${new URL(request.url).pathname} failed:`,
@@ -97,4 +98,26 @@ export function respond<T>(result: Result<T>, successStatus = 200): Response {
   return result.ok
     ? json(result.value, successStatus)
     : json({ error: result.error }, result.status);
+}
+
+/**
+ * Wraps a route that anyone may call, signed in or not (an invitation preview): 503 when accounts are not set up, and 500
+ * with a plain message when something unexpected goes wrong. The route must not depend on who is asking.
+ */
+export async function withAccounts(
+  request: Request,
+  handler: (context: { db: Db }) => Promise<Response>,
+): Promise<Response> {
+  const accounts = getAccounts();
+  if (!accounts)
+    return json({ error: "Accounts are not set up on this server." }, 503);
+  try {
+    return await handler({ db: accounts.db });
+  } catch (error) {
+    console.error(
+      `${request.method} ${new URL(request.url).pathname} failed:`,
+      error,
+    );
+    return json({ error: "Something went wrong on the server." }, 500);
+  }
 }
