@@ -13,6 +13,7 @@ import {
 import { createCollabServer } from "./createServer";
 import { MemoryFileStore } from "./fileStore";
 import { PostgresDocumentStore } from "./postgresStore";
+import { shouldRunDatabaseTests } from "./testDatabase";
 import { MemoryStore } from "./store";
 
 // Step M8f: the collab server keeps its documents in Postgres, and they survive a restart. Uses the real Postgres of
@@ -36,7 +37,10 @@ async function until(
   }
 }
 
-describe("collab server with Postgres documents", () => {
+const dbTests = await shouldRunDatabaseTests(DATABASE_URL);
+const describeDb = dbTests ? describe : describe.skip;
+
+describeDb("collab server with Postgres documents", () => {
   const servers: ReturnType<typeof createCollabServer>[] = [];
   const stores: PostgresDocumentStore[] = [];
   const providers: HocuspocusProvider[] = [];

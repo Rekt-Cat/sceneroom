@@ -11,6 +11,7 @@ import { useCollabStore } from "./collabStore";
 import { setCursorSender } from "./activePresence";
 import { watchHistory } from "./collabHistory";
 import { loadSavedName } from "./identity";
+import { HOLD_IDLE_MS, createObjectHolds, type Holder } from "./objectHolds";
 import { cleanName, createPresence, defaultName } from "./presence";
 import {
   createEditLocks,
@@ -22,6 +23,9 @@ import { createFileClient } from "./fileClient";
 import { createFileUploader, type FileUploader } from "./fileUploader";
 import { OnlineAssetStorage } from "./onlineAssetStorage";
 import { asTokenSource, type TokenSource } from "./tokenSource";
+
+/** The idle time in whole seconds, for the message. */
+const HOLD_IDLE_SECONDS = Math.round(HOLD_IDLE_MS / 1000);
 
 /**
  * Goes online with the project: whichever scene is open is shared through its own document, and the sharing moves
@@ -47,6 +51,7 @@ export function startCollab(options: {
   let stopHistoryWatch: (() => void) | null = null;
   let locks: ReturnType<typeof createEditLocks> | null = null;
   let presence: ReturnType<typeof createPresence> | null = null;
+  let holds: ReturnType<typeof createObjectHolds> | null = null;
   let stopEditingWatch: (() => void) | null = null;
 
   /** What this person is doing to an object right now, for the others to see. */
@@ -63,6 +68,8 @@ export function startCollab(options: {
   const releaseLocks = () => {
     stopEditingWatch?.();
     stopEditingWatch = null;
+    holds?.destroy();
+    holds = null;
     locks?.destroy();
     locks = null;
     setCursorSender(null);
@@ -93,11 +100,68 @@ export function startCollab(options: {
     const sharing = presence;
     sharing.setSelection(useSceneStore.getState().selectedIds);
     setCursorSender((position) => sharing.setCursor(position));
+    // Selection locks: selecting an object holds it for everyone else (objectHolds.ts)
+    const keeper = createObjectHolds({
+      awareness,
+      getTree: () => useSceneStore.getState().scene.nodes,
+      getSelection: () => useSceneStore.getState().selectedIds,
+      setSelection: (ids) => useSceneStore.getState().setSelection(ids),
+      isReadOnly: () => useCollabStore.getState().readOnly,
+      onState: ({ holds: held, blocked }) =>
+        useCollabStore.getState().setHolds(held, blocked),
+      onLost: (ids, holder: Holder) => {
+        const name =
+          useSceneStore.getState().scene.nodes[ids[0]!]?.name ?? "that object";
+        useImportStore.getState().setMessage({
+          tone: "info",
+          text: `${holder.name} selected "${name}" at the same moment, so you were taken off it.`,
+        });
+      },
+      onIdle: (ids) => {
+        const name =
+          useSceneStore.getState().scene.nodes[ids[0]!]?.name ?? "the object";
+        useImportStore.getState().setMessage({
+          tone: "info",
+          text: `You were not active for ${HOLD_IDLE_SECONDS} seconds, so "${name}" was let go for others. Click it to take it again.`,
+        });
+      },
+    });
+    holds = keeper;
+    // Any key or mouse button counts as activity (orbiting the camera or typing a value keeps the hold)
+    let lastActivity = 0;
+    const active = (event: Event) => {
+      if (event.type === "pointermove" && (event as PointerEvent).buttons === 0)
+        return;
+      const now = Date.now();
+      if (now - lastActivity < 500) return;
+      lastActivity = now;
+      keeper.activity();
+    };
+    const activityEvents = [
+      "pointerdown",
+      "pointermove",
+      "keydown",
+      "wheel",
+    ] as const;
+    activityEvents.forEach((name) =>
+      window.addEventListener(name, active, { passive: true }),
+    );
     const stopWatching = [
+      () =>
+        activityEvents.forEach((name) =>
+          window.removeEventListener(name, active),
+        ),
       useSceneStore.subscribe((state, previous) => {
         if (state.selectedIds !== previous.selectedIds) {
           sharing.setSelection(state.selectedIds);
+          keeper.selectionChanged();
         }
+        if (state.scene.nodes !== previous.scene.nodes) keeper.treeChanged();
+      }),
+      useCollabStore.subscribe((state, previous) => {
+        if (state.status !== previous.status)
+          keeper.setConnected(state.status === "online");
+        if (state.readOnly !== previous.readOnly) keeper.selectionChanged();
       }),
       useCollabStore.subscribe((state, previous) => {
         if (state.myName !== previous.myName) {

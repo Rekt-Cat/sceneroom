@@ -157,6 +157,12 @@ test("a viewer sees the scene, and nothing a viewer does reaches the others", as
   expect(Object.keys(await summary(alice))).not.toContain("Cone");
 });
 
+/** Lets go of the selection (Escape, then a click on empty space): the object is free for the other person again. */
+async function letGo(page: Page): Promise<void> {
+  await page.keyboard.press("Escape");
+  await page.mouse.click(1000, 600);
+}
+
 /** A cube turned into an editable mesh with a UV map (so it has a stored file): Edit points, Unwrap, Done. */
 async function makeUnwrappedCube(page: Page, shape = "Cube"): Promise<void> {
   await addShape(page, shape);
@@ -178,6 +184,8 @@ test("an edited mesh travels with the scene: the other window downloads its file
   await makeUnwrappedCube(alice);
   const aliceFacts = await meshFacts(alice);
   expect(aliceFacts.hasUvs).toBe(true);
+  // (the mesh stays Alice's while she has it selected, so she lets go before Bob picks it)
+  await letGo(alice);
 
   await bob.goto(sharedAddress(projectId, "editor", sceneId));
   await waitOnline(bob);
@@ -200,6 +208,7 @@ test("an edited mesh travels with the scene: the other window downloads its file
   // ... and one made while Bob is already there arrives the same way
   await makeUnwrappedCube(alice, "Cone");
   const coneFacts = await meshFacts(alice);
+  await letGo(alice);
   await expect
     .poll(async () => Object.keys(await summary(bob)))
     .toContain("Cone");
@@ -273,17 +282,18 @@ test("one editor per object: while one person edits a mesh, the other is told an
   // Bob sees who holds it
   await expect(bob.getByTestId("edit-lock")).toBeVisible();
 
-  // Bob selects the cube and tries: he is told, and does not get in
+  // Bob tries to select the cube: with selection locks it is Alice's while she has it selected, so he is told and gets nothing
   await bob.getByRole("button", { name: "Cube", exact: true }).first().click();
-  await bob.getByRole("button", { name: /Edit points/ }).click();
-  await expect(bob.getByText(/is editing the points of "Cube"/)).toBeVisible();
-  await expect(
-    bob.getByRole("button", { name: "Done", exact: true }),
-  ).toHaveCount(0);
+  await expect(bob.getByText(/is working on "Cube"/)).toBeVisible();
+  await expect(bob.getByRole("button", { name: /Edit points/ })).toHaveCount(0);
 
-  // Alice leaves; the lock goes and Bob can edit
+  // Alice leaves Edit points and lets go of the cube (a click on empty space); the lock goes and Bob can edit
   await alice.getByRole("button", { name: "Done", exact: true }).click();
+  await alice.keyboard.press("Escape");
+  await alice.mouse.click(1000, 600);
   await expect(bob.getByTestId("edit-lock")).toHaveCount(0);
+  await expect(bob.getByTestId("held-by")).toHaveCount(0);
+  await bob.getByRole("button", { name: "Cube", exact: true }).first().click();
   await bob.getByRole("button", { name: /Edit points/ }).click();
   await expect(
     bob.getByRole("button", { name: "Done", exact: true }),
@@ -482,4 +492,72 @@ test("Share: only the person who started sharing can make links, and cancelling 
   await expect
     .poll(async () => Object.keys(await summary(carol)))
     .toEqual(["Cube"]);
+});
+
+test("selecting an object holds it: others see who has it and cannot select it, until it is let go", async ({
+  browser,
+}) => {
+  const alice = await person(browser);
+  const bob = await person(browser);
+  const { projectId, sceneId } = await startShared(alice);
+  await addShape(alice, "Cube"); // she has it selected after adding it
+  await bob.goto(sharedAddress(projectId, "editor", sceneId));
+  await waitOnline(bob);
+  await expect
+    .poll(async () => Object.keys(await summary(bob)))
+    .toEqual(["Cube"]);
+
+  // Bob sees the cube highlighted with the name of the person who has it, in the 3D view and in the list
+  await expect(bob.getByTestId("held-label")).toContainText(
+    "is working on this",
+  );
+  await expect(bob.getByTestId("held-by")).toHaveCount(1);
+  await bob.screenshot({ path: "test-results/locks-bob.png" });
+
+  // Bob cannot select it: he is told who has it, and gets no tools for it
+  await bob.getByRole("button", { name: "Cube", exact: true }).first().click();
+  await expect(bob.getByText(/is working on "Cube"/)).toBeVisible();
+  await expect(bob.getByRole("button", { name: /Edit points/ })).toHaveCount(0);
+
+  // Bob adds a sphere: it is his now, and Alice cannot take it
+  await addShape(bob, "Sphere");
+  await expect(alice.getByTestId("held-by")).toHaveCount(1);
+  await alice
+    .getByRole("button", { name: "Sphere", exact: true })
+    .first()
+    .click();
+  await expect(alice.getByText(/is working on "Sphere"/)).toBeVisible();
+
+  // Alice lets go of the cube (a click on empty space): it is free for Bob
+  await alice.keyboard.press("Escape");
+  await alice.mouse.click(1000, 600);
+  await expect(bob.getByTestId("held-label")).toHaveCount(0);
+  await bob.getByRole("button", { name: "Cube", exact: true }).first().click();
+  await expect(bob.getByRole("button", { name: /Edit points/ })).toBeVisible();
+  // ... and now it is Bob's: Alice sees the other holds change
+  await expect(alice.getByTestId("held-by")).toHaveCount(1);
+});
+
+test("a hold ends after 30 seconds without activity, and the holder is told", async ({
+  browser,
+}) => {
+  test.setTimeout(120_000);
+  const alice = await person(browser);
+  const bob = await person(browser);
+  const { projectId, sceneId } = await startShared(alice);
+  await addShape(alice, "Cube");
+  await bob.goto(sharedAddress(projectId, "editor", sceneId));
+  await waitOnline(bob);
+  await expect(bob.getByTestId("held-by")).toHaveCount(1);
+
+  // Alice does nothing: after 30 seconds the cube is let go, for Bob and in her own editor
+  await expect(bob.getByTestId("held-by")).toHaveCount(0, { timeout: 50_000 });
+  await expect(alice.getByText(/was let go for others/)).toBeVisible();
+  await expect(alice.getByRole("button", { name: /Edit points/ })).toHaveCount(
+    0,
+  );
+
+  // Bob can take it now
+  await bob.getByRole("button", { name: "Cube", exact: true }).first().click();
+  await expect(bob.getByRole("button", { name: /Edit points/ })).toBeVisible();
 });

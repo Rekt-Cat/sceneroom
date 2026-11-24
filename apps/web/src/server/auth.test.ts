@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { createDb } from "@sceneroom/db";
+import { createDb, shouldRunDatabaseTests } from "@sceneroom/db";
 import { createAuth } from "./auth";
 import { readAccountsEnv } from "./accountsEnv";
 
@@ -15,9 +15,12 @@ const env = readAccountsEnv({
 if (!env.ok) throw new Error(env.problems.join(", "));
 const db = createDb(env.env.DATABASE_URL);
 const auth = createAuth(env.env, db);
-afterAll(() => db.$disconnect());
+const dbTests = await shouldRunDatabaseTests(env.env.DATABASE_URL);
+const describeDb = dbTests ? describe : describe.skip;
 
-describe("sign-in wiring", () => {
+if (dbTests) afterAll(() => db.$disconnect());
+
+describeDb("sign-in wiring", () => {
   it("nobody is signed in without a cookie", async () => {
     const response = await auth.handler(
       new Request("http://localhost:3000/api/auth/get-session"),

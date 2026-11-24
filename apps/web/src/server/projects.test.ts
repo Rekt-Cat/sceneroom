@@ -1,5 +1,9 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { createDb } from "@sceneroom/db";
+import {
+  DEFAULT_DATABASE_URL,
+  createDb,
+  shouldRunDatabaseTests,
+} from "@sceneroom/db";
 import {
   changeMemberRole,
   createProject,
@@ -59,14 +63,21 @@ async function setup() {
   }
 }
 
-beforeEach(async () => {
-  await clean();
-  await setup();
-});
-afterAll(async () => {
-  await clean();
-  await db.$disconnect();
-});
+const dbTests = await shouldRunDatabaseTests(
+  process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL,
+);
+const describeDb = dbTests ? describe : describe.skip;
+
+if (dbTests)
+  beforeEach(async () => {
+    await clean();
+    await setup();
+  });
+if (dbTests)
+  afterAll(async () => {
+    await clean();
+    await db.$disconnect();
+  });
 
 const memberRole = async (person: Person) =>
   (
@@ -75,7 +86,7 @@ const memberRole = async (person: Person) =>
     })
   )?.role;
 
-describe("createProject", () => {
+describeDb("createProject", () => {
   it("makes the actor the owner and a member", async () => {
     const mine = await listMyProjects(db, who("owner"));
     expect(mine).toMatchObject([{ id: P, name: "Shared", role: "owner" }]);
@@ -114,7 +125,7 @@ describe("createProject", () => {
   });
 });
 
-describe("who can see a project", () => {
+describeDb("who can see a project", () => {
   it("every member sees it with their own role; a stranger gets 'no such project'", async () => {
     for (const role of ["owner", "editor", "commenter", "viewer"] as const) {
       expect(await getProject(db, who(role), P)).toMatchObject({
@@ -155,7 +166,7 @@ describe("who can see a project", () => {
   });
 });
 
-describe("changing a role", () => {
+describeDb("changing a role", () => {
   const cases: [Person, number | "ok"][] = [
     ["owner", "ok"],
     ["editor", 403],
@@ -190,7 +201,7 @@ describe("changing a role", () => {
   });
 });
 
-describe("removing a member", () => {
+describeDb("removing a member", () => {
   it("the owner can remove anyone else", async () => {
     expect(
       await removeMember(db, who("owner"), P, uid("editor")),
@@ -226,7 +237,7 @@ describe("removing a member", () => {
   });
 });
 
-describe("deleting a project", () => {
+describeDb("deleting a project", () => {
   const cases: [Person, number | "ok"][] = [
     ["editor", 403],
     ["commenter", 403],

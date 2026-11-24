@@ -16,7 +16,8 @@ import {
 } from "three";
 import { sendCursor } from "@/collab/activePresence";
 import { useCollabStore } from "@/collab/collabStore";
-import type { Cursor, Person } from "@/collab/presence";
+import type { Holder } from "@/collab/objectHolds";
+import type { Cursor } from "@/collab/presence";
 import { getMesh, getRegisteredObjects } from "./meshRegistry";
 
 /** The pointer is sent to the others at most this often (ms). */
@@ -26,47 +27,117 @@ const GROUND_REACH = 200;
 /** How fast a shown pointer glides to its new place (the share of the way covered each frame, at 60 fps). */
 const CURSOR_GLIDE = 0.35;
 
-/** A box in a person's colour round something they have selected. */
-function RemoteSelectionBox({
-  nodeId,
-  color,
-}: {
-  nodeId: string;
-  color: string;
-}) {
+/**
+ * An object someone else holds (they have it selected): a box in their colour, a faint tint over it, and their name over it
+ * (selection locks, collab/objectHolds.ts). Everything follows the object every frame, so it stays right while it moves.
+ */
+function HeldObject({ nodeId, holder }: { nodeId: string; holder: Holder }) {
   const helper = useRef<Box3Helper>(null);
+  const tint = useRef<Mesh>(null);
+  const label = useRef<HTMLDivElement | null>(null);
+  const gl = useThree((state) => state.gl);
+  // The name label over the object: a plain DOM element in the canvas's parent, moved to the object's top every frame by
+  // projecting that point to the screen. (drei's `Html` makes a React root of its own for each label, and unmounting it while
+  // the scene is updating makes React complain; a plain element has nothing of the kind.)
+  useEffect(() => {
+    const parent = gl.domElement.parentElement;
+    if (!parent) return;
+    const element = document.createElement("div");
+    element.dataset["testid"] = "held-label";
+    element.textContent = `${holder.name} is working on this`;
+    Object.assign(element.style, {
+      position: "absolute",
+      left: "0",
+      top: "0",
+      display: "none",
+      pointerEvents: "none",
+      whiteSpace: "nowrap",
+      borderRadius: "4px",
+      padding: "2px 6px",
+      font: "500 11px system-ui, sans-serif",
+      color: "#13202a",
+      backgroundColor: holder.color,
+      willChange: "transform",
+    });
+    parent.appendChild(element);
+    label.current = element;
+    return () => {
+      label.current = null;
+      element.remove();
+    };
+  }, [gl, holder.name, holder.color]);
+  const camera = useThree((state) => state.camera);
+  const canvasSize = useThree((state) => state.size);
   const args = useMemo(
-    () => [new Box3(), new Color(color)] as [Box3, Color],
-    [color],
+    () => [new Box3(), new Color(holder.color)] as [Box3, Color],
+    [holder.color],
   );
+  const size = useMemo(() => new Vector3(), []);
+  const center = useMemo(() => new Vector3(), []);
+  const top = useMemo(() => new Vector3(), []);
   useFrame(() => {
     const current = helper.current;
-    if (!current) return;
+    const shade = tint.current;
+    if (!current || !shade) return;
     const object = getMesh(nodeId);
+    const element = label.current;
     if (!object) {
-      current.visible = false;
+      current.visible = shade.visible = false;
+      if (element) element.style.display = "none";
       return;
     }
     current.box.setFromObject(object);
-    current.visible = !current.box.isEmpty();
+    const shown = !current.box.isEmpty();
+    current.visible = shade.visible = shown;
+    if (!shown) {
+      if (element) element.style.display = "none";
+      return;
+    }
+    current.box.getSize(size);
+    current.box.getCenter(center);
+    shade.position.copy(center);
+    shade.scale.copy(size);
+    if (element) {
+      top.set(center.x, current.box.max.y, center.z).project(camera);
+      // Behind the camera, or far outside the view: nothing to show
+      const onScreen =
+        top.z < 1 && Math.abs(top.x) < 1.2 && Math.abs(top.y) < 1.2;
+      element.style.display = onScreen ? "block" : "none";
+      if (onScreen) {
+        const x = (top.x * 0.5 + 0.5) * canvasSize.width;
+        const y = (-top.y * 0.5 + 0.5) * canvasSize.height;
+        element.style.transform = `translate(${x}px, ${y}px) translate(-50%, -130%)`;
+      }
+    }
   });
-  return <box3Helper ref={helper} args={args} raycast={() => null} />;
-}
-
-/** What other people have selected, drawn as boxes in their colours (yours stays the amber outline). */
-function RemoteSelections() {
-  const people = useCollabStore((state) => state.people);
   return (
     <>
-      {people.flatMap((person: Person) =>
-        person.selection.map((id) => (
-          <RemoteSelectionBox
-            key={`${person.clientId}:${id}`}
-            nodeId={id}
-            color={person.color}
-          />
-        )),
-      )}
+      <box3Helper ref={helper} args={args} raycast={() => null} />
+      <mesh ref={tint} raycast={() => null} renderOrder={998}>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshBasicMaterial
+          color={holder.color}
+          transparent
+          opacity={0.14}
+          depthWrite={false}
+        />
+      </mesh>
+    </>
+  );
+}
+
+/** The objects other people hold, drawn in their colours with their names. */
+function HeldObjects() {
+  const holds = useCollabStore((state) => state.holds);
+  return (
+    <>
+      {Object.entries(holds).map(([id, holder]) => (
+        <HeldObject
+          key={`${holder.clientId}:${id}`}
+          nodeId={id}
+          holder={holder}
+        />
+      ))}
     </>
   );
 }
@@ -177,7 +248,7 @@ export default function PresenceLayer() {
   if (!active) return null;
   return (
     <>
-      <RemoteSelections />
+      <HeldObjects />
       <RemoteCursors />
       <CursorBroadcaster />
     </>

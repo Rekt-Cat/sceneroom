@@ -1,5 +1,9 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { createDb } from "@sceneroom/db";
+import {
+  DEFAULT_DATABASE_URL,
+  createDb,
+  shouldRunDatabaseTests,
+} from "@sceneroom/db";
 import { verifyLinkToken } from "@sceneroom/link-token";
 import { issueCollabToken } from "./collabToken";
 import { COLLAB_TOKEN_TTL_SECONDS } from "./limits";
@@ -21,26 +25,33 @@ async function clean() {
   await db.user.deleteMany({ where: { id: { in: IDS } } });
 }
 
-beforeEach(async () => {
-  await clean();
-  for (const id of IDS) {
-    await db.user.create({
-      data: { id, name: id, email: `${id}@example.test` },
-    });
-  }
-  await createProject(db, { id: "ct-owner" }, { id: P, name: "T" });
-  for (const role of ["editor", "commenter", "viewer"] as const) {
-    await db.projectMember.create({
-      data: { projectId: P, userId: `ct-${role}`, role },
-    });
-  }
-});
-afterAll(async () => {
-  await clean();
-  await db.$disconnect();
-});
+const dbTests = await shouldRunDatabaseTests(
+  process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL,
+);
+const describeDb = dbTests ? describe : describe.skip;
 
-describe("issueCollabToken", () => {
+if (dbTests)
+  beforeEach(async () => {
+    await clean();
+    for (const id of IDS) {
+      await db.user.create({
+        data: { id, name: id, email: `${id}@example.test` },
+      });
+    }
+    await createProject(db, { id: "ct-owner" }, { id: P, name: "T" });
+    for (const role of ["editor", "commenter", "viewer"] as const) {
+      await db.projectMember.create({
+        data: { projectId: P, userId: `ct-${role}`, role },
+      });
+    }
+  });
+if (dbTests)
+  afterAll(async () => {
+    await clean();
+    await db.$disconnect();
+  });
+
+describeDb("issueCollabToken", () => {
   const expected = {
     owner: "editor",
     editor: "editor",

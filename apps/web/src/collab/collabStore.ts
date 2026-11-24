@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { EditLock } from "./editLocks";
+import type { Holder } from "./objectHolds";
 import { saveName } from "./identity";
 import { cleanName, type Cursor, type Person } from "./presence";
 
@@ -19,6 +20,14 @@ type CollabState = {
   detail: string;
   /** Objects that someone else is editing, painting or baking right now, by object id (see editLocks.ts). */
   locks: Record<string, EditLock>;
+  /** Objects someone else holds because they have them selected (selection locks, see objectHolds.ts), by object id. */
+  holds: Record<string, Holder>;
+  /** Everything out of bounds because of those holds: the held objects, what is inside them and what contains them. */
+  blocked: Record<string, Holder>;
+  setHolds: (
+    holds: Record<string, Holder>,
+    blocked: Record<string, Holder>,
+  ) => void;
   /** True when the server let this connection in as a viewer: changes are not accepted and are put back. */
   readOnly: boolean;
   setReadOnly: (readOnly: boolean) => void;
@@ -48,6 +57,9 @@ export const useCollabStore = create<CollabState>()((set) => ({
   active: false,
   detail: "",
   locks: {},
+  holds: {},
+  blocked: {},
+  setHolds: (holds, blocked) => set({ holds, blocked }),
   readOnly: false,
   setReadOnly: (readOnly) => set({ readOnly }),
   people: [],
@@ -71,6 +83,8 @@ export const useCollabStore = create<CollabState>()((set) => ({
             active: false,
             detail,
             locks: {},
+            holds: {},
+            blocked: {},
             people: [],
             cursors: [],
             me: null,

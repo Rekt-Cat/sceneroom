@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { createDb } from "@sceneroom/db";
+import { createDb, shouldRunDatabaseTests } from "@sceneroom/db";
 import { verifyLinkToken } from "@sceneroom/link-token";
 import type { CurrentUser } from "@/server/session";
 
@@ -58,20 +58,25 @@ async function clean() {
   await db.user.deleteMany({ where: { id: { in: [ME, FRIEND] } } });
 }
 
-beforeEach(async () => {
-  disconnected.length = 0;
-  await clean();
-  for (const id of [ME, FRIEND]) {
-    await db.user.create({
-      data: { id, name: id, email: `${id}@example.test` },
-    });
-  }
-  signedIn = user(ME);
-});
-afterAll(async () => {
-  await clean();
-  await db.$disconnect();
-});
+const dbTests = await shouldRunDatabaseTests(DATABASE_URL);
+const describeDb = dbTests ? describe : describe.skip;
+
+if (dbTests)
+  beforeEach(async () => {
+    disconnected.length = 0;
+    await clean();
+    for (const id of [ME, FRIEND]) {
+      await db.user.create({
+        data: { id, name: id, email: `${id}@example.test` },
+      });
+    }
+    signedIn = user(ME);
+  });
+if (dbTests)
+  afterAll(async () => {
+    await clean();
+    await db.$disconnect();
+  });
 
 const url = (path: string) => `http://localhost:3000/api/projects${path}`;
 function send(
@@ -95,7 +100,7 @@ const ctx = <T extends object>(params: T) => ({
   params: Promise.resolve(params),
 });
 
-describe("who may call", () => {
+describeDb("who may call", () => {
   it("answers 401 when nobody is signed in, on every route", async () => {
     signedIn = null;
     const answers = await Promise.all([
@@ -145,7 +150,7 @@ describe("who may call", () => {
   });
 });
 
-describe("what is accepted", () => {
+describeDb("what is accepted", () => {
   it("refuses bodies that are not JSON, not the right shape, or too big", async () => {
     expect((await projects.POST(send("POST", "", "{not json"))).status).toBe(
       400,
@@ -190,7 +195,7 @@ describe("what is accepted", () => {
   });
 });
 
-describe("the collab token route", () => {
+describeDb("the collab token route", () => {
   it("a member gets a token whose role follows their role; a stranger gets nothing", async () => {
     await projects.POST(send("POST", "", { id: P, name: "x" }));
     await db.projectMember.create({
@@ -237,7 +242,7 @@ describe("the collab token route", () => {
   });
 });
 
-describe("the whole journey through the routes", () => {
+describeDb("the whole journey through the routes", () => {
   it("create, list, look, change a role, remove, delete", async () => {
     const created = await projects.POST(
       send("POST", "", { id: P, name: "  My scene  " }),
@@ -296,7 +301,7 @@ describe("the whole journey through the routes", () => {
   });
 });
 
-describe("invitations through the routes", () => {
+describeDb("invitations through the routes", () => {
   const post = (
     path: string,
     body: unknown,
@@ -454,7 +459,7 @@ describe("invitations through the routes", () => {
   });
 });
 
-describe("cutting people off", () => {
+describeDb("cutting people off", () => {
   async function projectWithFriend(role: "viewer" | "editor" = "viewer") {
     await projects.POST(send("POST", "", { id: P, name: "x" }));
     await db.projectMember.create({

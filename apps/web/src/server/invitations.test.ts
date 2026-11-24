@@ -1,5 +1,9 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { createDb } from "@sceneroom/db";
+import {
+  DEFAULT_DATABASE_URL,
+  createDb,
+  shouldRunDatabaseTests,
+} from "@sceneroom/db";
 import {
   acceptInvitation,
   createInvitation,
@@ -46,32 +50,39 @@ async function clean() {
   await db.user.deleteMany({ where: { id: { in: mine } } });
 }
 
-beforeEach(async () => {
-  await clean();
-  for (const person of PEOPLE) {
-    await db.user.create({
-      data: {
-        id: uid(person),
-        name: person,
-        email: `${uid(person)}@example.test`,
-      },
+const dbTests = await shouldRunDatabaseTests(
+  process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL,
+);
+const describeDb = dbTests ? describe : describe.skip;
+
+if (dbTests)
+  beforeEach(async () => {
+    await clean();
+    for (const person of PEOPLE) {
+      await db.user.create({
+        data: {
+          id: uid(person),
+          name: person,
+          email: `${uid(person)}@example.test`,
+        },
+      });
+    }
+    await createProject(db, who("owner"), {
+      id: P,
+      name: "Shared",
+      entrySceneId: "scene-1",
     });
-  }
-  await createProject(db, who("owner"), {
-    id: P,
-    name: "Shared",
-    entrySceneId: "scene-1",
+    for (const role of ["editor", "commenter", "viewer"] as const) {
+      await db.projectMember.create({
+        data: { projectId: P, userId: uid(role), role },
+      });
+    }
   });
-  for (const role of ["editor", "commenter", "viewer"] as const) {
-    await db.projectMember.create({
-      data: { projectId: P, userId: uid(role), role },
-    });
-  }
-});
-afterAll(async () => {
-  await clean();
-  await db.$disconnect();
-});
+if (dbTests)
+  afterAll(async () => {
+    await clean();
+    await db.$disconnect();
+  });
 
 const invite = async (
   role: "editor" | "commenter" | "viewer" = "viewer",
@@ -89,7 +100,7 @@ const invite = async (
   return result.value;
 };
 
-describe("making an invitation", () => {
+describeDb("making an invitation", () => {
   it("only the owner may; everyone else is refused", async () => {
     for (const person of ["editor", "commenter", "viewer"] as const) {
       expect(
@@ -135,7 +146,7 @@ describe("making an invitation", () => {
   });
 });
 
-describe("listing and revoking", () => {
+describeDb("listing and revoking", () => {
   it("only the owner sees the list; it has statuses and never the secrets", async () => {
     const pending = await invite("viewer");
     const revoked = await invite("editor");
@@ -210,7 +221,7 @@ describe("listing and revoking", () => {
   });
 });
 
-describe("previewing a link", () => {
+describeDb("previewing a link", () => {
   it("shows the project name and role to whoever holds the secret", async () => {
     const made = await invite("commenter");
     expect(await previewInvitation(db, made.token)).toEqual({
@@ -244,7 +255,7 @@ describe("previewing a link", () => {
   });
 });
 
-describe("accepting", () => {
+describeDb("accepting", () => {
   it("makes the person a member with the invited role, once", async () => {
     const made = await invite("editor");
     const result = await acceptInvitation(db, who("newbie"), made.token);

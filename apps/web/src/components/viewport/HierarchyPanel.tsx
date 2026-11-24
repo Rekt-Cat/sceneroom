@@ -361,6 +361,9 @@ function HierarchyRow({
   const { node, depth, hasChildren, expanded } = row;
   // Online: someone else is editing, painting or baking this object right now
   const heldBy = useCollabStore((state) => state.locks[node.id]);
+  // ... someone has this object selected (selection lock), or something inside it or around it
+  const holder = useCollabStore((state) => state.holds[node.id]);
+  const blockedBy = useCollabStore((state) => state.blocked[node.id]);
   // ... and who has selected it (a small circle in their colour)
   const people = useCollabStore((state) => state.people);
   const selectedBy = people.filter((person) =>
@@ -447,7 +450,7 @@ function HierarchyRow({
           <span
             className={`min-w-0 flex-1 truncate ${
               node.visible ? "" : "text-ed-text-3 italic"
-            }`}
+            } ${blockedBy ? "opacity-60" : ""}`}
           >
             {node.name}
           </span>
@@ -464,6 +467,31 @@ function HierarchyRow({
             className="size-2 shrink-0 rounded-full"
           />
         ))}
+
+        {holder ? (
+          <span
+            role="img"
+            aria-label={`${holder.name} is working on ${node.name}`}
+            title={`${holder.name} is working on this object right now`}
+            data-testid="held-by"
+            style={{ backgroundColor: holder.color }}
+            className="shrink-0 truncate rounded-full px-1.5 text-[10px] font-medium text-[#13202a]"
+          >
+            {holder.name}
+          </span>
+        ) : (
+          blockedBy && (
+            <span
+              role="img"
+              aria-label={`Locked because ${blockedBy.name} is working on something inside it or around it`}
+              title={`Locked because ${blockedBy.name} is working on something inside it or around it`}
+              data-testid="blocked-by"
+              className="grid size-[26px] shrink-0 place-items-center text-ed-text-3"
+            >
+              <Icon name="lock" />
+            </span>
+          )
+        )}
 
         {heldBy && (
           <span

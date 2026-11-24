@@ -5,6 +5,7 @@ import { Pool } from "pg";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { OwnerStore } from "./ownerStore";
 import { PostgresDocumentStore } from "./postgresStore";
+import { shouldRunDatabaseTests } from "./testDatabase";
 import { MemoryStore, SqliteStore, type DocumentStore } from "./store";
 
 /** `name` is where the documents of this run live: the Postgres test needs names of its own (the database is shared). */
@@ -96,7 +97,10 @@ const DATABASE_URL =
   "postgresql://sceneroom:sceneroom@127.0.0.1:5432/sceneroom";
 const PG_PREFIX = "pgstore-test";
 
-describe("PostgresDocumentStore", () => {
+const dbTests = await shouldRunDatabaseTests(DATABASE_URL);
+const describeDb = dbTests ? describe : describe.skip;
+
+describeDb("PostgresDocumentStore", () => {
   const cleanup = async () => {
     const pool = new Pool({ connectionString: DATABASE_URL });
     await pool.query("DELETE FROM collab_document WHERE name LIKE $1", [

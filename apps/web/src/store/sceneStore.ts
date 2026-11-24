@@ -1,5 +1,10 @@
 import { create } from "zustand";
 import { redoOnline, undoOnline } from "@/collab/collabHistory";
+import {
+  isBlockedByOthers,
+  selectableIds,
+  tellBlocked,
+} from "@/collab/blockedByOthers";
 import { useCollabStore } from "@/collab/collabStore";
 import {
   IDENTITY_TRANSFORM,
@@ -29,9 +34,9 @@ import {
   duplicateModifier,
   duplicateNodes,
   environmentChangeDiffers,
-  editableIds,
+  editableIds as sceneEditableIds,
   fitScale,
-  isEffectivelyLocked,
+  isEffectivelyLocked as sceneIsEffectivelyLocked,
   lightChangeDiffers,
   modifierChangeDiffers,
   moveModifier,
@@ -102,6 +107,21 @@ import {
   type Transform,
   type TransformMode,
 } from "@sceneroom/shared";
+
+/**
+ * An object is out of bounds for editing when its owner locked it (the padlock, also through a parent) or when someone else
+ * online holds it by having it selected (collab/objectHolds.ts). Every action asks these two, so a held object is refused
+ * like a locked one.
+ */
+const isEffectivelyLocked = (scene: Scene, id: string): boolean =>
+  sceneIsEffectivelyLocked(scene, id) || isBlockedByOthers(id);
+
+const editableIds = (scene: Scene, ids: readonly string[]): string[] =>
+  sceneEditableIds(scene, ids).filter((id) => !isBlockedByOthers(id));
+
+/** A selection without the objects someone else holds (and a message saying who has the first of them). */
+const selectable = (scene: Scene, ids: string[]): string[] =>
+  selectableIds(ids, (id) => scene.nodes[id]?.name ?? id);
 
 /** How far (in world units) a duplicate is placed from the original: x, y, z. */
 const DUPLICATE_OFFSET: [number, number, number] = [1, 0, 0];
@@ -392,17 +412,22 @@ export const useSceneStore = create<SceneState>()((set) => ({
   pendingEdit: null,
   select: (id) =>
     set((state) => ({
-      selectedIds: id === null ? [] : resolveSelection(state.scene, [id]),
+      selectedIds:
+        id === null
+          ? []
+          : selectable(state.scene, resolveSelection(state.scene, [id])),
     })),
   toggleSelect: (id) =>
     set((state) => ({
-      selectedIds: resolveSelection(
+      selectedIds: selectable(
         state.scene,
-        toggleInSelection(state.selectedIds, id),
+        resolveSelection(state.scene, toggleInSelection(state.selectedIds, id)),
       ),
     })),
   setSelection: (ids) =>
-    set((state) => ({ selectedIds: resolveSelection(state.scene, ids) })),
+    set((state) => ({
+      selectedIds: selectable(state.scene, resolveSelection(state.scene, ids)),
+    })),
   setTransformMode: (mode) => set({ transformMode: mode }),
   toggleSnap: () => set((state) => ({ snapEnabled: !state.snapEnabled })),
   setSnapKeyHeld: (held) => set({ snapKeyHeld: held }),
@@ -966,6 +991,15 @@ export const useSceneStore = create<SceneState>()((set) => ({
     }),
   reparentNodes: (moves, label) =>
     set((state) => {
+      // Moving an object, or putting one inside another, changes both: neither may be held by someone else
+      const touched = moves.flatMap((move) =>
+        move.parentId === null ? [move.id] : [move.id, move.parentId],
+      );
+      const refused = touched.find((id) => isBlockedByOthers(id));
+      if (refused !== undefined) {
+        tellBlocked(refused, state.scene.nodes[refused]?.name ?? refused);
+        return state;
+      }
       const scene = reparentNodes(state.scene, moves);
       // Moves that change nothing leave every object as it was (the same object), so they record no undo step
       const changed = Object.keys(scene.nodes).some(
@@ -1034,10 +1068,15 @@ export const useSceneStore = create<SceneState>()((set) => ({
     }),
   setNodesVisible: (ids, visible) =>
     set((state) => {
-      const changing = ids.filter(
+      const wanted = ids.filter(
         (id) =>
           state.scene.nodes[id] && state.scene.nodes[id].visible !== visible,
       );
+      const changing = wanted.filter((id) => !isBlockedByOthers(id));
+      if (changing.length < wanted.length) {
+        const refused = wanted.find((id) => isBlockedByOthers(id))!;
+        tellBlocked(refused, state.scene.nodes[refused]!.name);
+      }
       if (changing.length === 0) return state;
       const scene = changing.reduce(
         (next, id) => updateNode(next, id, { visible }),
@@ -1047,10 +1086,15 @@ export const useSceneStore = create<SceneState>()((set) => ({
     }),
   setNodesLocked: (ids, locked) =>
     set((state) => {
-      const changing = ids.filter(
+      const wanted = ids.filter(
         (id) =>
           state.scene.nodes[id] && state.scene.nodes[id].locked !== locked,
       );
+      const changing = wanted.filter((id) => !isBlockedByOthers(id));
+      if (changing.length < wanted.length) {
+        const refused = wanted.find((id) => isBlockedByOthers(id))!;
+        tellBlocked(refused, state.scene.nodes[refused]!.name);
+      }
       if (changing.length === 0) return state;
       const scene = changing.reduce(
         (next, id) => updateNode(next, id, { locked }),
@@ -1062,6 +1106,10 @@ export const useSceneStore = create<SceneState>()((set) => ({
     set((state) => {
       const node = state.scene.nodes[id];
       if (!node || node.visible === visible) return state;
+      if (isBlockedByOthers(id)) {
+        tellBlocked(id, node.name);
+        return state;
+      }
       return {
         scene: updateNode(state.scene, id, { visible }),
         history: record(state, visible ? "Show" : "Hide"),

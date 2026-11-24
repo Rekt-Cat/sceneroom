@@ -1,5 +1,13 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { collabAccess, createDb, permissionsOf, Prisma, Role } from "./index";
+import {
+  collabAccess,
+  createDb,
+  DEFAULT_DATABASE_URL,
+  permissionsOf,
+  Prisma,
+  Role,
+  shouldRunDatabaseTests,
+} from "./index";
 
 // These tests use the real Postgres of docker-compose.yml (docker compose up -d). They clean the tables first, so run
 // them against the development database only.
@@ -37,11 +45,17 @@ async function twoUsersAndAProject() {
   return { alice, bob, project };
 }
 
-beforeEach(clean);
-afterAll(async () => {
-  await clean();
-  await db.$disconnect();
-});
+const dbTests = await shouldRunDatabaseTests(
+  process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL,
+);
+const describeDb = dbTests ? describe : describe.skip;
+
+if (dbTests) beforeEach(clean);
+if (dbTests)
+  afterAll(async () => {
+    await clean();
+    await db.$disconnect();
+  });
 
 describe("roles", () => {
   it("only owner and editor may edit; only the owner invites and deletes", () => {
@@ -67,7 +81,7 @@ describe("roles", () => {
   });
 });
 
-describe("database rules", () => {
+describeDb("database rules", () => {
   it("a person is a member of a project only once", async () => {
     const { bob, project } = await twoUsersAndAProject();
     await db.projectMember.create({
