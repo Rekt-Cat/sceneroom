@@ -1723,8 +1723,10 @@
                 >apps/collab-server/data/collab.sqlite</code
               >
               by default), opened with Node's built-in <code>node:sqlite</code>,
-              so there is nothing to install. Step M8f may move documents to
-              Postgres.
+              so there is nothing to install. When <code>DATABASE_URL</code> is
+              set on the collab server the documents go to Postgres instead
+              (table <code>collab_document</code>, step M8f) and this file only
+              holds the owners of share links.
             </dd>
           </div>
           <div>
@@ -1801,7 +1803,9 @@
               <code>account</code>, <code>verification</code> (Better Auth);
               <code>project</code>, <code>project_member</code> (role
               owner/editor/commenter/viewer), <code>invitation</code> (only a
-              hash of its token). Docker Desktop must be open for it to run.
+              hash of its token), and <code>collab_document</code> (the shared
+              scene documents, when the collab server is set to use Postgres).
+              Docker Desktop must be open for it to run.
             </dd>
           </div>
           <div>
@@ -1820,8 +1824,9 @@
           <div>
             <dt>Talks to</dt>
             <dd>
-              Only <strong>sign-in</strong> (8) and
-              <strong>account code</strong> (9) talk to it. Never the browser
+              <strong>Sign-in</strong> (8) and <strong>account code</strong> (9)
+              talk to it, and the collab server too, for the
+              <code>collab_document</code> table only. Never the browser
               directly.
             </dd>
           </div>
@@ -2144,8 +2149,10 @@
         </li>
       </ol>
       <p>
-        Not built yet: documents saved in Postgres instead of SQLite (M8f), rate
-        limits (M9).
+        Documents can also be kept in Postgres: with
+        <code>DATABASE_URL</code> set the collab server saves each scene's
+        document in the <code>collab_document</code> table and loads it from
+        there after a restart. Not built yet: rate limits (M9).
       </p>
     </section>
     <section class="panel" id="j10">
@@ -2505,14 +2512,13 @@
           Accounts: the database package and Postgres (M8a), sign-in with GitHub
           (M8b), projects and members API (M8c), signed collab tokens and online
           with your account (M8d), invitations, dashboard and live disconnect
-          (M8e)
+          (M8e), documents in Postgres (M8f)
         </li>
       </ul>
     </div>
     <div>
       <h2><span class="dot pending"></span>Planned</h2>
       <ul>
-        <li>M8f: documents in Postgres</li>
         <li>Selection locks (see COLLABORATION.md)</li>
         <li>
           M9: deployment (Vercel, WebSocket host, Neon, R2) and a two-browser

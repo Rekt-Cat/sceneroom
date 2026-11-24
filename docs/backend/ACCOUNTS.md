@@ -1,7 +1,7 @@
 # Accounts, members and the database (step M8 of the online part)
 
-Status: **designed 2026-11-23, not built yet.** Waiting for two things only the owner can do: install Docker Desktop and
-register a GitHub OAuth app (`docs/dev/SETUP-ACCOUNTS.md`). Context: `COLLABORATION.md` (sections 9 to 11). Diagram:
+Status: **designed 2026-11-23, built 2026-11-23 to 2026-11-24 (parts M8a to M8f).** The real GitHub round trip is
+checked by hand by the owner (a test cannot do it). Setup of Docker and the GitHub app: `docs/dev/SETUP-ACCOUNTS.md`. Context: `COLLABORATION.md` (sections 9 to 11). Diagram:
 `docs/diagrams/backend/accounts.svg`.
 
 ## 1. What this step adds, in plain words
@@ -107,7 +107,7 @@ that way. It is not mixed with accounts for the same project.
 | M8c  | Projects and members: create, list mine, members, roles, remove; all with Zod and permission checks | Route tests for every role against every action, including "not a member" and "not signed in".   |
 | M8d  | `packages/link-token`; the token route; the editor fetches tokens by function                       | Two-window browser test: sign-in is faked in tests; a viewer member gets a read-only connection. |
 | M8e  | Invitations and the dashboard; a removed member is disconnected (**built 2026-11-24**)              | Browser test: invite, accept, appear on the dashboard; remove, disconnected.                     |
-| M8f  | Documents saved in Postgres instead of SQLite                                                       | Documents survive a server restart against Postgres.                                             |
+| M8f  | Documents saved in Postgres instead of SQLite (**built 2026-11-24**)                                | Documents survive a server restart against Postgres.                                             |
 
 ## 8. Risks and open points, stated plainly
 

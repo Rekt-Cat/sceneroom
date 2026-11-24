@@ -194,9 +194,9 @@ describe("collab server", () => {
     await pause(150);
 
     expect(editor.doc.getMap("nodes").has("sneaky")).toBe(false);
-    await until(() => store.load(SCENE_DOC) !== null, "saved");
+    await until(() => store.documents.has(SCENE_DOC), "saved");
     const saved = new Y.Doc();
-    Y.applyUpdate(saved, store.load(SCENE_DOC)!);
+    Y.applyUpdate(saved, (await store.load(SCENE_DOC))!);
     expect(saved.getMap("nodes").has("real")).toBe(true);
     expect(saved.getMap("nodes").has("sneaky")).toBe(false);
   });
@@ -211,7 +211,7 @@ describe("collab server", () => {
     );
     const scene = addNode(createEmptyScene(), createNode("cube1", "cube"));
     writeSceneToDoc(alice.doc, scene);
-    await until(() => store.load(SCENE_DOC) !== null, "saved");
+    await until(() => store.documents.has(SCENE_DOC), "saved");
 
     alice.provider.destroy();
     await first.server.destroy();
@@ -254,7 +254,7 @@ describe("collab server", () => {
     await pause(150);
 
     expect(watcher.doc.getMap("assets").has("huge")).toBe(false);
-    expect(store.load(SCENE_DOC)).toBeNull();
+    expect(await store.load(SCENE_DOC)).toBeNull();
   });
 
   it("a document over the size limit is not saved, and the log says so", async () => {
@@ -265,7 +265,7 @@ describe("collab server", () => {
       () => lines.some((l) => l.startsWith("error NOT SAVED")),
       "error logged",
     );
-    expect(store.load(SCENE_DOC)).toBeNull();
+    expect(await store.load(SCENE_DOC)).toBeNull();
   });
 
   it("a saved scene with an invalid object is reported in the log", async () => {

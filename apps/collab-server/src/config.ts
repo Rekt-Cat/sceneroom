@@ -6,6 +6,14 @@ const envSchema = z.object({
   HOST: z.string().min(1).default("127.0.0.1"),
   /** Where the SQLite file lives. */
   DB_PATH: z.string().min(1).default("./data/collab.sqlite"),
+  /**
+   * The address of the Postgres database. When set, documents are kept there instead of in the SQLite file (run the
+   * migrations in packages/db first). Left out or empty = SQLite.
+   */
+  DATABASE_URL: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().url().optional(),
+  ),
   /** The secret that link tokens are signed with. At least 32 characters; never commit the real one. */
   COLLAB_SECRET: z.string().min(32),
   /** The biggest single message a client may send, in bytes. Bigger ones close the connection. */
@@ -30,6 +38,8 @@ export type CollabConfig = {
   port: number;
   host: string;
   dbPath: string;
+  /** Where documents go when it is set (Postgres); otherwise the SQLite file. */
+  databaseUrl: string | undefined;
   secret: string;
   maxMessageBytes: number;
   maxDocumentBytes: number;
@@ -53,6 +63,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): CollabConfig {
     port: e.PORT,
     host: e.HOST,
     dbPath: e.DB_PATH,
+    databaseUrl: e.DATABASE_URL,
     secret: e.COLLAB_SECRET,
     maxMessageBytes: e.MAX_MESSAGE_BYTES,
     maxDocumentBytes: e.MAX_DOCUMENT_BYTES,

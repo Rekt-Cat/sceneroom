@@ -101,7 +101,7 @@ export function createCollabServer(options: CollabServerOptions) {
     },
 
     async onLoadDocument({ document, documentName }) {
-      const saved = store.load(documentName);
+      const saved = await store.load(documentName);
       if (saved) Y.applyUpdate(document, saved);
     },
 
@@ -114,7 +114,7 @@ export function createCollabServer(options: CollabServerOptions) {
         );
         return;
       }
-      store.save(documentName, state);
+      await store.save(documentName, state);
       if (parseDocumentName(documentName)?.kind === "scene") {
         const { issues } = readSceneFromDoc(document);
         for (const issue of issues) {

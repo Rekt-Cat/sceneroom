@@ -135,3 +135,14 @@ model Invitation {
   @@index([projectId])
   @@map("invitation")
 }
+
+/// A shared scene document of the collab server (step M8f): one row per document, named "scene:<projectId>:<sceneId>".
+/// `state` is the whole Yjs document as bytes. The collab server reads and writes this table with plain SQL (`pg`); the
+/// table lives here so that the database has one place where its structure is written down and migrated.
+model CollabDocument {
+  name      String   @id
+  state     Bytes
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@map("collab_document")
+}

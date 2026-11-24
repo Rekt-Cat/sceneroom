@@ -4,14 +4,16 @@ import { DatabaseSync } from "node:sqlite";
 import { MemoryOwners, type OwnerStore } from "./ownerStore";
 
 /**
- * Where documents are kept between server runs. The server only knows this interface, so the SQLite file used
- * now can be replaced by Postgres (step M8) by writing one more class.
+ * Where documents are kept between server runs. The server only knows this interface, so the place can change: a SQLite
+ * file (this file), or Postgres (postgresStore.ts, step M8f). The calls return promises because a database over the
+ * network is not instant, even where the local ones happen to be.
  */
 export interface DocumentStore {
   /** The saved state of a document (a Yjs update), or null if it was never saved. */
-  load(name: string): Uint8Array | null;
-  save(name: string, state: Uint8Array): void;
-  close(): void;
+  load(name: string): Promise<Uint8Array | null>;
+  save(name: string, state: Uint8Array): Promise<void>;
+  /** Writes nothing more; lets the database connection go. */
+  close(): Promise<void>;
 }
 
 /** Keeps documents in memory only. For tests. */
@@ -20,13 +22,13 @@ export class MemoryStore
   implements DocumentStore, OwnerStore
 {
   readonly documents = new Map<string, Uint8Array>();
-  load(name: string): Uint8Array | null {
+  async load(name: string): Promise<Uint8Array | null> {
     return this.documents.get(name) ?? null;
   }
-  save(name: string, state: Uint8Array): void {
+  async save(name: string, state: Uint8Array): Promise<void> {
     this.documents.set(name, state);
   }
-  close(): void {}
+  async close(): Promise<void> {}
 }
 
 /**
@@ -49,20 +51,33 @@ export class SqliteStore implements DocumentStore, OwnerStore {
     );
   }
 
-  load(name: string): Uint8Array | null {
+  async load(name: string): Promise<Uint8Array | null> {
     const row = this.db
       .prepare("SELECT state FROM documents WHERE name = ?")
       .get(name);
     return row && row["state"] instanceof Uint8Array ? row["state"] : null;
   }
 
-  save(name: string, state: Uint8Array): void {
+  async save(name: string, state: Uint8Array): Promise<void> {
     this.db
       .prepare(
         "INSERT INTO documents (name, state, updated_at) VALUES (?, ?, ?) " +
           "ON CONFLICT(name) DO UPDATE SET state = excluded.state, updated_at = excluded.updated_at",
       )
       .run(name, state, Date.now());
+  }
+
+  /** Every saved document, for copying them to another store (migrateDocuments.ts). */
+  *entries(): Iterable<[name: string, state: Uint8Array]> {
+    const rows = this.db.prepare("SELECT name, state FROM documents").all();
+    for (const row of rows) {
+      if (
+        typeof row["name"] === "string" &&
+        row["state"] instanceof Uint8Array
+      ) {
+        yield [row["name"], row["state"]];
+      }
+    }
   }
 
   ownerHash(projectId: string): string | null {
@@ -97,7 +112,7 @@ export class SqliteStore implements DocumentStore, OwnerStore {
     return this.generation(projectId);
   }
 
-  close(): void {
+  async close(): Promise<void> {
     this.db.close();
   }
 }

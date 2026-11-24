@@ -3880,15 +3880,28 @@
               <tr>
                 <td>2</td>
                 <td><code>config.ts</code></td>
-                <td>environment variables checked at start</td>
+                <td>
+                  environment variables checked at start (DATABASE_URL optional:
+                  documents in Postgres)
+                </td>
               </tr>
               <tr>
                 <td>3</td>
                 <td><code>store.ts, fileStore.ts, ownerStore.ts</code></td>
-                <td>the stores behind interfaces</td>
+                <td>
+                  the stores behind interfaces; DocumentStore is asynchronous
+                </td>
               </tr>
               <tr>
                 <td>4</td>
+                <td><code>postgresStore.ts check()</code></td>
+                <td>
+                  when DATABASE_URL is set: stop with a clear message unless the
+                  collab_document table is reachable
+                </td>
+              </tr>
+              <tr>
+                <td>5</td>
                 <td><code>createServer.ts</code></td>
                 <td>
                   the Hocuspocus Server and the request chain: share -&gt; files
@@ -3977,11 +3990,20 @@
               <tr>
                 <td>
                   <code
-                    >MemoryStore, SqliteStore, MemoryFileStore,
-                    FolderFileStore</code
+                    >MemoryStore, SqliteStore, PostgresDocumentStore,
+                    MemoryFileStore, FolderFileStore</code
                   >
                 </td>
-                <td>the implementations</td>
+                <td>
+                  the implementations (documents: Postgres when DATABASE_URL is
+                  set, else SQLite)
+                </td>
+              </tr>
+              <tr>
+                <td><code>migrateDocuments.ts</code></td>
+                <td>
+                  one-off script: copies the SQLite documents into Postgres
+                </td>
               </tr>
               <tr>
                 <td><code>consoleLogger</code></td>
@@ -4605,7 +4627,7 @@
           data-card="s-help"
           tabindex="0"
           role="button"
-          aria-label="SqliteStore: show explanation"
+          aria-label="SqliteStore / Postgres: show explanation"
         >
           <rect
             class="box ok"
@@ -4615,12 +4637,12 @@
             height="58"
             rx="9"
           />
-          <text class="t-title" x="542.0" y="776">SqliteStore</text>
+          <text class="t-title" x="542.0" y="776">SqliteStore / Postgres</text>
           <text class="t-sub" x="542.0" y="793">
-            node:sqlite: documents + owners;
+            SqliteStore: documents + owners;
           </text>
           <text class="t-sub" x="542.0" y="806">
-            one file; M8f may use Postgres
+            PostgresDocumentStore: documents only
           </text>
         </g>
         <g

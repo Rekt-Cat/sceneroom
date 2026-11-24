@@ -21,6 +21,22 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # The tests of the accounts and of the collab server use a real Postgres (the same settings as docker-compose.yml, which
+    # is also the default address in packages/db/prisma.config.ts)
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: sceneroom
+          POSTGRES_PASSWORD: sceneroom
+          POSTGRES_DB: sceneroom
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sceneroom -d sceneroom"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v7
 
@@ -32,6 +48,9 @@ jobs:
       - run: corepack enable
 
       - run: pnpm install --frozen-lockfile
+
+      # Builds the tables (the migrations in packages/db) before the tests that use them
+      - run: pnpm --filter @sceneroom/db migrate:deploy
 
       - run: pnpm format:check
       - run: pnpm lint

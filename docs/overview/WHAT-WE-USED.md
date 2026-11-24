@@ -212,3 +212,14 @@ Why these and not the alternatives: `WHY-THESE-TOOLS.md`. Playwright is already 
 | Signed internal request | `signAdminRequest` / `verifyAdminRequest`: HMAC of the time and the exact body with `COLLAB_SECRET`, accepted within 60 seconds                                  | `packages/link-token/src/adminRequest.ts`                                      |
 | Disconnect route        | `POST /internal/disconnect` on the collab server (no CORS): closes one person's or a whole project's connections                                                 | `apps/collab-server/src/adminRoutes.ts`, `createServer.ts`                     |
 | Disconnect call         | The web app calls it after removing a member, changing a role or deleting a project; best effort, never throws                                                   | `apps/web/src/server/collabAdmin.ts`                                           |
+
+## Documents in Postgres (step M8f, built 2026-11-24)
+
+| Item                    | Purpose                                                                                                                                           | Where                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `PostgresDocumentStore` | The collab server keeps each scene's document in Postgres (one row, replaced on each save) instead of the SQLite file, when `DATABASE_URL` is set | `apps/collab-server/src/postgresStore.ts`                       |
+| `collab_document` table | `name`, `state` (bytes), `updatedAt`; made by a Prisma migration so the database has one place where its structure lives                          | `packages/db/prisma/schema.prisma`, migration `collab_document` |
+| `pg` (collab server)    | 8.23.1: plain SQL for that one table, so the collab server does not need the Prisma client                                                        | `apps/collab-server/package.json`                               |
+| Async `DocumentStore`   | The store contract returns promises, so the SQLite, memory and Postgres stores all fit it                                                         | `apps/collab-server/src/store.ts`                               |
+| `migrate-documents`     | Copies the SQLite documents into Postgres once (`--overwrite` to replace ones already there)                                                      | `apps/collab-server/src/migrateDocuments.ts`                    |
+| CI Postgres service     | The CI job starts a Postgres container and runs the migrations before the tests that need them                                                    | `.github/workflows/ci.yml`                                      |
