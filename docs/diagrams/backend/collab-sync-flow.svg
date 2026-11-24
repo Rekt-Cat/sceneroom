@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" width="960" height="600" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
   <title id="t">One edit travelling from Alice to Bob</title>
-  <desc id="d">Alice drags a slider. A store action makes a new scene. The sync layer compares it with the old scene and writes only the difference into the Yjs document in one transaction marked as hers; the UndoManager records it. The provider sends it to the collab server, which checks her role and the size and forwards it. Bob's Yjs document fires an event, his sync layer rebuilds the changed objects, checks them with Zod and puts them in his store without an Undo step, and his 3D view redraws. Alice's Undo reverts only her own change. Selections and the one editor per object lock travel by awareness.</desc>
+  <desc id="d">Alice drags a slider. A store action makes a new scene. The sync layer compares it with the old scene and writes only the difference into the Yjs document in one transaction marked as hers; the step is remembered for her own Undo. The provider sends it to the collab server, which checks her role and the size and forwards it. Bob's Yjs document fires an event, his sync layer rebuilds the changed objects, checks them with Zod and puts them in his store without an Undo step, and his 3D view redraws. Alice's Undo reverts only her own change. Selections and the one editor per object lock travel by awareness.</desc>
   <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker></defs>
   <rect width="960" height="600" fill="#f2f5f6"/>
   <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">One edit, from Alice to Bob</text>
-  <text x="32" y="60" font-size="13" fill="#55656f">Alice drags the Roughness slider on a cube. Solid = built (steps M1 to M3), dashed = planned (M4 to M6).</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Alice drags the Roughness slider on a cube. Every step is built (M1 to M7).</text>
 
   <text x="32" y="92" font-size="13" font-weight="700" fill="#0a6c8a">ALICE'S BROWSER</text>
   <rect x="32" y="100" width="210" height="96" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
@@ -22,8 +22,8 @@
   <rect x="528" y="100" width="210" height="96" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
   <text x="540" y="122" font-size="13" font-weight="700" fill="#13202a">3. Yjs transaction</text>
   <text x="540" y="142" font-size="12" fill="#13202a">One small update, marked</text>
-  <text x="540" y="159" font-size="12" fill="#13202a">"mine". (Per-person Undo:</text>
-  <text x="540" y="176" font-size="12" fill="#13202a">a later step, M5.)</text>
+  <text x="540" y="159" font-size="12" fill="#13202a">"mine": Undo uses it to</text>
+  <text x="540" y="176" font-size="12" fill="#13202a">know what was yours.</text>
   <path d="M738 148 H766" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
   <rect x="766" y="100" width="162" height="96" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
   <text x="778" y="122" font-size="13" font-weight="700" fill="#13202a">4. Provider</text>
@@ -62,14 +62,14 @@
   <text x="282" y="484" font-size="13" font-weight="700" fill="#13202a">Undo</text>
   <text x="282" y="503" font-size="12" fill="#13202a">Alice presses Undo: only</text>
   <text x="282" y="520" font-size="12" fill="#13202a">HER change goes back. Bob's</text>
-  <text x="282" y="537" font-size="12" fill="#13202a">edits stay (Yjs UndoManager,</text>
-  <text x="282" y="554" font-size="12" fill="#13202a">not scene snapshots).</text>
+  <text x="282" y="537" font-size="12" fill="#13202a">edits stay (own field-by-field</text>
+  <text x="282" y="554" font-size="12" fill="#13202a">code, not snapshots).</text>
   <rect x="486" y="462" width="220" height="110" rx="12" fill="#fff" stroke="#0a6c8a" stroke-width="2"/>
   <text x="498" y="484" font-size="13" font-weight="700" fill="#13202a">Awareness (not saved)</text>
   <text x="498" y="503" font-size="12" fill="#13202a">Who is here, their colour,</text>
   <text x="498" y="520" font-size="12" fill="#13202a">what they have selected,</text>
-  <text x="498" y="537" font-size="12" fill="#13202a">and "Alice is editing the</text>
-  <text x="498" y="554" font-size="12" fill="#13202a">points of Cube" (a lock).</text>
+  <text x="498" y="537" font-size="12" fill="#13202a">and what they hold: selecting</text>
+  <text x="498" y="554" font-size="12" fill="#13202a">an object locks it for others.</text>
   <rect x="722" y="462" width="206" height="110" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
   <text x="734" y="484" font-size="13" font-weight="700" fill="#13202a">Big files</text>
   <text x="734" y="503" font-size="12" fill="#13202a">A mesh or picture goes by</text>

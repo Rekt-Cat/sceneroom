@@ -4,7 +4,7 @@
   <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker><marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#b3261e"/></marker></defs>
   <rect width="960" height="560" fill="#f2f5f6"/>
   <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">The collab server: who gets in, and what is saved</text>
-  <text x="32" y="60" font-size="13" fill="#55656f">Built in step M2 (apps/collab-server). Every check is on the server; the browser is never trusted.</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Built in step M2 and extended since (apps/collab-server). Every check is on the server; the browser is never trusted.</text>
 
   <rect x="32" y="84" width="130" height="86" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
   <text x="44" y="108" font-size="13" font-weight="700" fill="#13202a">A browser</text>
@@ -71,12 +71,14 @@
 
   <path d="M783 404 V440" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
   <rect x="610" y="442" width="318" height="76" rx="12" fill="#e4f1f6" stroke="#0a6c8a" stroke-width="2"/>
-  <text x="622" y="466" font-size="13" font-weight="700" fill="#13202a">The store (a SQLite file)</text>
-  <text x="622" y="486" font-size="12" fill="#13202a">One row per document. Only this one</text>
-  <text x="622" y="503" font-size="12" fill="#13202a">file changes when Postgres arrives (M8).</text>
+  <text x="622" y="466" font-size="13" font-weight="700" fill="#13202a">The store (SQLite or Postgres)</text>
+  <text x="622" y="486" font-size="12" fill="#13202a">One row per document: a SQLite file by</text>
+  <text x="622" y="503" font-size="12" fill="#13202a">default, Postgres if DATABASE_URL is set.</text>
 
-  <rect x="32" y="442" width="550" height="76" rx="12" fill="#fff" stroke="#8a97a0" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="44" y="466" font-size="13" font-weight="700" fill="#13202a">Not yet (later steps)</text>
-  <text x="44" y="486" font-size="12" fill="#13202a">Share button that makes the tokens (M7), accounts and roles from a database (M8),</text>
-  <text x="44" y="503" font-size="12" fill="#13202a">the editor connecting to this server (M3), big files (M4), running it online (M9).</text>
+  <rect x="32" y="442" width="550" height="100" rx="12" fill="#fff" stroke="#8a97a0" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="44" y="466" font-size="13" font-weight="700" fill="#13202a">Added since, and still to do</text>
+  <text x="44" y="486" font-size="12" fill="#13202a">Added: the editor connecting (M3), big files (M4), share links (M7),</text>
+  <text x="44" y="503" font-size="12" fill="#13202a">account tokens that name the user (M8), a signed route that</text>
+  <text x="44" y="520" font-size="12" fill="#13202a">disconnects a removed member. Still to do: running it online (M9),</text>
+  <text x="44" y="537" font-size="12" fill="#13202a">rate limits.</text>
 </svg>

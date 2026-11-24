@@ -2009,27 +2009,49 @@
       </ol>
     </section>
     <section class="panel" id="j6">
-      <h3>F. Undo when other people are editing, and the edit lock</h3>
-      <p>
-        A normal undo puts back a whole earlier scene. That would erase your
-        friend's work, so online it works differently.
-      </p>
+      <h3>F. Two people, one object: selection locks, edit locks and Undo</h3>
+      <p>Online, an object belongs to the person who has it selected.</p>
       <ol class="steps">
         <li>
-          Online, Undo takes back <strong>only your own fields</strong>, and
-          only the ones nobody else has changed since. If someone else touched
-          the same field, that part is left alone.
+          <strong>Selecting holds.</strong> When you select an object, your
+          editor adds its id to your <em>holding</em> record (the same small
+          shared record as your name and pointer). Everyone else's editor sees
+          it and treats that object, everything inside it and everything it is
+          inside of as out of bounds.
         </li>
         <li>
-          Redo works the same way. The editor remembers the scene after each
-          step so it can tell what was yours.
+          <strong>What others see:</strong> the object is highlighted in your
+          colour with your name over it (<em>Guest 237 is working on this</em>),
+          and the scene list shows your name on its row. They cannot select it
+          (a message says who has it), no handles appear, and moving, renaming,
+          hiding, locking, reparenting and deleting it are refused.
         </li>
         <li>
-          <em>Edit points</em>, <em>Paint</em> and <em>Bake</em> take over one
-          object for a long time, so they use a courtesy lock: while you are in
-          one of them on an object, others are told and kept out of the same
-          mode on it. If two people enter at the same moment, the lower client
-          number keeps it and the other is taken out with a message.
+          <strong>Letting go:</strong> you deselect, or 30 seconds pass without
+          a key, mouse button or wheel (your editor then clears your selection
+          and tells you), or you disconnect, or you switch scene tab. The object
+          is free at once for everyone.
+        </li>
+        <li>
+          <strong>Two people at the same moment:</strong> the lower client
+          number keeps the object and the other editor takes it out of its
+          selection with a message.
+        </li>
+        <li>
+          <strong>Viewers</strong> hold nothing and are never blocked.
+          <strong>Without a connection</strong> to the collab server nobody's
+          records arrive, so there are no locks, and the merge rule of the
+          shared document applies.
+        </li>
+        <li>
+          <strong>Edit points, Paint and Bake</strong> still announce their own
+          courtesy lock, which now almost never matters because the object is
+          already held.
+        </li>
+        <li>
+          <strong>Undo</strong> online takes back only <em>your own</em> fields,
+          and only the ones nobody else has changed since. It can still touch an
+          object someone else now holds (a known limit).
         </li>
       </ol>
     </section>
@@ -2506,7 +2528,8 @@
         </li>
         <li>
           Online: shared scenes, files by hash, per-person Undo, edit locks,
-          presence, share links (steps M1 to M7)
+          selection locks, presence, share links (steps M1 to M7 and the
+          selection locks)
         </li>
         <li>
           Accounts: the database package and Postgres (M8a), sign-in with GitHub
@@ -2519,7 +2542,6 @@
     <div>
       <h2><span class="dot pending"></span>Planned</h2>
       <ul>
-        <li>Selection locks (see COLLABORATION.md)</li>
         <li>
           M9: deployment (Vercel, WebSocket host, Neon, R2) and a two-browser
           test in CI

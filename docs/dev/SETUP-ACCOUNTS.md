@@ -34,3 +34,27 @@ COLLAB_SECRET=the same value as in apps/collab-server/.env
 ```
 
 For a deployed site (step M9) you make a second OAuth app with the real address.
+
+## 3. Starting everything
+
+After the one-time steps above, from the repo root (Docker Desktop must be open; after every restart of the Mac it has to be
+opened again):
+
+1. `docker compose up -d`: starts Postgres (check with `docker compose ps`: `healthy`).
+2. `pnpm --filter @sceneroom/db migrate:deploy`: builds the tables (run it again after pulling a change that adds a migration).
+   `pnpm --filter @sceneroom/db seed` adds two example people and a project (optional).
+3. Make `apps/collab-server/.env` from `.env.example` and put the **same** `COLLAB_SECRET` as in `apps/web/.env.local`.
+4. `pnpm dev` starts the web app (http://localhost:3000); `pnpm --filter @sceneroom/collab-server serve` starts the collab
+   server (port 1234).
+
+Optional settings:
+
+- `COLLAB_ADMIN_URL=http://127.0.0.1:1234` in `apps/web/.env.local`: removing a member then disconnects them at once.
+- `DATABASE_URL=...` in `apps/collab-server/.env`: the collab server keeps its documents in Postgres instead of its SQLite file.
+  Copy the documents you already have once with `pnpm --filter @sceneroom/collab-server migrate-documents`.
+
+Everything above uses `localhost`, so it works on this computer only. Opening a shared link from another computer needs the
+deployment (step M9).
+
+Tests that use Postgres (`pnpm test` in `packages/db`, `apps/web` and `apps/collab-server`) need steps 1 and 2 first. They only
+touch rows of their own.

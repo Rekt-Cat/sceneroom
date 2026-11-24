@@ -93,7 +93,7 @@ that way. It is not mixed with accounts for the same project.
 - **`apps/web`**: Better Auth set-up (route handler, server helper), sign-in button and menu, project and member routes (Zod
   checked), the token route, invitation routes and page, the dashboard. All server routes run on Node (not edge) because they use
   Prisma.
-- **`apps/collab-server`**: imports the shared token package. Optionally a Postgres `DocumentStore` (step M8f). Its stage A share
+- **`apps/collab-server`**: imports the shared token package. A Postgres `DocumentStore` when `DATABASE_URL` is set (step M8f, built). Its stage A share
   routes stay for no-database use.
 - **`docker-compose.yml`** (repo root): one Postgres service for development.
 - **The editor (`apps/web/src/collab`)**: gets its token from a function (stage B) or from the saved link (stage A).
@@ -111,11 +111,10 @@ that way. It is not mixed with accounts for the same project.
 
 ## 8. Risks and open points, stated plainly
 
-- **Browser tests cannot sign in with GitHub.** The tests need a test-only way to start a session (a route that exists only when
-  an environment variable says so, never in production), and the real GitHub round trip is checked by hand.
+- **Browser tests cannot sign in with GitHub.** Built: a test-only header (`x-test-user`) works only on a server started with `SCENEROOM_TEST_AUTH=1` and never in production; the real GitHub round trip is checked by hand.
 - **Secrets.** `BETTER_AUTH_SECRET`, `GITHUB_CLIENT_SECRET`, `DATABASE_URL` and `COLLAB_SECRET` live in `.env.local` files that are
   never committed. The web server and the collab server must share `COLLAB_SECRET`.
-- **A token lives up to an hour** after a member is removed, unless the collab server is told to disconnect them (M8e).
+- **A token lives up to an hour** after a member is removed, unless the collab server is told to disconnect them (built in M8e: a signed request from the web app; without `COLLAB_ADMIN_URL` the one-hour limit applies).
 - **Names.** Presence shows the GitHub name when signed in, else the chosen or guest name (a small change in M8d).
 - **Project ids.** A cloud project reuses the local project's UUID. Two people cannot both register the same id; the first
   becomes the owner and the second gets a clear error.

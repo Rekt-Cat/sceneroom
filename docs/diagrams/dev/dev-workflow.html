@@ -558,7 +558,7 @@
         class="diagram"
         viewBox="0 0 980 632"
         role="group"
-        aria-label="Diagram. Edits made in Claude Code (1) are written to files (2), formatted by a Prettier hook (3), checked locally with Turborepo (4), committed and pushed through GitHub Desktop (5); a pre-push hook runs the checks again and blocks the push if one fails. The push reaches the GitHub repository (6), where a GitHub Actions workflow with nine steps verifies it (7), and Vercel builds and publishes it (9). A second PC (8) pulls from the repository. Repo files (A) and a skill (B) support the process."
+        aria-label="Diagram. Edits made in Claude Code (1) are written to files (2), formatted by a Prettier hook (3), checked locally with Turborepo (4), committed and pushed through GitHub Desktop (5); a pre-push hook runs the checks again and blocks the push if one fails. The push reaches the GitHub repository (6), where a GitHub Actions workflow (a Postgres container, then ten steps) verifies it (7), and Vercel builds and publishes it (9). A second PC (8) pulls from the repository. Repo files (A) and a skill (B) support the process."
       >
         <defs>
           <marker
@@ -1220,13 +1220,17 @@
             <code>pnpm test</code> and <code>pnpm build</code>. They also run
             automatically: a git <code>pre-push</code> hook (Husky,
             <code>.husky/pre-push</code>) runs all five before every push and
-            blocks the push if one fails (the format check was added to it on
-            2026-11-20, after a push failed CI only because of formatting). The
-            browser tests (<code>pnpm test:e2e</code>, Playwright) are NOT in
-            the hook: they take minutes, so they run on demand and in CI. Skip
-            it once from a terminal with <code>git push --no-verify</code>.
-            Turborepo works out the order and caches results. "FULL TURBO" in
-            its output means it reused an earlier result.
+            blocks the push if one fails. The tests that use Postgres skip
+            themselves, with a warning, when Docker is not running, so a push is
+            not blocked by a database that is simply off (in CI they never skip)
+            (the format check was added to it on 2026-11-20, after a push failed
+            CI only because of formatting). The browser tests (<code
+              >pnpm test:e2e</code
+            >, Playwright) are NOT in the hook: they take minutes, so they run
+            on demand and in CI. Skip it once from a terminal with
+            <code>git push --no-verify</code>. Turborepo works out the order and
+            caches results. "FULL TURBO" in its output means it reused an
+            earlier result.
           </dd>
           <dt>If it goes wrong</dt>
           <dd>
@@ -1319,7 +1323,9 @@
             checkout, so "works on my machine" problems show up.
           </dd>
           <dt>
-            The nine steps of the main job (<code>verify</code>), in order
+            The steps of the main job (<code>verify</code>), in order. GitHub
+            starts a Postgres 17 container first (the same user, password and
+            database as <code>docker-compose.yml</code>)
           </dt>
           <dd>
             <ol class="ci">
@@ -1341,6 +1347,11 @@
                 with <code>package.json</code>.
               </li>
               <li>
+                <strong>migrate</strong> builds the database tables with
+                <code>pnpm --filter @sceneroom/db migrate:deploy</code>, because
+                many tests use the real Postgres (added 2026-11-24).
+              </li>
+              <li>
                 <strong>format</strong> runs <code>prettier --check</code> and
                 fails if any file is not formatted.
               </li>
@@ -1350,9 +1361,11 @@
                 <code>tsc</code>. This failed on the first run.
               </li>
               <li>
-                <strong>test</strong> runs <code>vitest</code> on the scene
-                logic in <code>packages/shared</code> and on the store (undo and
-                redo) in <code>apps/web</code>.
+                <strong>test</strong> runs <code>vitest</code> in every package:
+                the scene logic (<code>packages/shared</code>), the web app, the
+                collab server, the token package and the database package. The
+                tests that need Postgres are never skipped here: a missing
+                database is a failure in CI.
               </li>
               <li>
                 <strong>build</strong> runs <code>next build</code>, a full
@@ -1367,7 +1380,9 @@
             with the system libraries it needs, runs
             <code>pnpm test:e2e</code> (a real browser opens the real editor and
             clicks through it: a new project, a cube to Unwrap, a hand and a
-            person built with the edit tools) and, if a test fails, uploads the
+            person built with the edit tools, two or three windows sharing a
+            scene and holding objects; the account tests skip themselves here
+            because sign-in is not set up) and, if a test fails, uploads the
             report and screenshots as a downloadable file. It is a separate job
             so the quick checks report first.
           </dd>

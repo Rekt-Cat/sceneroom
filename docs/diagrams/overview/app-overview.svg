@@ -61,7 +61,7 @@
   <rect x="32" y="380" width="896" height="82" rx="12" fill="#e9eef0" stroke="#0a6c8a" stroke-width="2"/>
   <text x="46" y="404" font-size="14" font-weight="700" fill="#13202a">Big files live apart, under a fingerprint of their bytes (SHA-256)</text>
   <text x="46" y="425" font-size="12" fill="#13202a">Meshes (points and triangles, or small patches of them), imported models and painted or baked pictures are NOT inside the scene. The scene only</text>
-  <text x="46" y="442" font-size="12" fill="#13202a">holds their id. Same bytes = same id = stored once. That keeps the scene small, the undo history cheap, and is what will let files travel online by id.</text>
+  <text x="46" y="442" font-size="12" fill="#13202a">holds their id. Same bytes = same id = stored once. That keeps the scene small, the undo history cheap, and is what lets files travel online by id.</text>
 
   <rect x="32" y="480" width="290" height="62" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
   <text x="46" y="504" font-size="14" font-weight="700" fill="#13202a">Save, Open, Export</text>

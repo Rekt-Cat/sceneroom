@@ -2851,7 +2851,8 @@
                 <td>5</td>
                 <td><code>PresenceLayer.tsx</code></td>
                 <td>
-                  other people&#x27;s selection boxes and pointers;
+                  other people&#x27;s pointers and the objects they hold
+                  (HeldObject: a box, a tint and a name label over the object);
                   CursorBroadcaster sends yours
                 </td>
               </tr>
@@ -3606,6 +3607,18 @@
                 </td>
                 <td>name, colour, selection, pointer; one editor per object</td>
               </tr>
+              <tr>
+                <td></td>
+                <td>
+                  &nbsp;&nbsp;&nbsp;&nbsp;<code
+                    >objectHolds.ts createObjectHolds()</code
+                  >
+                </td>
+                <td>
+                  selection locks: publishes your selection as `holding`, works
+                  out what the others&#x27; holds block, 30 s idle release
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -3651,6 +3664,22 @@
               <tr>
                 <td><code>shared/selectiveUndo.ts</code></td>
                 <td>undoOwnChange / redoOwnChange</td>
+              </tr>
+              <tr>
+                <td><code>objectHolds.ts + blockedByOthers.ts</code></td>
+                <td>
+                  a held object cannot be selected or changed by anyone else:
+                  select / toggleSelect / setSelection, isEffectivelyLocked and
+                  editableIds, visibility, padlock and reparent all ask
+                  isBlockedByOthers
+                </td>
+              </tr>
+              <tr>
+                <td><code>window pointerdown / keydown / wheel</code></td>
+                <td>
+                  any of them counts as activity and restarts the 30 s idle
+                  clock
+                </td>
               </tr>
             </tbody>
           </table>
@@ -4026,7 +4055,7 @@
     <div class="fig-scroll">
       <svg
         class="diagram"
-        viewBox="0 0 980 1233"
+        viewBox="0 0 980 1344"
         role="group"
         aria-label="Rows. Each row has a contract on the left and the classes or libraries that implement or use it on the right: file storage, the browser project library, the live sharing session, who is here, where the connection gets its token, the HTTP clients, the collab server stores, the accounts pieces, and the named error types."
       >
@@ -4413,6 +4442,100 @@
           <text class="t-sub" x="762.0" y="499">(localStorage)</text>
         </g>
         <text class="lane-label" x="28" y="540">
+          WHO MAY TOUCH WHAT (BROWSER)
+        </text>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="Selection locks: show explanation"
+        >
+          <rect class="box ok" x="28" y="548" width="250" height="58" rx="9" />
+          <text class="t-title" x="38" y="567">Selection locks</text>
+          <text class="t-sub" x="38" y="584">
+            objectHolds.ts + blockedByOthers.ts
+          </text>
+          <text class="t-sub" x="38" y="597">a hold is your selection</text>
+        </g>
+        <path class="arrow" d="M280 577 H306" marker-end="url(#ah3)" />
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="createObjectHolds: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="312.0"
+            y="548"
+            width="210.0"
+            height="71"
+            rx="9"
+          />
+          <text class="t-title" x="322.0" y="567">createObjectHolds</text>
+          <text class="t-sub" x="322.0" y="584">
+            publishes `holding`; works out
+          </text>
+          <text class="t-sub" x="322.0" y="597">
+            what others&#x27; holds block;
+          </text>
+          <text class="t-sub" x="322.0" y="610">30 s idle release</text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="computeHolds / reachOf: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="532.0"
+            y="548"
+            width="210.0"
+            height="71"
+            rx="9"
+          />
+          <text class="t-title" x="542.0" y="567">computeHolds / reachOf</text>
+          <text class="t-sub" x="542.0" y="584">
+            pure: the object, what is inside it
+          </text>
+          <text class="t-sub" x="542.0" y="597">
+            and what it is inside of; ties go
+          </text>
+          <text class="t-sub" x="542.0" y="610">
+            to the lower client number
+          </text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="isBlockedByOthers, selectableIds: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="752.0"
+            y="548"
+            width="210.0"
+            height="71"
+            rx="9"
+          />
+          <text class="t-title" x="762.0" y="567">
+            isBlockedByOthers, selectableIds
+          </text>
+          <text class="t-sub" x="762.0" y="584">
+            the scene store asks these before
+          </text>
+          <text class="t-sub" x="762.0" y="597">
+            any selection or edit; one message,
+          </text>
+          <text class="t-sub" x="762.0" y="610">not repeated within 1.5 s</text>
+        </g>
+        <text class="lane-label" x="28" y="651">
           WHERE THE CONNECTION GETS ITS TOKEN
         </text>
         <g
@@ -4422,14 +4545,14 @@
           role="button"
           aria-label="TokenSource: show explanation"
         >
-          <rect class="box ok" x="28" y="548" width="250" height="58" rx="9" />
-          <text class="t-title" x="38" y="567">TokenSource</text>
-          <text class="t-sub" x="38" y="584">
+          <rect class="box ok" x="28" y="659" width="250" height="58" rx="9" />
+          <text class="t-title" x="38" y="678">TokenSource</text>
+          <text class="t-sub" x="38" y="695">
             tokenSource.ts: fresh() at every
           </text>
-          <text class="t-sub" x="38" y="597">connect, cached() for files</text>
+          <text class="t-sub" x="38" y="708">connect, cached() for files</text>
         </g>
-        <path class="arrow" d="M280 577 H306" marker-end="url(#ah3)" />
+        <path class="arrow" d="M280 688 H306" marker-end="url(#ah3)" />
         <g
           class="hit"
           data-card="s-help"
@@ -4440,14 +4563,14 @@
           <rect
             class="box ok"
             x="312.0"
-            y="548"
+            y="659"
             width="210.0"
             height="58"
             rx="9"
           />
-          <text class="t-title" x="322.0" y="567">fixedToken(link)</text>
-          <text class="t-sub" x="322.0" y="584">the same token every time</text>
-          <text class="t-sub" x="322.0" y="597">(a link, made by Share)</text>
+          <text class="t-title" x="322.0" y="678">fixedToken(link)</text>
+          <text class="t-sub" x="322.0" y="695">the same token every time</text>
+          <text class="t-sub" x="322.0" y="708">(a link, made by Share)</text>
         </g>
         <g
           class="hit"
@@ -4459,21 +4582,21 @@
           <rect
             class="box ok"
             x="532.0"
-            y="548"
+            y="659"
             width="210.0"
             height="71"
             rx="9"
           />
-          <text class="t-title" x="542.0" y="567">
+          <text class="t-title" x="542.0" y="678">
             createAccountTokenSource
           </text>
-          <text class="t-sub" x="542.0" y="584">
+          <text class="t-sub" x="542.0" y="695">
             POST /api/projects/&lt;id&gt;/token
           </text>
-          <text class="t-sub" x="542.0" y="597">
+          <text class="t-sub" x="542.0" y="708">
             with the sign-in cookie; cached()
           </text>
-          <text class="t-sub" x="542.0" y="610">
+          <text class="t-sub" x="542.0" y="721">
             reuses until a minute before expiry
           </text>
         </g>
@@ -4487,20 +4610,20 @@
           <rect
             class="box ok"
             x="752.0"
-            y="548"
+            y="659"
             width="210.0"
             height="58"
             rx="9"
           />
-          <text class="t-title" x="762.0" y="567">connectionToken()</text>
-          <text class="t-sub" x="762.0" y="584">
+          <text class="t-title" x="762.0" y="678">connectionToken()</text>
+          <text class="t-sub" x="762.0" y="695">
             savedConnection.ts: picks the
           </text>
-          <text class="t-sub" x="762.0" y="597">
+          <text class="t-sub" x="762.0" y="708">
             link&#x27;s string or the account source
           </text>
         </g>
-        <text class="lane-label" x="28" y="651">
+        <text class="lane-label" x="28" y="762">
           TALKING TO THE COLLAB SERVER (BROWSER)
         </text>
         <g
@@ -4510,16 +4633,16 @@
           role="button"
           aria-label="HTTP clients: show explanation"
         >
-          <rect class="box ok" x="28" y="659" width="250" height="58" rx="9" />
-          <text class="t-title" x="38" y="678">HTTP clients</text>
-          <text class="t-sub" x="38" y="695">
+          <rect class="box ok" x="28" y="770" width="250" height="58" rx="9" />
+          <text class="t-title" x="38" y="789">HTTP clients</text>
+          <text class="t-sub" x="38" y="806">
             serverAddress.ts: ws -&gt; http
           </text>
-          <text class="t-sub" x="38" y="708">
+          <text class="t-sub" x="38" y="819">
             shareClient.ts, fileClient.ts
           </text>
         </g>
-        <path class="arrow" d="M280 688 H306" marker-end="url(#ah3)" />
+        <path class="arrow" d="M280 799 H306" marker-end="url(#ah3)" />
         <g
           class="hit"
           data-card="s-help"
@@ -4530,16 +4653,16 @@
           <rect
             class="box ok"
             x="312.0"
-            y="659"
+            y="770"
             width="210.0"
             height="58"
             rx="9"
           />
-          <text class="t-title" x="322.0" y="678">createFileClient</text>
-          <text class="t-sub" x="322.0" y="695">
+          <text class="t-title" x="322.0" y="789">createFileClient</text>
+          <text class="t-sub" x="322.0" y="806">
             PUT/GET /files/&lt;project&gt;/&lt;id&gt;
           </text>
-          <text class="t-sub" x="322.0" y="708">with the token</text>
+          <text class="t-sub" x="322.0" y="819">with the token</text>
         </g>
         <g
           class="hit"
@@ -4551,16 +4674,16 @@
           <rect
             class="box ok"
             x="532.0"
-            y="659"
+            y="770"
             width="210.0"
             height="58"
             rx="9"
           />
-          <text class="t-title" x="542.0" y="678">createFileUploader</text>
-          <text class="t-sub" x="542.0" y="695">
+          <text class="t-title" x="542.0" y="789">createFileUploader</text>
+          <text class="t-sub" x="542.0" y="806">
             sends files the scene uses;
           </text>
-          <text class="t-sub" x="542.0" y="708">retries; skips viewers</text>
+          <text class="t-sub" x="542.0" y="819">retries; skips viewers</text>
         </g>
         <g
           class="hit"
@@ -4572,20 +4695,20 @@
           <rect
             class="box ok"
             x="752.0"
-            y="659"
+            y="770"
             width="210.0"
             height="58"
             rx="9"
           />
-          <text class="t-title" x="762.0" y="678">shareClient + ownerKey</text>
-          <text class="t-sub" x="762.0" y="695">
+          <text class="t-title" x="762.0" y="789">shareClient + ownerKey</text>
+          <text class="t-sub" x="762.0" y="806">
             makes/cancels links; owner key
           </text>
-          <text class="t-sub" x="762.0" y="708">
+          <text class="t-sub" x="762.0" y="819">
             made in the browser; ShareError
           </text>
         </g>
-        <text class="lane-label" x="28" y="749">COLLAB SERVER STORES</text>
+        <text class="lane-label" x="28" y="860">COLLAB SERVER STORES</text>
         <g
           class="hit"
           data-card="s-help"
@@ -4593,14 +4716,14 @@
           role="button"
           aria-label="Contracts: show explanation"
         >
-          <rect class="box ok" x="28" y="757" width="250" height="58" rx="9" />
-          <text class="t-title" x="38" y="776">Contracts</text>
-          <text class="t-sub" x="38" y="793">
+          <rect class="box ok" x="28" y="868" width="250" height="58" rx="9" />
+          <text class="t-title" x="38" y="887">Contracts</text>
+          <text class="t-sub" x="38" y="904">
             DocumentStore, OwnerStore, FileStore
           </text>
-          <text class="t-sub" x="38" y="806">the server only knows these</text>
+          <text class="t-sub" x="38" y="917">the server only knows these</text>
         </g>
-        <path class="arrow" d="M280 786 H306" marker-end="url(#ah3)" />
+        <path class="arrow" d="M280 897 H306" marker-end="url(#ah3)" />
         <g
           class="hit"
           data-card="s-help"
@@ -4611,16 +4734,16 @@
           <rect
             class="box"
             x="312.0"
-            y="757"
+            y="868"
             width="210.0"
             height="58"
             rx="9"
           />
-          <text class="t-title" x="322.0" y="776">Memory stores</text>
-          <text class="t-sub" x="322.0" y="793">
+          <text class="t-title" x="322.0" y="887">Memory stores</text>
+          <text class="t-sub" x="322.0" y="904">
             MemoryStore, MemoryOwners:
           </text>
-          <text class="t-sub" x="322.0" y="806">tests and quick runs</text>
+          <text class="t-sub" x="322.0" y="917">tests and quick runs</text>
         </g>
         <g
           class="hit"
@@ -4632,16 +4755,16 @@
           <rect
             class="box ok"
             x="532.0"
-            y="757"
+            y="868"
             width="210.0"
             height="58"
             rx="9"
           />
-          <text class="t-title" x="542.0" y="776">SqliteStore / Postgres</text>
-          <text class="t-sub" x="542.0" y="793">
+          <text class="t-title" x="542.0" y="887">SqliteStore / Postgres</text>
+          <text class="t-sub" x="542.0" y="904">
             SqliteStore: documents + owners;
           </text>
-          <text class="t-sub" x="542.0" y="806">
+          <text class="t-sub" x="542.0" y="917">
             PostgresDocumentStore: documents only
           </text>
         </g>
@@ -4655,20 +4778,20 @@
           <rect
             class="box ok"
             x="752.0"
-            y="757"
+            y="868"
             width="210.0"
             height="58"
             rx="9"
           />
-          <text class="t-title" x="762.0" y="776">FolderFileStore</text>
-          <text class="t-sub" x="762.0" y="793">
+          <text class="t-title" x="762.0" y="887">FolderFileStore</text>
+          <text class="t-sub" x="762.0" y="904">
             files named by SHA-256 in a
           </text>
-          <text class="t-sub" x="762.0" y="806">
+          <text class="t-sub" x="762.0" y="917">
             folder (MemoryFileStore: tests)
           </text>
         </g>
-        <text class="lane-label" x="28" y="847">LOGGING</text>
+        <text class="lane-label" x="28" y="958">LOGGING</text>
         <g
           class="hit"
           data-card="s-help"
@@ -4676,12 +4799,12 @@
           role="button"
           aria-label="Logger: show explanation"
         >
-          <rect class="box ok" x="28" y="855" width="250" height="58" rx="9" />
-          <text class="t-title" x="38" y="874">Logger</text>
-          <text class="t-sub" x="38" y="891">logger.ts</text>
-          <text class="t-sub" x="38" y="904">info, warn, error</text>
+          <rect class="box ok" x="28" y="966" width="250" height="58" rx="9" />
+          <text class="t-title" x="38" y="985">Logger</text>
+          <text class="t-sub" x="38" y="1002">logger.ts</text>
+          <text class="t-sub" x="38" y="1015">info, warn, error</text>
         </g>
-        <path class="arrow" d="M280 884 H306" marker-end="url(#ah3)" />
+        <path class="arrow" d="M280 995 H306" marker-end="url(#ah3)" />
         <g
           class="hit"
           data-card="s-help"
@@ -4692,18 +4815,18 @@
           <rect
             class="box ok"
             x="312.0"
-            y="855"
+            y="966"
             width="650.0"
             height="58"
             rx="9"
           />
-          <text class="t-title" x="322.0" y="874">consoleLogger</text>
-          <text class="t-sub" x="322.0" y="891">
+          <text class="t-title" x="322.0" y="985">consoleLogger</text>
+          <text class="t-sub" x="322.0" y="1002">
             what the server runs with;
           </text>
-          <text class="t-sub" x="322.0" y="904">tests pass their own</text>
+          <text class="t-sub" x="322.0" y="1015">tests pass their own</text>
         </g>
-        <text class="lane-label" x="28" y="945">
+        <text class="lane-label" x="28" y="1056">
           ACCOUNTS: DATABASE AND SIGN-IN
         </text>
         <g
@@ -4713,14 +4836,14 @@
           role="button"
           aria-label="Accounts pieces: show explanation"
         >
-          <rect class="box ok" x="28" y="953" width="250" height="58" rx="9" />
-          <text class="t-title" x="38" y="972">Accounts pieces</text>
-          <text class="t-sub" x="38" y="989">
+          <rect class="box ok" x="28" y="1064" width="250" height="58" rx="9" />
+          <text class="t-title" x="38" y="1083">Accounts pieces</text>
+          <text class="t-sub" x="38" y="1100">
             packages/db + apps/web/src/server
           </text>
-          <text class="t-sub" x="38" y="1002">optional: none set = off</text>
+          <text class="t-sub" x="38" y="1113">optional: none set = off</text>
         </g>
-        <path class="arrow" d="M280 982 H306" marker-end="url(#ah3)" />
+        <path class="arrow" d="M280 1093 H306" marker-end="url(#ah3)" />
         <g
           class="hit"
           data-card="s-help"
@@ -4731,14 +4854,14 @@
           <rect
             class="box ok"
             x="312.0"
-            y="953"
+            y="1064"
             width="210.0"
             height="58"
             rx="9"
           />
-          <text class="t-title" x="322.0" y="972">createDb(url)</text>
-          <text class="t-sub" x="322.0" y="989">Prisma 7 + pg adapter</text>
-          <text class="t-sub" x="322.0" y="1002">-&gt; Db (the client)</text>
+          <text class="t-title" x="322.0" y="1083">createDb(url)</text>
+          <text class="t-sub" x="322.0" y="1100">Prisma 7 + pg adapter</text>
+          <text class="t-sub" x="322.0" y="1113">-&gt; Db (the client)</text>
         </g>
         <g
           class="hit"
@@ -4750,14 +4873,14 @@
           <rect
             class="box ok"
             x="532.0"
-            y="953"
+            y="1064"
             width="210.0"
             height="58"
             rx="9"
           />
-          <text class="t-title" x="542.0" y="972">createAuth(env, db)</text>
-          <text class="t-sub" x="542.0" y="989">Better Auth + GitHub +</text>
-          <text class="t-sub" x="542.0" y="1002">
+          <text class="t-title" x="542.0" y="1083">createAuth(env, db)</text>
+          <text class="t-sub" x="542.0" y="1100">Better Auth + GitHub +</text>
+          <text class="t-sub" x="542.0" y="1113">
             nextCookies; getAccounts() caches
           </text>
         </g>
@@ -4771,20 +4894,20 @@
           <rect
             class="box ok"
             x="752.0"
-            y="953"
+            y="1064"
             width="210.0"
             height="58"
             rx="9"
           />
-          <text class="t-title" x="762.0" y="972">getCurrentUser()</text>
-          <text class="t-sub" x="762.0" y="989">
+          <text class="t-title" x="762.0" y="1083">getCurrentUser()</text>
+          <text class="t-sub" x="762.0" y="1100">
             session.ts: who is signed in;
           </text>
-          <text class="t-sub" x="762.0" y="1002">
+          <text class="t-sub" x="762.0" y="1113">
             test-only x-test-user header
           </text>
         </g>
-        <text class="lane-label" x="28" y="1043">
+        <text class="lane-label" x="28" y="1154">
           ACCOUNTS: PERMISSIONS AND TOKENS
         </text>
         <g
@@ -4794,14 +4917,14 @@
           role="button"
           aria-label="Rules: show explanation"
         >
-          <rect class="box ok" x="28" y="1051" width="250" height="58" rx="9" />
-          <text class="t-title" x="38" y="1070">Rules</text>
-          <text class="t-sub" x="38" y="1087">
+          <rect class="box ok" x="28" y="1162" width="250" height="58" rx="9" />
+          <text class="t-title" x="38" y="1181">Rules</text>
+          <text class="t-sub" x="38" y="1198">
             one place for &#x27;may they?&#x27;
           </text>
-          <text class="t-sub" x="38" y="1100">and one for signing tokens</text>
+          <text class="t-sub" x="38" y="1211">and one for signing tokens</text>
         </g>
-        <path class="arrow" d="M280 1080 H306" marker-end="url(#ah3)" />
+        <path class="arrow" d="M280 1191 H306" marker-end="url(#ah3)" />
         <g
           class="hit"
           data-card="s-help"
@@ -4812,13 +4935,13 @@
           <rect
             class="box ok"
             x="312.0"
-            y="1051"
+            y="1162"
             width="210.0"
             height="58"
             rx="9"
           />
-          <text class="t-title" x="322.0" y="1070">roles.ts</text>
-          <text class="t-sub" x="322.0" y="1087">
+          <text class="t-title" x="322.0" y="1181">roles.ts</text>
+          <text class="t-sub" x="322.0" y="1198">
             permissionsOf, collabAccess
           </text>
         </g>
@@ -4832,16 +4955,16 @@
           <rect
             class="box ok"
             x="532.0"
-            y="1051"
+            y="1162"
             width="210.0"
             height="58"
             rx="9"
           />
-          <text class="t-title" x="542.0" y="1070">issueCollabToken()</text>
-          <text class="t-sub" x="542.0" y="1087">
+          <text class="t-title" x="542.0" y="1181">issueCollabToken()</text>
+          <text class="t-sub" x="542.0" y="1198">
             collabToken.ts: role -&gt; token
           </text>
-          <text class="t-sub" x="542.0" y="1100">(link-token package)</text>
+          <text class="t-sub" x="542.0" y="1211">(link-token package)</text>
         </g>
         <g
           class="hit"
@@ -4853,20 +4976,20 @@
           <rect
             class="box ok"
             x="752.0"
-            y="1051"
+            y="1162"
             width="210.0"
             height="58"
             rx="9"
           />
-          <text class="t-title" x="762.0" y="1070">withUser()</text>
-          <text class="t-sub" x="762.0" y="1087">
+          <text class="t-title" x="762.0" y="1181">withUser()</text>
+          <text class="t-sub" x="762.0" y="1198">
             routeHelpers.ts: 503 / 401 / 403
           </text>
-          <text class="t-sub" x="762.0" y="1100">
+          <text class="t-sub" x="762.0" y="1211">
             then the route&#x27;s own work
           </text>
         </g>
-        <text class="lane-label" x="28" y="1141">ERROR TYPES AND GUARDS</text>
+        <text class="lane-label" x="28" y="1252">ERROR TYPES AND GUARDS</text>
         <g
           class="hit"
           data-card="s-help"
@@ -4874,12 +4997,12 @@
           role="button"
           aria-label="Named problems: show explanation"
         >
-          <rect class="box ok" x="28" y="1149" width="250" height="58" rx="9" />
-          <text class="t-title" x="38" y="1168">Named problems</text>
-          <text class="t-sub" x="38" y="1185">so a message can be shown,</text>
-          <text class="t-sub" x="38" y="1198">not a stack trace</text>
+          <rect class="box ok" x="28" y="1260" width="250" height="58" rx="9" />
+          <text class="t-title" x="38" y="1279">Named problems</text>
+          <text class="t-sub" x="38" y="1296">so a message can be shown,</text>
+          <text class="t-sub" x="38" y="1309">not a stack trace</text>
         </g>
-        <path class="arrow" d="M280 1178 H306" marker-end="url(#ah3)" />
+        <path class="arrow" d="M280 1289 H306" marker-end="url(#ah3)" />
         <g
           class="hit"
           data-card="s-help"
@@ -4890,16 +5013,16 @@
           <rect
             class="box ok"
             x="312.0"
-            y="1149"
+            y="1260"
             width="210.0"
             height="58"
             rx="9"
           />
-          <text class="t-title" x="322.0" y="1168">ImportError</text>
-          <text class="t-sub" x="322.0" y="1185">
+          <text class="t-title" x="322.0" y="1279">ImportError</text>
+          <text class="t-sub" x="322.0" y="1296">
             loadModel.ts: a file we cannot use,
           </text>
-          <text class="t-sub" x="322.0" y="1198">
+          <text class="t-sub" x="322.0" y="1309">
             message written for the user
           </text>
         </g>
@@ -4913,16 +5036,16 @@
           <rect
             class="box ok"
             x="532.0"
-            y="1149"
+            y="1260"
             width="210.0"
             height="58"
             rx="9"
           />
-          <text class="t-title" x="542.0" y="1168">ShareError</text>
-          <text class="t-sub" x="542.0" y="1185">
+          <text class="t-title" x="542.0" y="1279">ShareError</text>
+          <text class="t-sub" x="542.0" y="1296">
             shareClient.ts: the server said no
           </text>
-          <text class="t-sub" x="542.0" y="1198">
+          <text class="t-sub" x="542.0" y="1309">
             (owner key, expired, ...)
           </text>
         </g>
@@ -4936,16 +5059,16 @@
           <rect
             class="box ok"
             x="752.0"
-            y="1149"
+            y="1260"
             width="210.0"
             height="58"
             rx="9"
           />
-          <text class="t-title" x="762.0" y="1168">ModelErrorBoundary</text>
-          <text class="t-sub" x="762.0" y="1185">
+          <text class="t-title" x="762.0" y="1279">ModelErrorBoundary</text>
+          <text class="t-sub" x="762.0" y="1296">
             ModelObject.tsx: one broken model
           </text>
-          <text class="t-sub" x="762.0" y="1198">
+          <text class="t-sub" x="762.0" y="1309">
             does not blank the 3D view
           </text>
         </g>

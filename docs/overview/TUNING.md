@@ -781,3 +781,12 @@ value and what it does.
 | `ADMIN_MAX_SKEW_SECONDS`  | `packages/link-token/src/adminRequest.ts`             | 60                      | How far a disconnect request's time may be from the collab server's clock.                                               |
 | Disconnect time-out       | `apps/web/src/server/collabAdmin.ts` (`TIMEOUT_MS`)   | 3000 ms                 | How long the web app waits for the collab server before giving up (the change is already made).                          |
 | `COLLAB_ADMIN_URL`        | `apps/web/.env.local`                                 | `http://127.0.0.1:1234` | Where the web app finds the collab server's internal route. Left out = removed people are cut off at their next connect. |
+
+## Selection locks
+
+| Setting           | Where                                                 | Our value | What it does                                                                                          |
+| ----------------- | ----------------------------------------------------- | --------- | ----------------------------------------------------------------------------------------------------- |
+| `HOLD_IDLE_MS`    | `apps/web/src/collab/objectHolds.ts`                  | 30 000    | A hold ends this long after the holder's last activity (a key, a mouse button, the wheel, selecting). |
+| Activity throttle | `apps/web/src/collab/startCollab.ts` (`lastActivity`) | 500 ms    | Activity restarts the idle clock at most this often (mouse moves with a button pressed count).        |
+| `SAME_MESSAGE_MS` | `apps/web/src/collab/blockedByOthers.ts`              | 1500 ms   | The same "X is working on Y" message is not shown again within this time.                             |
+| Tint opacity      | `PresenceLayer.tsx` (`HeldObject`, `opacity`)         | 0.14      | How strong the coloured tint over a held object is.                                                   |

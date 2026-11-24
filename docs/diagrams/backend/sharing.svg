@@ -4,7 +4,7 @@
   <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker></defs>
   <rect width="960" height="560" fill="#f2f5f6"/>
   <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">Sharing: make a link, use it, cancel it</text>
-  <text x="32" y="60" font-size="13" fill="#55656f">Built in step M7 (stage A of the permissions: whoever has the link has its role). Accounts come in step M8.</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Built in step M7 (stage A of the permissions: whoever has the link has its role). Accounts (step M8) are the other way in.</text>
 
   <text x="32" y="92" font-size="13" font-weight="700" fill="#0a6c8a">ALICE (THE OWNER) MAKES A LINK</text>
   <rect x="32" y="100" width="270" height="116" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
@@ -57,5 +57,5 @@
 
   <rect x="32" y="486" width="896" height="58" rx="12" fill="#fff" stroke="#8a97a0" stroke-width="2" stroke-dasharray="6 4"/>
   <text x="44" y="508" font-size="13" font-weight="700" fill="#13202a">Limits of this stage</text>
-  <text x="44" y="526" font-size="12" fill="#13202a">Lose the owner key (clear the browser) and no more links can be made. Whoever holds a link has its role. No names or invitations until accounts (M8).</text>
+  <text x="44" y="526" font-size="12" fill="#13202a">Lose the owner key (clear the browser) and no more links can be made. Whoever holds a link has its role. Members and invitations need accounts (M8).</text>
 </svg>

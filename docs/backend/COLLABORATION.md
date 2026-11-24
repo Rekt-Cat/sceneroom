@@ -1,7 +1,8 @@
 # Collaboration and the online part: design
 
-Written 2026-11-21, before any of it is built. This is the plan to check, and the place to come back to when something here
-is unclear. Diagrams: `docs/diagrams/backend/collab-architecture.svg` (the pieces) and `docs/diagrams/backend/collab-sync-flow.svg` (one edit
+Designed 2026-11-21 and built from 2026-11-21 to 2026-11-24: steps M1 to M8 (see the table in section 11) and the selection locks
+(section 7) are done; M9 (deployment) is not. The text below keeps the original design wording; where the build differs, a
+**Built:** note says so. It is the place to come back to when something here is unclear. Diagrams: `docs/diagrams/backend/collab-architecture.svg` (the pieces) and `docs/diagrams/backend/collab-sync-flow.svg` (one edit
 travelling from one person to another). Why each tool was chosen over the others: `WHY-THESE-TOOLS.md`.
 
 ## 1. What we are building, in plain words
@@ -49,14 +50,15 @@ Browser B ──┘     (Yjs updates + awareness)      └── file store (mes
    └──────────── HTTPS upload / download ───────────────┘
 ```
 
-- **`apps/web`** (exists): the editor. Gets a new "sync" layer that connects the scene store to a `Y.Doc`.
-- **`apps/collab-server`** (new): a small Node program using **Hocuspocus** (a ready-made Yjs server). It checks who is
+- **`apps/web`**: the editor. Has a "sync" layer (`apps/web/src/collab/`) that connects the scene store to a `Y.Doc`.
+- **`apps/collab-server`**: a small Node program using **Hocuspocus** (a ready-made Yjs server). It checks who is
   connecting, keeps documents in memory while people are in them, saves them, and forwards updates.
-- **`packages/shared`** (exists): grows the code that converts between our `Scene` data and a `Y.Doc`, so the browser and the
+- **`packages/shared`**: has the code that converts between our `Scene` data and a `Y.Doc`, so the browser and the
   server agree on the layout and both validate with the same Zod schemas.
 - **File store**: big binary files do not go through the document (see section 6).
-- **Postgres** (via Docker, later): users, projects, members and roles, and the saved documents. Until then the collab server
-  saves documents in a local file database (SQLite, through Node's built-in `node:sqlite`) so we can build and test collaboration without installing Docker.
+- **Postgres** (via Docker): users, projects, members and roles, and, when the collab server has a `DATABASE_URL`, the saved
+  documents. **Built:** without a `DATABASE_URL` the collab server saves documents in a local file database (SQLite, through
+  Node's built-in `node:sqlite`), which is how it was built and tested first.
 
 ## 4. What lives in the shared document, and what does not
 
@@ -82,6 +84,10 @@ Scene document    "scene:<projectId>:<sceneId>"
   assets          Y.Map     fileId -> record (name, type, bytes, bounds ...). Add-only.
   environment     Y.Map     background, sky, fog, sun ...
 ```
+
+**Built:** only the scene documents exist. The project document (`project:<id>`, the scene list, names and prefabs shared) is
+not built; until it is, each online project stores the id of its entry scene (`entrySceneId`, step M8e) so a new member's browser
+knows which scene to open.
 
 Rules for what goes where:
 
@@ -144,10 +150,10 @@ Moving, rotating, scaling, colouring and every other scene-level change stay ope
 rule `DECISIONS.md` already named ("one editor per mesh"). It is enforced by the editor; the server cannot tell what is being
 edited inside a file, so we state honestly that it is a courtesy lock, not a security control.
 
-### Planned change: selection locks (owner's design, 2026-11-24; not built yet)
+### Selection locks (owner's design, 2026-11-24; built 2026-11-24)
 
-The courtesy lock above covers only Edit points, Paint and Bake. The owner wants every object protected while someone works
-on it, so two people online never move the same object at once. Rules agreed with the owner:
+The courtesy lock above covers only Edit points, Paint and Bake. The owner wanted every object protected while someone works
+on it, so two people online never move the same object at once. Rules agreed with the owner (all built):
 
 - **Taking a lock:** selecting an object locks it for everyone else. No change has to be made first. Several selected
   objects are all locked; box-select skips objects someone else holds.
@@ -166,13 +172,13 @@ on it, so two people online never move the same object at once. Rules agreed wit
 - **No connection to the collab server:** no locks exist (nobody's records arrive), so the merge rule of the shared document
   still applies there.
 - **Enforcement:** in the editors, not on the server (courtesy, as before). The merge rule is the safety net.
-- **How it would be built:** each person's awareness record gets a `holding` list (the ids of their selection, held until the
+- **How it is built** (`apps/web/src/collab/objectHolds.ts`, `blockedByOthers.ts`, the scene store): each person's awareness record gets a `holding` list (the ids of their selection, held until the
   holder releases it); every editor computes who is blocked from it and the scene (`parentId`) tree; the scene store's
   `select`, `toggleSelect` and `setSelection` refuse blocked ids, and the actions that take explicit ids (reparent, hide,
   lock, rename) check too. The idle timer lives in the holder's editor (no clocks are compared between computers).
-- **Known limit:** Undo online takes back only your own unchanged fields and could still touch an object someone else now
-  holds; to be decided when this is built.
-- **Tests when built:** unit tests for the blocked-set maths and the keeper (idle, ties, release), store tests for refused
+- **Known limits:** Undo online takes back only your own unchanged fields and can still touch an object someone else now
+  holds, and paste does not check the parent it goes under.
+- **Tests:** unit tests for the blocked-set maths and the keeper (idle, ties, release), store tests for refused
   selection and actions, and a two-window browser test (select, see the name, try to select, wait out the idle time).
 
 **Proposed, not decided:** a notice after a merge when a field you changed while disconnected was replaced by someone else's
@@ -185,6 +191,9 @@ Today Undo restores a **snapshot of the whole scene** (`DECISIONS.md`, "why snap
 somebody else's work too. So in a shared scene Undo moves to **`Y.UndoManager`**, which Yjs provides: it remembers only the
 changes made by _this_ browser (the transactions marked "mine") and undoes exactly those, leaving other people's changes
 alone, field by field.
+
+**Built (step M5):** our own pure functions, not `Y.UndoManager`: `packages/shared/src/selectiveUndo.ts` records the scene after
+each step and takes back only the fields this person changed and nobody has changed since (`DECISIONS.md`, "Editor sync layer").
 
 What stays the same: the Undo and Redo buttons, shortcuts, and the step labels shown in the UI ("Move points", "Paint stroke").
 What changes: the history is no longer a list of scene snapshots. Local-only (never shared) projects keep the current
@@ -208,6 +217,10 @@ Always, on the server and not only in the page:
 
 Locks and hidden objects (`DECISIONS.md`) are shown to everyone as they are today; enforcing "locked" on the server is a Stage B item.
 
+**Built:** stage A (links, step M7) and stage B (accounts, steps M8a to M8f, `ACCOUNTS.md`) both work, and are not mixed for one project.
+The size limits, the read-only viewer and the token checks are on the server. **Not built:** rate limits per connection (to be
+discussed with the limits in general) and server-side enforcement of "locked".
+
 ## 10. Staying local-first
 
 SceneRoom works with no account and no internet today, and that stays true.
@@ -219,19 +232,19 @@ SceneRoom works with no account and no internet today, and that stays true.
 
 ## 11. Build order (each step is demonstrable and tested)
 
-| Step | What                                                                                                                                                                               | How we know it works                                                                                     |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| M1   | **Shared code:** `Scene` to `Y.Doc` and back, and applying a change as a small difference, in `packages/shared`. Round-trips every scene feature.                                  | Vitest: a scene survives a trip; two docs edited apart merge to the same scene; bad updates are refused. |
-| M2   | **Collab server:** `apps/collab-server` with Hocuspocus, saving to SQLite; token check; read-only viewers; size limits.                                                            | Unit and integration tests with two in-process clients.                                                  |
-| M3   | **Sync layer in the editor:** connect the store to the document; remote changes appear; no echo loops; status badge ("Connected", "Offline, changes kept").                        | Playwright with **two browser windows**: edit in one, see it in the other.                               |
-| M4   | **Files online:** upload and download by hash, with the hash check and limits.                                                                                                     | Playwright: import a model in one window, see it in the other.                                           |
-| M5   | **Per-user Undo** with `Y.UndoManager`, and the **one editor per object** lock.                                                                                                    | Two windows: A undoes, B's changes stay; B cannot enter Edit points on A's object.                       |
-| M6   | **Presence:** names and colours, selections, where each person is, 3D cursors.                                                                                                     | Two windows show each other's selection.                                                                 |
-| M7   | **Share button and links** (Stage A): create a link, open it, role respected.                                                                                                      | Viewer link cannot change anything, checked on the server.                                               |
-| M8   | **Postgres, Docker, accounts** (Stage B), dashboard, invitations. Designed in `ACCOUNTS.md` (parts M8a to M8f). Needs Docker Desktop and a GitHub OAuth app (set up by the owner). | Documents survive a server restart; roles enforced from the database.                                    |
-| M9   | **Deploy:** web on Vercel, collab server on a host that keeps WebSockets open, Postgres on Neon, files on R2; a two-context test in CI.                                            | A real link works between two real devices.                                                              |
+| Step | What                                                                                                                                                        | How we know it works                                                                                     |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| M1   | **Shared code:** `Scene` to `Y.Doc` and back, and applying a change as a small difference, in `packages/shared`. Round-trips every scene feature.           | Vitest: a scene survives a trip; two docs edited apart merge to the same scene; bad updates are refused. |
+| M2   | **Collab server:** `apps/collab-server` with Hocuspocus, saving to SQLite; token check; read-only viewers; size limits.                                     | Unit and integration tests with two in-process clients.                                                  |
+| M3   | **Sync layer in the editor:** connect the store to the document; remote changes appear; no echo loops; status badge ("Connected", "Offline, changes kept"). | Playwright with **two browser windows**: edit in one, see it in the other.                               |
+| M4   | **Files online:** upload and download by hash, with the hash check and limits.                                                                              | Playwright: import a model in one window, see it in the other.                                           |
+| M5   | **Per-user Undo** with `Y.UndoManager`, and the **one editor per object** lock.                                                                             | Two windows: A undoes, B's changes stay; B cannot enter Edit points on A's object.                       |
+| M6   | **Presence:** names and colours, selections, where each person is, 3D cursors.                                                                              | Two windows show each other's selection.                                                                 |
+| M7   | **Share button and links** (Stage A): create a link, open it, role respected.                                                                               | Viewer link cannot change anything, checked on the server.                                               |
+| M8   | **Postgres, Docker, accounts** (Stage B), dashboard, invitations. Designed in `ACCOUNTS.md` (parts M8a to M8f); **built 2026-11-23 to 2026-11-24**.         | Documents survive a server restart; roles enforced from the database.                                    |
+| M9   | **Deploy:** web on Vercel, collab server on a host that keeps WebSockets open, Postgres on Neon, files on R2; a two-context test in CI.                     | A real link works between two real devices.                                                              |
 
-**Status (2026-11-23): M1 to M7 are built.** What the build changed against this design is in `DECISIONS.md` (sections "Collab server" and "Editor sync layer"): `node:sqlite` instead of `better-sqlite3`, going online by `?collab=` in the address until the Share button (M7), Undo online takes back only your own field changes through our own pure functions (M5) rather than the Yjs `UndoManager`, and only the open scene is shared until the project document exists. M4 (files) sends them over plain HTTP at `/files/...` rather than through the WebSocket, and receives on demand with retries instead of a strict "upload first" order.
+**Status (2026-11-24): M1 to M8 are built, and the selection locks.** Only M9 (deployment) is left. What the build changed against this design is in `DECISIONS.md` (sections "Collab server", "Editor sync layer" and the M8 entries): `node:sqlite` instead of `better-sqlite3`, going online by `?collab=` in the address (and `?online=account` for accounts), Undo online takes back only your own field changes through our own pure functions (M5) rather than the Yjs `UndoManager`, and only the open scene is shared (no project document yet). M4 (files) sends them over plain HTTP at `/files/...` rather than through the WebSocket, and receives on demand with retries instead of a strict "upload first" order.
 
 ## 12. Risks and open questions, stated plainly
 
@@ -245,10 +258,10 @@ SceneRoom works with no account and no internet today, and that stays true.
   so the collab server needs a different host (a small container service). Which one is decided at M9, not now.
 - **Courtesy locks** (section 7) can be bypassed by a modified client. Fine for friends and teams; Stage B decides whether
   something stronger is needed.
-- **Prisma's `latest` tag is a release candidate** (8.0.0-rc.34, checked 2026-11-21); `DECISIONS.md` already says to use the
-  stable 7.x line. Re-check when M8 starts.
-- **Not verified yet:** the Hocuspocus 4.x API details (checked only that it exists, version 4.9.0, and needs Yjs 13), and
-  how Yjs behaves with our largest scenes. Both are checked at M2 and M3 by reading the library's own docs and measuring.
+- **Prisma's `latest` tag is a release candidate** (8.0.0-rc.35, checked 2026-11-24); the project stays on the stable 7.10.1
+  (`DECISIONS.md`). Re-check before moving to Prisma 8.
+- **Checked while building:** the Hocuspocus 4.x API (read from its source; a token can be a function, `connection.context` is what `onAuthenticate` returns, `closeConnections` only resets the document) and how Yjs behaves with our scenes (a 7-object scene is about 4.7 KB; a move is tens of bytes).
+- **Not verified yet:** how Yjs behaves with the largest scenes and many people at once; M9 gives real numbers.
 
 ## 13. Versions looked up on 2026-11-21 (npm registry)
 

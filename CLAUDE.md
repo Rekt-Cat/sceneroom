@@ -8,22 +8,24 @@ development with this project, so correctness, clear structure and documentation
 1. `docs/overview/PLAN.md` ("Current status" block at the top = where we are and the next action)
 2. `docs/overview/DECISIONS.md` (why things are the way they are)
 3. `docs/overview/WHAT-WE-USED.md` (running list of tools and libraries) and `docs/overview/WHY-THESE-TOOLS.md` (why each tool and not its alternatives)
-4. Working on the online part: `docs/backend/COLLABORATION.md` (design and build steps M1 to M9)
+4. Working on the online part: `docs/backend/COLLABORATION.md` (design and build steps M1 to M9) and `docs/backend/ACCOUNTS.md` (accounts, members, Postgres). For how the parts connect and which script runs when: `docs/diagrams/overview/whole-app.html` and `docs/diagrams/overview/script-flow.html`
 
 ## Repo layout
 
 - `docs/`: documents sorted into `overview/`, `editor/`, `backend/`, `dev/` (index: `docs/README.md`); new documents go in the folder for their topic and into that index.
 - `apps/web`: Next.js 16 app (App Router, Turbopack, Tailwind 4). Read `apps/web/AGENTS.md`: Next.js docs for the installed version are in `apps/web/node_modules/next/dist/docs/`. Check them before writing Next.js code.
-- `packages/shared`: types and constants shared by the web app and (later) the collab server.
-- `apps/collab-server`: the online part's server (Hocuspocus, SQLite). Run: `pnpm --filter @sceneroom/collab-server serve` (needs `apps/collab-server/.env`, see `.env.example`).
-- Planned: `packages/db`.
+- `packages/shared`: scene types, rules and the scene-to-Yjs code, shared by the web app and the collab server (browser-safe: no `node:` imports).
+- `packages/db`: the accounts database (Prisma 7 schema, migrations, role rules, seed). Needs Postgres (`docker compose up -d`) and Node 24.
+- `packages/link-token`: signed collab tokens and signed internal requests (server-only: uses `node:crypto`).
+- `apps/collab-server`: the online part's server (Hocuspocus; documents in SQLite, or in Postgres when `DATABASE_URL` is set). Run: `pnpm --filter @sceneroom/collab-server serve` (needs `apps/collab-server/.env`, see `.env.example`).
 
 ## Commands (run from the repo root)
 
 - `pnpm install`: install everything
 - `pnpm dev`: start dev servers through Turborepo (web app at http://localhost:3000)
+- `docker compose up -d` then `pnpm --filter @sceneroom/db migrate:deploy`: start Postgres and build its tables (needed for sign-in and for the tests of `packages/db`, `apps/web` and `apps/collab-server`; setup in `docs/dev/SETUP-ACCOUNTS.md`)
 - `pnpm build`, `pnpm lint`, `pnpm check-types`: run through Turborepo
-- `pnpm test:e2e`: browser tests (Playwright, `apps/web/e2e/`) against the running dev server. Set `PLAYWRIGHT_BROWSERS_PATH` first (see `docs/overview/DECISIONS.md`); restart the dev server after installing any dependency
+- `pnpm test:e2e`: browser tests (Playwright, `apps/web/e2e/`) against the running dev server (the account tests only run when Playwright starts the dev server itself with the accounts settings in `apps/web/.env.local`; otherwise they skip). Set `PLAYWRIGHT_BROWSERS_PATH` first (see `docs/overview/DECISIONS.md`); restart the dev server after installing any dependency
 - Node is pinned in `.node-version` (24, managed with fnm). pnpm is pinned in the root `package.json` via Corepack.
 
 ## How to work with the owner
