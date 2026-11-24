@@ -5,23 +5,30 @@ import { collabAccess, createDb, permissionsOf, Prisma, Role } from "./index";
 // them against the development database only.
 const db = createDb(process.env.DATABASE_URL);
 
+/** Only this file's own rows (users "u-...") are removed: other test files share the database and run at the same time. */
+const MINE = ["u-alice", "u-bob"];
 async function clean() {
-  await db.invitation.deleteMany();
-  await db.projectMember.deleteMany();
-  await db.project.deleteMany();
-  await db.user.deleteMany();
+  const projects = await db.project.findMany({
+    where: { ownerId: { in: MINE } },
+    select: { id: true },
+  });
+  const ids = projects.map((project) => project.id);
+  await db.invitation.deleteMany({ where: { projectId: { in: ids } } });
+  await db.projectMember.deleteMany({ where: { projectId: { in: ids } } });
+  await db.project.deleteMany({ where: { id: { in: ids } } });
+  await db.user.deleteMany({ where: { id: { in: [...MINE, "u-x"] } } });
 }
 
 async function twoUsersAndAProject() {
   const alice = await db.user.create({
-    data: { id: "u-alice", name: "Alice", email: "alice@example.test" },
+    data: { id: "u-alice", name: "Alice", email: "dbt-alice@example.test" },
   });
   const bob = await db.user.create({
-    data: { id: "u-bob", name: "Bob", email: "bob@example.test" },
+    data: { id: "u-bob", name: "Bob", email: "dbt-bob@example.test" },
   });
   const project = await db.project.create({
     data: {
-      id: "11111111-1111-4111-8111-111111111111",
+      id: "6b6b6b6b-0000-4000-8000-000000000001",
       name: "P",
       ownerId: alice.id,
       members: { create: { userId: alice.id, role: "owner" } },
@@ -77,7 +84,7 @@ describe("database rules", () => {
     await twoUsersAndAProject();
     await expect(
       db.user.create({
-        data: { id: "u-x", name: "X", email: "alice@example.test" },
+        data: { id: "u-x", name: "X", email: "dbt-alice@example.test" },
       }),
     ).rejects.toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
   });
@@ -112,8 +119,12 @@ describe("database rules", () => {
       },
     });
     await db.project.delete({ where: { id: project.id } });
-    expect(await db.projectMember.count()).toBe(0);
-    expect(await db.invitation.count()).toBe(0);
+    expect(
+      await db.projectMember.count({ where: { projectId: project.id } }),
+    ).toBe(0);
+    expect(
+      await db.invitation.count({ where: { projectId: project.id } }),
+    ).toBe(0);
   });
 
   it("an invitation token hash is unique, and removing the person who accepted keeps the invitation", async () => {
@@ -155,7 +166,7 @@ describe("database rules", () => {
       },
     });
     await db.user.delete({ where: { id: bob.id } });
-    expect(await db.session.count()).toBe(0);
-    expect(await db.account.count()).toBe(0);
+    expect(await db.session.count({ where: { userId: bob.id } })).toBe(0);
+    expect(await db.account.count({ where: { userId: bob.id } })).toBe(0);
   });
 });

@@ -1127,3 +1127,15 @@ Also learned: a test that clicks a button before the last change was stored race
 - **Verified by hand:** the sign-in request returns the GitHub address with our callback `http://localhost:3000/api/auth/callback/github`. **Not yet verified:** the full round trip through GitHub (a test cannot do it); the owner tries it once in the browser.
 - **The sign-in button is on the home screen only** for now; the editor's top bar gets the account state with the dashboard (M8e).
 - **Docker must be running** for sign-in and for the `auth` and `db` tests; Docker Desktop does not start by itself after a restart.
+
+## 2026-11-24: Accounts step M8c built (projects and members API)
+
+- **Rules are plain functions, routes are thin.** `apps/web/src/server/projects.ts` holds `createProject`, `listMyProjects`, `getProject`, `listMembers`, `changeMemberRole`, `removeMember`, `deleteProject`; each takes the database and the person asking, and checks the role itself through `permissionsOf`. Routes only check sign-in, the request shape (Zod) and translate the result. Result type: success with a value, or failure with a status (400, 403, 404, 409) and a message.
+- **"Not a member" and "no such project" both answer 404**, so nobody can learn which project ids exist. A member without the right gets 403.
+- **Creating a project is safe to repeat.** The id is the local project's id; the same owner asking again changes nothing, another person's id is refused (409, also when two requests race: Prisma error `P2002`). A person may own at most 50 online projects.
+- **One owner per project.** Roles can be changed only to editor, commenter or viewer; the owner's role cannot change, the owner cannot be removed or leave (delete the project instead). Members may leave themselves. Adding people is done with invitations (step M8e), so there is no "add member" route.
+- **Only the owner sees members' email addresses**; other members see name, picture and role.
+- **Changing routes check the site.** Sign-in uses a cookie, so a page on another site could make the browser send it along; a change request whose `Origin` header is not this site's address is refused (403). Requests without an Origin (tests, `curl`) are allowed; they carry no cookie from a browser.
+- **Small bodies only:** bodies over 4096 bytes get 413 before parsing; bad JSON or a wrong shape gets 400 with the problems listed.
+- **Tests share one database, so each file removes only its own rows** (`pt-`, `rt-`, `u-` user ids and fixed project ids). Earlier the tests emptied whole tables, which would break when `pnpm test` runs the db package and the web package at the same time.
+- **Not done yet:** deleting a project does not yet tell the collab server to disconnect people (step M8e); nothing in the editor calls these routes yet (the dashboard and the token route come in M8d and M8e).

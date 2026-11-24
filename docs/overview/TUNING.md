@@ -753,3 +753,11 @@ value and what it does.
 | Edge spread   | `padding` in `startNormalBake` (`shared/src/bake.ts`)     | 4 pixels           | How far the picture is spread past the edge of each map piece.                                  |
 | Work per step | `TEXELS_PER_STEP` in `bake/bakeNormal.ts`                 | 20 000             | Pixels baked before the page gets a moment to redraw (smaller = smoother progress bar, slower). |
 | Leaf size     | `LEAF_SIZE` in `shared/src/rayMesh.ts`                    | 4                  | Triangles in a leaf of the ray-casting tree.                                                    |
+
+## Projects and members API (`apps/web/src/server/limits.ts`)
+
+| Setting                        | Our value | What it does                                                                                      |
+| ------------------------------ | --------- | ------------------------------------------------------------------------------------------------- |
+| `MAX_ONLINE_PROJECTS_PER_USER` | 50        | The most online projects one person may own (each costs storage on the collab server).            |
+| `MAX_PROJECT_NAME_LENGTH`      | 100       | The longest an online project's name may be, in characters.                                       |
+| `MAX_REQUEST_BYTES`            | 4096      | The biggest body the project routes read (they only receive a name or a role); bigger gets a 413. |

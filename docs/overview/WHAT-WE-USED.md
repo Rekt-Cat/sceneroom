@@ -175,3 +175,13 @@ Why these and not the alternatives: `WHY-THESE-TOOLS.md`. Playwright is already 
 | GitHub OAuth app         | -       | The login itself: GitHub vouches for who the person is                                                         | made by the owner (`docs/dev/SETUP-ACCOUNTS.md`); values in `apps/web/.env.local` |
 | `transpilePackages`      | -       | Next compiles `@sceneroom/db` (TypeScript source in this repo) together with the web app                       | `apps/web/next.config.ts`                                                         |
 | Accounts env check (Zod) | 4.6.7   | The six accounts variables are checked together; none set = accounts off, the editor works as before           | `apps/web/src/server/accountsEnv.ts`                                              |
+
+## Projects and members API (step M8c, built 2026-11-24)
+
+| Item                     | Purpose                                                                                                                                               | Where                                          |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Next.js route handlers   | `/api/projects` (list mine, create), `/api/projects/<id>` (look, delete), `.../members` (list), `.../members/<userId>` (change role, remove or leave) | `apps/web/src/app/api/projects/`               |
+| Service functions        | All the rules as plain functions with the database passed in, so every role and action can be tested without HTTP                                     | `apps/web/src/server/projects.ts`              |
+| Zod schemas              | Checks the project id (UUID), the name (1 to 100 characters) and the role (editor, commenter, viewer)                                                 | `apps/web/src/server/projectSchemas.ts`        |
+| Route wrapper            | One place for: accounts off (503), not signed in (401), a change from another site (403), body too big (413), bad body (400)                          | `apps/web/src/server/routeHelpers.ts`          |
+| `vi.mock` of the session | Route tests fake the signed-in person and use the real routes and the real Postgres                                                                   | `apps/web/src/app/api/projects/routes.test.ts` |
