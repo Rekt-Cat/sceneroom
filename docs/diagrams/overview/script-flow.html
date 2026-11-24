@@ -1,0 +1,5284 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SceneRoom: script flow</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@500;600;700&display=swap"
+/>
+<style>
+  /* Layout concept: one whiteboard-style figure in two lanes, then a numbered walkthrough that matches it. */
+  :root {
+    --bg: #f2f5f6;
+    --surface: #ffffff;
+    --lane: #e9eef0;
+    --ink: #13202a;
+    --muted: #55656f;
+    --line: #c4d0d6;
+    --accent: #0a6c8a;
+    --on-accent: #ffffff;
+    --ok: #1c7a4b;
+    --ok-bg: #e0f2e8;
+    --pending: #8a5a00;
+    --pending-bg: #fbeed2;
+    --warn: #b3342c;
+    --font-head: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
+    --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1417;
+      --surface: #172026;
+      --lane: #121a1f;
+      --ink: #e5ecef;
+      --muted: #93a4ae;
+      --line: #2c3b44;
+      --accent: #5cc4e0;
+      --on-accent: #0e1417;
+      --ok: #5fd09a;
+      --ok-bg: #153227;
+      --pending: #e8b65c;
+      --pending-bg: #332a12;
+      --warn: #ff918a;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1417;
+    --surface: #172026;
+    --lane: #121a1f;
+    --ink: #e5ecef;
+    --muted: #93a4ae;
+    --line: #2c3b44;
+    --accent: #5cc4e0;
+    --on-accent: #0e1417;
+    --ok: #5fd09a;
+    --ok-bg: #153227;
+    --pending: #e8b65c;
+    --pending-bg: #332a12;
+    --warn: #ff918a;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    line-height: 1.5;
+    padding-block: 28px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  main {
+    max-width: 1040px;
+    margin-inline: auto;
+    display: grid;
+    gap: 26px;
+  }
+  h1 {
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: clamp(1.7rem, 4vw, 2.3rem);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h2 {
+    font-family: var(--font-head);
+    font-size: 1.25rem;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .lede {
+    margin: 6px 0 0;
+    color: var(--muted);
+    max-width: 62ch;
+    font-size: 1rem;
+  }
+  figure {
+    margin: 0;
+    display: grid;
+    gap: 10px;
+  }
+  .fig-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+  }
+  svg.diagram {
+    display: block;
+    min-width: 860px;
+    width: 100%;
+    height: auto;
+    color: var(--accent);
+  }
+  figcaption,
+  .hint {
+    color: var(--muted);
+    font-size: 0.9rem;
+    max-width: 78ch;
+    min-width: 0;
+    margin: 0;
+  }
+
+  /* diagram parts */
+  .lane {
+    fill: var(--lane);
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .lane-label {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.12em;
+    fill: var(--muted);
+  }
+  .box {
+    fill: var(--surface);
+    stroke: var(--line);
+    stroke-width: 1.5;
+  }
+  .box.ok {
+    stroke: var(--ok);
+  }
+  .box.pending {
+    stroke: var(--pending);
+    stroke-dasharray: 5 4;
+  }
+  .box.warn {
+    stroke: var(--warn);
+  }
+  .group {
+    fill: var(--surface);
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .t-title {
+    font: 600 13px var(--font-head);
+    fill: var(--ink);
+  }
+  .t-sub {
+    font: 400 11px var(--font-ui);
+    fill: var(--muted);
+  }
+  .t-mono {
+    font: 500 10.5px var(--font-mono);
+    fill: var(--ink);
+  }
+  .t-mono-sm {
+    font: 500 9.5px var(--font-mono);
+    fill: var(--muted);
+  }
+  .t-step {
+    font: 600 11px var(--font-head);
+    fill: var(--ink);
+  }
+  .arrow {
+    stroke: var(--accent);
+    stroke-width: 1.75;
+    fill: none;
+  }
+  .arrow-label {
+    font: 500 10.5px var(--font-ui);
+    fill: var(--accent);
+  }
+  .chev {
+    fill: var(--accent);
+  }
+  .pill-ok {
+    fill: var(--ok-bg);
+    stroke: var(--ok);
+    stroke-width: 1;
+  }
+  .pill-pending {
+    fill: var(--pending-bg);
+    stroke: var(--pending);
+    stroke-width: 1;
+  }
+  .pt-ok {
+    font: 600 10px var(--font-ui);
+    fill: var(--ok);
+  }
+  .pt-pending {
+    font: 600 10px var(--font-ui);
+    fill: var(--pending);
+  }
+  .note-warn {
+    font: 500 10.5px var(--font-ui);
+    fill: var(--warn);
+  }
+  .chip {
+    fill: var(--lane);
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .chip.pending {
+    fill: var(--pending-bg);
+    stroke: var(--pending);
+    stroke-dasharray: 4 3;
+  }
+  .badge {
+    fill: var(--accent);
+  }
+  .badge-t {
+    font: 700 10.5px var(--font-head);
+    fill: var(--on-accent);
+  }
+  .hit {
+    cursor: pointer;
+  }
+  .hit:hover > .box,
+  .hit:hover > .group {
+    stroke-width: 2.5;
+  }
+  .hit:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  /* walkthrough */
+  .walk {
+    display: grid;
+    gap: 14px;
+  }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 14px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 16px 14px;
+    min-width: 0;
+    scroll-margin-top: 20px;
+  }
+  .card.wide {
+    grid-column: 1 / -1;
+  }
+  .card.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  .card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .num {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--on-accent);
+    font: 700 13px var(--font-head);
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+  .card h3 {
+    font-family: var(--font-head);
+    font-size: 1.05rem;
+    margin: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .tag {
+    font: 600 11px var(--font-ui);
+    padding: 2px 9px;
+    border-radius: 999px;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+  .tag.ok {
+    color: var(--ok);
+    background: var(--ok-bg);
+    border-color: var(--ok);
+  }
+  .tag.pending {
+    color: var(--pending);
+    background: var(--pending-bg);
+    border-color: var(--pending);
+  }
+  dl {
+    margin: 0;
+    display: grid;
+    gap: 8px;
+  }
+  dt {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  dd {
+    margin: 0;
+    font-size: 0.92rem;
+    min-width: 0;
+  }
+  dd code,
+  li code,
+  .hint code {
+    font-family: var(--font-mono);
+    font-size: 0.84em;
+    background: var(--lane);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  ol.ci {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    gap: 8px 22px;
+    counter-reset: ci;
+  }
+  ol.ci li {
+    counter-increment: ci;
+    padding-left: 30px;
+    position: relative;
+    font-size: 0.92rem;
+    min-width: 0;
+  }
+  ol.ci li::before {
+    content: counter(ci);
+    position: absolute;
+    left: 0;
+    top: 1px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    font: 600 11px var(--font-head);
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+  }
+  ol.ci li.fail::before {
+    border-color: var(--warn);
+    color: var(--warn);
+  }
+  ol.ci strong {
+    font-family: var(--font-head);
+  }
+
+  a {
+    color: var(--accent);
+  }
+
+  /* deep dives */
+  .deep {
+    display: grid;
+    gap: 14px;
+  }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 16px;
+    min-width: 0;
+    display: grid;
+    gap: 12px;
+    scroll-margin-top: 20px;
+  }
+  .panel h3 {
+    font-family: var(--font-head);
+    font-size: 1.1rem;
+    margin: 0;
+  }
+  .panel h4 {
+    font: 600 0.95rem var(--font-head);
+    margin: 6px 0 0;
+  }
+  .panel p {
+    margin: 0;
+    font-size: 0.92rem;
+    max-width: 78ch;
+  }
+  .panel code,
+  .gloss code,
+  td code {
+    font-family: var(--font-mono);
+    font-size: 0.84em;
+    background: var(--lane);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  pre.code {
+    margin: 0;
+    padding: 10px 12px;
+    background: var(--lane);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font: 500 12px/1.55 var(--font-mono);
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--ink);
+  }
+  .ba {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    gap: 12px;
+  }
+  .ba > div {
+    min-width: 0;
+    display: grid;
+    gap: 5px;
+    align-content: start;
+  }
+  .ba-label {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .tbl-wrap {
+    overflow-x: auto;
+  }
+  table.cmp {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 680px;
+    font-size: 0.88rem;
+  }
+  table.cmp th,
+  table.cmp td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  table.cmp th {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  ol.steps {
+    margin: 0;
+    padding-left: 1.3rem;
+    display: grid;
+    gap: 6px;
+    font-size: 0.92rem;
+  }
+  ol.steps li {
+    padding-left: 4px;
+    min-width: 0;
+  }
+  .gloss {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 12px 26px;
+  }
+  .gloss > div {
+    min-width: 0;
+  }
+  .gloss dt {
+    text-transform: none;
+    letter-spacing: 0;
+    font: 600 0.9rem var(--font-head);
+    color: var(--ink);
+  }
+  .gloss dd {
+    font-size: 0.88rem;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  /* status note */
+  .status {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px 28px;
+  }
+  .status h2 {
+    font-size: 0.95rem;
+    margin: 0 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: none;
+  }
+  .dot.ok {
+    background: var(--ok);
+  }
+  .dot.pending {
+    background: var(--pending);
+  }
+  .status ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+  .status li + li {
+    margin-top: 3px;
+  }
+  .status code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    color: var(--ink);
+  }
+  .foot {
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin: 0;
+  }
+
+  .card h3 small {
+    font: 500 0.78rem var(--font-ui);
+    color: var(--muted);
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .sw {
+    width: 22px;
+    height: 12px;
+    border-radius: 4px;
+    border: 1.5px solid var(--ok);
+    background: var(--surface);
+  }
+  .sw.pending {
+    border-color: var(--pending);
+    border-style: dashed;
+  }
+  .sw.ext {
+    border-color: var(--line);
+  }
+  table.cmp td:first-child {
+    white-space: nowrap;
+  }
+  dd,
+  li,
+  p,
+  td code,
+  dd code,
+  li code,
+  p code {
+    overflow-wrap: anywhere;
+  }
+  .toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    font-size: 0.9rem;
+  }
+</style>
+<main>
+  <header>
+    <h1>SceneRoom: script flow</h1>
+    <p class="lede">
+      Which scripts run when you open a screen, which run afterwards, and which
+      helper and provider classes they lean on. The figures show the order
+      across the whole app; below them every screen has its own table. Click a
+      box in a figure to jump to the table for that part. File paths are
+      relative to <code>apps/web/src</code> unless they start with
+      <code>packages/</code> or <code>apps/</code>.
+    </p>
+    <p class="lede">
+      For the parts and how they connect (servers, data, people) see
+      <a href="whole-app.html">whole-app.html</a>.
+    </p>
+    <nav class="toc" aria-label="Screens">
+      <a href="#s-home">Home screen</a> <a href="#s-shell">Editor frame</a>
+      <a href="#s-store">Local storage (save and restore)</a>
+      <a href="#s-auth">Sign-in (the button and the route)</a>
+      <a href="#s-invite">Invite page</a> <a href="#s-top">Top bar</a>
+      <a href="#s-left">Left panel: scene list and assets</a>
+      <a href="#s-view">3D view</a>
+      <a href="#s-inspector">Right panel (Inspector)</a>
+      <a href="#s-edit">Edit mode (points, edges, faces)</a>
+      <a href="#s-uv">UV window</a> <a href="#s-paintbake">Paint and Bake</a>
+      <a href="#s-files">Importing and exporting</a>
+      <a href="#s-collab">Online layer (in the browser)</a>
+      <a href="#s-web">Web server (Next.js routes)</a>
+      <a href="#s-server">Collab server</a>
+    </nav>
+  </header>
+
+  <figure>
+    <h2>1. What runs, in order</h2>
+    <div class="fig-scroll">
+      <svg
+        class="diagram"
+        viewBox="0 0 1000 1353"
+        role="group"
+        aria-label="Three columns of numbered steps. A: opening the home screen, nine steps. B: opening the editor, fifteen steps from the server reading the address to the running watchers. C: the two servers, twelve steps from starting the web server to the collab server answering connections and requests. Arrows join A9 to B1 and B11 and B12 to the collab server."
+      >
+        <defs>
+          <marker
+            id="ah2"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+          </marker>
+          <marker
+            id="ah3"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+          </marker>
+        </defs>
+        <rect class="lane" x="12" y="10" width="316" height="1343" rx="14" />
+        <text class="lane-label" x="24" y="34">A: OPEN THE HOME SCREEN /</text>
+        <g
+          class="hit"
+          data-card="s-home"
+          tabindex="0"
+          role="button"
+          aria-label="A1, Server makes the page shell: show explanation"
+        >
+          <rect class="box ok" x="20" y="70" width="300" height="62" rx="8" />
+          <circle class="badge" cx="36" cy="86" r="10" />
+          <text
+            class="badge-t"
+            x="36"
+            y="90"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            A1
+          </text>
+          <text class="t-title" x="52" y="90">Server makes the page shell</text>
+          <text class="t-mono-sm" x="32" y="108">
+            app/layout.tsx fonts, &lt;html&gt;
+          </text>
+          <text class="t-mono-sm" x="32" y="121">
+            app/page.tsx returns HomeScreen
+          </text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-home"
+          tabindex="0"
+          role="button"
+          aria-label="A2, Browser starts React: show explanation"
+        >
+          <rect class="box ok" x="20" y="146" width="300" height="62" rx="8" />
+          <circle class="badge" cx="36" cy="162" r="10" />
+          <text
+            class="badge-t"
+            x="36"
+            y="166"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            A2
+          </text>
+          <text class="t-title" x="52" y="166">Browser starts React</text>
+          <text class="t-mono-sm" x="32" y="184">
+            components/home/HomeScreen.tsx
+          </text>
+          <text class="t-mono-sm" x="32" y="197">
+            shows &#x27;Looking for your projects…&#x27;
+          </text>
+        </g>
+        <path class="arrow" d="M130.0 132 V145" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-store"
+          tabindex="0"
+          role="button"
+          aria-label="A3, Open the browser&#x27;s database: show explanation"
+        >
+          <rect class="box ok" x="20" y="222" width="300" height="62" rx="8" />
+          <circle class="badge" cx="36" cy="238" r="10" />
+          <text
+            class="badge-t"
+            x="36"
+            y="242"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            A3
+          </text>
+          <text class="t-title" x="52" y="242">
+            Open the browser&#x27;s database
+          </text>
+          <text class="t-mono-sm" x="32" y="260">
+            persistence/idb.ts openDatabase()
+          </text>
+          <text class="t-mono-sm" x="32" y="273">
+            IndexedDB (promise wrapper)
+          </text>
+        </g>
+        <path class="arrow" d="M130.0 208 V221" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-store"
+          tabindex="0"
+          role="button"
+          aria-label="A4, Choose where files are kept: show explanation"
+        >
+          <rect class="box ok" x="20" y="298" width="300" height="62" rx="8" />
+          <circle class="badge" cx="36" cy="314" r="10" />
+          <text
+            class="badge-t"
+            x="36"
+            y="318"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            A4
+          </text>
+          <text class="t-title" x="52" y="318">
+            Choose where files are kept
+          </text>
+          <text class="t-mono-sm" x="32" y="336">
+            assets/assetStorage.ts setAssetStorage()
+          </text>
+          <text class="t-mono-sm" x="32" y="349">
+            -&gt; IndexedDbAssetStorage (provider)
+          </text>
+        </g>
+        <path class="arrow" d="M130.0 284 V297" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-store"
+          tabindex="0"
+          role="button"
+          aria-label="A5, List the projects: show explanation"
+        >
+          <rect class="box ok" x="20" y="374" width="300" height="62" rx="8" />
+          <circle class="badge" cx="36" cy="390" r="10" />
+          <text
+            class="badge-t"
+            x="36"
+            y="394"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            A5
+          </text>
+          <text class="t-title" x="52" y="394">List the projects</text>
+          <text class="t-mono-sm" x="32" y="412">
+            persistence/projectLibrary.ts list()
+          </text>
+          <text class="t-mono-sm" x="32" y="425">
+            first run: moves the old project in
+          </text>
+        </g>
+        <path class="arrow" d="M130.0 360 V373" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-home"
+          tabindex="0"
+          role="button"
+          aria-label="A6, Draw one card per project: show explanation"
+        >
+          <rect class="box ok" x="20" y="450" width="300" height="62" rx="8" />
+          <circle class="badge" cx="36" cy="466" r="10" />
+          <text
+            class="badge-t"
+            x="36"
+            y="470"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            A6
+          </text>
+          <text class="t-title" x="52" y="470">Draw one card per project</text>
+          <text class="t-mono-sm" x="32" y="488">home/ProjectCard.tsx</text>
+          <text class="t-mono-sm" x="32" y="501">
+            pictures: library.thumbnail(id)
+          </text>
+        </g>
+        <path class="arrow" d="M130.0 436 V449" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-auth"
+          tabindex="0"
+          role="button"
+          aria-label="A7, Ask who you are (parallel): show explanation"
+        >
+          <rect class="box ok" x="20" y="526" width="300" height="62" rx="8" />
+          <circle class="badge" cx="36" cy="542" r="10" />
+          <text
+            class="badge-t"
+            x="36"
+            y="546"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            A7
+          </text>
+          <text class="t-title" x="52" y="546">Ask who you are (parallel)</text>
+          <text class="t-mono-sm" x="32" y="564">
+            AccountButton.tsx -&gt; /api/auth/...
+          </text>
+          <text class="t-mono-sm" x="32" y="577">
+            OnlineProjects.tsx -&gt; /api/projects
+          </text>
+        </g>
+        <path class="arrow" d="M130.0 512 V525" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-home"
+          tabindex="0"
+          role="button"
+          aria-label="A8, A person clicks something: show explanation"
+        >
+          <rect class="box ok" x="20" y="602" width="300" height="62" rx="8" />
+          <circle class="badge" cx="36" cy="618" r="10" />
+          <text
+            class="badge-t"
+            x="36"
+            y="622"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            A8
+          </text>
+          <text class="t-title" x="52" y="622">A person clicks something</text>
+          <text class="t-mono-sm" x="32" y="640">
+            home/homeActions.ts new / import /
+          </text>
+          <text class="t-mono-sm" x="32" y="653">
+            export; rename, copy, delete in cards
+          </text>
+        </g>
+        <path class="arrow" d="M130.0 588 V601" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-home"
+          tabindex="0"
+          role="button"
+          aria-label="A9, Open a project: show explanation"
+        >
+          <rect class="box ok" x="20" y="678" width="300" height="62" rx="8" />
+          <circle class="badge" cx="36" cy="694" r="10" />
+          <text
+            class="badge-t"
+            x="36"
+            y="698"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            A9
+          </text>
+          <text class="t-title" x="52" y="698">Open a project</text>
+          <text class="t-mono-sm" x="32" y="716">
+            router.push(&#x27;/p/&lt;id&gt;&#x27;)
+          </text>
+          <text class="t-mono-sm" x="32" y="729">-&gt; column B</text>
+        </g>
+        <path class="arrow" d="M130.0 664 V677" marker-end="url(#ah2)" />
+        <rect class="lane" x="342" y="10" width="316" height="1343" rx="14" />
+        <text class="lane-label" x="354" y="34">
+          B: OPEN THE EDITOR /p/&lt;id&gt;
+        </text>
+        <g
+          class="hit"
+          data-card="s-shell"
+          tabindex="0"
+          role="button"
+          aria-label="B1, Server reads the address: show explanation"
+        >
+          <rect class="box ok" x="350" y="70" width="300" height="62" rx="8" />
+          <circle class="badge" cx="366" cy="86" r="10" />
+          <text
+            class="badge-t"
+            x="366"
+            y="90"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            B1
+          </text>
+          <text class="t-title" x="382" y="90">Server reads the address</text>
+          <text class="t-mono-sm" x="362" y="108">
+            app/p/[projectId]/page.tsx
+          </text>
+          <text class="t-mono-sm" x="362" y="121">
+            passes projectId to EditorShell
+          </text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-shell"
+          tabindex="0"
+          role="button"
+          aria-label="B2, EditorShell renders, hooks start: show explanation"
+        >
+          <rect class="box ok" x="350" y="146" width="300" height="62" rx="8" />
+          <circle class="badge" cx="366" cy="162" r="10" />
+          <text
+            class="badge-t"
+            x="366"
+            y="166"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            B2
+          </text>
+          <text class="t-title" x="382" y="166">
+            EditorShell renders, hooks start
+          </text>
+          <text class="t-mono-sm" x="362" y="184">
+            useEditorShortcuts usePeekKeys
+          </text>
+          <text class="t-mono-sm" x="362" y="197">window key listeners</text>
+        </g>
+        <path class="arrow" d="M460.0 132 V145" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-shell"
+          tabindex="0"
+          role="button"
+          aria-label="B3, Small start-up effects: show explanation"
+        >
+          <rect class="box ok" x="350" y="222" width="300" height="75" rx="8" />
+          <circle class="badge" cx="366" cy="238" r="10" />
+          <text
+            class="badge-t"
+            x="366"
+            y="242"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            B3
+          </text>
+          <text class="t-title" x="382" y="242">Small start-up effects</text>
+          <text class="t-mono-sm" x="362" y="260">
+            plantLibraryStore / layoutStore /
+          </text>
+          <text class="t-mono-sm" x="362" y="273">
+            viewStore hydrate; installTestHooks;
+          </text>
+          <text class="t-mono-sm" x="362" y="286">
+            watchEditMode; startPrefabEditing
+          </text>
+        </g>
+        <path class="arrow" d="M460.0 208 V221" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-collab"
+          tabindex="0"
+          role="button"
+          aria-label="B4, Read the address for a way online: show explanation"
+        >
+          <rect class="box ok" x="350" y="311" width="300" height="75" rx="8" />
+          <circle class="badge" cx="366" cy="327" r="10" />
+          <text
+            class="badge-t"
+            x="366"
+            y="331"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            B4
+          </text>
+          <text class="t-title" x="382" y="331">
+            Read the address for a way online
+          </text>
+          <text class="t-mono-sm" x="362" y="349">
+            collabParams.ts ?collab&amp;token (link)
+          </text>
+          <text class="t-mono-sm" x="362" y="362">
+            accountParams.ts ?online=account
+          </text>
+          <text class="t-mono-sm" x="362" y="375">
+            savedConnection.ts save / load
+          </text>
+        </g>
+        <path class="arrow" d="M460.0 297 V310" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-store"
+          tabindex="0"
+          role="button"
+          aria-label="B5, startPersistence(projectId): show explanation"
+        >
+          <rect class="box ok" x="350" y="400" width="300" height="62" rx="8" />
+          <circle class="badge" cx="366" cy="416" r="10" />
+          <text
+            class="badge-t"
+            x="366"
+            y="420"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            B5
+          </text>
+          <text class="t-title" x="382" y="420">
+            startPersistence(projectId)
+          </text>
+          <text class="t-mono-sm" x="362" y="438">
+            persistence/startPersistence.ts
+          </text>
+          <text class="t-mono-sm" x="362" y="451">
+            openDatabase -&gt; IndexedDbAssetStorage
+          </text>
+        </g>
+        <path class="arrow" d="M460.0 386 V399" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-store"
+          tabindex="0"
+          role="button"
+          aria-label="B6, Restore the saved project: show explanation"
+        >
+          <rect class="box ok" x="350" y="476" width="300" height="75" rx="8" />
+          <circle class="badge" cx="366" cy="492" r="10" />
+          <text
+            class="badge-t"
+            x="366"
+            y="496"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            B6
+          </text>
+          <text class="t-title" x="382" y="496">Restore the saved project</text>
+          <text class="t-mono-sm" x="362" y="514">
+            projectLibrary.load -&gt; projectStore
+          </text>
+          <text class="t-mono-sm" x="362" y="527">
+            .loadProject -&gt; sceneStore.loadScene;
+          </text>
+          <text class="t-mono-sm" x="362" y="540">
+            applyAllPrefabScenes; else Not found
+          </text>
+        </g>
+        <path class="arrow" d="M460.0 462 V475" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-store"
+          tabindex="0"
+          role="button"
+          aria-label="B7, Turn saving on: show explanation"
+        >
+          <rect class="box ok" x="350" y="565" width="300" height="75" rx="8" />
+          <circle class="badge" cx="366" cy="581" r="10" />
+          <text
+            class="badge-t"
+            x="366"
+            y="585"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            B7
+          </text>
+          <text class="t-title" x="382" y="585">Turn saving on</text>
+          <text class="t-mono-sm" x="362" y="603">
+            persistence/autosave.ts (debounced)
+          </text>
+          <text class="t-mono-sm" x="362" y="616">
+            subscribe sceneStore + projectStore;
+          </text>
+          <text class="t-mono-sm" x="362" y="629">
+            thumbnail after 4 s, then 30 s
+          </text>
+        </g>
+        <path class="arrow" d="M460.0 551 V564" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-view"
+          tabindex="0"
+          role="button"
+          aria-label="B8, 3D view loads in the browser only: show explanation"
+        >
+          <rect class="box ok" x="350" y="654" width="300" height="75" rx="8" />
+          <circle class="badge" cx="366" cy="670" r="10" />
+          <text
+            class="badge-t"
+            x="366"
+            y="674"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            B8
+          </text>
+          <text class="t-title" x="382" y="674">
+            3D view loads in the browser only
+          </text>
+          <text class="t-mono-sm" x="362" y="692">
+            ViewportLoader.tsx (dynamic, no SSR)
+          </text>
+          <text class="t-mono-sm" x="362" y="705">
+            Viewport.tsx: Canvas, SceneNodes,
+          </text>
+          <text class="t-mono-sm" x="362" y="718">
+            controllers, PresenceLayer
+          </text>
+        </g>
+        <path class="arrow" d="M460.0 640 V653" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-collab"
+          tabindex="0"
+          role="button"
+          aria-label="B9, Go online if a way is saved: show explanation"
+        >
+          <rect class="box ok" x="350" y="743" width="300" height="75" rx="8" />
+          <circle class="badge" cx="366" cy="759" r="10" />
+          <text
+            class="badge-t"
+            x="366"
+            y="763"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            B9
+          </text>
+          <text class="t-title" x="382" y="763">
+            Go online if a way is saved
+          </text>
+          <text class="t-mono-sm" x="362" y="781">
+            collab/collabController.ts
+          </text>
+          <text class="t-mono-sm" x="362" y="794">
+            connectionToken(): link string or
+          </text>
+          <text class="t-mono-sm" x="362" y="807">
+            account source; connectCollab -&gt; startCollab
+          </text>
+        </g>
+        <path class="arrow" d="M460.0 729 V742" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-collab"
+          tabindex="0"
+          role="button"
+          aria-label="B10, Wait until the project is restored: show explanation"
+        >
+          <rect class="box ok" x="350" y="832" width="300" height="62" rx="8" />
+          <circle class="badge" cx="366" cy="848" r="10" />
+          <text
+            class="badge-t"
+            x="366"
+            y="852"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            B10
+          </text>
+          <text class="t-title" x="382" y="852">
+            Wait until the project is restored
+          </text>
+          <text class="t-mono-sm" x="362" y="870">startCollab.ts watches</text>
+          <text class="t-mono-sm" x="362" y="883">
+            persistenceStore.status saved/saving
+          </text>
+        </g>
+        <path class="arrow" d="M460.0 818 V831" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-collab"
+          tabindex="0"
+          role="button"
+          aria-label="B11, Wrap storage, start helpers: show explanation"
+        >
+          <rect class="box ok" x="350" y="908" width="300" height="75" rx="8" />
+          <circle class="badge" cx="366" cy="924" r="10" />
+          <text
+            class="badge-t"
+            x="366"
+            y="928"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            B11
+          </text>
+          <text class="t-title" x="382" y="928">
+            Wrap storage, start helpers
+          </text>
+          <text class="t-mono-sm" x="362" y="946">
+            OnlineAssetStorage wraps IndexedDb one;
+          </text>
+          <text class="t-mono-sm" x="362" y="959">
+            fileClient (token.cached()) + uploader;
+          </text>
+          <text class="t-mono-sm" x="362" y="972">
+            collabHistory.watchHistory
+          </text>
+        </g>
+        <path class="arrow" d="M460.0 894 V907" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-collab"
+          tabindex="0"
+          role="button"
+          aria-label="B12, One session per open scene: show explanation"
+        >
+          <rect class="box ok" x="350" y="997" width="300" height="75" rx="8" />
+          <circle class="badge" cx="366" cy="1013" r="10" />
+          <text
+            class="badge-t"
+            x="366"
+            y="1017"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            B12
+          </text>
+          <text class="t-title" x="382" y="1017">
+            One session per open scene
+          </text>
+          <text class="t-mono-sm" x="362" y="1035">
+            collabSession.ts: Y.Doc, sceneBinding,
+          </text>
+          <text class="t-mono-sm" x="362" y="1048">
+            IndexeddbPersistence, HocuspocusProvider
+          </text>
+          <text class="t-mono-sm" x="362" y="1061">
+            (token: () =&gt; source.fresh() each connect)
+          </text>
+        </g>
+        <path class="arrow" d="M460.0 983 V996" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-collab"
+          tabindex="0"
+          role="button"
+          aria-label="B13, Meet the shared document: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="350"
+            y="1086"
+            width="300"
+            height="75"
+            rx="8"
+          />
+          <circle class="badge" cx="366" cy="1102" r="10" />
+          <text
+            class="badge-t"
+            x="366"
+            y="1106"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            B13
+          </text>
+          <text class="t-title" x="382" y="1106">Meet the shared document</text>
+          <text class="t-mono-sm" x="362" y="1124">
+            offline copy loaded, then binding.start()
+          </text>
+          <text class="t-mono-sm" x="362" y="1137">
+            first meeting: seed or adopt scene;
+          </text>
+          <text class="t-mono-sm" x="362" y="1150">
+            server synced -&gt; binding.serverSynced()
+          </text>
+        </g>
+        <path class="arrow" d="M460.0 1072 V1085" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-collab"
+          tabindex="0"
+          role="button"
+          aria-label="B14, Share who is here: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="350"
+            y="1175"
+            width="300"
+            height="75"
+            rx="8"
+          />
+          <circle class="badge" cx="366" cy="1191" r="10" />
+          <text
+            class="badge-t"
+            x="366"
+            y="1195"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            B14
+          </text>
+          <text class="t-title" x="382" y="1195">Share who is here</text>
+          <text class="t-mono-sm" x="362" y="1213">
+            presence.ts name, colour, selection,
+          </text>
+          <text class="t-mono-sm" x="362" y="1226">
+            pointer; editLocks.ts one editor
+          </text>
+          <text class="t-mono-sm" x="362" y="1239">per object (awareness)</text>
+        </g>
+        <path class="arrow" d="M460.0 1161 V1174" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-collab"
+          tabindex="0"
+          role="button"
+          aria-label="B15, Running: three watchers: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="350"
+            y="1264"
+            width="300"
+            height="75"
+            rx="8"
+          />
+          <circle class="badge" cx="366" cy="1280" r="10" />
+          <text
+            class="badge-t"
+            x="366"
+            y="1284"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            B15
+          </text>
+          <text class="t-title" x="382" y="1284">Running: three watchers</text>
+          <text class="t-mono-sm" x="362" y="1302">
+            scene changed -&gt; session.localChanged
+          </text>
+          <text class="t-mono-sm" x="362" y="1315">
+            assets changed -&gt; uploader.request
+          </text>
+          <text class="t-mono-sm" x="362" y="1328">
+            sceneEpoch changed -&gt; rebind
+          </text>
+        </g>
+        <path class="arrow" d="M460.0 1250 V1263" marker-end="url(#ah2)" />
+        <rect class="lane" x="672" y="10" width="316" height="1343" rx="14" />
+        <text class="lane-label" x="684" y="34">C: THE TWO SERVERS</text>
+        <g
+          class="hit"
+          data-card="s-web"
+          tabindex="0"
+          role="button"
+          aria-label="C1, Web server starts: show explanation"
+        >
+          <rect class="box ok" x="680" y="70" width="300" height="62" rx="8" />
+          <circle class="badge" cx="696" cy="86" r="10" />
+          <text
+            class="badge-t"
+            x="696"
+            y="90"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            C1
+          </text>
+          <text class="t-title" x="712" y="90">Web server starts</text>
+          <text class="t-mono-sm" x="692" y="108">
+            pnpm dev -&gt; turbo -&gt; next dev :3000
+          </text>
+          <text class="t-mono-sm" x="692" y="121">
+            reads apps/web/.env.local
+          </text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-web"
+          tabindex="0"
+          role="button"
+          aria-label="C2, First /api request: show explanation"
+        >
+          <rect class="box ok" x="680" y="146" width="300" height="75" rx="8" />
+          <circle class="badge" cx="696" cy="162" r="10" />
+          <text
+            class="badge-t"
+            x="696"
+            y="166"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            C2
+          </text>
+          <text class="t-title" x="712" y="166">First /api request</text>
+          <text class="t-mono-sm" x="692" y="184">
+            server/auth.ts getAccounts():
+          </text>
+          <text class="t-mono-sm" x="692" y="197">
+            readAccountsEnv (Zod) -&gt; createDb -&gt;
+          </text>
+          <text class="t-mono-sm" x="692" y="210">
+            createAuth, kept on globalThis
+          </text>
+        </g>
+        <path class="arrow" d="M790.0 132 V145" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-web"
+          tabindex="0"
+          role="button"
+          aria-label="C3, Better Auth answers: show explanation"
+        >
+          <rect class="box ok" x="680" y="235" width="300" height="75" rx="8" />
+          <circle class="badge" cx="696" cy="251" r="10" />
+          <text
+            class="badge-t"
+            x="696"
+            y="255"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            C3
+          </text>
+          <text class="t-title" x="712" y="255">Better Auth answers</text>
+          <text class="t-mono-sm" x="692" y="273">
+            api/auth/[...all]/route.ts
+          </text>
+          <text class="t-mono-sm" x="692" y="286">
+            toNextJsHandler; 503 if accounts off
+          </text>
+          <text class="t-mono-sm" x="692" y="299">
+            -&gt; Prisma adapter -&gt; Postgres
+          </text>
+        </g>
+        <path class="arrow" d="M790.0 221 V234" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-web"
+          tabindex="0"
+          role="button"
+          aria-label="C4, Project and token routes: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="680"
+            y="324"
+            width="300"
+            height="101"
+            rx="8"
+          />
+          <circle class="badge" cx="696" cy="340" r="10" />
+          <text
+            class="badge-t"
+            x="696"
+            y="344"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            C4
+          </text>
+          <text class="t-title" x="712" y="344">Project and token routes</text>
+          <text class="t-mono-sm" x="692" y="362">
+            routeHelpers.withUser: 503 / 401 / 403
+          </text>
+          <text class="t-mono-sm" x="692" y="375">
+            (other site) / 413 / 400, then
+          </text>
+          <text class="t-mono-sm" x="692" y="388">
+            projects.ts rules or collabToken.ts
+          </text>
+          <text class="t-mono-sm" x="692" y="401">
+            (roleOf -&gt; collabAccess -&gt; link-token);
+          </text>
+          <text class="t-mono-sm" x="692" y="414">
+            invitations; collabAdmin.ts disconnect
+          </text>
+        </g>
+        <path class="arrow" d="M790.0 310 V323" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-server"
+          tabindex="0"
+          role="button"
+          aria-label="C5, Collab server starts: show explanation"
+        >
+          <rect class="box ok" x="680" y="439" width="300" height="62" rx="8" />
+          <circle class="badge" cx="696" cy="455" r="10" />
+          <text
+            class="badge-t"
+            x="696"
+            y="459"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            C5
+          </text>
+          <text class="t-title" x="712" y="459">Collab server starts</text>
+          <text class="t-mono-sm" x="692" y="477">
+            pnpm --filter ...collab-server serve
+          </text>
+          <text class="t-mono-sm" x="692" y="490">
+            tsx --env-file-if-exists=.env main.ts
+          </text>
+        </g>
+        <path class="arrow" d="M790.0 425 V438" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-server"
+          tabindex="0"
+          role="button"
+          aria-label="C6, Read and check settings: show explanation"
+        >
+          <rect class="box ok" x="680" y="515" width="300" height="62" rx="8" />
+          <circle class="badge" cx="696" cy="531" r="10" />
+          <text
+            class="badge-t"
+            x="696"
+            y="535"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            C6
+          </text>
+          <text class="t-title" x="712" y="535">Read and check settings</text>
+          <text class="t-mono-sm" x="692" y="553">
+            config.ts loadConfig(process.env)
+          </text>
+          <text class="t-mono-sm" x="692" y="566">
+            bad value stops the server at once
+          </text>
+        </g>
+        <path class="arrow" d="M790.0 501 V514" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-server"
+          tabindex="0"
+          role="button"
+          aria-label="C7, Open the stores: show explanation"
+        >
+          <rect class="box ok" x="680" y="591" width="300" height="62" rx="8" />
+          <circle class="badge" cx="696" cy="607" r="10" />
+          <text
+            class="badge-t"
+            x="696"
+            y="611"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            C7
+          </text>
+          <text class="t-title" x="712" y="611">Open the stores</text>
+          <text class="t-mono-sm" x="692" y="629">
+            store.ts SqliteStore (node:sqlite)
+          </text>
+          <text class="t-mono-sm" x="692" y="642">
+            fileStore.ts FolderFileStore
+          </text>
+        </g>
+        <path class="arrow" d="M790.0 577 V590" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-server"
+          tabindex="0"
+          role="button"
+          aria-label="C8, Build the server: show explanation"
+        >
+          <rect class="box ok" x="680" y="667" width="300" height="75" rx="8" />
+          <circle class="badge" cx="696" cy="683" r="10" />
+          <text
+            class="badge-t"
+            x="696"
+            y="687"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            C8
+          </text>
+          <text class="t-title" x="712" y="687">Build the server</text>
+          <text class="t-mono-sm" x="692" y="705">
+            createServer.ts: Hocuspocus Server with
+          </text>
+          <text class="t-mono-sm" x="692" y="718">
+            hooks, then a request handler chain:
+          </text>
+          <text class="t-mono-sm" x="692" y="731">
+            share -&gt; files -&gt; Hocuspocus
+          </text>
+        </g>
+        <path class="arrow" d="M790.0 653 V666" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-server"
+          tabindex="0"
+          role="button"
+          aria-label="C9, Listen, and guard shutdown: show explanation"
+        >
+          <rect class="box ok" x="680" y="756" width="300" height="62" rx="8" />
+          <circle class="badge" cx="696" cy="772" r="10" />
+          <text
+            class="badge-t"
+            x="696"
+            y="776"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            C9
+          </text>
+          <text class="t-title" x="712" y="776">
+            Listen, and guard shutdown
+          </text>
+          <text class="t-mono-sm" x="692" y="794">
+            server.listen() on :1234
+          </text>
+          <text class="t-mono-sm" x="692" y="807">
+            SIGINT/SIGTERM: save, close, exit
+          </text>
+        </g>
+        <path class="arrow" d="M790.0 742 V755" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-server"
+          tabindex="0"
+          role="button"
+          aria-label="C10, Per WebSocket connection: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="680"
+            y="832"
+            width="300"
+            height="101"
+            rx="8"
+          />
+          <circle class="badge" cx="696" cy="848" r="10" />
+          <text
+            class="badge-t"
+            x="696"
+            y="852"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            C10
+          </text>
+          <text class="t-title" x="712" y="852">Per WebSocket connection</text>
+          <text class="t-mono-sm" x="692" y="870">
+            onAuthenticate: documentName.ts,
+          </text>
+          <text class="t-mono-sm" x="692" y="883">
+            link-token verifyLinkToken, project,
+          </text>
+          <text class="t-mono-sm" x="692" y="896">
+            generation; viewer = read-only
+          </text>
+          <text class="t-mono-sm" x="692" y="909">
+            onLoadDocument: store.load
+          </text>
+          <text class="t-mono-sm" x="692" y="922">
+            onStoreDocument: size limit, store.save
+          </text>
+        </g>
+        <path class="arrow" d="M790.0 818 V831" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-server"
+          tabindex="0"
+          role="button"
+          aria-label="C11, Per HTTP request: show explanation"
+        >
+          <rect class="box ok" x="680" y="947" width="300" height="88" rx="8" />
+          <circle class="badge" cx="696" cy="963" r="10" />
+          <text
+            class="badge-t"
+            x="696"
+            y="967"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            C11
+          </text>
+          <text class="t-title" x="712" y="967">Per HTTP request</text>
+          <text class="t-mono-sm" x="692" y="985">cors.ts (OPTIONS first)</text>
+          <text class="t-mono-sm" x="692" y="998">
+            shareRoutes.ts /share/&lt;project&gt;[/reset]
+          </text>
+          <text class="t-mono-sm" x="692" y="1011">
+            fileRoutes.ts /files/&lt;project&gt;/&lt;id&gt;:
+          </text>
+          <text class="t-mono-sm" x="692" y="1024">
+            token, role, hash, size, quota
+          </text>
+        </g>
+        <path class="arrow" d="M790.0 933 V946" marker-end="url(#ah2)" />
+        <g
+          class="hit"
+          data-card="s-web"
+          tabindex="0"
+          role="button"
+          aria-label="C12, Next: M8f and after: show explanation"
+        >
+          <rect
+            class="box pending"
+            x="680"
+            y="1049"
+            width="300"
+            height="75"
+            rx="8"
+          />
+          <circle class="badge" cx="696" cy="1065" r="10" />
+          <text
+            class="badge-t"
+            x="696"
+            y="1069"
+            text-anchor="middle"
+            style="font-size: 9.5px"
+          >
+            C12
+          </text>
+          <text class="t-title" x="712" y="1069">Next: M8f and after</text>
+          <text class="t-mono-sm" x="692" y="1087">
+            M8f documents in Postgres;
+          </text>
+          <text class="t-mono-sm" x="692" y="1100">
+            then selection locks and M9
+          </text>
+          <text class="t-mono-sm" x="692" y="1113">
+            deployment (docs/overview/PLAN.md)
+          </text>
+        </g>
+        <path class="arrow" d="M790.0 1035 V1048" marker-end="url(#ah2)" />
+        <path
+          class="arrow"
+          d="M320 709.0 H335 V101.0 H346"
+          marker-end="url(#ah2)"
+        />
+        <path
+          class="arrow"
+          d="M650 1034.5 H659 V882.5 H676"
+          marker-end="url(#ah2)"
+          marker-start="url(#ah2)"
+        />
+        <path
+          class="arrow"
+          d="M650 945.5 H669 V991.0 H676"
+          marker-end="url(#ah2)"
+          marker-start="url(#ah2)"
+        />
+      </svg>
+    </div>
+    <figcaption>
+      Column A is the home screen, B the editor, C the two servers. Arrows
+      between columns: A9 opens B1; B11 (files) and B12 (the live connection)
+      talk to C11 and C10. Dashed boxes are not built yet.
+    </figcaption>
+  </figure>
+
+  <section class="walk" aria-labelledby="screens-h">
+    <h2 id="screens-h">2. Screen by screen</h2>
+    <div class="cards">
+      <section class="card wide" id="s-home">
+        <div class="card-head">
+          <span class="num">1</span>
+          <h3>
+            Home screen <small>route / (apps/web/src/app/page.tsx)</small>
+          </h3>
+        </div>
+        <p class="hint">
+          The list of your projects. Runs entirely in the browser after the page
+          arrives; no server call except the sign-in button.
+        </p>
+        <h4>Runs first, in this order</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td><code>app/layout.tsx</code></td>
+                <td>fonts and the &lt;html&gt; shell for every page</td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td><code>app/page.tsx</code></td>
+                <td>returns HomeScreen</td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td><code>components/home/HomeScreen.tsx</code></td>
+                <td>
+                  starts in &#x27;loading&#x27;; its start-up effect opens the
+                  database
+                </td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td><code>persistence/idb.ts openDatabase()</code></td>
+                <td>opens the browser&#x27;s IndexedDB</td>
+              </tr>
+              <tr>
+                <td>5</td>
+                <td><code>assets/assetStorage.ts setAssetStorage()</code></td>
+                <td>from now on imported files are kept in IndexedDB</td>
+              </tr>
+              <tr>
+                <td>6</td>
+                <td><code>persistence/projectLibrary.ts list()</code></td>
+                <td>
+                  reads the project list; on the very first run moves the old
+                  single project in
+                </td>
+              </tr>
+              <tr>
+                <td>7</td>
+                <td><code>home/ProjectCard.tsx</code></td>
+                <td>
+                  one card per project; its picture comes from
+                  library.thumbnail(id)
+                </td>
+              </tr>
+              <tr>
+                <td>8</td>
+                <td><code>components/home/AccountButton.tsx</code></td>
+                <td>
+                  in parallel: asks /api/auth/get-session who is signed in;
+                  shows nothing if accounts are off
+                </td>
+              </tr>
+              <tr>
+                <td>9</td>
+                <td><code>components/home/OnlineProjects.tsx</code></td>
+                <td>
+                  in parallel: if signed in (fetchMe), lists the projects you
+                  are a member of with your role; links open
+                  /p/&lt;id&gt;?online=account&amp;scene=&lt;entry scene&gt;
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Runs afterwards, when you use it</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>home/homeActions.ts</code></td>
+                <td>
+                  createNewProject, importProject (.sceneroom file),
+                  exportProjectFile; each returns a HomeResult message
+                </td>
+              </tr>
+              <tr>
+                <td><code>persistence/projectLibrary.ts</code></td>
+                <td>
+                  rename, duplicate, delete and save go through the library from
+                  the cards
+                </td>
+              </tr>
+              <tr>
+                <td><code>components/viewport/ImportBanner.tsx</code></td>
+                <td>shows the message of the last action (importStore)</td>
+              </tr>
+              <tr>
+                <td><code>auth/authClient.ts</code></td>
+                <td>sign in with GitHub / sign out (Better Auth client)</td>
+              </tr>
+              <tr>
+                <td>
+                  <code
+                    >next/navigation
+                    router.push(&#x27;/p/&lt;id&gt;&#x27;)</code
+                  >
+                </td>
+                <td>opening a project leaves this screen for the editor</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Helpers, providers and stores it relies on</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>IndexedDbProjectLibrary</code></td>
+                <td>
+                  class: list, load, save, thumbnail, setThumbnail, rename,
+                  delete (the home screen&#x27;s storage provider)
+                </td>
+              </tr>
+              <tr>
+                <td><code>IndexedDbAssetStorage</code></td>
+                <td>class implementing AssetStorage over IndexedDB</td>
+              </tr>
+              <tr>
+                <td><code>importStore (Zustand)</code></td>
+                <td>the one-message bar shared with the editor</td>
+              </tr>
+              <tr>
+                <td><code>authClient</code></td>
+                <td>
+                  Better Auth browser client: useSession, signIn.social, signOut
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card wide" id="s-shell">
+        <div class="card-head">
+          <span class="num">2</span>
+          <h3>
+            Editor frame
+            <small>route /p/&lt;projectId&gt; (EditorShell.tsx)</small>
+          </h3>
+        </div>
+        <p class="hint">
+          The page around everything else. It starts the saving, the online
+          connection and all the keyboard handling, then lays out the panels.
+        </p>
+        <h4>Runs first, in this order</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td><code>app/p/[projectId]/page.tsx</code></td>
+                <td>
+                  server side: reads projectId from the address and renders
+                  EditorShell
+                </td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td><code>components/viewport/EditorShell.tsx</code></td>
+                <td>client component; hooks run in this order:</td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  &nbsp;&nbsp;&nbsp;&nbsp;<code
+                    >useEditorShortcuts, usePeekKeys</code
+                  >
+                </td>
+                <td>
+                  global key handlers (Delete, Ctrl+Z, W/E/R, hold Space for
+                  four views)
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  &nbsp;&nbsp;&nbsp;&nbsp;<code
+                    >plantLibraryStore.hydrate, layoutStore.hydrate,
+                    viewStore.hydratePeekTiles</code
+                  >
+                </td>
+                <td>
+                  read saved choices from localStorage after the page is in the
+                  browser
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  &nbsp;&nbsp;&nbsp;&nbsp;<code
+                    >watchEditMode, startPrefabEditing</code
+                  >
+                </td>
+                <td>
+                  edit mode ends when its object is deselected; prefab copies
+                  follow their prefab
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  &nbsp;&nbsp;&nbsp;&nbsp;<code
+                    >collabParams / accountParams / savedConnection</code
+                  >
+                </td>
+                <td>read the address and the saved way of going online</td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  &nbsp;&nbsp;&nbsp;&nbsp;<code
+                    >persistence/startPersistence.ts</code
+                  >
+                </td>
+                <td>
+                  restore the project, then turn on autosave (see &#x27;Local
+                  storage&#x27;)
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  &nbsp;&nbsp;&nbsp;&nbsp;<code
+                    >collab/collabController.ts connectCollab()</code
+                  >
+                </td>
+                <td>
+                  go online if there is a way (see &#x27;Online layer&#x27;)
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  &nbsp;&nbsp;&nbsp;&nbsp;<code
+                    >testHooks.ts installTestHooks()</code
+                  >
+                </td>
+                <td>
+                  window.__sceneroom for the browser tests (not in production)
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Runs afterwards, when you use it</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>persistence/startPersistence.ts</code></td>
+                <td>
+                  autosave on every change; picture of the project after 4 s,
+                  then every 30 s
+                </td>
+              </tr>
+              <tr>
+                <td><code>components/viewport/ProjectNotFound.tsx</code></td>
+                <td>
+                  shown instead of the editor when the id is not in this browser
+                </td>
+              </tr>
+              <tr>
+                <td><code>store/persistenceStore.ts</code></td>
+                <td>
+                  &#x27;loading / saved / saving / error / missing&#x27; for the
+                  top bar
+                </td>
+              </tr>
+              <tr>
+                <td><code>drag and drop handlers</code></td>
+                <td>
+                  a .glb dropped on the 3D view is imported; drops elsewhere are
+                  cancelled
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Helpers, providers and stores it relies on</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>usePersistenceStore</code></td>
+                <td>
+                  where saving stands (read by EditorShell and the top bar)
+                </td>
+              </tr>
+              <tr>
+                <td><code>useLayoutStore</code></td>
+                <td>panel widths (saved in localStorage)</td>
+              </tr>
+              <tr>
+                <td><code>importFiles()</code></td>
+                <td>assets/importFile.ts: checks and imports dropped files</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card wide" id="s-store">
+        <div class="card-head">
+          <span class="num">3</span>
+          <h3>
+            Local storage (save and restore)
+            <small>persistence/ (no server)</small>
+          </h3>
+        </div>
+        <p class="hint">
+          Your project is kept in the browser. Restoring comes first; saving
+          starts only after the restore, so the starting cube can never
+          overwrite your project.
+        </p>
+        <h4>Runs first, in this order</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td><code>persistence/idb.ts openDatabase()</code></td>
+                <td>IndexedDB wrapper with promises; describeStorageError()</td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td><code>persistence/assetStorageIdb.ts</code></td>
+                <td>
+                  IndexedDbAssetStorage: bytes of imported files by SHA-256
+                </td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td><code>persistence/projectLibrary.ts load()</code></td>
+                <td>returns loaded / empty / invalid for this project id</td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td><code>store/projectStore.ts loadProject()</code></td>
+                <td>
+                  puts every scene into the stores; opens the active one in
+                  sceneStore
+                </td>
+              </tr>
+              <tr>
+                <td>5</td>
+                <td>
+                  <code>store/libraryActions.ts applyAllPrefabScenes()</code>
+                </td>
+                <td>
+                  applies a prefab edit that was still waiting when the page
+                  closed
+                </td>
+              </tr>
+              <tr>
+                <td>6</td>
+                <td><code>persistence/autosave.ts createAutosave()</code></td>
+                <td>
+                  waits for a quiet moment, then saves; status saving / saved /
+                  error
+                </td>
+              </tr>
+              <tr>
+                <td>7</td>
+                <td>
+                  <code
+                    >components/viewport/thumbnail.ts captureThumbnail()</code
+                  >
+                </td>
+                <td>a small picture for the home card</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Runs afterwards, when you use it</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>sceneStore / projectStore subscriptions</code></td>
+                <td>
+                  every change to the scene or the scene list calls
+                  autosave.markChanged()
+                </td>
+              </tr>
+              <tr>
+                <td><code>pagehide, visibilitychange, beforeunload</code></td>
+                <td>
+                  flush what is waiting; ask the browser to confirm if something
+                  is unsaved
+                </td>
+              </tr>
+              <tr>
+                <td><code>sceneFile/sceneFileActions.ts</code></td>
+                <td>
+                  save to / open a .sceneroom file, with its models and meshes
+                </td>
+              </tr>
+              <tr>
+                <td><code>export/exportGlb.ts, buildExportScene.ts</code></td>
+                <td>export the scene as a .glb</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Helpers, providers and stores it relies on</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>IndexedDbProjectLibrary</code></td>
+                <td>the project records</td>
+              </tr>
+              <tr>
+                <td><code>IndexedDbAssetStorage</code></td>
+                <td>the file bytes</td>
+              </tr>
+              <tr>
+                <td><code>IndexedDbProjectRepository</code></td>
+                <td>
+                  persistence/sceneRepository.ts: implements ProjectRepository
+                  from shared/persistence.ts
+                </td>
+              </tr>
+              <tr>
+                <td><code>Autosave (type)</code></td>
+                <td>markChanged, flush, hasUnsavedChanges, stop</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card wide" id="s-auth">
+        <div class="card-head">
+          <span class="num">4</span>
+          <h3>
+            Sign-in (the button and the route)
+            <small>AccountButton.tsx + /api/auth/...</small>
+          </h3>
+        </div>
+        <p class="hint">
+          Optional. If the six account settings are missing the button never
+          appears.
+        </p>
+        <h4>Runs first, in this order</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td><code>components/home/AccountButton.tsx</code></td>
+                <td>
+                  useSession(): hidden while pending or when the route answers
+                  503
+                </td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td><code>app/api/auth/[...all]/route.ts</code></td>
+                <td>
+                  GET/POST: 503 without accounts, else Better Auth handles it
+                </td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td><code>server/accountsEnv.ts readAccountsEnv()</code></td>
+                <td>
+                  Zod check of the six variables; problems name the variable,
+                  never its value
+                </td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td><code>server/auth.ts getAccounts()</code></td>
+                <td>
+                  first use only: createDb -&gt; createAuth, cached on
+                  globalThis
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Runs afterwards, when you use it</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <code
+                    >authClient.signIn.social({provider:
+                    &#x27;github&#x27;})</code
+                  >
+                </td>
+                <td>
+                  asks the route for GitHub&#x27;s address, then the browser
+                  goes there
+                </td>
+              </tr>
+              <tr>
+                <td><code>GitHub -&gt; /api/auth/callback/github</code></td>
+                <td>
+                  Better Auth exchanges the code, makes the user, account and
+                  session rows, sets the cookie
+                </td>
+              </tr>
+              <tr>
+                <td><code>server/session.ts getCurrentUser()</code></td>
+                <td>who is signed in for a request (server code only)</td>
+              </tr>
+              <tr>
+                <td><code>app/api/me/route.ts</code></td>
+                <td>200 / 401 / 503: used by the Share box</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Helpers, providers and stores it relies on</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>createAuth(env, db)</code></td>
+                <td>
+                  Better Auth with the Prisma adapter, GitHub, nextCookies
+                </td>
+              </tr>
+              <tr>
+                <td><code>createDb(url)</code></td>
+                <td>packages/db: Prisma 7 client over pg</td>
+              </tr>
+              <tr>
+                <td><code>TEST_USER_HEADER, testUserId()</code></td>
+                <td>
+                  x-test-user for browser tests only (SCENEROOM_TEST_AUTH=1,
+                  never production)
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card wide" id="s-invite">
+        <div class="card-head">
+          <span class="num">5</span>
+          <h3>
+            Invite page
+            <small
+              >route /invite/&lt;token&gt;
+              (components/home/InviteScreen.tsx)</small
+            >
+          </h3>
+        </div>
+        <p class="hint">
+          What an invitation link opens. The secret in the address says which
+          invitation; the page sends no Referer to other sites.
+        </p>
+        <h4>Runs first, in this order</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td><code>app/invite/[token]/page.tsx</code></td>
+                <td>
+                  server side: reads the token from the address and renders
+                  InviteScreen (metadata referrer: no-referrer)
+                </td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td><code>components/home/InviteScreen.tsx</code></td>
+                <td>starts two requests in parallel:</td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  &nbsp;&nbsp;&nbsp;&nbsp;<code
+                    >collab/accountClient.ts previewInvitation()</code
+                  >
+                </td>
+                <td>
+                  POST /api/invitations/preview: project name and role, or why
+                  the link cannot be used
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  &nbsp;&nbsp;&nbsp;&nbsp;<code
+                    >collab/accountClient.ts fetchMe()</code
+                  >
+                </td>
+                <td>GET /api/me: signed in or not</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Runs afterwards, when you use it</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>authClient.signIn.social()</code></td>
+                <td>
+                  signed out: sign in with GitHub and come back to this page
+                </td>
+              </tr>
+              <tr>
+                <td><code>collab/accountClient.ts acceptInvitation()</code></td>
+                <td>
+                  signed in: POST /api/invitations/accept; makes you a member
+                  once
+                </td>
+              </tr>
+              <tr>
+                <td><code>router.push(onlineProjectAddress(...))</code></td>
+                <td>
+                  opens /p/&lt;id&gt;?online=account&amp;scene=&lt;entry
+                  scene&gt; (see &#x27;Editor frame&#x27;)
+                </td>
+              </tr>
+              <tr>
+                <td><code>server/invitations.ts</code></td>
+                <td>
+                  previewInvitation and acceptInvitation: hash lookup, expired /
+                  revoked / used checks, one conditional update
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Helpers, providers and stores it relies on</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>InvitationStatus (invitations.ts)</code></td>
+                <td>pending / accepted / revoked / expired</td>
+              </tr>
+              <tr>
+                <td><code>hashInvitationToken</code></td>
+                <td>SHA-256 of the secret: the only thing stored</td>
+              </tr>
+              <tr>
+                <td><code>invitationTokenSchema (projectSchemas.ts)</code></td>
+                <td>43 base64url characters, anything else refused at once</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card wide" id="s-top">
+        <div class="card-head">
+          <span class="num">6</span>
+          <h3>Top bar <small>components/viewport/TopBar.tsx</small></h3>
+        </div>
+        <p class="hint">
+          The strip above the editor: home, undo and redo, files, share, scene
+          tabs, who is here, saving and online status.
+        </p>
+        <h4>Runs first, in this order</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td><code>TopBar.tsx</code></td>
+                <td>
+                  HomeButton, HistoryButton (undo / redo with labels),
+                  FileButtons, ShareButton, SceneTabs, PresenceBar, SaveStatus,
+                  CollabStatusBadge
+                </td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td><code>components/viewport/SceneTabs.tsx</code></td>
+                <td>scene tabs with rename, duplicate, delete and new scene</td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td><code>components/viewport/PresenceBar.tsx</code></td>
+                <td>avatars of the other people (hidden when alone)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Runs afterwards, when you use it</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>sceneStore.undo / redo</code></td>
+                <td>
+                  online they go through collab/collabHistory.ts and take back
+                  only your own fields
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <code
+                    >persistence/startPersistence.ts saveOpenProjectNow()</code
+                  >
+                </td>
+                <td>
+                  the Home button saves and takes a picture before leaving
+                </td>
+              </tr>
+              <tr>
+                <td><code>components/viewport/ShareDialog.tsx</code></td>
+                <td>
+                  links (stage A): ShareClient, owner key, link expiry, cancel
+                  all
+                </td>
+              </tr>
+              <tr>
+                <td><code>components/viewport/AccountOnline.tsx</code></td>
+                <td>&#x27;Put online with my account&#x27; (needs /api/me)</td>
+              </tr>
+              <tr>
+                <td><code>components/viewport/AccountMembers.tsx</code></td>
+                <td>
+                  for a project online with an account: members, change role,
+                  remove or leave, make an invitation link, revoke; refreshes
+                  when someone connects and every 10 s
+                </td>
+              </tr>
+              <tr>
+                <td><code>components/viewport/ProjectDialog.tsx</code></td>
+                <td>project overview: scenes, unused models</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Helpers, providers and stores it relies on</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>useCollabStore</code></td>
+                <td>status, readOnly, people, cursors, locks</td>
+              </tr>
+              <tr>
+                <td><code>createShareClient (collab/shareClient.ts)</code></td>
+                <td>talks to /share on the collab server; ShareError</td>
+              </tr>
+              <tr>
+                <td><code>getOwnerKey (collab/ownerKey.ts)</code></td>
+                <td>the owner key made in the browser</td>
+              </tr>
+              <tr>
+                <td><code>accountClient.ts functions</code></td>
+                <td>
+                  putProjectOnline, fetchMe, listMyProjects, listMembers,
+                  changeMemberRole, removeMember, create/list/revokeInvitation,
+                  preview/acceptInvitation, onlineProjectAddress (each answer
+                  checked with Zod)
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card wide" id="s-left">
+        <div class="card-head">
+          <span class="num">7</span>
+          <h3>
+            Left panel: scene list and assets
+            <small>HierarchyPanel.tsx, AssetsPanel.tsx</small>
+          </h3>
+        </div>
+        <p class="hint">
+          The tree of objects (with search, drag to reparent, visibility and
+          lock toggles) and the project&#x27;s library of models and prefabs.
+        </p>
+        <h4>Runs first, in this order</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td><code>components/viewport/HierarchyPanel.tsx</code></td>
+                <td>
+                  rows for the scene tree; dots for people who selected an
+                  object; edit-lock badge
+                </td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td><code>components/viewport/AssetsPanel.tsx</code></td>
+                <td>tab with imported models and prefabs (useLibrary)</td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td><code>components/viewport/PanelResizer.tsx</code></td>
+                <td>drag to resize; layoutStore keeps the width</td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td>
+                  <code>components/viewport/AddMenu.tsx, ImportButton.tsx</code>
+                </td>
+                <td>add shapes, lights, characters, plants; import a model</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Runs afterwards, when you use it</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>components/viewport/useRowDrag.ts</code></td>
+                <td>
+                  drag a row onto another to reparent (reparent.ts,
+                  worldTransform.ts keep it in place)
+                </td>
+              </tr>
+              <tr>
+                <td><code>store/libraryActions.ts</code></td>
+                <td>rename, delete and note assets; make and place prefabs</td>
+              </tr>
+              <tr>
+                <td>
+                  <code
+                    >components/viewport/clipboardActions.ts,
+                    ContextMenu.tsx</code
+                  >
+                </td>
+                <td>copy / cut / paste, right-click menu</td>
+              </tr>
+              <tr>
+                <td>
+                  <code>sceneStore.select / toggleSelect / setSelection</code>
+                </td>
+                <td>row clicks; selection is shared with others as presence</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Helpers, providers and stores it relies on</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>useSceneStore</code></td>
+                <td>scene, selection, history</td>
+              </tr>
+              <tr>
+                <td><code>useProjectStore</code></td>
+                <td>scenes, parked scenes, prefabs</td>
+              </tr>
+              <tr>
+                <td><code>useLibrary</code></td>
+                <td>models and prefabs for the whole project</td>
+              </tr>
+              <tr>
+                <td><code>useCollabStore</code></td>
+                <td>locks and people for the badges</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card wide" id="s-view">
+        <div class="card-head">
+          <span class="num">8</span>
+          <h3>
+            3D view
+            <small
+              >Viewport.tsx and the objects and controllers inside it</small
+            >
+          </h3>
+        </div>
+        <p class="hint">
+          Loaded in the browser only (WebGL does not exist on the server).
+          Everything below is mounted inside one three.js Canvas.
+        </p>
+        <h4>Runs first, in this order</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td><code>components/viewport/ViewportLoader.tsx</code></td>
+                <td>dynamic import with ssr: false</td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td><code>components/viewport/Viewport.tsx</code></td>
+                <td>
+                  Canvas, ambient light, the sun, the shadow-catching ground,
+                  the grid, OrbitControls
+                </td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td><code>SceneEnvironment.tsx</code></td>
+                <td>
+                  background, reflections and fog from the scene&#x27;s
+                  environment
+                </td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td>
+                  <code
+                    >SceneNodes.tsx -&gt; ModelObject, LightObject,
+                    CharacterObject, PlantObject, SurfaceMaterial</code
+                  >
+                </td>
+                <td>
+                  draws every object; shapeGeometry.ts and modifiers build the
+                  shapes
+                </td>
+              </tr>
+              <tr>
+                <td>5</td>
+                <td><code>PresenceLayer.tsx</code></td>
+                <td>
+                  other people&#x27;s selection boxes and pointers;
+                  CursorBroadcaster sends yours
+                </td>
+              </tr>
+              <tr>
+                <td>6</td>
+                <td>
+                  <code
+                    >Controllers: FocusController, BigViewController,
+                    FlyController, CameraModifierSwitch, BoxSelectController,
+                    AssetDropController, ViewportContextMenuController,
+                    ThumbnailSource, MeshEditor</code
+                  >
+                </td>
+                <td>each listens for its own input</td>
+              </tr>
+              <tr>
+                <td>7</td>
+                <td>
+                  <code
+                    >ControlsLegend, ToolDock, BigViewSwitch, PeekOverlay (HTML
+                    over the canvas)</code
+                  >
+                </td>
+                <td>
+                  controls card, Move/Rotate/Scale and Snap, side view choice,
+                  four-view peek
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Runs afterwards, when you use it</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <code>SelectionGizmo.tsx / MultiSelectionGizmo.tsx</code>
+                </td>
+                <td>
+                  drag handles move the three.js object directly; the new
+                  transform is written on release
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <code
+                    >sceneStore.beginEdit / previewNodeTransform / endEdit</code
+                  >
+                </td>
+                <td>one undo step per drag</td>
+              </tr>
+              <tr>
+                <td>
+                  <code
+                    >FocusController (F or double-click), FlyController (hold
+                    right button + WASDQE)</code
+                  >
+                </td>
+                <td>camera moves</td>
+              </tr>
+              <tr>
+                <td><code>PeekRenderer.tsx</code></td>
+                <td>mounted only while Space is held: draws four views</td>
+              </tr>
+              <tr>
+                <td><code>meshRegistry.ts, cameraRegistry.ts</code></td>
+                <td>
+                  lookups from node id to three.js object, and the normal camera
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Helpers, providers and stores it relies on</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>meshRegistry</code></td>
+                <td>
+                  which three.js object draws which node (used by gizmos and box
+                  select)
+                </td>
+              </tr>
+              <tr>
+                <td><code>boxSelectStore</code></td>
+                <td>the box being dragged</td>
+              </tr>
+              <tr>
+                <td><code>ModelErrorBoundary (ModelObject.tsx)</code></td>
+                <td>
+                  React error boundary: one broken model does not blank the view
+                </td>
+              </tr>
+              <tr>
+                <td><code>useShadowCamera, environmentTexture</code></td>
+                <td>helpers for shadows and reflections</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card wide" id="s-inspector">
+        <div class="card-head">
+          <span class="num">9</span>
+          <h3>Right panel (Inspector) <small>InspectorPanel.tsx</small></h3>
+        </div>
+        <p class="hint">
+          Nothing selected shows the world&#x27;s settings; one object shows its
+          sections; several show a count.
+        </p>
+        <h4>Runs first, in this order</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td><code>components/viewport/InspectorPanel.tsx</code></td>
+                <td>
+                  chooses: EmptyState / EnvironmentPanel / SingleObject /
+                  SeveralObjects
+                </td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td>
+                  <code
+                    >InspectorFields.tsx, NumberField.tsx,
+                    OperationField.tsx</code
+                  >
+                </td>
+                <td>the shared field widgets, each with a reset button</td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td>
+                  <code
+                    >Sections: TransformSection, ParentSection,
+                    AppearanceSection, SurfaceSection, LightSection,
+                    PlantSection, CharacterSection, ModifiersSection,
+                    PrefabSection, PaintSection, BakeSection</code
+                  >
+                </td>
+                <td>shown according to the object&#x27;s kind</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Runs afterwards, when you use it</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <code
+                    >sceneStore actions (setNodeTransform, setNodeMaterial,
+                    setNodeColor, renameNode, addModifier, setNodeLight,
+                    ...)</code
+                  >
+                </td>
+                <td>each edit is one named action = one undo step</td>
+              </tr>
+              <tr>
+                <td><code>preview... actions</code></td>
+                <td>live preview while a slider moves, committed on release</td>
+              </tr>
+              <tr>
+                <td>
+                  <code
+                    >shared/inspectorValues.ts, modifiers.ts, lights.ts,
+                    plant.ts, character.ts, environment.ts</code
+                  >
+                </td>
+                <td>
+                  the clamping, defaults and change rules (plain functions)
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Helpers, providers and stores it relies on</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>EnvironmentPanel</code></td>
+                <td>world settings when nothing is selected</td>
+              </tr>
+              <tr>
+                <td><code>NumberField</code></td>
+                <td>number box with unit, arrow keys and reset</td>
+              </tr>
+              <tr>
+                <td><code>sanitize... functions (shared)</code></td>
+                <td>refuse out-of-range values</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card wide" id="s-edit">
+        <div class="card-head">
+          <span class="num">10</span>
+          <h3>
+            Edit mode (points, edges, faces)
+            <small>EditModeBar.tsx, MeshEditor.tsx, meshEdit/</small>
+          </h3>
+        </div>
+        <p class="hint">
+          Starts from &#x27;Edit points&#x27; on an object; a shape is first
+          turned into an editable mesh.
+        </p>
+        <h4>Runs first, in this order</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td><code>meshEdit/startEditing.ts</code></td>
+                <td>
+                  enter edit mode (refuses a mesh with modifiers);
+                  toggleEditMode, stopEditing
+                </td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td><code>store/editStore.ts</code></td>
+                <td>
+                  the edit state: object, selection mode (point/edge/face),
+                  selected points
+                </td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td><code>components/viewport/MeshEditor.tsx</code></td>
+                <td>
+                  draws and picks points, edges and faces (pickEdge.ts,
+                  projectPoints.ts, visibility.ts)
+                </td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td><code>components/viewport/EditModeBar.tsx</code></td>
+                <td>
+                  the tools bar: extrude, bevel, loop cut, divide, merge, weld,
+                  fill, bridge, crease, simplify, shrinkwrap ...
+                </td>
+              </tr>
+              <tr>
+                <td>5</td>
+                <td><code>collab/editLocks.ts</code></td>
+                <td>
+                  announces the lock &#x27;one editor per object&#x27; online
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Runs afterwards, when you use it</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>meshEdit/liveEdit.ts</code></td>
+                <td>moves the selected points live while dragging</td>
+              </tr>
+              <tr>
+                <td><code>meshEdit/editOperations.ts</code></td>
+                <td>applies each tool and commits it</td>
+              </tr>
+              <tr>
+                <td><code>meshEdit/commitMeshEdit.ts</code></td>
+                <td>
+                  stores the edited mesh as a new version (meshStorage.ts; small
+                  patch for big meshes) as one undo step
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <code
+                    >meshEdit/selectionTools.ts, hideShow.ts,
+                    shrinkwrap.ts</code
+                  >
+                </td>
+                <td>
+                  more, less, invert, loop and ring; hide and show; shrinkwrap
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <code
+                    >shared/meshEdit.ts, topology.ts, extrude, bevel.ts,
+                    loopCut.ts, divide.ts, subdivide.ts, simplify.ts,
+                    solidify.ts, meshTools.ts</code
+                  >
+                </td>
+                <td>the maths, with no three.js, fully tested</td>
+              </tr>
+              <tr>
+                <td>
+                  <code
+                    >Panels: ExtrudePanel, BevelPanel, LoopCutPanel,
+                    DividePanel</code
+                  >
+                </td>
+                <td>settings of the last operation</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Helpers, providers and stores it relies on</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>editStore</code></td>
+                <td>mode, selection, nodeId</td>
+              </tr>
+              <tr>
+                <td><code>meshStorage / meshData</code></td>
+                <td>
+                  MeshData and patch bytes, `bytesForFile` for sending to the
+                  server
+                </td>
+              </tr>
+              <tr>
+                <td><code>topology (shared)</code></td>
+                <td>which points are one spot, which edges are real</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card wide" id="s-uv">
+        <div class="card-head">
+          <span class="num">11</span>
+          <h3>UV window <small>UvWindow.tsx</small></h3>
+        </div>
+        <p class="hint">
+          Opens from edit mode for a mesh with a UV map (made by Unwrap).
+        </p>
+        <h4>Runs first, in this order</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td><code>components/viewport/UvWindow.tsx</code></td>
+                <td>the window and its canvas (draw())</td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td><code>checkerTexture.ts, checkerView.ts</code></td>
+                <td>checker picture to show stretching</td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td><code>shared/unwrap.ts, lscm.ts, seams.ts</code></td>
+                <td>unwrap, careful unwrap, seams</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Runs afterwards, when you use it</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>shared/uvEdit.ts</code></td>
+                <td>move, rotate, scale, mirror selected islands</td>
+              </tr>
+              <tr>
+                <td><code>commitMeshEdit.ts</code></td>
+                <td>each UV edit is one undo step</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Helpers, providers and stores it relies on</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>seams (shared)</code></td>
+                <td>edges marked as cuts</td>
+              </tr>
+              <tr>
+                <td><code>checkerView</code></td>
+                <td>does this object have a UV map?</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card wide" id="s-paintbake">
+        <div class="card-head">
+          <span class="num">12</span>
+          <h3>Paint and Bake <small>paint/, bake/</small></h3>
+        </div>
+        <p class="hint">
+          Both work on one editable mesh with a UV map and each produce a new
+          picture file.
+        </p>
+        <h4>Runs first, in this order</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td><code>components/viewport/PaintSection.tsx</code></td>
+                <td>button and brush settings</td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td><code>paint/paintSession.ts</code></td>
+                <td>
+                  keeps the picture as pixels while the brush works; shows it as
+                  a live canvas texture
+                </td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td><code>components/viewport/BakeSection.tsx</code></td>
+                <td>choose the dense object, cage and size</td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td><code>bake/bakeNormal.ts</code></td>
+                <td>
+                  runs the bake in small steps so the progress bar can move
+                </td>
+              </tr>
+              <tr>
+                <td>5</td>
+                <td><code>store/paintStore.ts, store/bakeStore.ts</code></td>
+                <td>settings and state</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Runs afterwards, when you use it</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>shared/paint.ts</code></td>
+                <td>brush, erase, fill on a block of pixels</td>
+              </tr>
+              <tr>
+                <td><code>shared/bake.ts, rayMesh.ts</code></td>
+                <td>normal-map baking with BVH ray casting</td>
+              </tr>
+              <tr>
+                <td><code>paint/useMapTexture.ts</code></td>
+                <td>
+                  the picture a slot shows: live while painting, stored
+                  otherwise
+                </td>
+              </tr>
+              <tr>
+                <td><code>collab/editLocks.ts</code></td>
+                <td>Paint and Bake take the same lock as Edit points</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Helpers, providers and stores it relies on</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>PaintSession</code></td>
+                <td>
+                  paintSession.ts: begin, stroke, commit one undo step per
+                  stroke
+                </td>
+              </tr>
+              <tr>
+                <td><code>assets/meshStorage + AssetStorage</code></td>
+                <td>the pictures are stored as files by hash</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card wide" id="s-files">
+        <div class="card-head">
+          <span class="num">13</span>
+          <h3>
+            Importing and exporting <small>assets/, export/, sceneFile/</small>
+          </h3>
+        </div>
+        <p class="hint">
+          Files come in by drop or by the Import button, and go out as .glb or
+          .sceneroom.
+        </p>
+        <h4>Runs first, in this order</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td><code>assets/importFile.ts importFiles()</code></td>
+                <td>checks a file and tells you what happened</td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td><code>assets/loadModel.ts</code></td>
+                <td>reads a .glb; ImportError for a file we cannot use</td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td><code>assets/hash.ts sha256Hex()</code></td>
+                <td>the fingerprint that names the file</td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td><code>assets/thumbnail.ts, AssetThumbnail.tsx</code></td>
+                <td>the picture shown in the Assets tab</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Runs afterwards, when you use it</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>sceneFile/sceneFileActions.ts, download.ts</code></td>
+                <td>
+                  .sceneroom pack and unpack; hand bytes to the browser as a
+                  download
+                </td>
+              </tr>
+              <tr>
+                <td><code>export/exportGlb.ts, buildExportScene.ts</code></td>
+                <td>scene -&gt; three.js scene -&gt; .glb</td>
+              </tr>
+              <tr>
+                <td>
+                  <code>shared/sceneFile.ts, assets.ts, assetOps.ts</code>
+                </td>
+                <td>pack format, size limits, which objects use which file</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Helpers, providers and stores it relies on</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>AssetStorage (interface)</code></td>
+                <td>put, get, has</td>
+              </tr>
+              <tr>
+                <td><code>ImportError</code></td>
+                <td>a message written for the user</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card wide" id="s-collab">
+        <div class="card-head">
+          <span class="num">14</span>
+          <h3>
+            Online layer (in the browser) <small>apps/web/src/collab/</small>
+          </h3>
+        </div>
+        <p class="hint">
+          Starts only when a project has a way to go online. It waits for the
+          local restore, then binds the open scene to a shared document.
+        </p>
+        <h4>Runs first, in this order</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td><code>collabController.ts connectCollab()</code></td>
+                <td>stops any earlier connection, starts startCollab</td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td><code>startCollab.ts</code></td>
+                <td>
+                  waits until persistenceStore says restored; then begin():
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  &nbsp;&nbsp;&nbsp;&nbsp;<code
+                    >onlineAssetStorage.ts, fileClient.ts, fileUploader.ts</code
+                  >
+                </td>
+                <td>
+                  wrap the file storage; upload what the scene uses; download
+                  what is missing
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  &nbsp;&nbsp;&nbsp;&nbsp;<code
+                    >collabHistory.ts watchHistory()</code
+                  >
+                </td>
+                <td>
+                  remembers the scene after each step, for per-person Undo
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  &nbsp;&nbsp;&nbsp;&nbsp;<code
+                    >collabSession.ts createSceneSession()</code
+                  >
+                </td>
+                <td>
+                  Y.Doc + sceneBinding + IndexeddbPersistence +
+                  HocuspocusProvider (token asked at each connect)
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>&nbsp;&nbsp;&nbsp;&nbsp;<code>sceneBinding.ts</code></td>
+                <td>
+                  start(scene): reconcile with the document: seed it or adopt it
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>
+                  &nbsp;&nbsp;&nbsp;&nbsp;<code>presence.ts, editLocks.ts</code>
+                </td>
+                <td>name, colour, selection, pointer; one editor per object</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Runs afterwards, when you use it</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>sceneBinding.localChanged / flush</code></td>
+                <td>
+                  diff the scene into the document in one transaction; a
+                  viewer&#x27;s change is put back
+                </td>
+              </tr>
+              <tr>
+                <td><code>sceneBinding pull()</code></td>
+                <td>
+                  someone else&#x27;s change: readSceneFromDoc (Zod) then
+                  sceneStore.applyRemoteScene
+                </td>
+              </tr>
+              <tr>
+                <td><code>fileUploader.request()</code></td>
+                <td>when the scene&#x27;s files change</td>
+              </tr>
+              <tr>
+                <td><code>sceneStore.sceneEpoch watcher</code></td>
+                <td>another scene tab: rebind to that scene&#x27;s document</td>
+              </tr>
+              <tr>
+                <td><code>tokenSource.ts</code></td>
+                <td>
+                  fresh() at each connect, cached() for files; accounts ask
+                  /api/projects/&lt;id&gt;/token
+                </td>
+              </tr>
+              <tr>
+                <td><code>shared/selectiveUndo.ts</code></td>
+                <td>undoOwnChange / redoOwnChange</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Helpers, providers and stores it relies on</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <code>HocuspocusProvider, IndexeddbPersistence, Y.Doc</code>
+                </td>
+                <td>
+                  from the libraries: the connection, the offline copy, the
+                  shared document
+                </td>
+              </tr>
+              <tr>
+                <td><code>OnlineAssetStorage (AssetStorage)</code></td>
+                <td>wraps IndexedDbAssetStorage and downloads on demand</td>
+              </tr>
+              <tr>
+                <td>
+                  <code
+                    >TokenSource / fixedToken / createAccountTokenSource</code
+                  >
+                </td>
+                <td>where the token comes from</td>
+              </tr>
+              <tr>
+                <td><code>AwarenessLike</code></td>
+                <td>
+                  the small part of awareness the code needs (so it can be
+                  tested)
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card wide" id="s-web">
+        <div class="card-head">
+          <span class="num">15</span>
+          <h3>
+            Web server (Next.js routes)
+            <small>apps/web/src/app/api/ and apps/web/src/server/</small>
+          </h3>
+        </div>
+        <p class="hint">
+          Runs on Node (not edge) because it uses Prisma. All input is checked
+          with Zod and every route checks who is asking.
+        </p>
+        <h4>Runs first, in this order</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td><code>server/accountsEnv.ts, auth.ts</code></td>
+                <td>getAccounts(): optional accounts, made on first use</td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td><code>server/routeHelpers.ts withUser()</code></td>
+                <td>
+                  503 / 401 / 403 (other site) / 500, and readBody (400 / 413)
+                </td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td><code>server/projectSchemas.ts, limits.ts</code></td>
+                <td>the shapes and the limits</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Runs afterwards, when you use it</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>app/api/projects/route.ts</code></td>
+                <td>GET mine, POST create (limit 50)</td>
+              </tr>
+              <tr>
+                <td><code>app/api/projects/[id]/route.ts</code></td>
+                <td>GET one, DELETE (owner)</td>
+              </tr>
+              <tr>
+                <td>
+                  <code
+                    >app/api/projects/[id]/members/route.ts and
+                    [userId]/route.ts</code
+                  >
+                </td>
+                <td>list; change role; remove or leave</td>
+              </tr>
+              <tr>
+                <td><code>app/api/projects/[id]/token/route.ts</code></td>
+                <td>a one-hour collab token for a member (names the user)</td>
+              </tr>
+              <tr>
+                <td>
+                  <code
+                    >app/api/projects/[id]/invitations/route.ts and
+                    [invitationId]/route.ts</code
+                  >
+                </td>
+                <td>list, make (owner only), revoke</td>
+              </tr>
+              <tr>
+                <td>
+                  <code
+                    >app/api/invitations/preview/route.ts, accept/route.ts</code
+                  >
+                </td>
+                <td>
+                  preview works without sign-in (withAccounts); accept needs it
+                </td>
+              </tr>
+              <tr>
+                <td><code>server/invitations.ts</code></td>
+                <td>
+                  createInvitation, listInvitations, revokeInvitation,
+                  previewInvitation, acceptInvitation
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <code>server/collabAdmin.ts disconnectFromCollab()</code>
+                </td>
+                <td>
+                  after a removal, role change or delete: a signed POST to the
+                  collab server; best effort
+                </td>
+              </tr>
+              <tr>
+                <td><code>server/projects.ts</code></td>
+                <td>
+                  every rule: createProject, listMyProjects, getProject,
+                  listMembers, changeMemberRole, removeMember, deleteProject,
+                  roleOf
+                </td>
+              </tr>
+              <tr>
+                <td><code>server/collabToken.ts</code></td>
+                <td>issueCollabToken: role -&gt; editor/viewer token</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Helpers, providers and stores it relies on</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>Result&lt;T&gt; (projects.ts)</code></td>
+                <td>
+                  success with a value, or a failure with a status and a message
+                </td>
+              </tr>
+              <tr>
+                <td><code>packages/db permissionsOf, collabAccess</code></td>
+                <td>what each role may do</td>
+              </tr>
+              <tr>
+                <td><code>packages/link-token createLinkToken</code></td>
+                <td>signs the token</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card wide" id="s-server">
+        <div class="card-head">
+          <span class="num">16</span>
+          <h3>Collab server <small>apps/collab-server/src/</small></h3>
+        </div>
+        <p class="hint">
+          A separate program on port 1234. Starts once; then answers connections
+          and requests.
+        </p>
+        <h4>Runs first, in this order</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td><code>main.ts</code></td>
+                <td>
+                  loadConfig -&gt; SqliteStore -&gt; FolderFileStore -&gt;
+                  createCollabServer -&gt; listen
+                </td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td><code>config.ts</code></td>
+                <td>environment variables checked at start</td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td><code>store.ts, fileStore.ts, ownerStore.ts</code></td>
+                <td>the stores behind interfaces</td>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td><code>createServer.ts</code></td>
+                <td>
+                  the Hocuspocus Server and the request chain: share -&gt; files
+                  -&gt; Hocuspocus
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Runs afterwards, when you use it</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>createServer.ts onAuthenticate</code></td>
+                <td>
+                  document name, token, project match, generation; viewer =
+                  read-only
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <code>createServer.ts onLoadDocument / onStoreDocument</code>
+                </td>
+                <td>
+                  load from the store; save after a quiet moment (size limit)
+                </td>
+              </tr>
+              <tr>
+                <td><code>shareRoutes.ts</code></td>
+                <td>
+                  POST /share/&lt;project&gt;: make a link (owner key); /reset:
+                  cancel all and disconnect
+                </td>
+              </tr>
+              <tr>
+                <td><code>adminRoutes.ts</code></td>
+                <td>
+                  POST /internal/disconnect: signed by the web app
+                  (verifyAdminRequest); closes one person&#x27;s (token claim u)
+                  or a whole project&#x27;s connections; no CORS
+                </td>
+              </tr>
+              <tr>
+                <td><code>fileRoutes.ts</code></td>
+                <td>
+                  HEAD / GET / PUT /files/&lt;project&gt;/&lt;id&gt;: token,
+                  role, hash, size, quota
+                </td>
+              </tr>
+              <tr>
+                <td><code>cors.ts, documentName.ts, logger.ts</code></td>
+                <td>CORS headers, name parsing, logging</td>
+              </tr>
+              <tr>
+                <td><code>packages/link-token verifyLinkToken</code></td>
+                <td>the check every request passes</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h4>Helpers, providers and stores it relies on</h4>
+        <div class="tbl-wrap">
+          <table class="cmp">
+            <thead>
+              <tr>
+                <th>Script</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <code
+                    >DocumentStore / OwnerStore / FileStore (interfaces)</code
+                  >
+                </td>
+                <td>what the server knows</td>
+              </tr>
+              <tr>
+                <td>
+                  <code
+                    >MemoryStore, SqliteStore, MemoryFileStore,
+                    FolderFileStore</code
+                  >
+                </td>
+                <td>the implementations</td>
+              </tr>
+              <tr>
+                <td><code>consoleLogger</code></td>
+                <td>tests pass their own logger</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <figure id="s-help">
+    <h2>3. Helpers and providers</h2>
+    <p class="hint">
+      A provider here is a class that stands in for something that can change.
+      The code asks for the contract on the left and gets one of the
+      implementations on the right.
+    </p>
+    <div class="fig-scroll">
+      <svg
+        class="diagram"
+        viewBox="0 0 980 1233"
+        role="group"
+        aria-label="Rows. Each row has a contract on the left and the classes or libraries that implement or use it on the right: file storage, the browser project library, the live sharing session, who is here, where the connection gets its token, the HTTP clients, the collab server stores, the accounts pieces, and the named error types."
+      >
+        <defs>
+          <marker
+            id="ah2"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+          </marker>
+          <marker
+            id="ah3"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+          </marker>
+        </defs>
+        <text class="lane-label" x="28" y="24">WHERE FILE BYTES LIVE</text>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="AssetStorage: show explanation"
+        >
+          <rect class="box ok" x="28" y="32" width="250" height="58" rx="9" />
+          <text class="t-title" x="38" y="51">AssetStorage</text>
+          <text class="t-sub" x="38" y="68">
+            interface: put, get, has (assets/assetStorage.ts)
+          </text>
+          <text class="t-sub" x="38" y="81">swap with setAssetStorage()</text>
+        </g>
+        <path class="arrow" d="M280 61 H306" marker-end="url(#ah3)" />
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="MemoryAssetStorage: show explanation"
+        >
+          <rect class="box" x="312.0" y="32" width="210.0" height="58" rx="9" />
+          <text class="t-title" x="322.0" y="51">MemoryAssetStorage</text>
+          <text class="t-sub" x="322.0" y="68">in memory: tests,</text>
+          <text class="t-sub" x="322.0" y="81">fallback when no database</text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="IndexedDbAssetStorage: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="532.0"
+            y="32"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="542.0" y="51">IndexedDbAssetStorage</text>
+          <text class="t-sub" x="542.0" y="68">
+            persistence/assetStorageIdb.ts
+          </text>
+          <text class="t-sub" x="542.0" y="81">
+            keyed by SHA-256, survives reload
+          </text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="OnlineAssetStorage: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="752.0"
+            y="32"
+            width="210.0"
+            height="71"
+            rx="9"
+          />
+          <text class="t-title" x="762.0" y="51">OnlineAssetStorage</text>
+          <text class="t-sub" x="762.0" y="68">
+            collab/onlineAssetStorage.ts
+          </text>
+          <text class="t-sub" x="762.0" y="81">
+            wraps the one above; a missing
+          </text>
+          <text class="t-sub" x="762.0" y="94">
+            file is downloaded on demand
+          </text>
+        </g>
+        <text class="lane-label" x="28" y="135">
+          WHERE PROJECTS LIVE (BROWSER)
+        </text>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="Project library: show explanation"
+        >
+          <rect class="box ok" x="28" y="143" width="250" height="58" rx="9" />
+          <text class="t-title" x="38" y="162">Project library</text>
+          <text class="t-sub" x="38" y="179">
+            list, load, save, thumbnail, delete
+          </text>
+          <text class="t-sub" x="38" y="192">
+            persistence/projectLibrary.ts
+          </text>
+        </g>
+        <path class="arrow" d="M280 172 H306" marker-end="url(#ah3)" />
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="IndexedDbProjectLibrary: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="312.0"
+            y="143"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="322.0" y="162">IndexedDbProjectLibrary</text>
+          <text class="t-sub" x="322.0" y="179">
+            used by the home screen and
+          </text>
+          <text class="t-sub" x="322.0" y="192">startPersistence</text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="IndexedDbProjectRepository: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="532.0"
+            y="143"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="542.0" y="162">
+            IndexedDbProjectRepository
+          </text>
+          <text class="t-sub" x="542.0" y="179">
+            persistence/sceneRepository.ts
+          </text>
+          <text class="t-sub" x="542.0" y="192">
+            implements ProjectRepository
+          </text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="idb.ts: openDatabase(): show explanation"
+        >
+          <rect
+            class="box ok"
+            x="752.0"
+            y="143"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="762.0" y="162">idb.ts: openDatabase()</text>
+          <text class="t-sub" x="762.0" y="179">
+            promise wrapper over IndexedDB;
+          </text>
+          <text class="t-sub" x="762.0" y="192">describeStorageError()</text>
+        </g>
+        <text class="lane-label" x="28" y="233">LIVE SHARING (BROWSER)</text>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="One scene session: show explanation"
+        >
+          <rect class="box ok" x="28" y="241" width="250" height="58" rx="9" />
+          <text class="t-title" x="38" y="260">One scene session</text>
+          <text class="t-sub" x="38" y="277">collab/collabSession.ts</text>
+          <text class="t-sub" x="38" y="290">createSceneSession()</text>
+        </g>
+        <path class="arrow" d="M280 270 H306" marker-end="url(#ah3)" />
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="Y.Doc: show explanation"
+        >
+          <rect
+            class="box"
+            x="312.0"
+            y="241"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="322.0" y="260">Y.Doc</text>
+          <text class="t-sub" x="322.0" y="277">the shared document</text>
+          <text class="t-sub" x="322.0" y="290">
+            scene:&lt;project&gt;:&lt;scene&gt;
+          </text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="sceneBinding: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="532.0"
+            y="241"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="542.0" y="260">sceneBinding</text>
+          <text class="t-sub" x="542.0" y="277">diff-writes the scene in;</text>
+          <text class="t-sub" x="542.0" y="290">
+            reads others&#x27; changes (Zod)
+          </text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="IndexeddbPersistence: show explanation"
+        >
+          <rect
+            class="box"
+            x="752.0"
+            y="241"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="762.0" y="260">IndexeddbPersistence</text>
+          <text class="t-sub" x="762.0" y="277">y-indexeddb: the offline</text>
+          <text class="t-sub" x="762.0" y="290">copy of the document</text>
+        </g>
+        <text class="lane-label" x="28" y="331">THE CONNECTION (BROWSER)</text>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="Provider: show explanation"
+        >
+          <rect class="box ok" x="28" y="339" width="250" height="58" rx="9" />
+          <text class="t-title" x="38" y="358">Provider</text>
+          <text class="t-sub" x="38" y="375">@hocuspocus/provider</text>
+          <text class="t-sub" x="38" y="388">one per open scene</text>
+        </g>
+        <path class="arrow" d="M280 368 H306" marker-end="url(#ah3)" />
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="HocuspocusProvider: show explanation"
+        >
+          <rect
+            class="box"
+            x="312.0"
+            y="339"
+            width="650.0"
+            height="71"
+            rx="9"
+          />
+          <text class="t-title" x="322.0" y="358">HocuspocusProvider</text>
+          <text class="t-sub" x="322.0" y="375">
+            WebSocket to the server; asks
+          </text>
+          <text class="t-sub" x="322.0" y="388">
+            the token function at each connect;
+          </text>
+          <text class="t-sub" x="322.0" y="401">carries awareness</text>
+        </g>
+        <text class="lane-label" x="28" y="442">WHO IS HERE (BROWSER)</text>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="Awareness (not saved): show explanation"
+        >
+          <rect class="box ok" x="28" y="450" width="250" height="58" rx="9" />
+          <text class="t-title" x="38" y="469">Awareness (not saved)</text>
+          <text class="t-sub" x="38" y="486">
+            a small shared record per person
+          </text>
+          <text class="t-sub" x="38" y="499">AwarenessLike (editLocks.ts)</text>
+        </g>
+        <path class="arrow" d="M280 479 H306" marker-end="url(#ah3)" />
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="createPresence: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="312.0"
+            y="450"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="322.0" y="469">createPresence</text>
+          <text class="t-sub" x="322.0" y="486">
+            presence.ts: name, colour,
+          </text>
+          <text class="t-sub" x="322.0" y="499">selection, pointer</text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="createEditLocks: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="532.0"
+            y="450"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="542.0" y="469">createEditLocks</text>
+          <text class="t-sub" x="542.0" y="486">editLocks.ts: one editor</text>
+          <text class="t-sub" x="542.0" y="499">
+            per object (Edit, Paint, Bake)
+          </text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="activePresence / identity: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="752.0"
+            y="450"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="762.0" y="469">
+            activePresence / identity
+          </text>
+          <text class="t-sub" x="762.0" y="486">
+            pointer sender; saved name
+          </text>
+          <text class="t-sub" x="762.0" y="499">(localStorage)</text>
+        </g>
+        <text class="lane-label" x="28" y="540">
+          WHERE THE CONNECTION GETS ITS TOKEN
+        </text>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="TokenSource: show explanation"
+        >
+          <rect class="box ok" x="28" y="548" width="250" height="58" rx="9" />
+          <text class="t-title" x="38" y="567">TokenSource</text>
+          <text class="t-sub" x="38" y="584">
+            tokenSource.ts: fresh() at every
+          </text>
+          <text class="t-sub" x="38" y="597">connect, cached() for files</text>
+        </g>
+        <path class="arrow" d="M280 577 H306" marker-end="url(#ah3)" />
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="fixedToken(link): show explanation"
+        >
+          <rect
+            class="box ok"
+            x="312.0"
+            y="548"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="322.0" y="567">fixedToken(link)</text>
+          <text class="t-sub" x="322.0" y="584">the same token every time</text>
+          <text class="t-sub" x="322.0" y="597">(a link, made by Share)</text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="createAccountTokenSource: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="532.0"
+            y="548"
+            width="210.0"
+            height="71"
+            rx="9"
+          />
+          <text class="t-title" x="542.0" y="567">
+            createAccountTokenSource
+          </text>
+          <text class="t-sub" x="542.0" y="584">
+            POST /api/projects/&lt;id&gt;/token
+          </text>
+          <text class="t-sub" x="542.0" y="597">
+            with the sign-in cookie; cached()
+          </text>
+          <text class="t-sub" x="542.0" y="610">
+            reuses until a minute before expiry
+          </text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="connectionToken(): show explanation"
+        >
+          <rect
+            class="box ok"
+            x="752.0"
+            y="548"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="762.0" y="567">connectionToken()</text>
+          <text class="t-sub" x="762.0" y="584">
+            savedConnection.ts: picks the
+          </text>
+          <text class="t-sub" x="762.0" y="597">
+            link&#x27;s string or the account source
+          </text>
+        </g>
+        <text class="lane-label" x="28" y="651">
+          TALKING TO THE COLLAB SERVER (BROWSER)
+        </text>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="HTTP clients: show explanation"
+        >
+          <rect class="box ok" x="28" y="659" width="250" height="58" rx="9" />
+          <text class="t-title" x="38" y="678">HTTP clients</text>
+          <text class="t-sub" x="38" y="695">
+            serverAddress.ts: ws -&gt; http
+          </text>
+          <text class="t-sub" x="38" y="708">
+            shareClient.ts, fileClient.ts
+          </text>
+        </g>
+        <path class="arrow" d="M280 688 H306" marker-end="url(#ah3)" />
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="createFileClient: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="312.0"
+            y="659"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="322.0" y="678">createFileClient</text>
+          <text class="t-sub" x="322.0" y="695">
+            PUT/GET /files/&lt;project&gt;/&lt;id&gt;
+          </text>
+          <text class="t-sub" x="322.0" y="708">with the token</text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="createFileUploader: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="532.0"
+            y="659"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="542.0" y="678">createFileUploader</text>
+          <text class="t-sub" x="542.0" y="695">
+            sends files the scene uses;
+          </text>
+          <text class="t-sub" x="542.0" y="708">retries; skips viewers</text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="shareClient + ownerKey: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="752.0"
+            y="659"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="762.0" y="678">shareClient + ownerKey</text>
+          <text class="t-sub" x="762.0" y="695">
+            makes/cancels links; owner key
+          </text>
+          <text class="t-sub" x="762.0" y="708">
+            made in the browser; ShareError
+          </text>
+        </g>
+        <text class="lane-label" x="28" y="749">COLLAB SERVER STORES</text>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="Contracts: show explanation"
+        >
+          <rect class="box ok" x="28" y="757" width="250" height="58" rx="9" />
+          <text class="t-title" x="38" y="776">Contracts</text>
+          <text class="t-sub" x="38" y="793">
+            DocumentStore, OwnerStore, FileStore
+          </text>
+          <text class="t-sub" x="38" y="806">the server only knows these</text>
+        </g>
+        <path class="arrow" d="M280 786 H306" marker-end="url(#ah3)" />
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="Memory stores: show explanation"
+        >
+          <rect
+            class="box"
+            x="312.0"
+            y="757"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="322.0" y="776">Memory stores</text>
+          <text class="t-sub" x="322.0" y="793">
+            MemoryStore, MemoryOwners:
+          </text>
+          <text class="t-sub" x="322.0" y="806">tests and quick runs</text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="SqliteStore: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="532.0"
+            y="757"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="542.0" y="776">SqliteStore</text>
+          <text class="t-sub" x="542.0" y="793">
+            node:sqlite: documents + owners;
+          </text>
+          <text class="t-sub" x="542.0" y="806">
+            one file; M8f may use Postgres
+          </text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="FolderFileStore: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="752.0"
+            y="757"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="762.0" y="776">FolderFileStore</text>
+          <text class="t-sub" x="762.0" y="793">
+            files named by SHA-256 in a
+          </text>
+          <text class="t-sub" x="762.0" y="806">
+            folder (MemoryFileStore: tests)
+          </text>
+        </g>
+        <text class="lane-label" x="28" y="847">LOGGING</text>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="Logger: show explanation"
+        >
+          <rect class="box ok" x="28" y="855" width="250" height="58" rx="9" />
+          <text class="t-title" x="38" y="874">Logger</text>
+          <text class="t-sub" x="38" y="891">logger.ts</text>
+          <text class="t-sub" x="38" y="904">info, warn, error</text>
+        </g>
+        <path class="arrow" d="M280 884 H306" marker-end="url(#ah3)" />
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="consoleLogger: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="312.0"
+            y="855"
+            width="650.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="322.0" y="874">consoleLogger</text>
+          <text class="t-sub" x="322.0" y="891">
+            what the server runs with;
+          </text>
+          <text class="t-sub" x="322.0" y="904">tests pass their own</text>
+        </g>
+        <text class="lane-label" x="28" y="945">
+          ACCOUNTS: DATABASE AND SIGN-IN
+        </text>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="Accounts pieces: show explanation"
+        >
+          <rect class="box ok" x="28" y="953" width="250" height="58" rx="9" />
+          <text class="t-title" x="38" y="972">Accounts pieces</text>
+          <text class="t-sub" x="38" y="989">
+            packages/db + apps/web/src/server
+          </text>
+          <text class="t-sub" x="38" y="1002">optional: none set = off</text>
+        </g>
+        <path class="arrow" d="M280 982 H306" marker-end="url(#ah3)" />
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="createDb(url): show explanation"
+        >
+          <rect
+            class="box ok"
+            x="312.0"
+            y="953"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="322.0" y="972">createDb(url)</text>
+          <text class="t-sub" x="322.0" y="989">Prisma 7 + pg adapter</text>
+          <text class="t-sub" x="322.0" y="1002">-&gt; Db (the client)</text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="createAuth(env, db): show explanation"
+        >
+          <rect
+            class="box ok"
+            x="532.0"
+            y="953"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="542.0" y="972">createAuth(env, db)</text>
+          <text class="t-sub" x="542.0" y="989">Better Auth + GitHub +</text>
+          <text class="t-sub" x="542.0" y="1002">
+            nextCookies; getAccounts() caches
+          </text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="getCurrentUser(): show explanation"
+        >
+          <rect
+            class="box ok"
+            x="752.0"
+            y="953"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="762.0" y="972">getCurrentUser()</text>
+          <text class="t-sub" x="762.0" y="989">
+            session.ts: who is signed in;
+          </text>
+          <text class="t-sub" x="762.0" y="1002">
+            test-only x-test-user header
+          </text>
+        </g>
+        <text class="lane-label" x="28" y="1043">
+          ACCOUNTS: PERMISSIONS AND TOKENS
+        </text>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="Rules: show explanation"
+        >
+          <rect class="box ok" x="28" y="1051" width="250" height="58" rx="9" />
+          <text class="t-title" x="38" y="1070">Rules</text>
+          <text class="t-sub" x="38" y="1087">
+            one place for &#x27;may they?&#x27;
+          </text>
+          <text class="t-sub" x="38" y="1100">and one for signing tokens</text>
+        </g>
+        <path class="arrow" d="M280 1080 H306" marker-end="url(#ah3)" />
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="roles.ts: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="312.0"
+            y="1051"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="322.0" y="1070">roles.ts</text>
+          <text class="t-sub" x="322.0" y="1087">
+            permissionsOf, collabAccess
+          </text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="issueCollabToken(): show explanation"
+        >
+          <rect
+            class="box ok"
+            x="532.0"
+            y="1051"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="542.0" y="1070">issueCollabToken()</text>
+          <text class="t-sub" x="542.0" y="1087">
+            collabToken.ts: role -&gt; token
+          </text>
+          <text class="t-sub" x="542.0" y="1100">(link-token package)</text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="withUser(): show explanation"
+        >
+          <rect
+            class="box ok"
+            x="752.0"
+            y="1051"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="762.0" y="1070">withUser()</text>
+          <text class="t-sub" x="762.0" y="1087">
+            routeHelpers.ts: 503 / 401 / 403
+          </text>
+          <text class="t-sub" x="762.0" y="1100">
+            then the route&#x27;s own work
+          </text>
+        </g>
+        <text class="lane-label" x="28" y="1141">ERROR TYPES AND GUARDS</text>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="Named problems: show explanation"
+        >
+          <rect class="box ok" x="28" y="1149" width="250" height="58" rx="9" />
+          <text class="t-title" x="38" y="1168">Named problems</text>
+          <text class="t-sub" x="38" y="1185">so a message can be shown,</text>
+          <text class="t-sub" x="38" y="1198">not a stack trace</text>
+        </g>
+        <path class="arrow" d="M280 1178 H306" marker-end="url(#ah3)" />
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="ImportError: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="312.0"
+            y="1149"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="322.0" y="1168">ImportError</text>
+          <text class="t-sub" x="322.0" y="1185">
+            loadModel.ts: a file we cannot use,
+          </text>
+          <text class="t-sub" x="322.0" y="1198">
+            message written for the user
+          </text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="ShareError: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="532.0"
+            y="1149"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="542.0" y="1168">ShareError</text>
+          <text class="t-sub" x="542.0" y="1185">
+            shareClient.ts: the server said no
+          </text>
+          <text class="t-sub" x="542.0" y="1198">
+            (owner key, expired, ...)
+          </text>
+        </g>
+        <g
+          class="hit"
+          data-card="s-help"
+          tabindex="0"
+          role="button"
+          aria-label="ModelErrorBoundary: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="752.0"
+            y="1149"
+            width="210.0"
+            height="58"
+            rx="9"
+          />
+          <text class="t-title" x="762.0" y="1168">ModelErrorBoundary</text>
+          <text class="t-sub" x="762.0" y="1185">
+            ModelObject.tsx: one broken model
+          </text>
+          <text class="t-sub" x="762.0" y="1198">
+            does not blank the 3D view
+          </text>
+        </g>
+      </svg>
+    </div>
+    <section class="panel">
+      <h3>Reading these classes</h3>
+      <dl class="gloss">
+        <div>
+          <dt>Provider / adapter classes</dt>
+          <dd>
+            Classes that stand in for something that can change: AssetStorage
+            has three (Memory, IndexedDb, Online); the collab server&#x27;s
+            stores have Memory and Sqlite/Folder versions. The rest of the code
+            only knows the interface, so tests use the memory one and a later
+            step can swap in Postgres or R2.
+          </dd>
+        </div>
+        <div>
+          <dt>Wrapper vs replacement</dt>
+          <dd>
+            OnlineAssetStorage wraps the IndexedDb one (it keeps using it and
+            adds downloading), it does not replace it.
+          </dd>
+        </div>
+        <div>
+          <dt>Pure functions</dt>
+          <dd>
+            packages/shared holds functions that take data and return new data
+            (no React, no three.js, no network). They are the easiest files to
+            read first and every one has a test beside it.
+          </dd>
+        </div>
+        <div>
+          <dt>Stores</dt>
+          <dd>
+            Zustand stores are plain modules: useSceneStore, useProjectStore,
+            useEditStore, usePaintStore, useBakeStore, useImportStore,
+            usePersistenceStore, useLayoutStore, useViewStore,
+            usePlantLibraryStore, useCollabStore, useCharacterViewStore,
+            useContextMenuStore.
+          </dd>
+        </div>
+      </dl>
+    </section>
+  </figure>
+
+  <figure>
+    <h2>4. One change from your hand to the other person's screen</h2>
+    <div class="fig-scroll">
+      <svg
+        class="diagram"
+        viewBox="0 0 980 896"
+        role="group"
+        aria-label="Twelve numbered steps across four columns: your browser, the collab server, their browser and the server disk. Dragging a handle changes the scene state, is saved locally, written into the shared document, sent to the server, relayed to the other browser, validated and shown, and saved to the SQLite file; files go by hash and pointers are not saved."
+      >
+        <defs>
+          <marker
+            id="ah2"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+          </marker>
+          <marker
+            id="ah3"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+          </marker>
+        </defs>
+        <rect class="box ok" x="50" y="14" width="140" height="28" rx="8" />
+        <text class="t-title" x="120" y="33" text-anchor="middle">
+          Your browser
+        </text>
+        <rect class="box ok" x="330" y="14" width="140" height="28" rx="8" />
+        <text class="t-title" x="400" y="33" text-anchor="middle">
+          Collab server
+        </text>
+        <rect class="box ok" x="610" y="14" width="140" height="28" rx="8" />
+        <text class="t-title" x="680" y="33" text-anchor="middle">
+          Their browser
+        </text>
+        <rect class="box ok" x="810" y="14" width="140" height="28" rx="8" />
+        <text class="t-title" x="880" y="33" text-anchor="middle">
+          Server disk
+        </text>
+        <rect class="box ok" x="14" y="64" width="470" height="58" rx="8" />
+        <circle class="badge" cx="30" cy="80" r="10" />
+        <text
+          class="badge-t"
+          x="30"
+          y="84"
+          text-anchor="middle"
+          style="font-size: 9.5px"
+        >
+          1
+        </text>
+        <text class="t-title" x="46" y="84">Drag the move handle</text>
+        <text class="t-mono-sm" x="24" y="101">
+          SelectionGizmo.tsx moves the 3D object directly;
+        </text>
+        <text class="t-mono-sm" x="24" y="114">
+          sceneStore.beginEdit -&gt; previewNodeTransform -&gt; endEdit(keep)
+        </text>
+        <rect class="box ok" x="14" y="140" width="470" height="58" rx="8" />
+        <circle class="badge" cx="30" cy="156" r="10" />
+        <text
+          class="badge-t"
+          x="30"
+          y="160"
+          text-anchor="middle"
+          style="font-size: 9.5px"
+        >
+          2
+        </text>
+        <text class="t-title" x="46" y="160">One undo step, state updated</text>
+        <text class="t-mono-sm" x="24" y="177">
+          history.ts (pure) pushes the step; sceneStore.scene is a new object;
+        </text>
+        <text class="t-mono-sm" x="24" y="190">
+          3D view and Inspector re-render from it
+        </text>
+        <rect class="box ok" x="14" y="216" width="470" height="58" rx="8" />
+        <circle class="badge" cx="30" cy="232" r="10" />
+        <text
+          class="badge-t"
+          x="30"
+          y="236"
+          text-anchor="middle"
+          style="font-size: 9.5px"
+        >
+          3
+        </text>
+        <text class="t-title" x="46" y="236">Saved in this browser</text>
+        <text class="t-mono-sm" x="24" y="253">
+          autosave.ts: wait for a quiet moment, then
+        </text>
+        <text class="t-mono-sm" x="24" y="266">
+          projectLibrary.save -&gt; IndexedDB; status &#x27;Saving...&#x27;
+          -&gt; &#x27;Saved&#x27;
+        </text>
+        <rect class="box ok" x="14" y="292" width="470" height="58" rx="8" />
+        <circle class="badge" cx="30" cy="308" r="10" />
+        <text
+          class="badge-t"
+          x="30"
+          y="312"
+          text-anchor="middle"
+          style="font-size: 9.5px"
+        >
+          4
+        </text>
+        <text class="t-title" x="46" y="312">
+          Written into the shared document
+        </text>
+        <text class="t-mono-sm" x="24" y="329">
+          startCollab subscription -&gt; session.localChanged -&gt; sceneBinding
+          diffs
+        </text>
+        <text class="t-mono-sm" x="24" y="342">
+          old vs new scene into one Y transaction (LOCAL_ORIGIN); y-indexeddb
+          copy
+        </text>
+        <path class="arrow" d="M120 384 H396" marker-end="url(#ah3)" />
+        <circle class="badge" cx="140" cy="372" r="10" />
+        <text
+          class="badge-t"
+          x="140"
+          y="376"
+          text-anchor="middle"
+          style="font-size: 9.5px"
+        >
+          5
+        </text>
+        <text class="arrow-label" x="156" y="376">
+          update over the WebSocket (HocuspocusProvider)
+        </text>
+        <rect class="box ok" x="165" y="414" width="470" height="58" rx="8" />
+        <circle class="badge" cx="181" cy="430" r="10" />
+        <text
+          class="badge-t"
+          x="181"
+          y="434"
+          text-anchor="middle"
+          style="font-size: 9.5px"
+        >
+          6
+        </text>
+        <text class="t-title" x="197" y="434">Checked and merged</text>
+        <text class="t-mono-sm" x="175" y="451">
+          Hocuspocus: message under the size limit; a viewer&#x27;s update is
+          ignored;
+        </text>
+        <text class="t-mono-sm" x="175" y="464">
+          createServer.ts hooks; the document in memory now has it
+        </text>
+        <path class="arrow" d="M400 506 H676" marker-end="url(#ah3)" />
+        <circle class="badge" cx="420" cy="494" r="10" />
+        <text
+          class="badge-t"
+          x="420"
+          y="498"
+          text-anchor="middle"
+          style="font-size: 9.5px"
+        >
+          7
+        </text>
+        <text class="arrow-label" x="436" y="498">
+          the same update goes to everyone else in the room
+        </text>
+        <rect class="box ok" x="445" y="536" width="470" height="58" rx="8" />
+        <circle class="badge" cx="461" cy="552" r="10" />
+        <text
+          class="badge-t"
+          x="461"
+          y="556"
+          text-anchor="middle"
+          style="font-size: 9.5px"
+        >
+          8
+        </text>
+        <text class="t-title" x="477" y="556">Read, validated, shown</text>
+        <text class="t-mono-sm" x="455" y="573">
+          sceneBinding observer -&gt; readSceneFromDoc (Zod; bad data refused)
+          -&gt;
+        </text>
+        <text class="t-mono-sm" x="455" y="586">
+          sceneStore.applyRemoteScene (no undo step for you); view redraws
+        </text>
+        <rect class="box ok" x="165" y="612" width="470" height="58" rx="8" />
+        <circle class="badge" cx="181" cy="628" r="10" />
+        <text
+          class="badge-t"
+          x="181"
+          y="632"
+          text-anchor="middle"
+          style="font-size: 9.5px"
+        >
+          9
+        </text>
+        <text class="t-title" x="197" y="632">
+          Saved after 2 s of quiet (10 s at most)
+        </text>
+        <text class="t-mono-sm" x="175" y="649">
+          onStoreDocument: bytes over the limit are NOT saved (logged);
+        </text>
+        <text class="t-mono-sm" x="175" y="662">
+          else store.save(name, bytes)
+        </text>
+        <path class="arrow" d="M400 704 H876" marker-end="url(#ah3)" />
+        <circle class="badge" cx="520" cy="692" r="10" />
+        <text
+          class="badge-t"
+          x="520"
+          y="696"
+          text-anchor="middle"
+          style="font-size: 9.5px"
+        >
+          10
+        </text>
+        <text class="arrow-label" x="536" y="696">
+          SqliteStore writes the document (one file)
+        </text>
+        <rect class="box ok" x="14" y="734" width="470" height="58" rx="8" />
+        <circle class="badge" cx="30" cy="750" r="10" />
+        <text
+          class="badge-t"
+          x="30"
+          y="754"
+          text-anchor="middle"
+          style="font-size: 9.5px"
+        >
+          11
+        </text>
+        <text class="t-title" x="46" y="754">
+          A new or changed mesh? Files go by hash
+        </text>
+        <text class="t-mono-sm" x="24" y="771">
+          fileUploader -&gt; PUT /files/&lt;project&gt;/&lt;sha256&gt; (token,
+          role, hash, size);
+        </text>
+        <text class="t-mono-sm" x="24" y="784">
+          their OnlineAssetStorage downloads it when the scene refers to it
+        </text>
+        <rect class="box ok" x="445" y="810" width="470" height="58" rx="8" />
+        <circle class="badge" cx="461" cy="826" r="10" />
+        <text
+          class="badge-t"
+          x="461"
+          y="830"
+          text-anchor="middle"
+          style="font-size: 9.5px"
+        >
+          12
+        </text>
+        <text class="t-title" x="477" y="830">
+          Pointers and selections (not saved)
+        </text>
+        <text class="t-mono-sm" x="455" y="847">
+          PresenceLayer -&gt; presence.setCursor (throttled) -&gt; awareness
+          -&gt; everyone;
+        </text>
+        <text class="t-mono-sm" x="455" y="860">
+          gone when the connection is gone
+        </text>
+      </svg>
+    </div>
+  </figure>
+
+  <p class="foot">
+    Built on 24 Nov 2026 from the code at that date. When a new screen or script
+    is added, add its row to the table of its screen.
+  </p>
+</main>
+<script>
+  (function () {
+    var reduce =
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    function show(id) {
+      var card = document.getElementById(id);
+      if (!card) return;
+      var old = document.querySelectorAll(".card.active");
+      for (var i = 0; i < old.length; i++) old[i].classList.remove("active");
+      card.classList.add("active");
+      card.scrollIntoView({
+        behavior: reduce ? "auto" : "smooth",
+        block: "center",
+      });
+    }
+    var hits = document.querySelectorAll("[data-card]");
+    for (var i = 0; i < hits.length; i++) {
+      (function (el) {
+        el.addEventListener("click", function (e) {
+          e.stopPropagation();
+          show(el.getAttribute("data-card"));
+        });
+        el.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+            show(el.getAttribute("data-card"));
+          }
+        });
+      })(hits[i]);
+    }
+  })();
+</script>

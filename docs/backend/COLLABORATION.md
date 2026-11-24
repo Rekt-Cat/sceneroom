@@ -144,6 +144,41 @@ Moving, rotating, scaling, colouring and every other scene-level change stay ope
 rule `DECISIONS.md` already named ("one editor per mesh"). It is enforced by the editor; the server cannot tell what is being
 edited inside a file, so we state honestly that it is a courtesy lock, not a security control.
 
+### Planned change: selection locks (owner's design, 2026-11-24; not built yet)
+
+The courtesy lock above covers only Edit points, Paint and Bake. The owner wants every object protected while someone works
+on it, so two people online never move the same object at once. Rules agreed with the owner:
+
+- **Taking a lock:** selecting an object locks it for everyone else. No change has to be made first. Several selected
+  objects are all locked; box-select skips objects someone else holds.
+- **Reach of a lock:** an object and everything inside it. Nobody can change an object that is locked, is inside a locked
+  one, or contains a locked one (moving a parent moves its children).
+- **What others see:** the object is highlighted in the holder's colour and **the holder's name is shown over the object** in
+  the 3D view; the scene list shows a lock and the name. Others cannot select it (a message says who has it), no gizmo
+  appears, and Inspector actions, drag-to-reparent, rename, hide and delete are refused for it.
+- **Release:** when the holder deselects it, after **30 seconds without activity** (the lock ends and the object leaves the
+  holder's selection, with a message), on disconnect, and when the holder switches scene tabs.
+- **Activity** means selecting, changing something, or pressing a key or mouse button in the editor (so orbiting the camera
+  or typing a value keeps the lock).
+- **Tie:** two people selecting the same object at the same moment: the lower client number keeps it, as with the current
+  locks (the other is taken off it, with a message).
+- **Viewers** never take locks and may select anything.
+- **No connection to the collab server:** no locks exist (nobody's records arrive), so the merge rule of the shared document
+  still applies there.
+- **Enforcement:** in the editors, not on the server (courtesy, as before). The merge rule is the safety net.
+- **How it would be built:** each person's awareness record gets a `holding` list (the ids of their selection, held until the
+  holder releases it); every editor computes who is blocked from it and the scene (`parentId`) tree; the scene store's
+  `select`, `toggleSelect` and `setSelection` refuse blocked ids, and the actions that take explicit ids (reparent, hide,
+  lock, rename) check too. The idle timer lives in the holder's editor (no clocks are compared between computers).
+- **Known limit:** Undo online takes back only your own unchanged fields and could still touch an object someone else now
+  holds; to be decided when this is built.
+- **Tests when built:** unit tests for the blocked-set maths and the keeper (idle, ties, release), store tests for refused
+  selection and actions, and a two-window browser test (select, see the name, try to select, wait out the idle time).
+
+**Proposed, not decided:** a notice after a merge when a field you changed while disconnected was replaced by someone else's
+concurrent change, with a **Restore mine** button (writes your value again as a new, later change). Server-side checking of
+the contents of editors' updates (today only each browser checks what it receives) is another open idea.
+
 ## 8. Undo with several people
 
 Today Undo restores a **snapshot of the whole scene** (`DECISIONS.md`, "why snapshots"). With several people that would undo

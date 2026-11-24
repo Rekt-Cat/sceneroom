@@ -602,9 +602,10 @@
     </p>
     <p class="lede">
       For how an edit travels from Claude Code to GitHub and Vercel, see
-      <a href="../dev/dev-workflow.html">dev-workflow.html</a>. A
-      script-by-script flow (what runs at start, helpers and providers) is
-      planned for when the project is finished.
+      <a href="../dev/dev-workflow.html">dev-workflow.html</a>. The
+      script-by-script flow (what runs at start, then afterwards, per screen,
+      with helpers and providers) is
+      <a href="script-flow.html">script-flow.html</a>.
     </p>
   </header>
 
@@ -842,7 +843,7 @@
           aria-label="9, Account code: show explanation"
         >
           <rect
-            class="box pending"
+            class="box ok"
             x="344"
             y="258"
             width="130"
@@ -850,18 +851,11 @@
             rx="10"
           />
           <text class="t-title" x="356" y="282">Account code</text>
-          <text class="t-sub" x="356" y="301">packages/db (Prisma)</text>
-          <text class="t-sub" x="356" y="315">routes come next</text>
-          <rect
-            class="pill-pending"
-            x="356"
-            y="322"
-            width="76"
-            height="18"
-            rx="9"
-          />
-          <text class="pt-pending" x="394" y="334.5" text-anchor="middle">
-            next: M8c
+          <text class="t-sub" x="356" y="301">packages/db, projects</text>
+          <text class="t-sub" x="356" y="315">and token routes</text>
+          <rect class="pill-ok" x="356" y="322" width="63" height="18" rx="9" />
+          <text class="pt-ok" x="387" y="334.5" text-anchor="middle">
+            working
           </text>
           <circle class="badge" cx="458" cy="274" r="9" />
           <text class="badge-t" x="458" y="278" text-anchor="middle">9</text>
@@ -1074,14 +1068,9 @@
         <text class="arrow-label" x="257" y="560" text-anchor="start">
           sessions
         </text>
-        <path
-          class="arrow"
-          d="M409 350 V584"
-          marker-end="url(#ah)"
-          stroke-dasharray="5 4"
-        />
+        <path class="arrow" d="M409 350 V584" marker-end="url(#ah)" />
         <text class="arrow-label" x="415" y="574" text-anchor="start">
-          members (next)
+          projects, members
         </text>
         <path class="arrow" d="M652 498 V584" marker-end="url(#ah)" />
         <path class="arrow" d="M883 532 V584" marker-end="url(#ah)" />
@@ -1471,44 +1460,59 @@
       <section class="card" id="c9">
         <div class="card-head">
           <span class="num">9</span>
-          <h3>Account code (<code>packages/db</code>)</h3>
-          <span class="tag pending">next: M8c to M8f</span>
+          <h3>
+            Account code (<code>packages/db</code> and the project routes)
+          </h3>
+          <span class="tag ok">working</span>
         </div>
         <dl>
           <div>
             <dt>What it is</dt>
             <dd>
               The code that reads and writes the accounts database through
-              Prisma: the schema, the first migration, the role rules
-              (<code>permissionsOf</code>, <code>collabAccess</code>) and a seed
-              script. <strong>Built:</strong> all of that.
-              <strong>Next:</strong> routes that create projects, list mine,
-              change members and roles, make the one-hour collab token (<code
-                >POST /api/projects/&lt;id&gt;/token</code
-              >), invitations, the dashboard, and moving saved documents to
-              Postgres.
+              Prisma: the schema, the role rules (<code>permissionsOf</code>,
+              <code>collabAccess</code>), and the routes built on them.
+              <code>/api/projects</code> lists yours or puts a project online
+              with you as owner;
+              <code>/api/projects/&lt;id&gt;/members</code> lists people,
+              changes a role, removes someone or lets you leave; deleting a
+              project is owner-only.
+              <code>POST /api/projects/&lt;id&gt;/token</code> gives a member a
+              one-hour collab token whose role follows theirs. Every route
+              checks sign-in and the role on the server and validates input with
+              Zod; a non-member gets <em>no such project</em>. Invitations
+              (<code>/api/projects/&lt;id&gt;/invitations</code>,
+              <code>/api/invitations/preview</code> and <code>accept</code>)
+              make a person a member once, with only a hash of the link stored.
+              When someone is removed, changes role or the project is deleted,
+              this code tells the collab server to disconnect them.
+              <strong>Next:</strong> documents in Postgres.
             </dd>
           </div>
           <div>
             <dt>In Unity terms</dt>
             <dd>
-              The database layer of a live-service game's backend, with a typed
-              client generated from one schema file.
+              The backend API of a live-service game: accounts, groups and the
+              ticket office that hands out session tickets.
             </dd>
           </div>
           <div>
             <dt>Where in the code</dt>
             <dd>
-              <code>packages/db/prisma/schema.prisma</code>,
-              <code>packages/db/src/</code>.
+              <code>packages/db/</code>;
+              <code>apps/web/src/app/api/projects/</code>; rules in
+              <code>apps/web/src/server/projects.ts</code> and
+              <code>collabToken.ts</code>.
             </dd>
           </div>
           <div>
             <dt>Talks to</dt>
             <dd>
-              Used by <strong>sign-in</strong> (8); reads and writes
-              <strong>Postgres</strong> (16). Later signs tokens the
-              <strong>collab server</strong> (13) accepts.
+              Used by <strong>sign-in</strong> (8) for who you are; reads and
+              writes <strong>Postgres</strong> (16); signs tokens the
+              <strong>token check</strong> (13) accepts; the
+              <strong>online layer</strong> (6) asks it for a token at every
+              connect.
             </dd>
           </div>
         </dl>
@@ -1622,7 +1626,10 @@
               links (the first person to share becomes the owner, proven by a
               key that never leaves their browser) and
               <code>/share/&lt;projectId&gt;/reset</code> cancels all links and
-              disconnects everyone who used them. CORS headers let the web page
+              disconnects everyone who used them.
+              <code>POST /internal/disconnect</code> is called only by the web
+              app (signed with the shared secret, no CORS) to close one person's
+              connections when they are removed. CORS headers let the web page
               call them.
             </dd>
           </div>
@@ -1670,8 +1677,10 @@
               passed and the generation is still current (cancelling all links
               raises it). The secret is a random 64-character value in two
               git-ignored files, <code>apps/collab-server/.env</code> and
-              <code>apps/web/.env.local</code>, and must match. Stage B will let
-              the web app sign these tokens after checking membership.
+              <code>apps/web/.env.local</code>, and must match. The web app now
+              signs these too: after it checks that you are a member of the
+              project it hands out a one-hour token, and the editor asks for a
+              fresh one at every connect.
             </dd>
           </div>
           <div>
@@ -1684,8 +1693,8 @@
           <div>
             <dt>Where in the code</dt>
             <dd>
-              <code>apps/collab-server/src/linkToken.ts</code> (will move to
-              <code>packages/link-token</code> in step M8d).
+              <code>packages/link-token/src/linkToken.ts</code> now in
+              <code>packages/link-token</code>, shared by both servers.
             </dd>
           </div>
           <div>
@@ -2075,36 +2084,78 @@
       </ol>
     </section>
     <section class="panel" id="j9">
-      <h3>I. What comes next in accounts, and then deployment</h3>
+      <h3>
+        I. Online with your account, invitations and removal (steps M8c to M8e)
+      </h3>
       <p>
-        Planned, not built. Each part is built and tested before the next (see
-        <code>docs/backend/ACCOUNTS.md</code>).
+        Instead of a link, the web app vouches for you. Needs a signed-in person
+        and a collab server.
       </p>
       <ol class="steps">
         <li>
-          <strong>M8c:</strong> create an online project, list yours, list
-          members, change a role, remove a member. Every route checks the
-          session and the role on the server and validates input with Zod.
+          You are signed in and press <em>Share</em>, then
+          <em>Put online with my account</em>. The editor calls
+          <code>POST /api/projects</code> (<strong>account code</strong>, 9),
+          which makes the project in <strong>Postgres</strong> (16) with you as
+          owner and remembers which scene is open (the one new members open
+          first). Only a note <em>online with my account</em> is kept in your
+          browser: no token is stored.
         </li>
         <li>
-          <strong>M8d:</strong> the web app signs a collab token valid for one
-          hour after checking you are a member. The editor asks for a fresh
-          token whenever it reconnects. Owner and editor get read-write;
-          commenter and viewer get read-only.
+          To connect, the editor asks
+          <code>POST /api/projects/&lt;id&gt;/token</code>. The server checks
+          your session, finds your membership and signs a token for one hour
+          that names you: read-write for owner and editor, read-only for
+          commenter and viewer. A person who is not a member gets
+          <em>no such project</em> and no token.
         </li>
         <li>
-          <strong>M8e:</strong> invitation links (only a hash of the token
-          stored, one role, can be revoked), the dashboard of shared projects,
-          and disconnecting a removed member at once.
+          The editor shows that token to the <strong>live rooms</strong> (11),
+          which check it exactly like a link token (<strong>token check</strong
+          >, 13). The token is asked for again at <em>every</em> connect, so a
+          changed role or a removed member is noticed at the next connect.
         </li>
         <li>
-          <strong>M8f:</strong> scene documents saved in Postgres instead of the
-          SQLite file.
+          <strong>Invite someone:</strong> in the Share box the owner picks a
+          role and a length (1, 7 or 30 days) and gets a link
+          <code>/invite/&lt;secret&gt;</code>, shown once. Only a fingerprint of
+          the secret is stored.
         </li>
         <li>
-          <strong>M9:</strong> deploy: the web app on Vercel, the collab server
-          on a host that keeps WebSockets open, Neon for Postgres, Cloudflare R2
-          for the files, and a two-browser test in CI.
+          <strong>Join:</strong> the other person opens the link. Signed out,
+          the page says which project and role it is for and offers
+          <em>Sign in with GitHub</em>; signed in,
+          <em>Accept invitation</em> makes them a member with that role (once:
+          the link is then used up) and opens the project online with the shared
+          scene.
+        </li>
+        <li>
+          <strong>The dashboard:</strong> the home screen lists every project
+          you are a member of under <em>Online projects</em>, with your role.
+        </li>
+        <li>
+          <strong>Removing someone:</strong> the owner removes a member (or
+          changes their role, or deletes the project). The change is made in
+          Postgres, then the web app sends a signed request to the collab
+          server's <code>/internal/disconnect</code>. The server closes that
+          person's connections; their browser reconnects, asks for a token
+          again, and is refused. If the call cannot be made, the person is cut
+          off at their next connect.
+        </li>
+      </ol>
+      <p>
+        Not built yet: documents saved in Postgres instead of SQLite (M8f), rate
+        limits (M9).
+      </p>
+    </section>
+    <section class="panel" id="j10">
+      <h3>J. Deployment (step M9, planned)</h3>
+      <p>Not built.</p>
+      <ol class="steps">
+        <li>
+          The web app on Vercel, the collab server on a host that keeps
+          WebSockets open, Neon for Postgres, Cloudflare R2 for the files, and a
+          two-browser test in CI.
         </li>
       </ol>
     </section>
@@ -2452,17 +2503,17 @@
         </li>
         <li>
           Accounts: the database package and Postgres (M8a), sign-in with GitHub
-          (M8b)
+          (M8b), projects and members API (M8c), signed collab tokens and online
+          with your account (M8d), invitations, dashboard and live disconnect
+          (M8e)
         </li>
       </ul>
     </div>
     <div>
       <h2><span class="dot pending"></span>Planned</h2>
       <ul>
-        <li>
-          M8c to M8f: projects and members API, signed tokens from the web app,
-          invitations and dashboard, documents in Postgres
-        </li>
+        <li>M8f: documents in Postgres</li>
+        <li>Selection locks (see COLLABORATION.md)</li>
         <li>
           M9: deployment (Vercel, WebSocket host, Neon, R2) and a two-browser
           test in CI
