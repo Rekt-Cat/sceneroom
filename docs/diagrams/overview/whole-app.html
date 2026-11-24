@@ -1,0 +1,2517 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SceneRoom: the whole app</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@500;600;700&display=swap"
+/>
+<style>
+  /* Layout concept: one whiteboard-style figure in two lanes, then a numbered walkthrough that matches it. */
+  :root {
+    --bg: #f2f5f6;
+    --surface: #ffffff;
+    --lane: #e9eef0;
+    --ink: #13202a;
+    --muted: #55656f;
+    --line: #c4d0d6;
+    --accent: #0a6c8a;
+    --on-accent: #ffffff;
+    --ok: #1c7a4b;
+    --ok-bg: #e0f2e8;
+    --pending: #8a5a00;
+    --pending-bg: #fbeed2;
+    --warn: #b3342c;
+    --font-head: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
+    --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1417;
+      --surface: #172026;
+      --lane: #121a1f;
+      --ink: #e5ecef;
+      --muted: #93a4ae;
+      --line: #2c3b44;
+      --accent: #5cc4e0;
+      --on-accent: #0e1417;
+      --ok: #5fd09a;
+      --ok-bg: #153227;
+      --pending: #e8b65c;
+      --pending-bg: #332a12;
+      --warn: #ff918a;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1417;
+    --surface: #172026;
+    --lane: #121a1f;
+    --ink: #e5ecef;
+    --muted: #93a4ae;
+    --line: #2c3b44;
+    --accent: #5cc4e0;
+    --on-accent: #0e1417;
+    --ok: #5fd09a;
+    --ok-bg: #153227;
+    --pending: #e8b65c;
+    --pending-bg: #332a12;
+    --warn: #ff918a;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    line-height: 1.5;
+    padding-block: 28px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  main {
+    max-width: 1040px;
+    margin-inline: auto;
+    display: grid;
+    gap: 26px;
+  }
+  h1 {
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: clamp(1.7rem, 4vw, 2.3rem);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h2 {
+    font-family: var(--font-head);
+    font-size: 1.25rem;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .lede {
+    margin: 6px 0 0;
+    color: var(--muted);
+    max-width: 62ch;
+    font-size: 1rem;
+  }
+  figure {
+    margin: 0;
+    display: grid;
+    gap: 10px;
+  }
+  .fig-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+  }
+  svg.diagram {
+    display: block;
+    min-width: 860px;
+    width: 100%;
+    height: auto;
+    color: var(--accent);
+  }
+  figcaption,
+  .hint {
+    color: var(--muted);
+    font-size: 0.9rem;
+    max-width: 78ch;
+    min-width: 0;
+    margin: 0;
+  }
+
+  /* diagram parts */
+  .lane {
+    fill: var(--lane);
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .lane-label {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.12em;
+    fill: var(--muted);
+  }
+  .box {
+    fill: var(--surface);
+    stroke: var(--line);
+    stroke-width: 1.5;
+  }
+  .box.ok {
+    stroke: var(--ok);
+  }
+  .box.pending {
+    stroke: var(--pending);
+    stroke-dasharray: 5 4;
+  }
+  .box.warn {
+    stroke: var(--warn);
+  }
+  .group {
+    fill: var(--surface);
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .t-title {
+    font: 600 13px var(--font-head);
+    fill: var(--ink);
+  }
+  .t-sub {
+    font: 400 11px var(--font-ui);
+    fill: var(--muted);
+  }
+  .t-mono {
+    font: 500 10.5px var(--font-mono);
+    fill: var(--ink);
+  }
+  .t-mono-sm {
+    font: 500 9.5px var(--font-mono);
+    fill: var(--muted);
+  }
+  .t-step {
+    font: 600 11px var(--font-head);
+    fill: var(--ink);
+  }
+  .arrow {
+    stroke: var(--accent);
+    stroke-width: 1.75;
+    fill: none;
+  }
+  .arrow-label {
+    font: 500 10.5px var(--font-ui);
+    fill: var(--accent);
+  }
+  .chev {
+    fill: var(--accent);
+  }
+  .pill-ok {
+    fill: var(--ok-bg);
+    stroke: var(--ok);
+    stroke-width: 1;
+  }
+  .pill-pending {
+    fill: var(--pending-bg);
+    stroke: var(--pending);
+    stroke-width: 1;
+  }
+  .pt-ok {
+    font: 600 10px var(--font-ui);
+    fill: var(--ok);
+  }
+  .pt-pending {
+    font: 600 10px var(--font-ui);
+    fill: var(--pending);
+  }
+  .note-warn {
+    font: 500 10.5px var(--font-ui);
+    fill: var(--warn);
+  }
+  .chip {
+    fill: var(--lane);
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .chip.pending {
+    fill: var(--pending-bg);
+    stroke: var(--pending);
+    stroke-dasharray: 4 3;
+  }
+  .badge {
+    fill: var(--accent);
+  }
+  .badge-t {
+    font: 700 10.5px var(--font-head);
+    fill: var(--on-accent);
+  }
+  .hit {
+    cursor: pointer;
+  }
+  .hit:hover > .box,
+  .hit:hover > .group {
+    stroke-width: 2.5;
+  }
+  .hit:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  /* walkthrough */
+  .walk {
+    display: grid;
+    gap: 14px;
+  }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 14px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 16px 14px;
+    min-width: 0;
+    scroll-margin-top: 20px;
+  }
+  .card.wide {
+    grid-column: 1 / -1;
+  }
+  .card.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  .card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .num {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--on-accent);
+    font: 700 13px var(--font-head);
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+  .card h3 {
+    font-family: var(--font-head);
+    font-size: 1.05rem;
+    margin: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .tag {
+    font: 600 11px var(--font-ui);
+    padding: 2px 9px;
+    border-radius: 999px;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+  .tag.ok {
+    color: var(--ok);
+    background: var(--ok-bg);
+    border-color: var(--ok);
+  }
+  .tag.pending {
+    color: var(--pending);
+    background: var(--pending-bg);
+    border-color: var(--pending);
+  }
+  dl {
+    margin: 0;
+    display: grid;
+    gap: 8px;
+  }
+  dt {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  dd {
+    margin: 0;
+    font-size: 0.92rem;
+    min-width: 0;
+  }
+  dd code,
+  li code,
+  .hint code {
+    font-family: var(--font-mono);
+    font-size: 0.84em;
+    background: var(--lane);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  ol.ci {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    gap: 8px 22px;
+    counter-reset: ci;
+  }
+  ol.ci li {
+    counter-increment: ci;
+    padding-left: 30px;
+    position: relative;
+    font-size: 0.92rem;
+    min-width: 0;
+  }
+  ol.ci li::before {
+    content: counter(ci);
+    position: absolute;
+    left: 0;
+    top: 1px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    font: 600 11px var(--font-head);
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+  }
+  ol.ci li.fail::before {
+    border-color: var(--warn);
+    color: var(--warn);
+  }
+  ol.ci strong {
+    font-family: var(--font-head);
+  }
+
+  a {
+    color: var(--accent);
+  }
+
+  /* deep dives */
+  .deep {
+    display: grid;
+    gap: 14px;
+  }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 16px;
+    min-width: 0;
+    display: grid;
+    gap: 12px;
+    scroll-margin-top: 20px;
+  }
+  .panel h3 {
+    font-family: var(--font-head);
+    font-size: 1.1rem;
+    margin: 0;
+  }
+  .panel h4 {
+    font: 600 0.95rem var(--font-head);
+    margin: 6px 0 0;
+  }
+  .panel p {
+    margin: 0;
+    font-size: 0.92rem;
+    max-width: 78ch;
+  }
+  .panel code,
+  .gloss code,
+  td code {
+    font-family: var(--font-mono);
+    font-size: 0.84em;
+    background: var(--lane);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  pre.code {
+    margin: 0;
+    padding: 10px 12px;
+    background: var(--lane);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font: 500 12px/1.55 var(--font-mono);
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--ink);
+  }
+  .ba {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    gap: 12px;
+  }
+  .ba > div {
+    min-width: 0;
+    display: grid;
+    gap: 5px;
+    align-content: start;
+  }
+  .ba-label {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .tbl-wrap {
+    overflow-x: auto;
+  }
+  table.cmp {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 680px;
+    font-size: 0.88rem;
+  }
+  table.cmp th,
+  table.cmp td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  table.cmp th {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  ol.steps {
+    margin: 0;
+    padding-left: 1.3rem;
+    display: grid;
+    gap: 6px;
+    font-size: 0.92rem;
+  }
+  ol.steps li {
+    padding-left: 4px;
+    min-width: 0;
+  }
+  .gloss {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 12px 26px;
+  }
+  .gloss > div {
+    min-width: 0;
+  }
+  .gloss dt {
+    text-transform: none;
+    letter-spacing: 0;
+    font: 600 0.9rem var(--font-head);
+    color: var(--ink);
+  }
+  .gloss dd {
+    font-size: 0.88rem;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  /* status note */
+  .status {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px 28px;
+  }
+  .status h2 {
+    font-size: 0.95rem;
+    margin: 0 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: none;
+  }
+  .dot.ok {
+    background: var(--ok);
+  }
+  .dot.pending {
+    background: var(--pending);
+  }
+  .status ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+  .status li + li {
+    margin-top: 3px;
+  }
+  .status code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    color: var(--ink);
+  }
+  .foot {
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin: 0;
+  }
+
+  .card h3 small {
+    font: 500 0.78rem var(--font-ui);
+    color: var(--muted);
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .sw {
+    width: 22px;
+    height: 12px;
+    border-radius: 4px;
+    border: 1.5px solid var(--ok);
+    background: var(--surface);
+  }
+  .sw.pending {
+    border-color: var(--pending);
+    border-style: dashed;
+  }
+  .sw.ext {
+    border-color: var(--line);
+  }
+  table.cmp td:first-child {
+    white-space: nowrap;
+  }
+  dd,
+  li,
+  p,
+  td code,
+  dd code,
+  li code,
+  p code {
+    overflow-wrap: anywhere;
+  }
+  .toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    font-size: 0.9rem;
+  }
+</style>
+<main>
+  <header>
+    <h1>SceneRoom: the whole app</h1>
+    <p class="lede">
+      Every part of SceneRoom and how the parts connect: the editor in the
+      browser, the web server, the collab server and the places data is kept.
+      Click a numbered box to jump to its explanation. Below the figure there is
+      one walkthrough per part, then the main journeys through the system
+      (opening a project, one edit, going online, sharing, files, sign-in),
+      where each kind of data lives, who may do what, and a glossary with Unity
+      comparisons.
+    </p>
+    <p class="lede">
+      For how an edit travels from Claude Code to GitHub and Vercel, see
+      <a href="../dev/dev-workflow.html">dev-workflow.html</a>. A
+      script-by-script flow (what runs at start, helpers and providers) is
+      planned for when the project is finished.
+    </p>
+  </header>
+
+  <figure>
+    <div class="fig-scroll">
+      <svg
+        class="diagram"
+        viewBox="0 0 980 706"
+        role="group"
+        aria-label="Diagram of the whole app in four rows. In the browser: Screen (1), Scene state (2), 3D view (3), a band of shared Scene logic (4), Local save (5) and Online layer (6). On the web server: Pages (7), Sign-in (8), Account code (9) and GitHub outside the app (10). On the collab server: Live rooms (11), HTTP routes (12) and a token check (13). Where data is kept: Postgres (16), the files folder (15) and the SQLite file (14). The browser talks to the collab server over a WebSocket and over HTTP; sign-in talks to GitHub and Postgres."
+      >
+        <defs>
+          <marker
+            id="ah"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+          </marker>
+        </defs>
+        <rect class="lane" x="10" y="10" width="960" height="196" rx="14" />
+        <text class="lane-label" x="28" y="34">
+          IN THE BROWSER: THE EDITOR (everything the person sees and touches)
+        </text>
+        <rect class="lane" x="10" y="222" width="960" height="146" rx="14" />
+        <text class="lane-label" x="28" y="246">THE WEB SERVER: PORT 3000</text>
+        <rect class="lane" x="10" y="388" width="960" height="146" rx="14" />
+        <text class="lane-label" x="28" y="412">
+          THE COLLAB SERVER: PORT 1234
+        </text>
+        <rect class="lane" x="10" y="550" width="960" height="146" rx="14" />
+        <text class="lane-label" x="28" y="574">WHERE DATA IS KEPT</text>
+        <g
+          class="hit"
+          data-card="c1"
+          tabindex="0"
+          role="button"
+          aria-label="1, Screen: show explanation"
+        >
+          <rect class="box ok" x="28" y="48" width="130" height="100" rx="10" />
+          <text class="t-title" x="40" y="72">Screen</text>
+          <text class="t-sub" x="40" y="91">React panels,</text>
+          <text class="t-sub" x="40" y="105">top bar, buttons</text>
+          <rect class="pill-ok" x="40" y="122" width="63" height="18" rx="9" />
+          <text class="pt-ok" x="71" y="134.5" text-anchor="middle">
+            working
+          </text>
+          <circle class="badge" cx="142" cy="64" r="9" />
+          <text class="badge-t" x="142" y="68" text-anchor="middle">1</text>
+        </g>
+        <g
+          class="hit"
+          data-card="c2"
+          tabindex="0"
+          role="button"
+          aria-label="2, Scene state: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="186"
+            y="48"
+            width="130"
+            height="100"
+            rx="10"
+          />
+          <text class="t-title" x="198" y="72">Scene state</text>
+          <text class="t-sub" x="198" y="91">Zustand stores,</text>
+          <text class="t-sub" x="198" y="105">undo history</text>
+          <rect class="pill-ok" x="198" y="122" width="63" height="18" rx="9" />
+          <text class="pt-ok" x="229" y="134.5" text-anchor="middle">
+            working
+          </text>
+          <circle class="badge" cx="300" cy="64" r="9" />
+          <text class="badge-t" x="300" y="68" text-anchor="middle">2</text>
+        </g>
+        <g
+          class="hit"
+          data-card="c3"
+          tabindex="0"
+          role="button"
+          aria-label="3, 3D view: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="344"
+            y="48"
+            width="130"
+            height="100"
+            rx="10"
+          />
+          <text class="t-title" x="356" y="72">3D view</text>
+          <text class="t-sub" x="356" y="91">three.js through</text>
+          <text class="t-sub" x="356" y="105">react-three-fiber</text>
+          <rect class="pill-ok" x="356" y="122" width="63" height="18" rx="9" />
+          <text class="pt-ok" x="387" y="134.5" text-anchor="middle">
+            working
+          </text>
+          <circle class="badge" cx="458" cy="64" r="9" />
+          <text class="badge-t" x="458" y="68" text-anchor="middle">3</text>
+        </g>
+        <g
+          class="hit"
+          data-card="c5"
+          tabindex="0"
+          role="button"
+          aria-label="5, Local save: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="660"
+            y="48"
+            width="130"
+            height="100"
+            rx="10"
+          />
+          <text class="t-title" x="672" y="72">Local save</text>
+          <text class="t-sub" x="672" y="91">IndexedDB, autosave,</text>
+          <text class="t-sub" x="672" y="105">.sceneroom files</text>
+          <rect class="pill-ok" x="672" y="122" width="63" height="18" rx="9" />
+          <text class="pt-ok" x="703" y="134.5" text-anchor="middle">
+            working
+          </text>
+          <circle class="badge" cx="774" cy="64" r="9" />
+          <text class="badge-t" x="774" y="68" text-anchor="middle">5</text>
+        </g>
+        <g
+          class="hit"
+          data-card="c6"
+          tabindex="0"
+          role="button"
+          aria-label="6, Online layer: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="818"
+            y="48"
+            width="130"
+            height="100"
+            rx="10"
+          />
+          <text class="t-title" x="830" y="72">Online layer</text>
+          <text class="t-sub" x="830" y="91">Yjs, provider,</text>
+          <text class="t-sub" x="830" y="105">presence, files</text>
+          <rect class="pill-ok" x="830" y="122" width="63" height="18" rx="9" />
+          <text class="pt-ok" x="861" y="134.5" text-anchor="middle">
+            working
+          </text>
+          <circle class="badge" cx="932" cy="64" r="9" />
+          <text class="badge-t" x="932" y="68" text-anchor="middle">6</text>
+        </g>
+        <g
+          class="hit"
+          data-card="c4"
+          tabindex="0"
+          role="button"
+          aria-label="4, Scene logic: show explanation"
+        >
+          <rect class="box ok" x="186" y="158" width="604" height="32" rx="8" />
+          <text class="t-title" x="198" y="178">
+            Scene logic: plain functions and types (packages/shared)
+          </text>
+          <circle class="badge" cx="774" cy="174" r="9" />
+          <text class="badge-t" x="774" y="178" text-anchor="middle">4</text>
+        </g>
+        <path class="arrow" d="M158 88 H184" marker-end="url(#ah)" />
+        <text class="arrow-label" x="160" y="80" text-anchor="start">
+          actions
+        </text>
+        <path class="arrow" d="M316 88 H342" marker-end="url(#ah)" />
+        <text class="arrow-label" x="318" y="80" text-anchor="start">
+          state
+        </text>
+        <path class="arrow" d="M286 148 V153 H725 V150" marker-end="url(#ah)" />
+        <text class="arrow-label" x="506" y="149" text-anchor="start">
+          autosave
+        </text>
+        <path
+          class="arrow"
+          d="M790 98 H816"
+          marker-start="url(#ah)"
+          marker-end="url(#ah)"
+        />
+        <g
+          class="hit"
+          data-card="c7"
+          tabindex="0"
+          role="button"
+          aria-label="7, Pages: show explanation"
+        >
+          <rect class="box ok" x="28" y="258" width="130" height="90" rx="10" />
+          <text class="t-title" x="40" y="282">Pages</text>
+          <text class="t-sub" x="40" y="301">Next.js: / and</text>
+          <text class="t-sub" x="40" y="315">/p/project-id</text>
+          <rect class="pill-ok" x="40" y="322" width="63" height="18" rx="9" />
+          <text class="pt-ok" x="71" y="334.5" text-anchor="middle">
+            working
+          </text>
+          <circle class="badge" cx="142" cy="274" r="9" />
+          <text class="badge-t" x="142" y="278" text-anchor="middle">7</text>
+        </g>
+        <g
+          class="hit"
+          data-card="c8"
+          tabindex="0"
+          role="button"
+          aria-label="8, Sign-in: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="186"
+            y="258"
+            width="130"
+            height="90"
+            rx="10"
+          />
+          <text class="t-title" x="198" y="282">Sign-in</text>
+          <text class="t-sub" x="198" y="301">Better Auth,</text>
+          <text class="t-sub" x="198" y="315">/api/auth</text>
+          <rect class="pill-ok" x="198" y="322" width="63" height="18" rx="9" />
+          <text class="pt-ok" x="229" y="334.5" text-anchor="middle">
+            working
+          </text>
+          <circle class="badge" cx="300" cy="274" r="9" />
+          <text class="badge-t" x="300" y="278" text-anchor="middle">8</text>
+        </g>
+        <g
+          class="hit"
+          data-card="c9"
+          tabindex="0"
+          role="button"
+          aria-label="9, Account code: show explanation"
+        >
+          <rect
+            class="box pending"
+            x="344"
+            y="258"
+            width="130"
+            height="90"
+            rx="10"
+          />
+          <text class="t-title" x="356" y="282">Account code</text>
+          <text class="t-sub" x="356" y="301">packages/db (Prisma)</text>
+          <text class="t-sub" x="356" y="315">routes come next</text>
+          <rect
+            class="pill-pending"
+            x="356"
+            y="322"
+            width="76"
+            height="18"
+            rx="9"
+          />
+          <text class="pt-pending" x="394" y="334.5" text-anchor="middle">
+            next: M8c
+          </text>
+          <circle class="badge" cx="458" cy="274" r="9" />
+          <text class="badge-t" x="458" y="278" text-anchor="middle">9</text>
+        </g>
+        <g
+          class="hit"
+          data-card="c10"
+          tabindex="0"
+          role="button"
+          aria-label="10, GitHub: show explanation"
+        >
+          <rect class="box" x="502" y="258" width="130" height="90" rx="10" />
+          <text class="t-title" x="514" y="282">GitHub</text>
+          <text class="t-sub" x="514" y="301">outside our app:</text>
+          <text class="t-sub" x="514" y="315">proves who you are</text>
+          <rect
+            class="pill-pending"
+            x="514"
+            y="322"
+            width="63"
+            height="18"
+            rx="9"
+          />
+          <text class="pt-pending" x="545" y="334.5" text-anchor="middle">
+            outside
+          </text>
+          <circle class="badge" cx="616" cy="274" r="9" />
+          <text class="badge-t" x="616" y="278" text-anchor="middle">10</text>
+        </g>
+        <path class="arrow" d="M60 258 V150" marker-end="url(#ah)" />
+        <text class="arrow-label" x="66" y="206" text-anchor="start">
+          serves the page
+        </text>
+        <path
+          class="arrow"
+          d="M230 258 V214 H130 V150"
+          marker-start="url(#ah)"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="136" y="232" text-anchor="start">
+          who am I
+        </text>
+        <path
+          class="arrow"
+          d="M290 258 V230 H567 V256"
+          marker-start="url(#ah)"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="374" y="243" text-anchor="start">
+          GitHub login
+        </text>
+        <g
+          class="hit"
+          data-card="c12"
+          tabindex="0"
+          role="button"
+          aria-label="12, HTTP routes: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="502"
+            y="424"
+            width="288"
+            height="72"
+            rx="10"
+          />
+          <text class="t-title" x="514" y="448">HTTP routes</text>
+          <text class="t-sub" x="514" y="467">
+            /share: links. /files: big files by hash.
+          </text>
+          <rect class="pill-ok" x="514" y="470" width="63" height="18" rx="9" />
+          <text class="pt-ok" x="545" y="482.5" text-anchor="middle">
+            working
+          </text>
+          <circle class="badge" cx="774" cy="440" r="9" />
+          <text class="badge-t" x="774" y="444" text-anchor="middle">12</text>
+        </g>
+        <g
+          class="hit"
+          data-card="c11"
+          tabindex="0"
+          role="button"
+          aria-label="11, Live rooms: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="818"
+            y="424"
+            width="130"
+            height="72"
+            rx="10"
+          />
+          <text class="t-title" x="830" y="448">Live rooms</text>
+          <text class="t-sub" x="830" y="467">Hocuspocus</text>
+          <rect class="pill-ok" x="830" y="470" width="63" height="18" rx="9" />
+          <text class="pt-ok" x="861" y="482.5" text-anchor="middle">
+            working
+          </text>
+          <circle class="badge" cx="932" cy="440" r="9" />
+          <text class="badge-t" x="932" y="444" text-anchor="middle">11</text>
+        </g>
+        <g
+          class="hit"
+          data-card="c13"
+          tabindex="0"
+          role="button"
+          aria-label="13, Token check: show explanation"
+        >
+          <rect class="box ok" x="502" y="504" width="446" height="26" rx="8" />
+          <text class="t-title" x="514" y="522">
+            Token check on every request (COLLAB_SECRET)
+          </text>
+          <circle class="badge" cx="932" cy="517" r="9" />
+          <text class="badge-t" x="932" y="521" text-anchor="middle">13</text>
+        </g>
+        <path
+          class="arrow"
+          d="M883 150 V422"
+          marker-start="url(#ah)"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="889" y="300" text-anchor="start">
+          WebSocket:
+        </text>
+        <text class="arrow-label" x="889" y="313" text-anchor="start">
+          live changes
+        </text>
+        <path
+          class="arrow"
+          d="M834 150 V378 H652 V422"
+          marker-start="url(#ah)"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="658" y="372" text-anchor="start">
+          HTTP: files and share links
+        </text>
+        <g
+          class="hit"
+          data-card="c16"
+          tabindex="0"
+          role="button"
+          aria-label="16, Postgres (Docker): show explanation"
+        >
+          <rect class="box ok" x="28" y="586" width="420" height="96" rx="10" />
+          <text class="t-title" x="40" y="610">Postgres (Docker)</text>
+          <text class="t-sub" x="40" y="629">
+            users, sessions, projects, members, invitations
+          </text>
+          <text class="t-sub" x="40" y="643">(accounts only)</text>
+          <rect class="pill-ok" x="40" y="656" width="63" height="18" rx="9" />
+          <text class="pt-ok" x="71" y="668.5" text-anchor="middle">
+            working
+          </text>
+          <circle class="badge" cx="432" cy="602" r="9" />
+          <text class="badge-t" x="432" y="606" text-anchor="middle">16</text>
+        </g>
+        <g
+          class="hit"
+          data-card="c15"
+          tabindex="0"
+          role="button"
+          aria-label="15, Files folder: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="502"
+            y="586"
+            width="288"
+            height="96"
+            rx="10"
+          />
+          <text class="t-title" x="514" y="610">Files folder</text>
+          <text class="t-sub" x="514" y="629">
+            big files named by their SHA-256 fingerprint
+          </text>
+          <text class="t-sub" x="514" y="643">(meshes, models, pictures)</text>
+          <rect class="pill-ok" x="514" y="656" width="63" height="18" rx="9" />
+          <text class="pt-ok" x="545" y="668.5" text-anchor="middle">
+            working
+          </text>
+          <circle class="badge" cx="774" cy="602" r="9" />
+          <text class="badge-t" x="774" y="606" text-anchor="middle">15</text>
+        </g>
+        <g
+          class="hit"
+          data-card="c14"
+          tabindex="0"
+          role="button"
+          aria-label="14, SQLite file: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="818"
+            y="586"
+            width="130"
+            height="96"
+            rx="10"
+          />
+          <text class="t-title" x="830" y="610">SQLite file</text>
+          <text class="t-sub" x="830" y="629">scene documents,</text>
+          <text class="t-sub" x="830" y="643">owner key hash</text>
+          <rect class="pill-ok" x="830" y="656" width="63" height="18" rx="9" />
+          <text class="pt-ok" x="861" y="668.5" text-anchor="middle">
+            working
+          </text>
+          <circle class="badge" cx="932" cy="602" r="9" />
+          <text class="badge-t" x="932" y="606" text-anchor="middle">14</text>
+        </g>
+        <path class="arrow" d="M251 350 V584" marker-end="url(#ah)" />
+        <text class="arrow-label" x="257" y="560" text-anchor="start">
+          sessions
+        </text>
+        <path
+          class="arrow"
+          d="M409 350 V584"
+          marker-end="url(#ah)"
+          stroke-dasharray="5 4"
+        />
+        <text class="arrow-label" x="415" y="574" text-anchor="start">
+          members (next)
+        </text>
+        <path class="arrow" d="M652 498 V584" marker-end="url(#ah)" />
+        <path class="arrow" d="M883 532 V584" marker-end="url(#ah)" />
+        <text class="arrow-label" x="889" y="560" text-anchor="start">
+          saves
+        </text>
+      </svg>
+    </div>
+    <div class="legend" aria-label="Legend">
+      <span><i class="sw"></i> built and working</span>
+      <span><i class="sw pending"></i> planned or only partly built</span>
+      <span><i class="sw ext"></i> outside SceneRoom</span>
+      <span
+        >Arrows show who talks to whom; arrows with two heads go both ways;
+        dashed = not built yet.</span
+      >
+    </div>
+    <figcaption>
+      Everything in the first row runs in the visitor's browser. The two server
+      rows are two separate programs (the web server on port 3000, the collab
+      server on port 1234). Without accounts, only the first row and the collab
+      server are needed; with no collab server at all, the editor still works
+      fully alone.
+    </figcaption>
+  </figure>
+
+  <section class="walk" aria-labelledby="walk-h">
+    <h2 id="walk-h">The parts, one by one</h2>
+    <div class="cards">
+      <section class="card" id="c1">
+        <div class="card-head">
+          <span class="num">1</span>
+          <h3>Screen</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              Everything you see and click: the top bar, the scene list on the
+              left, the Inspector on the right, the tool dock, dialogs (Share,
+              Project), the home screen with the project cards, and the sign-in
+              button. These are React components. They only <em>show</em> state
+              and call functions; they hold no scene logic.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>
+              The Canvas UI and Inspector windows. A React component is like a
+              MonoBehaviour that draws a panel from data and calls methods when
+              a button is pressed.
+            </dd>
+          </div>
+          <div>
+            <dt>Where in the code</dt>
+            <dd>
+              <code>apps/web/src/components/viewport/</code> (editor),
+              <code>components/home/</code> (home screen), pages in
+              <code>apps/web/src/app/</code>.
+            </dd>
+          </div>
+          <div>
+            <dt>Talks to</dt>
+            <dd>
+              Reads and changes the <strong>scene state</strong> (2); the 3D
+              view (3) is drawn inside it; the <strong>pages</strong> (7)
+              deliver it; the sign-in button talks to
+              <strong>sign-in</strong> (8).
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="c2">
+        <div class="card-head">
+          <span class="num">2</span>
+          <h3>Scene state</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              The single place the open scene lives while you work: every
+              object, its transform, colour, modifiers, the selection, the undo
+              and redo history, the open project and its scene tabs. Changes go
+              through named actions (<em>add a cube</em>, <em>move</em>,
+              <em>extrude</em>), each of which becomes one undo step. Stores
+              also hold smaller things: edit mode, paint mode, panel widths,
+              online status, who is here.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>
+              A ScriptableObject-style shared data holder plus a command history
+              (Undo stack) that everything reads from, so the UI never keeps its
+              own copy.
+            </dd>
+          </div>
+          <div>
+            <dt>Where in the code</dt>
+            <dd>
+              <code>apps/web/src/store/</code> (<code>sceneStore.ts</code>,
+              <code>projectStore.ts</code>, <code>editStore.ts</code>, ...)
+              built with Zustand;
+              <code>apps/web/src/collab/collabStore.ts</code>.
+            </dd>
+          </div>
+          <div>
+            <dt>Talks to</dt>
+            <dd>
+              Calls the <strong>scene logic</strong> (4) for every real change;
+              is drawn by the <strong>3D view</strong> (3) and the
+              <strong>screen</strong> (1); is saved by
+              <strong>local save</strong> (5); is mirrored by the
+              <strong>online layer</strong> (6).
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="c3">
+        <div class="card-head">
+          <span class="num">3</span>
+          <h3>3D view</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              Draws the scene in the browser with WebGL: shapes, imported
+              models, characters, plants, lights, the ground grid, selection
+              outlines, the move/rotate/scale handles, the edit-mode points and
+              edges, painting, the four-view peek, other people's selections and
+              pointers. It also handles camera controls, box selection and
+              drag-and-drop of models.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>
+              The Scene view and Game view camera of the Unity editor, with its
+              gizmos and handles.
+            </dd>
+          </div>
+          <div>
+            <dt>Where in the code</dt>
+            <dd>
+              <code>apps/web/src/components/viewport/Viewport.tsx</code> and the
+              controllers and objects next to it; <code>meshEdit/</code>,
+              <code>paint/</code>, <code>bake/</code> for the tools.
+            </dd>
+          </div>
+          <div>
+            <dt>Talks to</dt>
+            <dd>
+              Reads the <strong>scene state</strong> (2) and writes back through
+              its actions; uses <strong>scene logic</strong> (4) for the maths
+              (for example mesh editing, ray casting).
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="c4">
+        <div class="card-head">
+          <span class="num">4</span>
+          <h3>Scene logic (<code>packages/shared</code>)</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              All the real rules, written as plain TypeScript functions with no
+              React and no three.js inside, so they can be tested alone and run
+              on both the browser and the server. A function takes a scene and
+              returns a <em>new</em> scene. Contains the scene shape (checked
+              with Zod), undo history, primitives, lights, modifiers, mesh
+              editing (extrude, bevel, loop cut, divide, simplify, UV unwrap),
+              painting and baking maths, project and prefab rules, the
+              scene-to-shared-document code, and per-person Undo.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>
+              Your static utility classes and pure data classes (no
+              MonoBehaviour), plus the data definitions. One copy, used by every
+              part.
+            </dd>
+          </div>
+          <div>
+            <dt>Where in the code</dt>
+            <dd>
+              <code>packages/shared/src/</code> (about 60 files, each with a
+              test next to it). Key ones: <code>scene.ts</code>,
+              <code>sceneOps.ts</code>, <code>history.ts</code>,
+              <code>sceneDoc.ts</code>, <code>selectiveUndo.ts</code>.
+            </dd>
+          </div>
+          <div>
+            <dt>Talks to</dt>
+            <dd>
+              Used by the <strong>scene state</strong> (2), the
+              <strong>3D view</strong> (3), <strong>local save</strong> (5), the
+              <strong>online layer</strong> (6) and the
+              <strong>collab server</strong> (11).
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="c5">
+        <div class="card-head">
+          <span class="num">5</span>
+          <h3>Local save</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              Your work is kept in the browser first, with no account and no
+              network. A project is saved a moment after each change (a burst of
+              changes becomes one write). Big imported files (models, meshes,
+              pictures) are stored apart, named by their SHA-256 fingerprint.
+              You can also save the whole project to a
+              <code>.sceneroom</code> file, open one, and export a
+              <code>.glb</code> model.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>
+              Like PlayerPrefs and the Library folder: saved on this computer
+              only, until you export it.
+            </dd>
+          </div>
+          <div>
+            <dt>Where in the code</dt>
+            <dd>
+              <code>apps/web/src/persistence/</code> (IndexedDB wrapper, project
+              library, autosave, file storage), <code>sceneFile/</code>,
+              <code>export/</code>.
+            </dd>
+          </div>
+          <div>
+            <dt>Talks to</dt>
+            <dd>
+              Reads the <strong>scene state</strong> (2) and writes to the
+              browser's IndexedDB. Does <em>not</em> talk to any server.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="c6">
+        <div class="card-head">
+          <span class="num">6</span>
+          <h3>Online layer</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              Turns the editor into a shared one. For each open scene it keeps a
+              Yjs document (a shared data structure that merges two people's
+              edits without losing either) in step with the scene state, keeps
+              an offline copy of that document in the browser, and connects to
+              the collab server. It also sends big files, shows who is here
+              (names, colours, selections, pointers), enforces the courtesy lock
+              <em>one editor per object</em>, and makes Undo take back only your
+              own changes. A viewer's editor is read-only.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>
+              Unity's networking layer (Netcode, Mirror) for a shared scene,
+              with the difference that edits merge instead of one side winning.
+            </dd>
+          </div>
+          <div>
+            <dt>Where in the code</dt>
+            <dd>
+              <code>apps/web/src/collab/</code> and
+              <code>packages/shared/src/sceneDoc.ts</code>,
+              <code>selectiveUndo.ts</code>.
+            </dd>
+          </div>
+          <div>
+            <dt>Talks to</dt>
+            <dd>
+              Reads and writes the <strong>scene state</strong> (2); talks to
+              the <strong>live rooms</strong> (11) over a WebSocket and to the
+              <strong>HTTP routes</strong> (12) for files and links.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="c7">
+        <div class="card-head">
+          <span class="num">7</span>
+          <h3>Pages (Next.js)</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              The web server's job for the editor itself: it sends the app to
+              the browser. Two pages exist: <code>/</code> (the home screen with
+              your projects) and <code>/p/&lt;projectId&gt;</code> (the editor
+              for one project). Everything inside the editor then runs in your
+              browser, not on the server.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>
+              The build of your game that gets handed to the player, plus the
+              loader.
+            </dd>
+          </div>
+          <div>
+            <dt>Where in the code</dt>
+            <dd>
+              <code>apps/web/src/app/page.tsx</code>,
+              <code>apps/web/src/app/p/[projectId]/page.tsx</code>,
+              <code>layout.tsx</code>.
+            </dd>
+          </div>
+          <div>
+            <dt>Talks to</dt>
+            <dd>
+              Serves the <strong>screen</strong> (1). Later it will also serve
+              the dashboard of shared projects (step M8e).
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="c8">
+        <div class="card-head">
+          <span class="num">8</span>
+          <h3>Sign-in (Better Auth)</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              Optional accounts. One route, <code>/api/auth/...</code>, handles
+              <em>Sign in with GitHub</em>, the return from GitHub, sign-out and
+              <em>who am I</em>. A signed-in browser carries a session cookie;
+              the session itself is a row in our own database. If the six
+              account settings are not set, the route answers 503 and the editor
+              works as before, with no sign-in button.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>
+              A login service you host yourself, like Unity's Authentication
+              service but running inside your own project.
+            </dd>
+          </div>
+          <div>
+            <dt>Where in the code</dt>
+            <dd>
+              <code>apps/web/src/server/</code> (<code>auth.ts</code>,
+              <code>accountsEnv.ts</code>, <code>session.ts</code>),
+              <code>app/api/auth/[...all]/route.ts</code>, button in
+              <code>components/home/AccountButton.tsx</code>.
+            </dd>
+          </div>
+          <div>
+            <dt>Talks to</dt>
+            <dd>
+              Redirects to <strong>GitHub</strong> (10) and back; stores users
+              and sessions in <strong>Postgres</strong> (16) through
+              <strong>account code</strong> (9); answers the
+              <strong>screen</strong> (1).
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="c9">
+        <div class="card-head">
+          <span class="num">9</span>
+          <h3>Account code (<code>packages/db</code>)</h3>
+          <span class="tag pending">next: M8c to M8f</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              The code that reads and writes the accounts database through
+              Prisma: the schema, the first migration, the role rules
+              (<code>permissionsOf</code>, <code>collabAccess</code>) and a seed
+              script. <strong>Built:</strong> all of that.
+              <strong>Next:</strong> routes that create projects, list mine,
+              change members and roles, make the one-hour collab token (<code
+                >POST /api/projects/&lt;id&gt;/token</code
+              >), invitations, the dashboard, and moving saved documents to
+              Postgres.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>
+              The database layer of a live-service game's backend, with a typed
+              client generated from one schema file.
+            </dd>
+          </div>
+          <div>
+            <dt>Where in the code</dt>
+            <dd>
+              <code>packages/db/prisma/schema.prisma</code>,
+              <code>packages/db/src/</code>.
+            </dd>
+          </div>
+          <div>
+            <dt>Talks to</dt>
+            <dd>
+              Used by <strong>sign-in</strong> (8); reads and writes
+              <strong>Postgres</strong> (16). Later signs tokens the
+              <strong>collab server</strong> (13) accepts.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="c10">
+        <div class="card-head">
+          <span class="num">10</span>
+          <h3>GitHub</h3>
+          <span
+            class="tag"
+            style="color: var(--muted); border-color: var(--line)"
+            >outside</span
+          >
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              Not part of SceneRoom. It proves who someone is: you press the
+              button, GitHub asks you to approve, and sends back a one-time code
+              that our server exchanges for your name, email and picture.
+              SceneRoom is registered there as an OAuth app named
+              <em>SceneRoom (local)</em>, with the return address
+              <code>http://localhost:3000/api/auth/callback/github</code>. Its
+              secret lives only in <code>apps/web/.env.local</code>.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>
+              The platform login (Steam, Google Play) that tells you who the
+              player is.
+            </dd>
+          </div>
+          <div>
+            <dt>Where in the code</dt>
+            <dd>
+              Settings in
+              <code>apps/web/.env.local</code> (<code>GITHUB_CLIENT_ID</code>,
+              <code>GITHUB_CLIENT_SECRET</code>); steps in
+              <code>docs/dev/SETUP-ACCOUNTS.md</code>.
+            </dd>
+          </div>
+          <div>
+            <dt>Talks to</dt>
+            <dd>
+              Only <strong>sign-in</strong> (8) talks to it. The real round trip
+              cannot be tested by a program, so it is checked by hand.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="c11">
+        <div class="card-head">
+          <span class="num">11</span>
+          <h3>Live rooms (Hocuspocus)</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              The WebSocket part of the collab server. Each scene has a room
+              named <code>scene:&lt;projectId&gt;:&lt;sceneId&gt;</code>. When
+              someone joins, the server checks their token, loads the saved
+              document (or an empty one), and relays every change to everyone
+              else in the room. A viewer's connection is <em>read-only</em>: the
+              server ignores what it sends. A message over the size limit closes
+              the connection. A changed document is saved after two quiet
+              seconds (ten at most); one over the size limit is
+              <em>not</em> saved and is logged loudly.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>A dedicated game server that relays state between players.</dd>
+          </div>
+          <div>
+            <dt>Where in the code</dt>
+            <dd>
+              <code>apps/collab-server/src/createServer.ts</code>,
+              <code>documentName.ts</code>.
+            </dd>
+          </div>
+          <div>
+            <dt>Talks to</dt>
+            <dd>
+              Browsers' <strong>online layer</strong> (6) over a WebSocket; the
+              <strong>token check</strong> (13); the
+              <strong>SQLite file</strong> (14).
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="c12">
+        <div class="card-head">
+          <span class="num">12</span>
+          <h3>HTTP routes</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              The ordinary web requests the collab server also answers.
+              <code>/files/&lt;projectId&gt;/&lt;fileId&gt;</code> stores and
+              serves big files: the id is the file's SHA-256, so the server
+              checks that the bytes match, refuses a file over the size limit,
+              refuses a project over its quota, and refuses a viewer's upload.
+              <code>/share/&lt;projectId&gt;</code> makes edit or view-only
+              links (the first person to share becomes the owner, proven by a
+              key that never leaves their browser) and
+              <code>/share/&lt;projectId&gt;/reset</code> cancels all links and
+              disconnects everyone who used them. CORS headers let the web page
+              call them.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>
+              The content delivery and web-API side of a game backend (asset
+              bundles, matchmaking links).
+            </dd>
+          </div>
+          <div>
+            <dt>Where in the code</dt>
+            <dd>
+              <code>apps/collab-server/src/fileRoutes.ts</code>,
+              <code>shareRoutes.ts</code>, <code>cors.ts</code>,
+              <code>fileStore.ts</code>, <code>ownerStore.ts</code>.
+            </dd>
+          </div>
+          <div>
+            <dt>Talks to</dt>
+            <dd>
+              The <strong>online layer</strong> (6); the
+              <strong>token check</strong> (13); the
+              <strong>files folder</strong> (15) and the
+              <strong>SQLite file</strong> (14).
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="c13">
+        <div class="card-head">
+          <span class="num">13</span>
+          <h3>Token check</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              The gate every request passes. A link token holds the project, the
+              role (<em>editor</em> or <em>viewer</em>), an optional expiry and
+              a counter called the generation; it is signed with
+              <code>COLLAB_SECRET</code>. The server recomputes the signature,
+              checks the project matches the room or file, the expiry has not
+              passed and the generation is still current (cancelling all links
+              raises it). The secret is a random 64-character value in two
+              git-ignored files, <code>apps/collab-server/.env</code> and
+              <code>apps/web/.env.local</code>, and must match. Stage B will let
+              the web app sign these tokens after checking membership.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>
+              A signed session ticket, like a Photon auth token the server
+              validates.
+            </dd>
+          </div>
+          <div>
+            <dt>Where in the code</dt>
+            <dd>
+              <code>apps/collab-server/src/linkToken.ts</code> (will move to
+              <code>packages/link-token</code> in step M8d).
+            </dd>
+          </div>
+          <div>
+            <dt>Talks to</dt>
+            <dd>
+              Used by the <strong>live rooms</strong> (11) and
+              <strong>HTTP routes</strong> (12); later also by the web app that
+              issues tokens.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="c14">
+        <div class="card-head">
+          <span class="num">14</span>
+          <h3>SQLite file</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              Where the collab server keeps each scene's document between runs,
+              plus the owner key fingerprint and the link generation of each
+              project. One file (<code
+                >apps/collab-server/data/collab.sqlite</code
+              >
+              by default), opened with Node's built-in <code>node:sqlite</code>,
+              so there is nothing to install. Step M8f may move documents to
+              Postgres.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>A save file on the game server.</dd>
+          </div>
+          <div>
+            <dt>Where in the code</dt>
+            <dd>
+              <code>apps/collab-server/src/store.ts</code>
+              (<code>SqliteStore</code>; <code>MemoryStore</code> for tests).
+            </dd>
+          </div>
+          <div>
+            <dt>Talks to</dt>
+            <dd>
+              Written and read only by the <strong>live rooms</strong> (11) and
+              <strong>HTTP routes</strong> (12).
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="c15">
+        <div class="card-head">
+          <span class="num">15</span>
+          <h3>Files folder</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              Big files (meshes, model files, pictures) as plain files, each
+              named by its SHA-256 fingerprint. The same bytes can only ever be
+              stored once, and a name can never be anything but 64 hex
+              characters, so a request cannot point outside the folder. Later
+              this moves to Cloudflare R2.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>The Addressables / asset-bundle store.</dd>
+          </div>
+          <div>
+            <dt>Where in the code</dt>
+            <dd>
+              <code>apps/collab-server/src/fileStore.ts</code>
+              (<code>FolderFileStore</code>; <code>MemoryFileStore</code> for
+              tests), folder from <code>FILES_DIR</code>.
+            </dd>
+          </div>
+          <div>
+            <dt>Talks to</dt>
+            <dd>
+              Written and read only by the <strong>HTTP routes</strong> (12).
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="c16">
+        <div class="card-head">
+          <span class="num">16</span>
+          <h3>Postgres (Docker)</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              The accounts database, running in a Docker container
+              (<code>docker-compose.yml</code>, Postgres 17,
+              <code>127.0.0.1:5432</code>), with its data on the external drive.
+              Tables: <code>user</code>, <code>session</code>,
+              <code>account</code>, <code>verification</code> (Better Auth);
+              <code>project</code>, <code>project_member</code> (role
+              owner/editor/commenter/viewer), <code>invitation</code> (only a
+              hash of its token). Docker Desktop must be open for it to run.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>
+              The player database of a live game (accounts, inventories), as
+              opposed to the world state.
+            </dd>
+          </div>
+          <div>
+            <dt>Where in the code</dt>
+            <dd>
+              <code>docker-compose.yml</code>, <code>packages/db/prisma/</code>.
+            </dd>
+          </div>
+          <div>
+            <dt>Talks to</dt>
+            <dd>
+              Only <strong>sign-in</strong> (8) and
+              <strong>account code</strong> (9) talk to it. Never the browser
+              directly.
+            </dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+  </section>
+
+  <section class="deep" aria-labelledby="deep-h">
+    <h2 id="deep-h">The main journeys through the system</h2>
+    <section class="panel" id="j1">
+      <h3>A. Opening a project (local first)</h3>
+      <p>Nothing here needs the internet, a login or a server.</p>
+      <ol class="steps">
+        <li>
+          You open <code>/</code>. The <strong>pages</strong> (7) send the app;
+          in the browser the <strong>screen</strong> (1) opens the browser's
+          database and lists your projects with their small pictures (<strong
+            >local save</strong
+          >, 5).
+        </li>
+        <li>
+          You click a project: the address becomes <code>/p/&lt;id&gt;</code>.
+          The editor page starts and asks <strong>local save</strong> to restore
+          that project. Until the restore is finished <em>nothing is saved</em>,
+          so the starting scene (one cube) can never overwrite your real one.
+        </li>
+        <li>
+          The restored project goes into the <strong>scene state</strong> (2):
+          every scene, the open one, the prefabs. The 3D view (3) is loaded in
+          the browser only (WebGL does not exist on the server) and draws it.
+        </li>
+        <li>
+          Saving turns on: each change to the scene or to the list of scenes is
+          written a moment later. Selecting objects and moving the gizmo mode
+          are not saved. A picture for the home card is taken 4 seconds after
+          opening and then at most every 30 seconds.
+        </li>
+        <li>
+          If the id is not in this browser (a wrong or deleted link) the page
+          says <em>project not found</em> and saves nothing. If the saved data
+          cannot be read, saving is switched off on purpose to protect it.
+        </li>
+      </ol>
+    </section>
+    <section class="panel" id="j2">
+      <h3>B. One edit, offline</h3>
+      <p>
+        What happens when you, for example, drag an object with the move handle.
+      </p>
+      <ol class="steps">
+        <li>
+          The gizmo moves the 3D object directly while you drag (smooth, no
+          React work). When you let go, one action in the
+          <strong>scene state</strong> (2) writes the new transform.
+        </li>
+        <li>
+          The action uses <strong>scene logic</strong> (4), which returns a
+          <em>new</em> scene, and the history records one undo step with a label
+          such as <em>Move cube</em>. The top bar's Undo button shows that
+          label.
+        </li>
+        <li>
+          The 3D view and the Inspector redraw from the new state.
+          <strong>Local save</strong> (5) notices the scene changed and writes
+          it to the browser after a quiet moment; the top bar goes
+          <em>Saving... then Saved</em>.
+        </li>
+        <li>
+          If you close the tab while a write is waiting, the page asks the
+          browser to confirm, and it writes what it still has on the way out.
+        </li>
+      </ol>
+    </section>
+    <section class="panel" id="j3">
+      <h3>C. One edit, online (you and a friend)</h3>
+      <p>
+        Needs a collab server and a link. Steps 1 to 3 of journey B happen
+        first, exactly the same.
+      </p>
+      <ol class="steps">
+        <li>
+          The <strong>online layer</strong> (6) sees the scene change and
+          compares it with the previous scene. Only the differences are written
+          into the shared document, in one transaction marked as yours. The
+          browser's offline copy of the document is updated too.
+        </li>
+        <li>
+          The provider sends the update over the WebSocket to the
+          <strong>live rooms</strong> (11). The server relays it to everyone
+          else in the room; if your connection is read-only (a viewer) it is
+          ignored.
+        </li>
+        <li>
+          In your friend's browser the update is merged into their document.
+          Their <strong>online layer</strong> reads the changed objects out,
+          <strong>checks them against the scene shape (Zod)</strong>, and
+          refuses anything invalid, then hands the scene to their
+          <strong>scene state</strong> without adding an undo step for them.
+          Their 3D view redraws.
+        </li>
+        <li>
+          After two quiet seconds (ten at most) the server saves the document
+          into the <strong>SQLite file</strong> (14). If it is over the size
+          limit it is not saved, and that is logged as an error.
+        </li>
+        <li>
+          If both of you change the <em>same field</em> at the same moment, the
+          shared document picks one value consistently for both. If you change
+          <em>different fields</em> of the same object, both changes are kept.
+        </li>
+        <li>
+          If the connection drops, you keep working; your changes wait in the
+          browser's copy and are sent when it comes back.
+        </li>
+      </ol>
+    </section>
+    <section class="panel" id="j4">
+      <h3>D. Sharing with a link (stage A, no account needed)</h3>
+      <p>How the Share button works today.</p>
+      <ol class="steps">
+        <li>
+          You press <em>Share</em> and choose edit or view-only, and how long
+          the link works. The editor makes (once, in your browser) a random
+          <strong>owner key</strong> and sends only its fingerprint to the
+          <strong>HTTP routes</strong> (12). The first person to do this for a
+          project becomes its owner; the key never leaves your browser.
+        </li>
+        <li>
+          The server signs a <strong>token</strong> (13) holding the project,
+          the role, the expiry and the current generation, and gives you a link
+          containing it: the editor address plus the server and the token.
+        </li>
+        <li>
+          Your friend opens the link. Their browser makes the project empty with
+          the shared scene, remembers the token, connects, and the document
+          fills it. A view-only token makes their editor read-only and the
+          server ignores their changes even if they try.
+        </li>
+        <li>
+          <em>Cancel all links</em> (owner key needed) raises the project's
+          generation. Every older token is now refused, and the server closes
+          the open connections of that project so they must connect again and
+          are turned away.
+        </li>
+      </ol>
+    </section>
+    <section class="panel" id="j5">
+      <h3>E. Big files go by fingerprint</h3>
+      <p>
+        A scene object holds only the id of its file, never the bytes. The id is
+        the SHA-256 of the bytes.
+      </p>
+      <ol class="steps">
+        <li>
+          You import a <code>.glb</code> or edit a big mesh. The bytes are
+          stored in the browser under their fingerprint (<strong
+            >local save</strong
+          >, 5).
+        </li>
+        <li>
+          The scene refers to the fingerprint. The uploader sends any file the
+          open scene uses that the server does not have yet to
+          <strong>HTTP routes</strong> (12) with your token. The server
+          recomputes the fingerprint, compares the size to the limits and the
+          project's quota, and stores it in the
+          <strong>files folder</strong> (15).
+        </li>
+        <li>
+          Your friend's scene mentions a fingerprint they do not have. Their
+          storage asks the server for it when it is needed (with retries,
+          because you may still be uploading), checks it, keeps it, and the
+          model appears.
+        </li>
+        <li>
+          A mesh edited by moving points (a sculpt stroke) is stored as a small
+          <em>difference</em> from the earlier version, but is sent to the
+          server as the whole mesh so the server never needs the chain.
+        </li>
+      </ol>
+    </section>
+    <section class="panel" id="j6">
+      <h3>F. Undo when other people are editing, and the edit lock</h3>
+      <p>
+        A normal undo puts back a whole earlier scene. That would erase your
+        friend's work, so online it works differently.
+      </p>
+      <ol class="steps">
+        <li>
+          Online, Undo takes back <strong>only your own fields</strong>, and
+          only the ones nobody else has changed since. If someone else touched
+          the same field, that part is left alone.
+        </li>
+        <li>
+          Redo works the same way. The editor remembers the scene after each
+          step so it can tell what was yours.
+        </li>
+        <li>
+          <em>Edit points</em>, <em>Paint</em> and <em>Bake</em> take over one
+          object for a long time, so they use a courtesy lock: while you are in
+          one of them on an object, others are told and kept out of the same
+          mode on it. If two people enter at the same moment, the lower client
+          number keeps it and the other is taken out with a message.
+        </li>
+      </ol>
+    </section>
+    <section class="panel" id="j7">
+      <h3>G. Who is here</h3>
+      <p>
+        Presence is separate from the saved scene: it is never stored, and
+        disappears with the connection.
+      </p>
+      <ol class="steps">
+        <li>
+          Each person publishes a small record: name (chosen in the Share box or
+          a guest name), colour, which objects are selected, and the pointer
+          position in the 3D world.
+        </li>
+        <li>
+          Everyone else draws it: the avatars in the top bar, coloured boxes
+          around objects other people selected, a ball for each pointer, and
+          small coloured dots in the scene list. The pointer is sent at most a
+          few times per second.
+        </li>
+        <li>
+          Every received record is checked before use, because it comes from
+          another browser.
+        </li>
+      </ol>
+    </section>
+    <section class="panel" id="j8">
+      <h3>H. Signing in with GitHub (accounts, built in step M8b)</h3>
+      <p>
+        Optional. It lets the system know <em>who</em> someone is; it does not
+        yet control access.
+      </p>
+      <ol class="steps">
+        <li>
+          On the home screen the sign-in button asks
+          <code>/api/auth/get-session</code> who you are. If accounts are not
+          set up the route answers 503 and no button is shown.
+        </li>
+        <li>
+          You press <em>Sign in with GitHub</em>. <strong>Sign-in</strong> (8)
+          creates a one-time record in <strong>Postgres</strong> (16) and sends
+          you to <strong>GitHub</strong> (10) with our client id and the return
+          address.
+        </li>
+        <li>
+          You approve. GitHub sends you back to
+          <code>/api/auth/callback/github</code> with a code. The server
+          exchanges it for your profile, creates or finds your user and account
+          rows, creates a session row and sets a cookie.
+        </li>
+        <li>
+          From then on, server code can ask
+          <em>who is signed in for this request</em> from the session cookie.
+          Sign-out deletes the session.
+        </li>
+      </ol>
+    </section>
+    <section class="panel" id="j9">
+      <h3>I. What comes next in accounts, and then deployment</h3>
+      <p>
+        Planned, not built. Each part is built and tested before the next (see
+        <code>docs/backend/ACCOUNTS.md</code>).
+      </p>
+      <ol class="steps">
+        <li>
+          <strong>M8c:</strong> create an online project, list yours, list
+          members, change a role, remove a member. Every route checks the
+          session and the role on the server and validates input with Zod.
+        </li>
+        <li>
+          <strong>M8d:</strong> the web app signs a collab token valid for one
+          hour after checking you are a member. The editor asks for a fresh
+          token whenever it reconnects. Owner and editor get read-write;
+          commenter and viewer get read-only.
+        </li>
+        <li>
+          <strong>M8e:</strong> invitation links (only a hash of the token
+          stored, one role, can be revoked), the dashboard of shared projects,
+          and disconnecting a removed member at once.
+        </li>
+        <li>
+          <strong>M8f:</strong> scene documents saved in Postgres instead of the
+          SQLite file.
+        </li>
+        <li>
+          <strong>M9:</strong> deploy: the web app on Vercel, the collab server
+          on a host that keeps WebSockets open, Neon for Postgres, Cloudflare R2
+          for the files, and a two-browser test in CI.
+        </li>
+      </ol>
+    </section>
+  </section>
+  <section class="deep" aria-labelledby="ref-h">
+    <h2 id="ref-h">Reference</h2>
+    <section class="panel" id="data">
+      <h3>Where each kind of data lives</h3>
+      <div class="tbl-wrap">
+        <table class="cmp">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Where</th>
+              <th>Kept until</th>
+              <th>Who can see it</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Your projects and scenes</td>
+              <td>The browser's IndexedDB</td>
+              <td>You clear browser data or delete the project</td>
+              <td>Only this browser (unless shared online)</td>
+            </tr>
+            <tr>
+              <td>Imported models, meshes, pictures</td>
+              <td>
+                IndexedDB (by SHA-256); a copy on the collab server when shared
+              </td>
+              <td>Same; the server keeps them in its files folder</td>
+              <td>This browser; people with a token for the project</td>
+            </tr>
+            <tr>
+              <td>
+                Panel widths, four-view choices, saved plants, your display name
+              </td>
+              <td>The browser's localStorage</td>
+              <td>You clear browser data</td>
+              <td>Only this browser</td>
+            </tr>
+            <tr>
+              <td>Shared scene documents</td>
+              <td>Browser offline copy, and the SQLite file on the server</td>
+              <td>Until deleted</td>
+              <td>People with a valid token</td>
+            </tr>
+            <tr>
+              <td>Owner key fingerprint, link generation</td>
+              <td>SQLite file</td>
+              <td>Until deleted</td>
+              <td>
+                The server only (the key itself stays in the owner's browser)
+              </td>
+            </tr>
+            <tr>
+              <td>Who is here (names, pointers, selections, locks)</td>
+              <td>Memory only (awareness)</td>
+              <td>While connected</td>
+              <td>People in the same scene</td>
+            </tr>
+            <tr>
+              <td>Users, sessions, GitHub account links</td>
+              <td>Postgres</td>
+              <td>Until sign-out / deletion</td>
+              <td>The web server only</td>
+            </tr>
+            <tr>
+              <td>Projects, members, roles, invitations</td>
+              <td>Postgres (tables ready; routes next)</td>
+              <td>Until removed</td>
+              <td>The web server; members see their own</td>
+            </tr>
+            <tr>
+              <td>
+                Secrets (<code>COLLAB_SECRET</code>,
+                <code>BETTER_AUTH_SECRET</code>, GitHub secret, database
+                address)
+              </td>
+              <td>Git-ignored <code>.env</code> files</td>
+              <td>Until you change them</td>
+              <td>Only you, on your computer. Never committed</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <section class="panel" id="roles">
+      <h3>Who may do what</h3>
+      <p>
+        Two rules, enforced on the <em>server</em>, never trusted from the
+        browser. Today's links have two roles; accounts add four.
+      </p>
+      <div class="tbl-wrap">
+        <table class="cmp">
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>Sees the project</th>
+              <th>Edits scenes</th>
+              <th>Invites and removes people</th>
+              <th>Deletes the project</th>
+              <th>Collab connection</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Link: editor</td>
+              <td>yes</td>
+              <td>yes</td>
+              <td>no</td>
+              <td>no</td>
+              <td>read-write</td>
+            </tr>
+            <tr>
+              <td>Link: viewer</td>
+              <td>yes</td>
+              <td>no</td>
+              <td>no</td>
+              <td>no</td>
+              <td>read-only</td>
+            </tr>
+            <tr>
+              <td>Owner (account, planned)</td>
+              <td>yes</td>
+              <td>yes</td>
+              <td>yes</td>
+              <td>yes</td>
+              <td>read-write</td>
+            </tr>
+            <tr>
+              <td>Editor (account, planned)</td>
+              <td>yes</td>
+              <td>yes</td>
+              <td>no</td>
+              <td>no</td>
+              <td>read-write</td>
+            </tr>
+            <tr>
+              <td>Commenter (account, planned)</td>
+              <td>yes</td>
+              <td>no (comments come later)</td>
+              <td>no</td>
+              <td>no</td>
+              <td>read-only</td>
+            </tr>
+            <tr>
+              <td>Viewer (account, planned)</td>
+              <td>yes</td>
+              <td>no</td>
+              <td>no</td>
+              <td>no</td>
+              <td>read-only</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <section class="panel" id="ports">
+      <h3>Programs, ports and settings</h3>
+      <div class="tbl-wrap">
+        <table class="cmp">
+          <thead>
+            <tr>
+              <th>Program</th>
+              <th>Address</th>
+              <th>Started with</th>
+              <th>Settings file</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Web app (Next.js)</td>
+              <td><code>http://localhost:3000</code></td>
+              <td><code>pnpm dev</code></td>
+              <td>
+                <code>apps/web/.env.local</code> (template
+                <code>.env.example</code>)
+              </td>
+            </tr>
+            <tr>
+              <td>Collab server</td>
+              <td><code>ws://127.0.0.1:1234</code> (also HTTP)</td>
+              <td><code>pnpm --filter @sceneroom/collab-server serve</code></td>
+              <td><code>apps/collab-server/.env</code></td>
+            </tr>
+            <tr>
+              <td>Postgres in Docker</td>
+              <td><code>127.0.0.1:5432</code></td>
+              <td>
+                <code>docker compose up -d</code> (Docker Desktop must be open)
+              </td>
+              <td><code>docker-compose.yml</code></td>
+            </tr>
+            <tr>
+              <td>Browser tests' collab server</td>
+              <td><code>127.0.0.1:1235</code></td>
+              <td>Playwright starts it</td>
+              <td><code>e2e/collabSettings.ts</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <section class="panel" id="gloss">
+      <h3>Words on this page</h3>
+      <dl class="gloss">
+        <div>
+          <dt>Browser, server</dt>
+          <dd>
+            The browser is the program on your computer that runs the editor. A
+            server is another program, here or far away, that answers requests.
+          </dd>
+        </div>
+        <div>
+          <dt>Next.js</dt>
+          <dd>
+            The framework that builds the pages and the <code>/api</code> routes
+            on the web server.
+          </dd>
+        </div>
+        <div>
+          <dt>React component</dt>
+          <dd>
+            A function that draws part of the screen from data. Like a Unity UI
+            element driven by data.
+          </dd>
+        </div>
+        <div>
+          <dt>Zustand store</dt>
+          <dd>
+            A small shared box of data that components read and actions change.
+            Like a ScriptableObject everything subscribes to.
+          </dd>
+        </div>
+        <div>
+          <dt>three.js, react-three-fiber</dt>
+          <dd>
+            three.js draws 3D in the browser (WebGL). react-three-fiber lets us
+            describe the 3D scene with React components.
+          </dd>
+        </div>
+        <div>
+          <dt>Zod</dt>
+          <dd>
+            A checker for data from outside (files, messages, settings). It
+            refuses anything that does not match the declared shape.
+          </dd>
+        </div>
+        <div>
+          <dt>IndexedDB</dt>
+          <dd>
+            The browser's built-in database for big data, kept on your computer.
+          </dd>
+        </div>
+        <div>
+          <dt>WebSocket</dt>
+          <dd>
+            A connection that stays open so either side can send at any time.
+            Used for live changes.
+          </dd>
+        </div>
+        <div>
+          <dt>Yjs, CRDT</dt>
+          <dd>
+            A shared document type that merges simultaneous edits from many
+            people without conflict, even after being offline.
+          </dd>
+        </div>
+        <div>
+          <dt>Hocuspocus</dt>
+          <dd>
+            The server and browser library that carries a Yjs document over
+            WebSockets, with hooks for login and saving.
+          </dd>
+        </div>
+        <div>
+          <dt>Awareness</dt>
+          <dd>The "who is here" record of Yjs. Never saved.</dd>
+        </div>
+        <div>
+          <dt>Token</dt>
+          <dd>
+            A signed note saying who may enter which project and as what. Anyone
+            can read it, nobody can forge it without the secret.
+          </dd>
+        </div>
+        <div>
+          <dt>SHA-256 fingerprint</dt>
+          <dd>
+            64 characters computed from a file's bytes. The same bytes always
+            give the same fingerprint, so it works as the file's name.
+          </dd>
+        </div>
+        <div>
+          <dt>OAuth, GitHub app</dt>
+          <dd>
+            The standard way to let GitHub vouch for who someone is, without us
+            ever seeing a GitHub password.
+          </dd>
+        </div>
+        <div>
+          <dt>Better Auth</dt>
+          <dd>
+            The library that runs the sign-in flow and keeps sessions in our
+            database.
+          </dd>
+        </div>
+        <div>
+          <dt>Prisma, migration</dt>
+          <dd>
+            Prisma talks to Postgres with typed code from one schema file. A
+            migration is a saved change to the database's structure.
+          </dd>
+        </div>
+        <div>
+          <dt>Docker</dt>
+          <dd>
+            Runs Postgres in a sealed box on your computer, so nothing is
+            installed into the system.
+          </dd>
+        </div>
+        <div>
+          <dt>Monorepo, package</dt>
+          <dd>
+            One repository holding several programs and libraries:
+            <code>apps/web</code>, <code>apps/collab-server</code>,
+            <code>packages/shared</code>, <code>packages/db</code>.
+          </dd>
+        </div>
+      </dl>
+    </section>
+  </section>
+  <section class="status" aria-label="Status">
+    <div>
+      <h2><span class="dot ok"></span>Built and tested</h2>
+      <ul>
+        <li>
+          The whole local editor: scenes, projects, modifiers, edit mode, UVs,
+          painting, baking, import and export
+        </li>
+        <li>
+          Online: shared scenes, files by hash, per-person Undo, edit locks,
+          presence, share links (steps M1 to M7)
+        </li>
+        <li>
+          Accounts: the database package and Postgres (M8a), sign-in with GitHub
+          (M8b)
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h2><span class="dot pending"></span>Planned</h2>
+      <ul>
+        <li>
+          M8c to M8f: projects and members API, signed tokens from the web app,
+          invitations and dashboard, documents in Postgres
+        </li>
+        <li>
+          M9: deployment (Vercel, WebSocket host, Neon, R2) and a two-browser
+          test in CI
+        </li>
+        <li>
+          Comments, sculpting, layers and ambient-occlusion baking (see
+          <code>docs/overview/PLAN.md</code>)
+        </li>
+      </ul>
+    </div>
+  </section>
+  <p class="foot">
+    Built on 24 Nov 2026 from the code and the documents in <code>docs/</code>.
+    Files: <code>docs/overview/PLAN.md</code>,
+    <code>docs/backend/COLLABORATION.md</code>,
+    <code>docs/backend/ACCOUNTS.md</code>.
+  </p>
+</main>
+<script>
+  (function () {
+    var reduce =
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    function show(id) {
+      var card = document.getElementById(id);
+      if (!card) return;
+      var old = document.querySelectorAll(".card.active");
+      for (var i = 0; i < old.length; i++) old[i].classList.remove("active");
+      card.classList.add("active");
+      card.scrollIntoView({
+        behavior: reduce ? "auto" : "smooth",
+        block: "center",
+      });
+    }
+    var hits = document.querySelectorAll("[data-card]");
+    for (var i = 0; i < hits.length; i++) {
+      (function (el) {
+        el.addEventListener("click", function (e) {
+          e.stopPropagation();
+          show(el.getAttribute("data-card"));
+        });
+        el.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+            show(el.getAttribute("data-card"));
+          }
+        });
+      })(hits[i]);
+    }
+  })();
+</script>

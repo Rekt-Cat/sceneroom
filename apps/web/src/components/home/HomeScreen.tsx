@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import AccountButton from "./AccountButton";
 import {
   APP_NAME,
   MAX_LOCAL_PROJECTS,
@@ -321,6 +322,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     <main className="min-h-dvh bg-ed-bg text-ed-text">
       <header className="flex h-12 items-center gap-2 border-b border-ed-line bg-ed-panel px-5">
         <span className="text-sm font-semibold tracking-tight">{APP_NAME}</span>
+        <AccountButton />
       </header>
       <div className="mx-auto max-w-6xl p-6">{children}</div>
     </main>

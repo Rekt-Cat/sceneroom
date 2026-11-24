@@ -148,12 +148,11 @@ Status column: **verified** = checked against official docs or by running it. Ve
 
 The online part is designed in `docs/backend/COLLABORATION.md`. Yjs (M1), the collab server with Hocuspocus (M2) and the browser side (provider, y-indexeddb, M3) are installed (see above); the rest is not yet. Versions looked up in the npm registry on 2026-11-21:
 
-| Item                    | Version | Purpose                                                   | Planned for  |
-| ----------------------- | ------- | --------------------------------------------------------- | ------------ |
-| y-protocols             | 1.0.7   | Awareness (who is here, selections) and the sync messages | steps M3, M6 |
-| y-indexeddb             | 9.0.12  | Offline copy of a shared document in the browser          | step M3      |
-| Better Auth, `proxy.ts` | -       | Sign-in with GitHub                                       | step M8b     |
-| Cloudflare R2           | -       | Big files (meshes, models, pictures) by content hash      | steps M4, M9 |
+| Item          | Version | Purpose                                                   | Planned for  |
+| ------------- | ------- | --------------------------------------------------------- | ------------ |
+| y-protocols   | 1.0.7   | Awareness (who is here, selections) and the sync messages | steps M3, M6 |
+| y-indexeddb   | 9.0.12  | Offline copy of a shared document in the browser          | step M3      |
+| Cloudflare R2 | -       | Big files (meshes, models, pictures) by content hash      | steps M4, M9 |
 
 Why these and not the alternatives: `WHY-THESE-TOOLS.md`. Playwright is already in use (see above).
 
@@ -167,3 +166,12 @@ Why these and not the alternatives: `WHY-THESE-TOOLS.md`. Playwright is already 
 | `@prisma/adapter-pg`, `pg`          | 7.10.1, 8.23.1               | Prisma 7 talks to Postgres through the `pg` driver                                                                   | `packages/db/src/client.ts`                                             |
 | `packages/db` (`@sceneroom/db`)     | 0.0.0                        | The database package: schema, first migration, `createDb`, role rules (`permissionsOf`, `collabAccess`), seed script | `packages/db`                                                           |
 | pnpm `allowBuilds`                  | -                            | `prisma` and `@prisma/engines` may run their install scripts (they download the migration engine)                    | `pnpm-workspace.yaml`                                                   |
+
+## Sign-in (step M8b, built 2026-11-24)
+
+| Item                     | Version | Purpose                                                                                                        | Where                                                                             |
+| ------------------------ | ------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Better Auth              | 1.7.27  | Sign in with GitHub, sessions in our database (Unity comparison: a ready-made login service you host yourself) | `apps/web/src/server/auth.ts`, route `/api/auth/[...all]`, client `src/auth/`     |
+| GitHub OAuth app         | -       | The login itself: GitHub vouches for who the person is                                                         | made by the owner (`docs/dev/SETUP-ACCOUNTS.md`); values in `apps/web/.env.local` |
+| `transpilePackages`      | -       | Next compiles `@sceneroom/db` (TypeScript source in this repo) together with the web app                       | `apps/web/next.config.ts`                                                         |
+| Accounts env check (Zod) | 4.6.7   | The six accounts variables are checked together; none set = accounts off, the editor works as before           | `apps/web/src/server/accountsEnv.ts`                                              |

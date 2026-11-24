@@ -1117,3 +1117,13 @@ Also learned: a test that clicks a button before the last change was stored race
 - **Prisma needs install scripts:** `allowBuilds` in `pnpm-workspace.yaml` now allows `prisma` and `@prisma/engines` (they fetch the migration engine).
 - **Tests use the real Postgres** from `docker-compose.yml` (`docker compose up -d` first) and empty its tables, so they must only point at the development database. Without Docker running `pnpm test` fails in `packages/db` with a connection error.
 - **Node 24 needed:** Prisma 7.10.1 does not run on Node 23, so run these commands under the pinned Node 24 (`.node-version`).
+
+## 2026-11-24: Accounts step M8b built (sign in with GitHub)
+
+- **Better Auth 1.7.27** is wired in `apps/web/src/server/auth.ts` (`createAuth(env, db)`): Prisma adapter for Postgres, GitHub as the only sign-in method (email sign-up is not offered, tested), and the `nextCookies` plugin last. One route, `/api/auth/[...all]`, answers sign-in, callback, sign-out and session.
+- **Accounts are optional.** `getAccounts()` returns null unless all six variables are valid (`accountsEnv.ts`, Zod; problems name the variable, never its value). Then `/api/auth` answers 503 and the home screen shows no sign-in button, so a fresh clone and CI work as before.
+- **Better Auth's tables match our hand-written ones.** A test compares `getAuthTables()` of the installed version with `schema.prisma`, so a Better Auth upgrade that needs a new column fails loudly. No migration was needed.
+- **Server helper:** `getCurrentUser()` (`src/server/session.ts`) reads the session in server code (`headers()` from Next); routes in M8c use it.
+- **Verified by hand:** the sign-in request returns the GitHub address with our callback `http://localhost:3000/api/auth/callback/github`. **Not yet verified:** the full round trip through GitHub (a test cannot do it); the owner tries it once in the browser.
+- **The sign-in button is on the home screen only** for now; the editor's top bar gets the account state with the dashboard (M8e).
+- **Docker must be running** for sign-in and for the `auth` and `db` tests; Docker Desktop does not start by itself after a restart.
