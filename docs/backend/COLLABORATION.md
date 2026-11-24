@@ -262,3 +262,26 @@ SceneRoom works with no account and no internet today, and that stays true.
 | ~~`better-sqlite3`~~   | 13.2.0  | Not used: `node:sqlite` (built into Node) does the job, see DECISIONS.md |
 
 Yjs (M1), `@hocuspocus/server` and `@hocuspocus/provider` (M2, M3) and `y-indexeddb` (M3) are installed. `y-protocols` is used through the provider and not installed on its own. The others are added at M4 and later, and then recorded in `WHAT-WE-USED.md` as usual.
+
+## 14. Scaling path: what we would add, and when (not built)
+
+Today there is one collab server, one web app and one Postgres. That is right for friends and small teams. This section says what would change as use grows, so the choice "not yet" is written down with a reason. The topic names match the sections of the public study list [awesome-system-design-resources](https://github.com/ashishps1/awesome-system-design-resources), which is general interview material, not a build guide.
+
+**Not verified:** the sizes below are rough guesses, not measurements. Measure first (M9 gives real numbers). The Hocuspocus Redis extension is named from memory; check its docs before relying on it.
+
+| Stage                               | What hurts first                                             | What we would add                                                                                                                                                                                             | Topic to read                            |
+| ----------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| **Now** (a few people per project)  | Nothing. Share and invite routes have no rate limit.         | **Rate limits** on share, invite, token and file routes (planned with M9). Limits per IP and per account.                                                                                                     | Rate limiting                            |
+| **10x** (many projects, one server) | Memory per open document; one big upload blocking others     | Keep documents loaded only while someone is connected (Hocuspocus already unloads idle ones); move files to R2 with a CDN in front (M9); a size cap per project                                               | Caching, CDN, object storage             |
+| **100x** (one server is not enough) | All WebSockets on one machine; a restart drops everyone      | **Several collab servers**, with one document always handled by one server (send a project to a server by its id, "consistent hashing"), or a Redis link between servers so any server can serve any document | Consistent hashing, pub/sub, scalability |
+| **Database grows**                  | Reads on Postgres for tokens and membership                  | Indexes (project id, user id are already keys); a read replica; a short cache of "is this person a member" with a time limit, cleared when a member is removed                                                | Indexes, replication, caching strategies |
+| **Heavy work** (baking, thumbnails) | A long job in the browser or on the server blocks the editor | A background worker and a **queue** for bakes and thumbnails; progress sent back over the same WebSocket                                                                                                      | Message queues, async communication      |
+
+**What we deliberately do not plan:**
+
+- **Sharding the database:** one Postgres holds millions of rows; project documents are the big data, and they are one blob per document, not rows to split.
+- **Microservices:** the web app and the collab server are already two services, each with one job. More would add network calls and failure modes with no gain.
+- **Consensus and distributed locks:** the CRDT removes the need for a referee for scene data. The courtesy locks (section 7) are advice shown to people, not a lock that must never fail.
+- **Strong consistency for scene data:** the design is eventual consistency on purpose (section 2): everyone ends with the same scene, and offline editing works. Accounts, roles and invitations in Postgres are the opposite: they use transactions and conditional updates because two people must never both win.
+
+**Interview framing:** scene data is eventually consistent (Yjs, works offline); permissions are strongly consistent (Postgres, checked on the server). One app uses both, each where it fits.
