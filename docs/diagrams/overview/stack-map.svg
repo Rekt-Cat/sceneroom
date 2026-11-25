@@ -53,10 +53,10 @@
   <rect x="640" y="376" width="140" height="64" rx="10" fill="#fff" stroke="#13202a" stroke-width="2"/>
   <text x="652" y="400" font-size="13" font-weight="700" fill="#13202a">Docker</text><text x="652" y="418" font-size="10.5" fill="#6a7a84">not Homebrew Postgres</text>
   <rect x="792" y="376" width="136" height="64" rx="10" fill="#fbeed2" stroke="#8a5a00" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="804" y="400" font-size="13" font-weight="700" fill="#13202a">Cloudflare R2</text><text x="804" y="418" font-size="10.5" fill="#6a7a84">not S3, B2, server disk</text>
+  <text x="804" y="400" font-size="13" font-weight="700" fill="#13202a">Backblaze B2</text><text x="804" y="418" font-size="10.5" fill="#6a7a84">R2, AWS S3 work too</text>
   <rect x="32" y="452" width="440" height="52" rx="10" fill="#fff" stroke="#13202a" stroke-width="2"/>
   <text x="44" y="474" font-size="13" font-weight="700" fill="#13202a">Login: Better Auth + GitHub</text><text x="44" y="492" font-size="10.5" fill="#6a7a84">not Auth.js (beta), Clerk, Lucia, Supabase Auth</text>
   <rect x="484" y="452" width="444" height="52" rx="10" fill="#fff" stroke="#8a5a00" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="496" y="474" font-size="13" font-weight="700" fill="#13202a">Where the collab server runs: not decided yet</text><text x="496" y="492" font-size="10.5" fill="#6a7a84">Fly.io, Railway, Render, a VPS: needs open WebSockets, so not Vercel</text>
+  <text x="496" y="474" font-size="13" font-weight="700" fill="#13202a">Collab server: Render free web service (sleeps)</text><text x="496" y="492" font-size="10.5" fill="#6a7a84">needs open WebSockets, so not Vercel; paid: Fly.io, Railway, VPS</text>
   <text x="32" y="534" font-size="12" fill="#55656f">"Not X" lines are what else could do the same job; none of them is "bad". See WHY-THESE-TOOLS.md for when each would win.</text>
 </svg>

@@ -234,3 +234,23 @@ Why these and not the alternatives: `WHY-THESE-TOOLS.md`. Playwright is already 
 | Wiring                  | The keeper starts with the online connection; any key, mouse button or wheel counts as activity; status changes switch it off and on                                                                     | `apps/web/src/collab/startCollab.ts`                                |
 | Held object in the view | A box and a faint tint in the holder's colour, and a name label over the object (a plain DOM element moved every frame)                                                                                  | `apps/web/src/components/viewport/PresenceLayer.tsx` (`HeldObject`) |
 | Scene list badges       | The holder's name on the row; a lock on rows blocked because of something inside or around them                                                                                                          | `apps/web/src/components/viewport/HierarchyPanel.tsx`               |
+
+## Deployment preparation (step M9, 2026-11-24)
+
+| Item            | Purpose                                                                                                                      | Where                                            |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| Health route    | `GET /health` answers `200 {"status":"ok"}` for a host's health check; no login, shows no settings                           | `apps/collab-server/src/healthRoute.ts`          |
+| Dockerfile      | The collab server as a container (node 24 alpine, pnpm from the lockfile, `tsx`, data in the `/data` volume, a health check) | `apps/collab-server/Dockerfile`, `.dockerignore` |
+| Deployment plan | Where each part runs, researched prices and limits, the decisions for the owner, the order of work                           | `docs/backend/DEPLOYMENT.md`                     |
+
+## Files in a bucket and a free sleeping host (step M9, 2026-11-25)
+
+| Item                  | Purpose                                                                                                          | Where                                                           |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `aws4fetch` 1.0.20    | Signs requests for S3-compatible services (R2, B2, AWS S3); MIT, no dependencies, about 65 KB                    | `apps/collab-server/src/s3FileStore.ts`                         |
+| `S3FileStore`         | Big files in a bucket instead of a folder, with the same server-side checks; chosen by the `S3_*` settings       | `apps/collab-server/src/s3FileStore.ts`, `config.ts`, `main.ts` |
+| `LINK_SHARING` switch | Turns the share-link routes off (their owners are in the SQLite file, which a host without a lasting disk loses) | `apps/collab-server/src/config.ts`, `createServer.ts`           |
+| `check-files`         | One command that tries the configured file store (put, has, get, total, absent)                                  | `apps/collab-server/src/checkFileStore.ts`                      |
+| Waking hint           | After 8 s of connecting the badge says "Waking the server…" (a free host takes up to a minute to wake)           | `apps/web/src/collab/slowConnection.ts`, `TopBar.tsx`           |
+
+- **`migrate:remote`** (`packages/db/scripts/migrate-remote.mjs`, 2026-11-25): builds the tables on a remote Postgres (Neon) from this computer; reads `DATABASE_URL` from the git-ignored `packages/db/.env.remote`, refuses a local or pooled address, shows the target without the password, then runs `prisma migrate deploy` and `migrate status`.

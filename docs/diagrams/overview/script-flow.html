@@ -3662,6 +3662,14 @@
                 </td>
               </tr>
               <tr>
+                <td><code>slowConnection.ts</code></td>
+                <td>
+                  after 8 s of connecting sets <code>slow</code>; the badge then
+                  says 'Waking the server…' (a free host takes up to a minute to
+                  wake)
+                </td>
+              </tr>
+              <tr>
                 <td><code>shared/selectiveUndo.ts</code></td>
                 <td>undoOwnChange / redoOwnChange</td>
               </tr>
@@ -4033,6 +4041,24 @@
                 <td>
                   one-off script: copies the SQLite documents into Postgres
                 </td>
+              </tr>
+              <tr>
+                <td><code>s3FileStore.ts S3FileStore</code></td>
+                <td>
+                  files in an S3-compatible bucket (R2, B2, AWS S3) when the
+                  S3_* settings are set; signs requests with aws4fetch
+                </td>
+              </tr>
+              <tr>
+                <td><code>checkFileStore.ts</code></td>
+                <td>
+                  pnpm check-files: tries the configured file store with one
+                  tiny file
+                </td>
+              </tr>
+              <tr>
+                <td><code>healthRoute.ts</code></td>
+                <td>GET /health: 200 ok for a host's health check</td>
               </tr>
               <tr>
                 <td><code>consoleLogger</code></td>
@@ -4783,12 +4809,12 @@
             height="58"
             rx="9"
           />
-          <text class="t-title" x="762.0" y="887">FolderFileStore</text>
+          <text class="t-title" x="762.0" y="887">Folder / S3FileStore</text>
           <text class="t-sub" x="762.0" y="904">
-            files named by SHA-256 in a
+            files named by SHA-256: a folder,
           </text>
           <text class="t-sub" x="762.0" y="917">
-            folder (MemoryFileStore: tests)
+            or an S3 bucket (MemoryFileStore: tests)
           </text>
         </g>
         <text class="lane-label" x="28" y="958">LOGGING</text>

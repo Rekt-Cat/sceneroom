@@ -790,3 +790,12 @@ value and what it does.
 | Activity throttle | `apps/web/src/collab/startCollab.ts` (`lastActivity`) | 500 ms    | Activity restarts the idle clock at most this often (mouse moves with a button pressed count).        |
 | `SAME_MESSAGE_MS` | `apps/web/src/collab/blockedByOthers.ts`              | 1500 ms   | The same "X is working on Y" message is not shown again within this time.                             |
 | Tint opacity      | `PresenceLayer.tsx` (`HeldObject`, `opacity`)         | 0.14      | How strong the coloured tint over a held object is.                                                   |
+
+## Free-host deployment (step M9)
+
+| Setting              | Where                                          | Our value | What it does                                                                                                          |
+| -------------------- | ---------------------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------- |
+| `SLOW_CONNECTION_MS` | `apps/web/src/collab/slowConnection.ts`        | 8000 ms   | How long the editor tries to connect before it says "Waking the server…".                                             |
+| `S3_*` settings      | `apps/collab-server/.env` (see `.env.example`) | not set   | Where the big files go (a bucket). Not set = the folder `FILES_DIR`.                                                  |
+| `LINK_SHARING`       | `apps/collab-server/.env`                      | `true`    | `false` switches the share-link routes off (needed on a host whose disk is lost at every restart).                    |
+| `totalsCacheMs`      | `apps/collab-server/src/s3FileStore.ts`        | 60 000 ms | How long a project's total file size is remembered before the bucket is listed again (a listing is a billed request). |
