@@ -128,15 +128,24 @@ const COLLAB_STATUS: Record<
 function CollabStatusBadge() {
   const status = useCollabStore((state) => state.status);
   const readOnly = useCollabStore((state) => state.readOnly);
+  const slow = useCollabStore((state) => state.slow);
   if (status === "off") return null;
   const entry = COLLAB_STATUS[status];
   const { dot } = entry;
+  // A host that sleeps when idle needs up to a minute to wake: say so after a few seconds of trying
+  const waking = slow && status === "connecting";
   const text =
-    status === "online" && readOnly ? "Online, view only" : entry.text;
+    status === "online" && readOnly
+      ? "Online, view only"
+      : waking
+        ? "Waking the server…"
+        : entry.text;
   const help =
     status === "online" && readOnly
       ? "You can look but not change anything: this link is view only. A change you try to make is put back."
-      : entry.help;
+      : waking
+        ? "The server is slow to answer. A free host goes to sleep when nobody uses it and takes up to a minute to wake. Your work is kept here and shared as soon as it answers."
+        : entry.help;
   return (
     <span
       role="status"

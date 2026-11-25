@@ -22,6 +22,7 @@ import { createSceneSession, type SceneSession } from "./collabSession";
 import { createFileClient } from "./fileClient";
 import { createFileUploader, type FileUploader } from "./fileUploader";
 import { OnlineAssetStorage } from "./onlineAssetStorage";
+import { watchSlowConnection } from "./slowConnection";
 import { asTokenSource, type TokenSource } from "./tokenSource";
 
 /** The idle time in whole seconds, for the message. */
@@ -48,6 +49,7 @@ export function startCollab(options: {
   let rebindQueued = false;
   let stopStoreWatch: (() => void) | null = null;
   let stopStatusWatch: (() => void) | null = null;
+  const stopSlowWatch = watchSlowConnection();
   let stopHistoryWatch: (() => void) | null = null;
   let locks: ReturnType<typeof createEditLocks> | null = null;
   let presence: ReturnType<typeof createPresence> | null = null;
@@ -299,6 +301,7 @@ export function startCollab(options: {
     stopWaiting?.();
     stopStoreWatch?.();
     stopStatusWatch?.();
+    stopSlowWatch();
     stopHistoryWatch?.();
     releaseLocks();
     uploader?.destroy();

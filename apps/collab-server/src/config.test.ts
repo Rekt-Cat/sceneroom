@@ -16,6 +16,7 @@ describe("loadConfig", () => {
       maxFileBytes: 52_428_800,
       maxProjectFileBytes: 524_288_000,
       allowedOrigins: ["http://localhost:3000"],
+      linkSharing: true,
     });
   });
 
@@ -52,5 +53,69 @@ describe("loadConfig", () => {
         MAX_MESSAGE_BYTES: "-1",
       }),
     ).toThrow(/PORT.*MAX_MESSAGE_BYTES/);
+  });
+});
+
+describe("the file store and link sharing settings", () => {
+  const base = { COLLAB_SECRET: "s".repeat(40) };
+
+  it("default to the folder and to link sharing on", () => {
+    const config = loadConfig(base);
+    expect(config.s3).toBeUndefined();
+    expect(config.linkSharing).toBe(true);
+  });
+
+  it("read a complete S3 setup, with the region defaulting to auto", () => {
+    const config = loadConfig({
+      ...base,
+      S3_ENDPOINT: "https://abc.r2.cloudflarestorage.com",
+      S3_BUCKET: "sceneroom-files",
+      S3_ACCESS_KEY_ID: "id",
+      S3_SECRET_ACCESS_KEY: "secret",
+    });
+    expect(config.s3).toEqual({
+      endpoint: "https://abc.r2.cloudflarestorage.com",
+      bucket: "sceneroom-files",
+      region: "auto",
+      accessKeyId: "id",
+      secretAccessKey: "secret",
+    });
+  });
+
+  it("treat empty S3 values as not set, and refuse half a setup naming what is missing, without printing any value", () => {
+    expect(
+      loadConfig({ ...base, S3_ENDPOINT: "", S3_BUCKET: "" }).s3,
+    ).toBeUndefined();
+    let message = "";
+    try {
+      loadConfig({
+        ...base,
+        S3_BUCKET: "b",
+        S3_SECRET_ACCESS_KEY: "do-not-print-this",
+      });
+    } catch (error) {
+      message = (error as Error).message;
+    }
+    expect(message).toMatch(/S3_ENDPOINT/);
+    expect(message).toMatch(/S3_ACCESS_KEY_ID/);
+    expect(message).not.toContain("do-not-print-this");
+    expect(() =>
+      loadConfig({
+        ...base,
+        S3_ENDPOINT: "not a url",
+        S3_BUCKET: "b",
+        S3_ACCESS_KEY_ID: "i",
+        S3_SECRET_ACCESS_KEY: "s",
+      }),
+    ).toThrow();
+  });
+
+  it("LINK_SHARING must be true or false", () => {
+    expect(loadConfig({ ...base, LINK_SHARING: "false" }).linkSharing).toBe(
+      false,
+    );
+    expect(() => loadConfig({ ...base, LINK_SHARING: "maybe" })).toThrow(
+      /LINK_SHARING/,
+    );
   });
 });

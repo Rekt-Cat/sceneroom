@@ -9,12 +9,14 @@
     "make-token": "tsx --env-file-if-exists=.env src/makeToken.ts",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
-    "migrate-documents": "tsx --env-file-if-exists=.env src/migrateDocuments.ts"
+    "migrate-documents": "tsx --env-file-if-exists=.env src/migrateDocuments.ts",
+    "check-files": "tsx --env-file-if-exists=.env src/checkFileStore.ts"
   },
   "dependencies": {
     "@hocuspocus/server": "4.9.0",
     "@sceneroom/link-token": "workspace:*",
     "@sceneroom/shared": "workspace:*",
+    "aws4fetch": "1.0.20",
     "pg": "8.23.1",
     "yjs": "13.6.33",
     "zod": "4.6.7"

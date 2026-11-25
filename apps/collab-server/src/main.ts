@@ -1,7 +1,8 @@
 import { createCollabServer } from "./createServer";
 import { loadConfig } from "./config";
 import { consoleLogger } from "./logger";
-import { FolderFileStore } from "./fileStore";
+import { FolderFileStore, type FileStore } from "./fileStore";
+import { S3FileStore } from "./s3FileStore";
 import { PostgresDocumentStore } from "./postgresStore";
 import { SqliteStore, type DocumentStore } from "./store";
 
@@ -15,6 +16,11 @@ if (config.databaseUrl) {
   documents = postgres;
 }
 
+// Big files: an S3-compatible bucket when it is set up (a host without a lasting disk), else a folder
+const files: FileStore = config.s3
+  ? new S3FileStore(config.s3)
+  : new FolderFileStore(config.filesDir);
+
 const server = createCollabServer({
   port: config.port,
   host: config.host,
@@ -24,7 +30,8 @@ const server = createCollabServer({
   logger: consoleLogger,
   maxMessageBytes: config.maxMessageBytes,
   maxDocumentBytes: config.maxDocumentBytes,
-  files: new FolderFileStore(config.filesDir),
+  files,
+  linkSharing: config.linkSharing,
   maxFileBytes: config.maxFileBytes,
   maxProjectFileBytes: config.maxProjectFileBytes,
   allowedOrigins: config.allowedOrigins,
@@ -32,7 +39,7 @@ const server = createCollabServer({
 
 await server.listen();
 consoleLogger.info(
-  `listening on ${server.webSocketURL}, documents in ${config.databaseUrl ? "Postgres" : config.dbPath}`,
+  `listening on ${server.webSocketURL}, documents in ${config.databaseUrl ? "Postgres" : config.dbPath}, files in ${config.s3 ? `bucket ${config.s3.bucket}` : config.filesDir}, link sharing ${config.linkSharing ? "on" : "off"}`,
 );
 
 // Save everything still waiting, then close the database, when asked to stop

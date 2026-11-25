@@ -1,9 +1,11 @@
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { Server } from "@hocuspocus/server";
 import * as Y from "yjs";
 import { readSceneFromDoc } from "@sceneroom/shared";
 import { parseDocumentName } from "./documentName";
 import { handleAdminRequest } from "./adminRoutes";
 import { handleFileRequest } from "./fileRoutes";
+import { handleHealthRequest } from "./healthRoute";
 import type { FileStore } from "./fileStore";
 import type { OwnerStore } from "./ownerStore";
 import { handleShareRequest } from "./shareRoutes";
@@ -33,12 +35,30 @@ export type CollabServerOptions = {
   maxProjectFileBytes: number;
   /** Web pages from these origins may call the file routes (CORS). */
   allowedOrigins: readonly string[];
+  /** Whether the share-link routes of stage A exist (default true). False: `/share/...` answers 404. */
+  linkSharing?: boolean;
   /** Save a document this long after its last change (ms), and at the latest this long after the first. */
   debounceMs?: number;
   maxDebounceMs?: number;
 };
 
 /** What the server remembers about a connection, from the moment its token was checked. */
+/** `/share/...` when link sharing is switched off: not found (and nothing else is touched). */
+function refuseSharing(
+  request: IncomingMessage,
+  response: ServerResponse,
+): boolean {
+  const path = new URL(request.url ?? "/", "http://localhost").pathname;
+  if (!path.startsWith("/share/")) return false;
+  response.writeHead(404, {
+    "Content-Type": "application/json; charset=utf-8",
+  });
+  response.end(
+    JSON.stringify({ error: "Link sharing is switched off on this server." }),
+  );
+  return true;
+}
+
 export type ConnectionContext = {
   projectId: string;
   role: LinkRole;
@@ -159,6 +179,8 @@ export function createCollabServer(options: CollabServerOptions) {
   server.httpServer.on("request", (request, response) => {
     void (async () => {
       const handled =
+        handleHealthRequest(request, response) ||
+        (!(options.linkSharing ?? true) && refuseSharing(request, response)) ||
         (await handleShareRequest(request, response, {
           owners: options.owners,
           secret: options.secret,

@@ -18,6 +18,9 @@ type CollabState = {
   active: boolean;
   /** A sentence with more detail, such as why the link was refused. */
   detail: string;
+  /** True when the first connection is taking long (a host that sleeps when idle takes up to a minute to wake). */
+  slow: boolean;
+  setSlow: (slow: boolean) => void;
   /** Objects that someone else is editing, painting or baking right now, by object id (see editLocks.ts). */
   locks: Record<string, EditLock>;
   /** Objects someone else holds because they have them selected (selection locks, see objectHolds.ts), by object id. */
@@ -56,6 +59,8 @@ export const useCollabStore = create<CollabState>()((set) => ({
   status: "off",
   active: false,
   detail: "",
+  slow: false,
+  setSlow: (slow) => set({ slow }),
   locks: {},
   holds: {},
   blocked: {},
@@ -82,6 +87,7 @@ export const useCollabStore = create<CollabState>()((set) => ({
             status,
             active: false,
             detail,
+            slow: false,
             locks: {},
             holds: {},
             blocked: {},
