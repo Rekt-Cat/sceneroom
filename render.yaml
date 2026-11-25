@@ -1,0 +1,37 @@
+# Render Blueprint for the collab server (step M9). A DRAFT: check each field against https://render.com/docs/blueprint-spec
+# before the first use (docs/backend/DEPLOYMENT.md, section 3). Secrets are marked `sync: false`: Render asks for them in its
+# dashboard and they are never stored in this file. Nothing here is a real value.
+services:
+  - type: web
+    name: sceneroom-collab
+    runtime: docker
+    plan: free
+    # Singapore is the Render region nearest to India (the owner's users); the others are oregon, ohio, virginia and frankfurt
+    region: singapore
+    dockerfilePath: ./apps/collab-server/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      # A new random value of 64 characters; the SAME one as COLLAB_SECRET of the web app on Vercel
+      - key: COLLAB_SECRET
+        sync: false
+      # Neon's address (the scene documents live there)
+      - key: DATABASE_URL
+        sync: false
+      # The web app's address, exactly, for example https://sceneroom.vercel.app
+      - key: ALLOWED_ORIGINS
+        sync: false
+      # The disk of a free web service is wiped at every restart: no share-link routes, files in a bucket
+      - key: LINK_SHARING
+        value: "false"
+      # Backblaze B2 (docs/dev/SETUP-DEPLOYMENT.md): https://s3.<region>.backblazeb2.com and the region name in it
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_REGION
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false

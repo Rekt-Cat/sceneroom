@@ -1,3 +1,4 @@
+import { createEmptyScene, createProject } from "@sceneroom/shared";
 import { setAssetStorage } from "@/assets/assetStorage";
 import { useImportStore } from "@/store/importStore";
 import { usePersistenceStore } from "@/store/persistenceStore";
@@ -53,8 +54,14 @@ export async function saveOpenProjectNow(): Promise<void> {
  * Saving only starts AFTER the restore has finished. Otherwise the starting scene (one cube) could be
  * saved over the real one before it was read. If the saved project cannot be READ (as opposed to being
  * unreadable data), saving stays off, for the same reason.
+ *
+ * `joinSceneId` is for opening a shared project in a browser that does not have it yet (a link with `?collab=`): the
+ * project is created here, empty, with that scene, and the online sync fills it. Without it, a missing project is "missing".
  */
-export function startPersistence(projectId: string): () => void {
+export function startPersistence(
+  projectId: string,
+  joinSceneId?: string,
+): () => void {
   const setStatus = usePersistenceStore.getState().setStatus;
   const tell = useImportStore.getState().setMessage;
 
@@ -96,6 +103,15 @@ export function startPersistence(projectId: string): () => void {
         useProjectStore.getState().loadProject(result.project);
         // A prefab scene whose last change was not applied before the page closed is applied now
         applyAllPrefabScenes();
+      } else if (result.status === "empty" && joinSceneId) {
+        const joined = createProject(
+          joinSceneId,
+          createEmptyScene(),
+          "Shared project",
+        );
+        await library.save(projectId, joined);
+        if (stopped) return;
+        useProjectStore.getState().loadProject(joined);
       } else if (result.status === "empty") {
         // No such project (a wrong or old link, or one that was deleted): the page says so, nothing is saved
         setStatus("missing");

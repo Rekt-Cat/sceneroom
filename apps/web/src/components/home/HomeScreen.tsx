@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import AccountButton from "./AccountButton";
+import OnlineProjects from "./OnlineProjects";
 import {
   APP_NAME,
   MAX_LOCAL_PROJECTS,
@@ -46,7 +48,7 @@ type Loaded =
 /**
  * The screen before a project opens: every project as a card (picture, name, last edit, scenes), a card to make a
  * new one, a way to open a file, and a menu on each card. Projects live in this browser for now; sharing with other
- * people comes with accounts (docs/PLAN.md, Phase 5c).
+ * people comes with accounts (docs/overview/PLAN.md, Phase 5c).
  */
 export default function HomeScreen() {
   const router = useRouter();
@@ -309,6 +311,7 @@ export default function HomeScreen() {
           No project has “{search}” in its name.
         </p>
       )}
+      <OnlineProjects />
       <div className="pointer-events-none fixed bottom-4 left-1/2 -translate-x-1/2 *:pointer-events-auto">
         <ImportBanner />
       </div>
@@ -321,6 +324,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     <main className="min-h-dvh bg-ed-bg text-ed-text">
       <header className="flex h-12 items-center gap-2 border-b border-ed-line bg-ed-panel px-5">
         <span className="text-sm font-semibold tracking-tight">{APP_NAME}</span>
+        <AccountButton />
       </header>
       <div className="mx-auto max-w-6xl p-6">{children}</div>
     </main>

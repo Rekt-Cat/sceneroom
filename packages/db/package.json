@@ -1,0 +1,32 @@
+{
+  "name": "@sceneroom/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "postinstall": "prisma generate",
+    "generate": "prisma generate",
+    "build": "prisma generate",
+    "migrate": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "seed": "tsx src/seed.ts",
+    "check-types": "tsc --noEmit",
+    "test": "vitest run",
+    "migrate:remote": "node scripts/migrate-remote.mjs"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "@types/pg": "^8",
+    "prisma": "7.10.1",
+    "tsx": "^4",
+    "typescript": "^5",
+    "vitest": "5.1.0"
+  }
+}

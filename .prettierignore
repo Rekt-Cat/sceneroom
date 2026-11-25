@@ -9,3 +9,4 @@ apps/web/next-env.d.ts
 apps/web/playwright-report
 apps/web/test-results
 apps/web/e2e-output
+packages/db/src/generated

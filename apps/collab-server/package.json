@@ -1,0 +1,32 @@
+{
+  "name": "@sceneroom/collab-server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "serve": "tsx watch --env-file-if-exists=.env src/main.ts",
+    "start": "tsx --env-file-if-exists=.env src/main.ts",
+    "make-token": "tsx --env-file-if-exists=.env src/makeToken.ts",
+    "check-types": "tsc --noEmit",
+    "test": "vitest run",
+    "migrate-documents": "tsx --env-file-if-exists=.env src/migrateDocuments.ts",
+    "check-files": "tsx --env-file-if-exists=.env src/checkFileStore.ts"
+  },
+  "dependencies": {
+    "@hocuspocus/server": "4.9.0",
+    "@sceneroom/link-token": "workspace:*",
+    "@sceneroom/shared": "workspace:*",
+    "aws4fetch": "1.0.20",
+    "pg": "8.23.1",
+    "yjs": "13.6.33",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@hocuspocus/provider": "4.9.0",
+    "@types/node": "^24",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4",
+    "typescript": "^5",
+    "vitest": "5.1.0"
+  }
+}

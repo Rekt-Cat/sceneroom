@@ -1,0 +1,300 @@
+# Collaboration and the online part: design
+
+Designed 2026-11-21 and built from 2026-11-21 to 2026-11-24: steps M1 to M8 (see the table in section 11) and the selection locks
+(section 7) are done; M9 (deployment) is not. The text below keeps the original design wording; where the build differs, a
+**Built:** note says so. It is the place to come back to when something here is unclear. Diagrams: `docs/diagrams/backend/collab-architecture.svg` (the pieces) and `docs/diagrams/backend/collab-sync-flow.svg` (one edit
+travelling from one person to another). Why each tool was chosen over the others: `WHY-THESE-TOOLS.md`.
+
+## 1. What we are building, in plain words
+
+Today SceneRoom is a very good **single-player** 3D editor. Everything lives in your browser (IndexedDB), and you send a
+project to someone as a `.sceneroom` file.
+
+The online part makes it **Google Docs for a 3D scene**: you press Share, send a link, and the other person opens the same
+scene. You both see each other's changes within a fraction of a second, you see where the other person is looking and what
+they have selected, and you each have your own Undo.
+
+Unity comparison: Unity has no built-in live co-editing of a scene (there is version control, such as Plastic SCM, which
+merges changes later, not live). What we build is closer to how Figma or Google Docs work, which is a different thing from
+Unity's multiplayer (Netcode), which syncs a running game, not an editor.
+
+## 2. The big idea: a shared document that merges by itself
+
+When two people change the same thing at the same time, somebody has to decide who wins. There are two well-known
+families of answer:
+
+| Idea                                          | How it works                                                                                                                            | Used by                                            |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| **OT** (operational transform)                | A central server reorders everybody's edits and rewrites them so they still make sense                                                  | Old Google Docs, ShareDB                           |
+| **CRDT** (conflict-free replicated data type) | The data structure itself is built so that edits made in any order, on any machine, always end up with the same result, with no referee | **Yjs** (our choice), Automerge, Figma-style (own) |
+
+We use a CRDT library called **Yjs**. The thing you edit is a `Y.Doc`: a document made of maps, lists and text that
+behaves like ordinary data in your code. Every change is recorded as a small update; updates can be sent in any order, even
+after being offline for an hour, and everyone converges on the same document. This is also what makes **offline work and
+reconnecting** simple, which a server-decides design makes hard.
+
+Two pieces of vocabulary used below:
+
+- **Provider**: the code that carries updates between a `Y.Doc` and the outside world (a WebSocket to our server, or the
+  browser's IndexedDB for offline).
+- **Awareness**: a second, throw-away channel for things that are not part of the document: who is online, their colour,
+  their cursor, what they have selected. It is never saved, and it disappears when the person leaves.
+
+## 3. The pieces
+
+```
+Browser A ──┐                                   ┌── Postgres  (documents, users, projects, roles)
+            ├── WebSocket ── collab server ─────┤
+Browser B ──┘     (Yjs updates + awareness)      └── file store (meshes, models, pictures, by content hash)
+   │  └─ IndexedDB (offline copy)                        ▲
+   └──────────── HTTPS upload / download ───────────────┘
+```
+
+- **`apps/web`**: the editor. Has a "sync" layer (`apps/web/src/collab/`) that connects the scene store to a `Y.Doc`.
+- **`apps/collab-server`**: a small Node program using **Hocuspocus** (a ready-made Yjs server). It checks who is
+  connecting, keeps documents in memory while people are in them, saves them, and forwards updates.
+- **`packages/shared`**: has the code that converts between our `Scene` data and a `Y.Doc`, so the browser and the
+  server agree on the layout and both validate with the same Zod schemas.
+- **File store**: big binary files do not go through the document (see section 6).
+- **Postgres** (via Docker): users, projects, members and roles, and, when the collab server has a `DATABASE_URL`, the saved
+  documents. **Built:** without a `DATABASE_URL` the collab server saves documents in a local file database (SQLite, through
+  Node's built-in `node:sqlite`), which is how it was built and tested first.
+
+## 4. What lives in the shared document, and what does not
+
+The scene is already stored the way a shared document wants it: a flat map of objects by id, each a small plain record
+(`DECISIONS.md`: "flat map of nodes", `order` numbers instead of array positions). That choice was made on purpose.
+
+**One `Y.Doc` per scene, plus one for the project.** (`PLAN.md`, Phase 7.) Two people working in different scenes of the same
+project do not send each other's changes, and a huge scene does not slow down the small project document.
+
+```
+Project document  "project:<projectId>"
+  meta            Y.Map     name
+  scenes          Y.Map     sceneId -> { name, order, prefabId? }
+  prefabs         Y.Map     prefabId -> prefab (nodes inside as JSON)
+  members         (later, from the server, not edited here)
+
+Scene document    "scene:<projectId>:<sceneId>"
+  nodes           Y.Map     nodeId -> Y.Map of that object's fields
+                              name, kind, parentId, order, color, visible, locked, assetId, ...
+                              transform   Y.Map   position, rotation, scale   (each a [x,y,z] value)
+                              material    Y.Map   roughness, metalness, colorMap, ... (each a plain value)
+                              light, plant, character, modifiers, ...   one JSON value each
+  assets          Y.Map     fileId -> record (name, type, bytes, bounds ...). Add-only.
+  environment     Y.Map     background, sky, fog, sun ...
+```
+
+**Built:** only the scene documents exist. The project document (`project:<id>`, the scene list, names and prefabs shared) is
+not built; until it is, each online project stores the id of its entry scene (`entrySceneId`, step M8e) so a new member's browser
+knows which scene to open.
+
+Rules for what goes where:
+
+- **Per-field granularity where people really collide.** `transform` and `material` are maps of their own, so one person
+  changing Roughness while another moves the object does not collide, and two people changing the same Roughness is
+  resolved by "the later change wins", which is what people expect from a slider.
+- **One JSON value for the rest** (a light's settings, a character's pose, the modifier list). Changing it replaces the whole
+  value; if two people edit the same modifier list at the same moment, one wins. This is simple and rare; it can be made
+  finer later without changing the rest.
+- **Not in the document (stays on your screen only):** which scene tab you have open, selection, camera, Edit-mode state,
+  paint and bake settings, hidden triangles, the clipboard. Selection and "who is in which scene" are shared through
+  awareness, not saved.
+- **Never trusted:** every update that arrives from the network is checked with the Zod schemas before it touches the
+  store, the same rule as for files and local storage (`CLAUDE.md`: validate all outside data). A bad update is dropped and
+  logged, never applied.
+
+## 5. How the editor talks to the document
+
+The editor does not get rewritten around Yjs. The Zustand store stays what the 3D view draws from, and all the pure scene
+functions stay as they are. A **sync layer** sits beside the store:
+
+1. **You change something** (a store action runs and the scene changes, as today).
+2. The sync layer sees the new scene, compares it with the previous one, and writes **only what differs** into the `Y.Doc`
+   in one transaction marked as "mine". Slider drags are sent a few times a second, not on every pixel.
+3. The provider sends the update to the server, which sends it to everyone else.
+4. **On the other side**, the document fires an event. The sync layer rebuilds only the objects that changed, checks them
+   with Zod, and puts them into that person's store **without adding an Undo step**. The 3D view redraws as it always does.
+
+This "compare and write the difference" approach (rather than turning every store action into a document action) keeps the
+change small and means the hundreds of existing actions keep working unchanged. Its cost is the compare step; for a scene
+of a few thousand objects that is cheap, and we measure it before worrying.
+
+## 6. Big files: meshes, models and pictures
+
+An imported model, a mesh, or a painted or baked picture can be many megabytes. They already live **outside the scene, under
+a fingerprint of their bytes** (`ASSETS-AND-IMPORT.md`, `meshStorage.ts`), and the scene only holds the id. That is exactly
+what we need online:
+
+- **Upload first, reference second.** Before a change that mentions file `4f2a…` is sent, that file is uploaded to the file
+  store (skipped if the server already has it: same bytes, same id).
+- **Download on demand.** When another person's scene mentions a file you do not have, it is fetched by id, with a
+  placeholder shown meanwhile (the missing-file placeholder already exists).
+- **Never trust the server's answer:** the downloaded bytes are hashed and must equal the id, or they are thrown away.
+- **Limits:** a maximum file size and a per-project total, checked on the server too.
+- **Meshes edited point by point:** each finished action already stores a new mesh version under a new id (and big meshes
+  as small patches), so syncing it means uploading one file. Old versions are cleaned up when no scene refers to them.
+- **Painting strokes** create a new picture at the end of each stroke; uploads are limited to a few per second so a fast
+  scribble does not flood the server.
+
+## 7. Two people editing the same mesh
+
+Editing points, painting and baking all produce a _new whole file_, so two people doing it to the same object at once would
+make one of them lose work. The rule for the first version, kept deliberately simple:
+
+> **One editor per object.** When you enter Edit points, Paint or Bake on an object, your awareness record says so. Everyone
+> else sees a small lock badge and cannot start those modes on that object until you leave. If you disconnect, the lock
+> disappears by itself (awareness records vanish with the connection).
+
+Moving, rotating, scaling, colouring and every other scene-level change stay open to everyone at all times. This is the
+rule `DECISIONS.md` already named ("one editor per mesh"). It is enforced by the editor; the server cannot tell what is being
+edited inside a file, so we state honestly that it is a courtesy lock, not a security control.
+
+### Selection locks (owner's design, 2026-11-24; built 2026-11-24)
+
+The courtesy lock above covers only Edit points, Paint and Bake. The owner wanted every object protected while someone works
+on it, so two people online never move the same object at once. Rules agreed with the owner (all built):
+
+- **Taking a lock:** selecting an object locks it for everyone else. No change has to be made first. Several selected
+  objects are all locked; box-select skips objects someone else holds.
+- **Reach of a lock:** an object and everything inside it. Nobody can change an object that is locked, is inside a locked
+  one, or contains a locked one (moving a parent moves its children).
+- **What others see:** the object is highlighted in the holder's colour and **the holder's name is shown over the object** in
+  the 3D view; the scene list shows a lock and the name. Others cannot select it (a message says who has it), no gizmo
+  appears, and Inspector actions, drag-to-reparent, rename, hide and delete are refused for it.
+- **Release:** when the holder deselects it, after **30 seconds without activity** (the lock ends and the object leaves the
+  holder's selection, with a message), on disconnect, and when the holder switches scene tabs.
+- **Activity** means selecting, changing something, or pressing a key or mouse button in the editor (so orbiting the camera
+  or typing a value keeps the lock).
+- **Tie:** two people selecting the same object at the same moment: the lower client number keeps it, as with the current
+  locks (the other is taken off it, with a message).
+- **Viewers** never take locks and may select anything.
+- **No connection to the collab server:** no locks exist (nobody's records arrive), so the merge rule of the shared document
+  still applies there.
+- **Enforcement:** in the editors, not on the server (courtesy, as before). The merge rule is the safety net.
+- **How it is built** (`apps/web/src/collab/objectHolds.ts`, `blockedByOthers.ts`, the scene store): each person's awareness record gets a `holding` list (the ids of their selection, held until the
+  holder releases it); every editor computes who is blocked from it and the scene (`parentId`) tree; the scene store's
+  `select`, `toggleSelect` and `setSelection` refuse blocked ids, and the actions that take explicit ids (reparent, hide,
+  lock, rename) check too. The idle timer lives in the holder's editor (no clocks are compared between computers).
+- **Known limits:** Undo online takes back only your own unchanged fields and can still touch an object someone else now
+  holds, and paste does not check the parent it goes under.
+- **Tests:** unit tests for the blocked-set maths and the keeper (idle, ties, release), store tests for refused
+  selection and actions, and a two-window browser test (select, see the name, try to select, wait out the idle time).
+
+**Proposed, not decided:** a notice after a merge when a field you changed while disconnected was replaced by someone else's
+concurrent change, with a **Restore mine** button (writes your value again as a new, later change). Server-side checking of
+the contents of editors' updates (today only each browser checks what it receives) is another open idea.
+
+## 8. Undo with several people
+
+Today Undo restores a **snapshot of the whole scene** (`DECISIONS.md`, "why snapshots"). With several people that would undo
+somebody else's work too. So in a shared scene Undo moves to **`Y.UndoManager`**, which Yjs provides: it remembers only the
+changes made by _this_ browser (the transactions marked "mine") and undoes exactly those, leaving other people's changes
+alone, field by field.
+
+**Built (step M5):** our own pure functions, not `Y.UndoManager`: `packages/shared/src/selectiveUndo.ts` records the scene after
+each step and takes back only the fields this person changed and nobody has changed since (`DECISIONS.md`, "Editor sync layer").
+
+What stays the same: the Undo and Redo buttons, shortcuts, and the step labels shown in the UI ("Move points", "Paint stroke").
+What changes: the history is no longer a list of scene snapshots. Local-only (never shared) projects keep the current
+history until the new one has proved itself, then switch to the same code so there is one path.
+
+## 9. Who may do what
+
+Two stages, so something works early and the proper version follows:
+
+| Stage           | How you get in                                                                                 | How the server decides                                                                                                                   |
+| --------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **A: link**     | Press Share, get a link with an unguessable token. The token carries a role: editor or viewer. | The server checks the token when the connection opens. A viewer connection is made **read-only** on the server: its updates are ignored. |
+| **B: accounts** | Log in (OAuth). Projects have members with a role: owner, editor, commenter, viewer.           | The server checks the member list in Postgres. Share links become invitations with a role and an expiry.                                 |
+
+Always, on the server and not only in the page:
+
+- a **maximum size** for one message and for one document;
+- **validation** of anything that is saved (shape and sizes);
+- **rate limits** per connection;
+- a viewer can never write, whatever the page does.
+
+Locks and hidden objects (`DECISIONS.md`) are shown to everyone as they are today; enforcing "locked" on the server is a Stage B item.
+
+**Built:** stage A (links, step M7) and stage B (accounts, steps M8a to M8f, `ACCOUNTS.md`) both work, and are not mixed for one project.
+The size limits, the read-only viewer and the token checks are on the server. **Not built:** rate limits per connection (to be
+discussed with the limits in general) and server-side enforcement of "locked".
+
+## 10. Staying local-first
+
+SceneRoom works with no account and no internet today, and that stays true.
+
+- A project is **local** until you press Share. Then its documents are created on the server and the project becomes
+  **shared**; your browser keeps an offline copy (`y-indexeddb`) and syncs when it can.
+- Offline edits made to a shared project are merged when you reconnect: that is the CRDT's main promise.
+- Export to `.sceneroom` and to GLB keeps working from the local copy.
+
+## 11. Build order (each step is demonstrable and tested)
+
+| Step | What                                                                                                                                                                                                                             | How we know it works                                                                                     |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| M1   | **Shared code:** `Scene` to `Y.Doc` and back, and applying a change as a small difference, in `packages/shared`. Round-trips every scene feature.                                                                                | Vitest: a scene survives a trip; two docs edited apart merge to the same scene; bad updates are refused. |
+| M2   | **Collab server:** `apps/collab-server` with Hocuspocus, saving to SQLite; token check; read-only viewers; size limits.                                                                                                          | Unit and integration tests with two in-process clients.                                                  |
+| M3   | **Sync layer in the editor:** connect the store to the document; remote changes appear; no echo loops; status badge ("Connected", "Offline, changes kept").                                                                      | Playwright with **two browser windows**: edit in one, see it in the other.                               |
+| M4   | **Files online:** upload and download by hash, with the hash check and limits.                                                                                                                                                   | Playwright: import a model in one window, see it in the other.                                           |
+| M5   | **Per-user Undo** with `Y.UndoManager`, and the **one editor per object** lock.                                                                                                                                                  | Two windows: A undoes, B's changes stay; B cannot enter Edit points on A's object.                       |
+| M6   | **Presence:** names and colours, selections, where each person is, 3D cursors.                                                                                                                                                   | Two windows show each other's selection.                                                                 |
+| M7   | **Share button and links** (Stage A): create a link, open it, role respected.                                                                                                                                                    | Viewer link cannot change anything, checked on the server.                                               |
+| M8   | **Postgres, Docker, accounts** (Stage B), dashboard, invitations. Designed in `ACCOUNTS.md` (parts M8a to M8f); **built 2026-11-23 to 2026-11-24**.                                                                              | Documents survive a server restart; roles enforced from the database.                                    |
+| M9   | **Deploy:** web on Vercel, collab server on a host that keeps WebSockets open, Postgres on Neon, files on R2; a two-context test in CI. Plan and decisions: `DEPLOYMENT.md` (prepared, not deployed; free sleeping host chosen). | A real link works between two real devices.                                                              |
+
+**Status (2026-11-24): M1 to M8 are built, and the selection locks.** Only M9 (deployment) is left. What the build changed against this design is in `DECISIONS.md` (sections "Collab server", "Editor sync layer" and the M8 entries): `node:sqlite` instead of `better-sqlite3`, going online by `?collab=` in the address (and `?online=account` for accounts), Undo online takes back only your own field changes through our own pure functions (M5) rather than the Yjs `UndoManager`, and only the open scene is shared (no project document yet). M4 (files) sends them over plain HTTP at `/files/...` rather than through the WebSocket, and receives on demand with retries instead of a strict "upload first" order.
+
+## 12. Risks and open questions, stated plainly
+
+- **The compare-and-write sync layer is the heart of it.** If it has a bug, changes echo or get lost. That is why M1 is
+  shared code with heavy tests before anything is connected, and why M3 is tested with two real browsers.
+- **Undo is the biggest change to existing behaviour** (M5). It touches how every action is recorded. We keep the snapshot
+  history running for local-only projects until M5 passes its tests.
+- **Mesh storage growth.** Every finished edit stores a new file. A clean-up of unused versions (planned already) becomes a
+  real requirement online. Patch storage (`meshPatch.ts`) keeps big meshes small.
+- **Hosting the collab server.** Vercel runs short-lived functions, not long-lived WebSocket servers (`DECISIONS.md`, 2026-11-11),
+  so the collab server needs a different host (a small container service). Which one is decided at M9, not now.
+- **Courtesy locks** (section 7) can be bypassed by a modified client. Fine for friends and teams; Stage B decides whether
+  something stronger is needed.
+- **Prisma's `latest` tag is a release candidate** (8.0.0-rc.35, checked 2026-11-24); the project stays on the stable 7.10.1
+  (`DECISIONS.md`). Re-check before moving to Prisma 8.
+- **Checked while building:** the Hocuspocus 4.x API (read from its source; a token can be a function, `connection.context` is what `onAuthenticate` returns, `closeConnections` only resets the document) and how Yjs behaves with our scenes (a 7-object scene is about 4.7 KB; a move is tens of bytes).
+- **Not verified yet:** how Yjs behaves with the largest scenes and many people at once; M9 gives real numbers.
+
+## 13. Versions looked up on 2026-11-21 (npm registry)
+
+| Package                | Version | Purpose                                                                  |
+| ---------------------- | ------- | ------------------------------------------------------------------------ |
+| `yjs`                  | 13.6.33 | The shared document                                                      |
+| `y-protocols`          | 1.0.7   | Awareness and the sync messages                                          |
+| `@hocuspocus/server`   | 4.9.0   | The collab server (needs `yjs` ^13.6.8)                                  |
+| `@hocuspocus/provider` | 4.9.0   | The browser side of the connection                                       |
+| `y-indexeddb`          | 9.0.12  | Offline copy in the browser                                              |
+| ~~`better-sqlite3`~~   | 13.2.0  | Not used: `node:sqlite` (built into Node) does the job, see DECISIONS.md |
+
+Yjs (M1), `@hocuspocus/server` and `@hocuspocus/provider` (M2, M3) and `y-indexeddb` (M3) are installed. `y-protocols` is used through the provider and not installed on its own. The others are added at M4 and later, and then recorded in `WHAT-WE-USED.md` as usual.
+
+## 14. Scaling path: what we would add, and when (not built)
+
+Today there is one collab server, one web app and one Postgres. That is right for friends and small teams. This section says what would change as use grows, so the choice "not yet" is written down with a reason. The topic names match the sections of the public study list [awesome-system-design-resources](https://github.com/ashishps1/awesome-system-design-resources), which is general interview material, not a build guide.
+
+**Not verified:** the sizes below are rough guesses, not measurements. Measure first (M9 gives real numbers). The Hocuspocus Redis extension is named from memory; check its docs before relying on it.
+
+| Stage                               | What hurts first                                             | What we would add                                                                                                                                                                                             | Topic to read                            |
+| ----------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| **Now** (a few people per project)  | Nothing. Share and invite routes have no rate limit.         | **Rate limits** on share, invite, token and file routes (planned with M9). Limits per IP and per account.                                                                                                     | Rate limiting                            |
+| **10x** (many projects, one server) | Memory per open document; one big upload blocking others     | Keep documents loaded only while someone is connected (Hocuspocus already unloads idle ones); move files to R2 with a CDN in front (M9); a size cap per project                                               | Caching, CDN, object storage             |
+| **100x** (one server is not enough) | All WebSockets on one machine; a restart drops everyone      | **Several collab servers**, with one document always handled by one server (send a project to a server by its id, "consistent hashing"), or a Redis link between servers so any server can serve any document | Consistent hashing, pub/sub, scalability |
+| **Database grows**                  | Reads on Postgres for tokens and membership                  | Indexes (project id, user id are already keys); a read replica; a short cache of "is this person a member" with a time limit, cleared when a member is removed                                                | Indexes, replication, caching strategies |
+| **Heavy work** (baking, thumbnails) | A long job in the browser or on the server blocks the editor | A background worker and a **queue** for bakes and thumbnails; progress sent back over the same WebSocket                                                                                                      | Message queues, async communication      |
+
+**What we deliberately do not plan:**
+
+- **Sharding the database:** one Postgres holds millions of rows; project documents are the big data, and they are one blob per document, not rows to split.
+- **Microservices:** the web app and the collab server are already two services, each with one job. More would add network calls and failure modes with no gain.
+- **Consensus and distributed locks:** the CRDT removes the need for a referee for scene data. The courtesy locks (section 7) are advice shown to people, not a lock that must never fail.
+- **Strong consistency for scene data:** the design is eventual consistency on purpose (section 2): everyone ends with the same scene, and offline editing works. Accounts, roles and invitations in Postgres are the opposite: they use transactions and conditional updates because two people must never both win.
+
+**Interview framing:** scene data is eventually consistent (Yjs, works offline); permissions are strongly consistent (Postgres, checked on the server). One app uses both, each where it fits.

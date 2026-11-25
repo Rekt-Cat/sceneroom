@@ -4,7 +4,7 @@ import { edgeBetween, edgeVertices, type Topology } from "./topology";
 /**
  * Seams: edges marked as the cuts along which a surface is laid flat for a UV map (like the seams of a shirt). A
  * seam is stored with the mesh as a pair of points (the two ends of the edge). Points on the same spot count as
- * one, so a seam may name any of the points at each end. See docs/UVS-AND-SEAMS.md.
+ * one, so a seam may name any of the points at each end. See docs/editor/UVS-AND-SEAMS.md.
  */
 export type Seam = { a: number; b: number };
 

@@ -4,5 +4,9 @@ packages:
 
 # Build scripts that dependencies may NOT run on install (pnpm blocks them unless allowed)
 allowBuilds:
+  # Prisma downloads its migration engine (needed for `prisma migrate`) when it is installed
+  "@prisma/engines": true
+  prisma: true
+  esbuild: false
   sharp: false
   unrs-resolver: false

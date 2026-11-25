@@ -1,0 +1,2190 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SceneRoom Dev Flow</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@500;600;700&display=swap"
+/>
+<style>
+  /* Layout concept: one whiteboard-style figure in two lanes, then a numbered walkthrough that matches it. */
+  :root {
+    --bg: #f2f5f6;
+    --surface: #ffffff;
+    --lane: #e9eef0;
+    --ink: #13202a;
+    --muted: #55656f;
+    --line: #c4d0d6;
+    --accent: #0a6c8a;
+    --on-accent: #ffffff;
+    --ok: #1c7a4b;
+    --ok-bg: #e0f2e8;
+    --pending: #8a5a00;
+    --pending-bg: #fbeed2;
+    --warn: #b3342c;
+    --font-head: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
+    --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1417;
+      --surface: #172026;
+      --lane: #121a1f;
+      --ink: #e5ecef;
+      --muted: #93a4ae;
+      --line: #2c3b44;
+      --accent: #5cc4e0;
+      --on-accent: #0e1417;
+      --ok: #5fd09a;
+      --ok-bg: #153227;
+      --pending: #e8b65c;
+      --pending-bg: #332a12;
+      --warn: #ff918a;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1417;
+    --surface: #172026;
+    --lane: #121a1f;
+    --ink: #e5ecef;
+    --muted: #93a4ae;
+    --line: #2c3b44;
+    --accent: #5cc4e0;
+    --on-accent: #0e1417;
+    --ok: #5fd09a;
+    --ok-bg: #153227;
+    --pending: #e8b65c;
+    --pending-bg: #332a12;
+    --warn: #ff918a;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    line-height: 1.5;
+    padding-block: 28px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  main {
+    max-width: 1040px;
+    margin-inline: auto;
+    display: grid;
+    gap: 26px;
+  }
+  h1 {
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: clamp(1.7rem, 4vw, 2.3rem);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h2 {
+    font-family: var(--font-head);
+    font-size: 1.25rem;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .lede {
+    margin: 6px 0 0;
+    color: var(--muted);
+    max-width: 62ch;
+    font-size: 1rem;
+  }
+  figure {
+    margin: 0;
+    display: grid;
+    gap: 10px;
+  }
+  .fig-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+  }
+  svg.diagram {
+    display: block;
+    min-width: 860px;
+    width: 100%;
+    height: auto;
+    color: var(--accent);
+  }
+  figcaption,
+  .hint {
+    color: var(--muted);
+    font-size: 0.9rem;
+    max-width: 78ch;
+    min-width: 0;
+    margin: 0;
+  }
+
+  /* diagram parts */
+  .lane {
+    fill: var(--lane);
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .lane-label {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.12em;
+    fill: var(--muted);
+  }
+  .box {
+    fill: var(--surface);
+    stroke: var(--line);
+    stroke-width: 1.5;
+  }
+  .box.ok {
+    stroke: var(--ok);
+  }
+  .box.pending {
+    stroke: var(--pending);
+    stroke-dasharray: 5 4;
+  }
+  .box.warn {
+    stroke: var(--warn);
+  }
+  .group {
+    fill: var(--surface);
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .t-title {
+    font: 600 13px var(--font-head);
+    fill: var(--ink);
+  }
+  .t-sub {
+    font: 400 11px var(--font-ui);
+    fill: var(--muted);
+  }
+  .t-mono {
+    font: 500 10.5px var(--font-mono);
+    fill: var(--ink);
+  }
+  .t-mono-sm {
+    font: 500 9.5px var(--font-mono);
+    fill: var(--muted);
+  }
+  .t-step {
+    font: 600 11px var(--font-head);
+    fill: var(--ink);
+  }
+  .arrow {
+    stroke: var(--accent);
+    stroke-width: 1.75;
+    fill: none;
+  }
+  .arrow-label {
+    font: 500 10.5px var(--font-ui);
+    fill: var(--accent);
+  }
+  .chev {
+    fill: var(--accent);
+  }
+  .pill-ok {
+    fill: var(--ok-bg);
+    stroke: var(--ok);
+    stroke-width: 1;
+  }
+  .pill-pending {
+    fill: var(--pending-bg);
+    stroke: var(--pending);
+    stroke-width: 1;
+  }
+  .pt-ok {
+    font: 600 10px var(--font-ui);
+    fill: var(--ok);
+  }
+  .pt-pending {
+    font: 600 10px var(--font-ui);
+    fill: var(--pending);
+  }
+  .note-warn {
+    font: 500 10.5px var(--font-ui);
+    fill: var(--warn);
+  }
+  .chip {
+    fill: var(--lane);
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .chip.pending {
+    fill: var(--pending-bg);
+    stroke: var(--pending);
+    stroke-dasharray: 4 3;
+  }
+  .badge {
+    fill: var(--accent);
+  }
+  .badge-t {
+    font: 700 10.5px var(--font-head);
+    fill: var(--on-accent);
+  }
+  .hit {
+    cursor: pointer;
+  }
+  .hit:hover > .box,
+  .hit:hover > .group {
+    stroke-width: 2.5;
+  }
+  .hit:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  /* walkthrough */
+  .walk {
+    display: grid;
+    gap: 14px;
+  }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 14px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 16px 14px;
+    min-width: 0;
+    scroll-margin-top: 20px;
+  }
+  .card.wide {
+    grid-column: 1 / -1;
+  }
+  .card.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  .card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .num {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--on-accent);
+    font: 700 13px var(--font-head);
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+  .card h3 {
+    font-family: var(--font-head);
+    font-size: 1.05rem;
+    margin: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .tag {
+    font: 600 11px var(--font-ui);
+    padding: 2px 9px;
+    border-radius: 999px;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+  .tag.ok {
+    color: var(--ok);
+    background: var(--ok-bg);
+    border-color: var(--ok);
+  }
+  .tag.pending {
+    color: var(--pending);
+    background: var(--pending-bg);
+    border-color: var(--pending);
+  }
+  dl {
+    margin: 0;
+    display: grid;
+    gap: 8px;
+  }
+  dt {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  dd {
+    margin: 0;
+    font-size: 0.92rem;
+    min-width: 0;
+  }
+  dd code,
+  li code,
+  .hint code {
+    font-family: var(--font-mono);
+    font-size: 0.84em;
+    background: var(--lane);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  ol.ci {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    gap: 8px 22px;
+    counter-reset: ci;
+  }
+  ol.ci li {
+    counter-increment: ci;
+    padding-left: 30px;
+    position: relative;
+    font-size: 0.92rem;
+    min-width: 0;
+  }
+  ol.ci li::before {
+    content: counter(ci);
+    position: absolute;
+    left: 0;
+    top: 1px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    font: 600 11px var(--font-head);
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+  }
+  ol.ci li.fail::before {
+    border-color: var(--warn);
+    color: var(--warn);
+  }
+  ol.ci strong {
+    font-family: var(--font-head);
+  }
+
+  a {
+    color: var(--accent);
+  }
+
+  /* deep dives */
+  .deep {
+    display: grid;
+    gap: 14px;
+  }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 16px;
+    min-width: 0;
+    display: grid;
+    gap: 12px;
+    scroll-margin-top: 20px;
+  }
+  .panel h3 {
+    font-family: var(--font-head);
+    font-size: 1.1rem;
+    margin: 0;
+  }
+  .panel h4 {
+    font: 600 0.95rem var(--font-head);
+    margin: 6px 0 0;
+  }
+  .panel p {
+    margin: 0;
+    font-size: 0.92rem;
+    max-width: 78ch;
+  }
+  .panel code,
+  .gloss code,
+  td code {
+    font-family: var(--font-mono);
+    font-size: 0.84em;
+    background: var(--lane);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  pre.code {
+    margin: 0;
+    padding: 10px 12px;
+    background: var(--lane);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font: 500 12px/1.55 var(--font-mono);
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--ink);
+  }
+  .ba {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    gap: 12px;
+  }
+  .ba > div {
+    min-width: 0;
+    display: grid;
+    gap: 5px;
+    align-content: start;
+  }
+  .ba-label {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .tbl-wrap {
+    overflow-x: auto;
+  }
+  table.cmp {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 680px;
+    font-size: 0.88rem;
+  }
+  table.cmp th,
+  table.cmp td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  table.cmp th {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  ol.steps {
+    margin: 0;
+    padding-left: 1.3rem;
+    display: grid;
+    gap: 6px;
+    font-size: 0.92rem;
+  }
+  ol.steps li {
+    padding-left: 4px;
+    min-width: 0;
+  }
+  .gloss {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 12px 26px;
+  }
+  .gloss > div {
+    min-width: 0;
+  }
+  .gloss dt {
+    text-transform: none;
+    letter-spacing: 0;
+    font: 600 0.9rem var(--font-head);
+    color: var(--ink);
+  }
+  .gloss dd {
+    font-size: 0.88rem;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  /* status note */
+  .status {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px 28px;
+  }
+  .status h2 {
+    font-size: 0.95rem;
+    margin: 0 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: none;
+  }
+  .dot.ok {
+    background: var(--ok);
+  }
+  .dot.pending {
+    background: var(--pending);
+  }
+  .status ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+  .status li + li {
+    margin-top: 3px;
+  }
+  .status code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    color: var(--ink);
+  }
+  .foot {
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin: 0;
+  }
+</style>
+
+<main>
+  <header>
+    <h1>SceneRoom Dev Flow</h1>
+    <p class="lede">
+      How one edit travels from Claude Code on your Mac, through the checks, to
+      GitHub and the live Vercel site, and what each part of the setup does
+      along the way. Click a numbered box to jump to its explanation. Words you
+      may not know are explained further down, in the deep dives and the
+      glossary.
+    </p>
+  </header>
+
+  <figure>
+    <div class="fig-scroll">
+      <svg
+        class="diagram"
+        viewBox="0 0 980 632"
+        role="group"
+        aria-label="Diagram. Edits made in Claude Code (1) are written to files (2), formatted by a Prettier hook (3), checked locally with Turborepo (4), committed and pushed through GitHub Desktop (5); a pre-push hook runs the checks again and blocks the push if one fails. The push reaches the GitHub repository (6), where a GitHub Actions workflow (a Postgres container, then ten steps) verifies it (7), and Vercel builds and publishes it (9). A second PC (8) pulls from the repository. Repo files (A) and a skill (B) support the process."
+      >
+        <defs>
+          <marker
+            id="ah"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto"
+          >
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+          </marker>
+        </defs>
+
+        <!-- ================= Lane 1: your Mac ================= -->
+        <rect class="lane" x="10" y="10" width="960" height="300" rx="14" />
+        <text class="lane-label" x="28" y="34">ON YOUR MAC</text>
+
+        <!-- Step 1 -->
+        <g
+          class="hit"
+          data-card="c1"
+          tabindex="0"
+          role="button"
+          aria-label="1, Claude Code: show explanation"
+        >
+          <rect class="box ok" x="28" y="48" width="150" height="100" rx="10" />
+          <text class="t-title" x="40" y="72">Claude Code</text>
+          <text class="t-sub" x="40" y="92">you ask, Claude works</text>
+          <text class="t-sub" x="40" y="107">in VS Code</text>
+          <rect class="pill-ok" x="40" y="118" width="64" height="18" rx="9" />
+          <text class="pt-ok" x="72" y="130.5" text-anchor="middle">
+            working
+          </text>
+          <circle class="badge" cx="162" cy="64" r="9" />
+          <text class="badge-t" x="162" y="68" text-anchor="middle">1</text>
+        </g>
+
+        <!-- Step 2 -->
+        <g
+          class="hit"
+          data-card="c2"
+          tabindex="0"
+          role="button"
+          aria-label="2, Edit a file: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="222"
+            y="48"
+            width="150"
+            height="100"
+            rx="10"
+          />
+          <text class="t-title" x="234" y="72">Edit a file</text>
+          <text class="t-sub" x="234" y="92">Write / Edit tool</text>
+          <text class="t-sub" x="234" y="107">inside the project</text>
+          <rect class="pill-ok" x="234" y="118" width="64" height="18" rx="9" />
+          <text class="pt-ok" x="266" y="130.5" text-anchor="middle">
+            working
+          </text>
+          <circle class="badge" cx="356" cy="64" r="9" />
+          <text class="badge-t" x="356" y="68" text-anchor="middle">2</text>
+        </g>
+
+        <!-- Step 3 -->
+        <g
+          class="hit"
+          data-card="c3"
+          tabindex="0"
+          role="button"
+          aria-label="3, Prettier hook: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="416"
+            y="48"
+            width="150"
+            height="100"
+            rx="10"
+          />
+          <text class="t-title" x="428" y="72">Prettier hook</text>
+          <text class="t-sub" x="428" y="92">PostToolUse hook</text>
+          <text class="t-sub" x="428" y="107">matcher Write|Edit</text>
+          <rect class="pill-ok" x="428" y="118" width="64" height="18" rx="9" />
+          <text class="pt-ok" x="460" y="130.5" text-anchor="middle">
+            working
+          </text>
+          <circle class="badge" cx="550" cy="64" r="9" />
+          <text class="badge-t" x="550" y="68" text-anchor="middle">3</text>
+        </g>
+
+        <!-- Step 4 -->
+        <g
+          class="hit"
+          data-card="c4"
+          tabindex="0"
+          role="button"
+          aria-label="4, Local checks: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="610"
+            y="48"
+            width="150"
+            height="100"
+            rx="10"
+          />
+          <text class="t-title" x="622" y="72">Local checks</text>
+          <text class="t-sub" x="622" y="92">pnpm → Turborepo</text>
+          <text class="t-sub" x="622" y="107">types·lint·test·build</text>
+          <rect class="pill-ok" x="622" y="118" width="58" height="18" rx="9" />
+          <text class="pt-ok" x="651" y="130.5" text-anchor="middle">
+            passes
+          </text>
+          <circle class="badge" cx="744" cy="64" r="9" />
+          <text class="badge-t" x="744" y="68" text-anchor="middle">4</text>
+        </g>
+
+        <!-- Step 5 -->
+        <g
+          class="hit"
+          data-card="c5"
+          tabindex="0"
+          role="button"
+          aria-label="5, Commit and push: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="804"
+            y="48"
+            width="150"
+            height="100"
+            rx="10"
+          />
+          <text class="t-title" x="816" y="72">Commit + push</text>
+          <text class="t-sub" x="816" y="92">git commit locally</text>
+          <text class="t-sub" x="816" y="107">push: GitHub Desktop</text>
+          <rect class="pill-ok" x="816" y="118" width="64" height="18" rx="9" />
+          <text class="pt-ok" x="848" y="130.5" text-anchor="middle">
+            working
+          </text>
+          <circle class="badge" cx="938" cy="64" r="9" />
+          <text class="badge-t" x="938" y="68" text-anchor="middle">5</text>
+        </g>
+
+        <!-- Row arrows -->
+        <line
+          class="arrow"
+          x1="180"
+          y1="98"
+          x2="220"
+          y2="98"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="200" y="90" text-anchor="middle">
+          edits
+        </text>
+        <line
+          class="arrow"
+          x1="374"
+          y1="98"
+          x2="414"
+          y2="98"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="394" y="90" text-anchor="middle">
+          after
+        </text>
+        <line
+          class="arrow"
+          x1="568"
+          y1="98"
+          x2="608"
+          y2="98"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="588" y="90" text-anchor="middle">
+          next
+        </text>
+        <line
+          class="arrow"
+          x1="762"
+          y1="98"
+          x2="802"
+          y2="98"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="782" y="90" text-anchor="middle">
+          pass
+        </text>
+
+        <!-- Note under the 4 -> 5 arrow -->
+        <text class="arrow-label" x="865" y="176" text-anchor="end">
+          pre-push hook runs step 4 first;
+        </text>
+        <text class="arrow-label" x="865" y="190" text-anchor="end">
+          a failure blocks the push
+        </text>
+
+        <!-- Repo docs group (A) -->
+        <g
+          class="hit"
+          data-card="cA"
+          tabindex="0"
+          role="button"
+          aria-label="A, repo files Claude reads: show explanation"
+        >
+          <rect class="group" x="28" y="184" width="560" height="116" rx="10" />
+          <text class="lane-label" x="44" y="204">
+            IN THE REPO, READ AT SESSION START
+          </text>
+          <rect class="chip" x="44" y="216" width="92" height="26" rx="6" />
+          <text class="t-mono" x="90" y="233" text-anchor="middle">
+            CLAUDE.md
+          </text>
+          <rect class="chip" x="144" y="216" width="110" height="26" rx="6" />
+          <text class="t-mono" x="199" y="233" text-anchor="middle">
+            docs/overview/PLAN.md
+          </text>
+          <rect class="chip" x="262" y="216" width="140" height="26" rx="6" />
+          <text class="t-mono" x="332" y="233" text-anchor="middle">
+            docs/overview/DECISIONS.md
+          </text>
+          <rect class="chip" x="410" y="216" width="158" height="26" rx="6" />
+          <text class="t-mono" x="489" y="233" text-anchor="middle">
+            docs/overview/WHAT-WE-USED.md
+          </text>
+          <circle class="badge" cx="570" cy="200" r="9" />
+          <text class="badge-t" x="570" y="204" text-anchor="middle">A</text>
+        </g>
+
+        <!-- Skill (B) -->
+        <g
+          class="hit"
+          data-card="cB"
+          tabindex="0"
+          role="button"
+          aria-label="B, update-what-we-used skill: show explanation"
+        >
+          <rect class="chip" x="372" y="264" width="196" height="26" rx="6" />
+          <text class="t-mono" x="470" y="281" text-anchor="middle">
+            skill /update-what-we-used
+          </text>
+          <circle class="badge" cx="354" cy="277" r="9" />
+          <text class="badge-t" x="354" y="281" text-anchor="middle">B</text>
+        </g>
+
+        <!-- group -> step 1 -->
+        <line
+          class="arrow"
+          x1="103"
+          y1="184"
+          x2="103"
+          y2="152"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="111" y="172">reads</text>
+        <!-- skill -> WHAT-WE-USED -->
+        <line
+          class="arrow"
+          x1="489"
+          y1="264"
+          x2="489"
+          y2="246"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="499" y="258">appends rows</text>
+
+        <!-- Legend -->
+        <rect class="box ok" x="640" y="204" width="28" height="16" rx="4" />
+        <text class="t-sub" x="680" y="216">confirmed working</text>
+        <rect
+          class="box pending"
+          x="640"
+          y="236"
+          width="28"
+          height="16"
+          rx="4"
+        />
+        <text class="t-sub" x="680" y="248">written, not yet confirmed</text>
+
+        <!-- Push elbow: step 5 -> GitHub repo -->
+        <path class="arrow" d="M879,148 V330 H128 V386" marker-end="url(#ah)" />
+        <text class="arrow-label" x="504" y="324" text-anchor="middle">
+          push to GitHub (GitHub Desktop)
+        </text>
+
+        <!-- ================= Lane 2: GitHub ================= -->
+        <rect class="lane" x="10" y="350" width="960" height="270" rx="14" />
+        <text class="lane-label" x="28" y="374">
+          GITHUB, CI AND THE SECOND PC
+        </text>
+
+        <!-- GitHub repo (6) -->
+        <g
+          class="hit"
+          data-card="c6"
+          tabindex="0"
+          role="button"
+          aria-label="6, GitHub repository: show explanation"
+        >
+          <rect class="box ok" x="28" y="388" width="200" height="84" rx="10" />
+          <text class="t-title" x="40" y="410">GitHub repository</text>
+          <text class="t-sub" x="40" y="426">Rekt-Cat/sceneroom · main</text>
+          <rect class="pill-ok" x="40" y="440" width="124" height="18" rx="9" />
+          <text class="pt-ok" x="102" y="452.5" text-anchor="middle">
+            source of truth
+          </text>
+          <circle class="badge" cx="210" cy="406" r="9" />
+          <text class="badge-t" x="210" y="410" text-anchor="middle">6</text>
+        </g>
+
+        <!-- Second PC (8) -->
+        <g
+          class="hit"
+          data-card="c8"
+          tabindex="0"
+          role="button"
+          aria-label="8, second PC: show explanation"
+        >
+          <rect
+            class="box pending"
+            x="700"
+            y="388"
+            width="252"
+            height="84"
+            rx="10"
+          />
+          <text class="t-title" x="712" y="410">Second PC</text>
+          <text class="t-sub" x="712" y="426">clone → fnm install →</text>
+          <text class="t-sub" x="712" y="440">
+            corepack enable → pnpm install
+          </text>
+          <rect
+            class="pill-pending"
+            x="712"
+            y="448"
+            width="104"
+            height="18"
+            rx="9"
+          />
+          <text class="pt-pending" x="764" y="460.5" text-anchor="middle">
+            not tested yet
+          </text>
+          <circle class="badge" cx="934" cy="406" r="9" />
+          <text class="badge-t" x="934" y="410" text-anchor="middle">8</text>
+        </g>
+
+        <line
+          class="arrow"
+          x1="230"
+          y1="468"
+          x2="698"
+          y2="468"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="464" y="460" text-anchor="middle">
+          git pull / clone
+        </text>
+
+        <!-- repo -> Vercel -->
+        <line
+          class="arrow"
+          x1="230"
+          y1="418"
+          x2="298"
+          y2="418"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="264" y="410" text-anchor="middle">
+          deploys
+        </text>
+
+        <!-- Vercel (9) -->
+        <g
+          class="hit"
+          data-card="c9"
+          tabindex="0"
+          role="button"
+          aria-label="9, Vercel: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="300"
+            y="388"
+            width="320"
+            height="60"
+            rx="10"
+          />
+          <text class="t-title" x="312" y="410">Vercel (Hobby)</text>
+          <text class="t-sub" x="312" y="426">
+            every push builds; main = live site
+          </text>
+          <text class="t-sub" x="312" y="440">
+            other branches = preview URL
+          </text>
+          <circle class="badge" cx="602" cy="406" r="9" />
+          <text class="badge-t" x="602" y="410" text-anchor="middle">9</text>
+        </g>
+
+        <!-- repo -> CI -->
+        <line
+          class="arrow"
+          x1="128"
+          y1="474"
+          x2="128"
+          y2="506"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="140" y="494">
+          a push to main or a pull request starts CI
+        </text>
+
+        <!-- CI group (7) -->
+        <g
+          class="hit"
+          data-card="c7"
+          tabindex="0"
+          role="button"
+          aria-label="7, GitHub Actions CI: show explanation"
+        >
+          <rect class="group" x="28" y="508" width="924" height="92" rx="10" />
+          <text class="lane-label" x="44" y="529">GITHUB ACTIONS · CI</text>
+          <circle class="badge" cx="214" cy="525" r="9" />
+          <text class="badge-t" x="214" y="529" text-anchor="middle">7</text>
+          <rect
+            class="pill-ok"
+            x="750"
+            y="514"
+            width="186"
+            height="20"
+            rx="10"
+          />
+          <text class="pt-ok" x="843" y="528" text-anchor="middle">
+            last confirmed green: b33fe6b
+          </text>
+          <text class="t-mono-sm" x="244" y="529">
+            + job 2: browser tests (e2e), not run yet
+          </text>
+
+          <rect class="box" x="44" y="540" width="92" height="48" rx="8" />
+          <text class="t-step" x="90" y="560" text-anchor="middle">
+            checkout
+          </text>
+          <text class="t-mono-sm" x="90" y="576" text-anchor="middle">v7</text>
+          <rect class="box" x="144" y="540" width="92" height="48" rx="8" />
+          <text class="t-step" x="190" y="560" text-anchor="middle">
+            setup-node
+          </text>
+          <text class="t-mono-sm" x="190" y="576" text-anchor="middle">
+            .node-version
+          </text>
+          <rect class="box" x="244" y="540" width="92" height="48" rx="8" />
+          <text class="t-step" x="290" y="560" text-anchor="middle">
+            corepack
+          </text>
+          <text class="t-mono-sm" x="290" y="576" text-anchor="middle">
+            enable
+          </text>
+          <rect class="box" x="344" y="540" width="92" height="48" rx="8" />
+          <text class="t-step" x="390" y="560" text-anchor="middle">
+            install
+          </text>
+          <text class="t-mono-sm" x="390" y="576" text-anchor="middle">
+            frozen lockfile
+          </text>
+          <rect class="box" x="444" y="540" width="92" height="48" rx="8" />
+          <text class="t-step" x="490" y="560" text-anchor="middle">
+            format
+          </text>
+          <text class="t-mono-sm" x="490" y="576" text-anchor="middle">
+            prettier check
+          </text>
+          <rect class="box" x="544" y="540" width="92" height="48" rx="8" />
+          <text class="t-step" x="590" y="560" text-anchor="middle">lint</text>
+          <text class="t-mono-sm" x="590" y="576" text-anchor="middle">
+            eslint
+          </text>
+          <rect
+            class="box warn"
+            x="644"
+            y="540"
+            width="92"
+            height="48"
+            rx="8"
+          />
+          <text class="t-step" x="690" y="560" text-anchor="middle">types</text>
+          <text class="t-mono-sm" x="690" y="576" text-anchor="middle">
+            typegen + tsc
+          </text>
+          <rect class="box" x="744" y="540" width="92" height="48" rx="8" />
+          <text class="t-step" x="790" y="560" text-anchor="middle">test</text>
+          <text class="t-mono-sm" x="790" y="576" text-anchor="middle">
+            vitest
+          </text>
+          <rect class="box" x="844" y="540" width="92" height="48" rx="8" />
+          <text class="t-step" x="890" y="560" text-anchor="middle">build</text>
+          <text class="t-mono-sm" x="890" y="576" text-anchor="middle">
+            next build
+          </text>
+          <polygon class="chev" points="137,560 142,564 137,568" />
+          <polygon class="chev" points="237,560 242,564 237,568" />
+          <polygon class="chev" points="337,560 342,564 337,568" />
+          <polygon class="chev" points="437,560 442,564 437,568" />
+          <polygon class="chev" points="537,560 542,564 537,568" />
+          <polygon class="chev" points="637,560 642,564 637,568" />
+          <polygon class="chev" points="737,560 742,564 737,568" />
+          <polygon class="chev" points="837,560 842,564 837,568" />
+        </g>
+        <text class="note-warn" x="690" y="613" text-anchor="middle">
+          first run failed here; typegen added
+        </text>
+      </svg>
+    </div>
+    <figcaption>
+      Each edit is formatted by the hook, checked on your Mac (and again by the
+      pre-push hook before anything leaves your Mac), then checked on GitHub's
+      machines and built by Vercel. Numbers follow the order an edit travels.
+      Letters mark supporting parts that are not steps in that path.
+    </figcaption>
+  </figure>
+
+  <section class="walk" aria-label="Walkthrough">
+    <h2>The path of an edit, step by step</h2>
+    <p class="hint">
+      Each card says what the part is, how it compares to something in Unity,
+      what happens there, and what to look for if it breaks.
+    </p>
+    <div class="cards">
+      <article class="card" id="c1">
+        <div class="card-head">
+          <span class="num">1</span>
+          <h3>Claude Code</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            The AI assistant that runs inside VS Code. You describe a task in
+            plain words. It reads files, runs commands and edits code, and asks
+            you before anything risky.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            A teammate working inside your Editor who can edit scripts and run
+            menu items. The difference: it remembers nothing between sessions
+            except what it reads from files.
+          </dd>
+          <dt>What happens here</dt>
+          <dd>
+            At the start of a session it reads the repo files in box A, so it
+            knows the plan, the rules and past decisions.
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>
+            In a very long chat it can lose details. That is why facts live in
+            files, and why it checks real versions with commands instead of
+            guessing.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c2">
+        <div class="card-head">
+          <span class="num">2</span>
+          <h3>Edit a file</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            Claude changes a file with its Write or Edit tool. Each change is
+            one tool call.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>Saving a script in your Assets folder.</dd>
+          <dt>What happens here</dt>
+          <dd>
+            The change lands in your working folder only. Nothing reaches GitHub
+            until you commit and push (box 5).
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>
+            Easy to undo: git shows exactly which lines changed, and you can
+            discard them.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c3">
+        <div class="card-head">
+          <span class="num">3</span>
+          <h3>Prettier hook</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            A hook is a command that Claude Code itself runs automatically when
+            something happens. This one runs after every successful Write or
+            Edit (<code>PostToolUse</code>, matcher
+            <code>Write|Edit</code>) and tidies that file's layout with
+            Prettier, a formatter (<a href="#dd-hook">what that means</a>). It
+            only touches files inside this project.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            Like an <code>AssetPostprocessor</code>: code that runs
+            automatically when an asset changes. Here it reacts to Claude's
+            edits.
+          </dd>
+          <dt>What happens here</dt>
+          <dd>
+            The hook receives the edited file's path as JSON, extracts it with
+            <code>jq</code>, and calls Prettier on that one file.
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>
+            The command ends with <code>|| true</code>, so it never blocks you,
+            which also means a broken hook fails silently. It has fired: files
+            Claude edited on 13 Nov 2026 came back reformatted.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c4">
+        <div class="card-head">
+          <span class="num">4</span>
+          <h3>Local checks</h3>
+          <span class="tag ok">passes</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            Five checks, run through Turborepo (a task runner).
+            <strong>format</strong> asks "is every file laid out the way
+            Prettier would lay it out?" (<code>pnpm format:check</code>).
+            <strong>lint</strong> asks "does this look like a mistake?" (done by
+            ESLint). <strong>types</strong> asks "do all the values fit
+            together?" (done by TypeScript's checker, <code>tsc</code>, after
+            <code>next typegen</code> has written type definitions for our
+            pages). <strong>test</strong> runs our Vitest tests on the scene
+            logic and the store. <strong>build</strong> makes the real
+            production version of the app (<code>next build</code>). More
+            detail: <a href="#dd-checkers">the three checkers</a> and
+            <a href="#dd-types">what "types" means</a>.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            Checking the Console for compile errors, then making a test build
+            before you hand it over.
+          </dd>
+          <dt>What happens here</dt>
+          <dd>
+            Run from the repo root with <code>pnpm format:check</code>,
+            <code>pnpm check-types</code>, <code>pnpm lint</code>,
+            <code>pnpm test</code> and <code>pnpm build</code>. They also run
+            automatically: a git <code>pre-push</code> hook (Husky,
+            <code>.husky/pre-push</code>) runs all five before every push and
+            blocks the push if one fails. The tests that use Postgres skip
+            themselves, with a warning, when Docker is not running, so a push is
+            not blocked by a database that is simply off (in CI they never skip)
+            (the format check was added to it on 2026-11-20, after a push failed
+            CI only because of formatting). The browser tests (<code
+              >pnpm test:e2e</code
+            >, Playwright) are NOT in the hook: they take minutes, so they run
+            on demand and in CI. Skip it once from a terminal with
+            <code>git push --no-verify</code>. Turborepo works out the order and
+            caches results. "FULL TURBO" in its output means it reused an
+            earlier result.
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>
+            A cached pass can hide a real failure. We hit this while reproducing
+            the CI bug: the check replayed an old success until we forced a real
+            run with <code>--force</code>.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c5">
+        <div class="card-head">
+          <span class="num">5</span>
+          <h3>Commit + push</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            A commit is a saved snapshot of the files with a message, stored on
+            your Mac. A push uploads your new commits to GitHub. You push with
+            GitHub Desktop.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            Checking in changes in version control, except a commit stays local
+            until you push.
+          </dd>
+          <dt>What happens here</dt>
+          <dd>
+            Commits are small, with plain messages and no co-author line, as you
+            asked.
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>
+            The pre-push hook runs the checks first; it was tested with a
+            deliberate error from a terminal, but not yet from GitHub Desktop
+            itself. Local commits can still be fixed. After a push to a public
+            repo, assume everyone can read it, so secrets never go in (<code
+              >.env</code
+            >
+            files are ignored).
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c6">
+        <div class="card-head">
+          <span class="num">6</span>
+          <h3>GitHub repository</h3>
+          <span class="tag ok">source of truth</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            The online copy of the project at
+            <code>github.com/Rekt-Cat/sceneroom</code>, branch
+            <code>main</code>, with the full history.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>The cloud server your version control syncs to.</dd>
+          <dt>What happens here</dt>
+          <dd>
+            A push to <code>main</code>, or a pull request, starts the CI
+            workflow (7). Vercel (9) builds from here, and your other PC (8)
+            gets the code from here.
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>The repo is public: anything pushed can be read by anyone.</dd>
+        </dl>
+      </article>
+
+      <article class="card wide" id="c7">
+        <div class="card-head">
+          <span class="num">7</span>
+          <h3>GitHub Actions CI</h3>
+          <span class="tag ok">last confirmed green: b33fe6b</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            A workflow file, <code>.github/workflows/ci.yml</code>. On every
+            push to <code>main</code> and every pull request, GitHub starts a
+            fresh Linux machine, fetches your code and runs the steps below. It
+            repeats your local checks in a clean place.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            A build server such as Unity Cloud Build that builds from a clean
+            checkout, so "works on my machine" problems show up.
+          </dd>
+          <dt>
+            The steps of the main job (<code>verify</code>), in order. GitHub
+            starts a Postgres 17 container first (the same user, password and
+            database as <code>docker-compose.yml</code>)
+          </dt>
+          <dd>
+            <ol class="ci">
+              <li>
+                <strong>checkout</strong> downloads your repository onto the
+                fresh machine.
+              </li>
+              <li>
+                <strong>setup-node</strong> installs the Node version named in
+                <code>.node-version</code> (24).
+              </li>
+              <li>
+                <strong>corepack enable</strong> lets <code>pnpm</code> use the
+                version pinned in <code>package.json</code> (12.18.0).
+              </li>
+              <li>
+                <strong>install</strong> with a frozen lockfile installs exactly
+                what <code>pnpm-lock.yaml</code> lists and fails if it disagrees
+                with <code>package.json</code>.
+              </li>
+              <li>
+                <strong>migrate</strong> builds the database tables with
+                <code>pnpm --filter @sceneroom/db migrate:deploy</code>, because
+                many tests use the real Postgres (added 2026-11-24).
+              </li>
+              <li>
+                <strong>format</strong> runs <code>prettier --check</code> and
+                fails if any file is not formatted.
+              </li>
+              <li><strong>lint</strong> runs ESLint.</li>
+              <li class="fail">
+                <strong>types</strong> runs <code>next typegen</code> then
+                <code>tsc</code>. This failed on the first run.
+              </li>
+              <li>
+                <strong>test</strong> runs <code>vitest</code> in every package:
+                the scene logic (<code>packages/shared</code>), the web app, the
+                collab server, the token package and the database package. The
+                tests that need Postgres are never skipped here: a missing
+                database is a failure in CI.
+              </li>
+              <li>
+                <strong>build</strong> runs <code>next build</code>, a full
+                production build.
+              </li>
+            </ol>
+          </dd>
+          <dt>The second job (<code>e2e</code>)</dt>
+          <dd>
+            Added 2026-11-20 and not run on GitHub yet. It starts its own fresh
+            machine, installs the same packages, downloads Playwright's Chromium
+            with the system libraries it needs, runs
+            <code>pnpm test:e2e</code> (a real browser opens the real editor and
+            clicks through it: a new project, a cube to Unwrap, a hand and a
+            person built with the edit tools, two or three windows sharing a
+            scene and holding objects; the account tests skip themselves here
+            because sign-in is not set up) and, if a test fails, uploads the
+            report and screenshots as a downloadable file. It is a separate job
+            so the quick checks report first.
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>
+            A red cross on the repository's Actions tab means a step failed;
+            open the step to read its log. Our first run failed at
+            <strong>types</strong>: Next.js generates some files that git
+            ignores, so a clean checkout did not have them. The fix (commit
+            <code>e798eac</code>) generates them first. CI does not stop Vercel:
+            the two run separately. CI has not been checked on commits since
+            <code>b33fe6b</code>, and pushing a plain branch does not start it
+            until a pull request is opened.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c8">
+        <div class="card-head">
+          <span class="num">8</span>
+          <h3>Second PC</h3>
+          <span class="tag pending">not tested yet</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            Your other computer. It gets the project with a clone the first time
+            and a pull afterwards.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            Opening the same Unity project on another machine from the cloud
+            copy.
+          </dd>
+          <dt>What happens here</dt>
+          <dd>
+            The steps are in <code>docs/dev/SETUP-SECOND-PC.md</code>: clone,
+            <code>fnm install</code>, <code>corepack enable</code>,
+            <code>pnpm install</code>. Real <code>.env</code> files and Claude's
+            private memory notes are not synced.
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>
+            Untested. The guide assumes macOS, so say so if the other PC runs
+            Windows.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="c9">
+        <div class="card-head">
+          <span class="num">9</span>
+          <h3>Vercel</h3>
+          <span class="tag ok">live</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            The host for the web app (Hobby plan) at
+            <code>sceneroom.vercel.app</code>. It watches the GitHub repository
+            and builds the app on every push. Settings live in the Vercel
+            dashboard (Root Directory <code>apps/web</code>), not in the repo.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            Like a build server that also uploads each WebGL build to your web
+            host automatically.
+          </dd>
+          <dt>What happens here</dt>
+          <dd>
+            A push to <code>main</code> becomes the live site. Any other pushed
+            branch gets its own preview URL and does not touch the live site
+            (standard Vercel behaviour; no preview has been looked at yet).
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>
+            If the Vercel build fails, the old version stays live. If it builds
+            but the app is broken, that broken version goes live: Vercel does
+            not wait for CI. That is why the pre-push hook (step 4) matters. The
+            Deployments tab can roll back to an earlier version.
+          </dd>
+        </dl>
+      </article>
+    </div>
+
+    <h2>Supporting parts</h2>
+    <div class="cards">
+      <article class="card" id="cA">
+        <div class="card-head">
+          <span class="num">A</span>
+          <h3>Repo files Claude reads</h3>
+          <span class="tag ok">in use</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            Four files that carry the project's memory:
+            <code>CLAUDE.md</code> (rules and commands),
+            <code>docs/overview/PLAN.md</code> (where we are and what is next),
+            <code>docs/overview/DECISIONS.md</code> (why choices were made) and
+            <code>docs/overview/WHAT-WE-USED.md</code> (tools and libraries).
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>The README and design docs every new teammate reads first.</dd>
+          <dt>What happens here</dt>
+          <dd>
+            They sync through git, so a session on either PC starts from the
+            same facts.
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>
+            An out-of-date file misleads. Claude updates <code>PLAN.md</code> at
+            the end of each step.
+          </dd>
+        </dl>
+      </article>
+
+      <article class="card" id="cB">
+        <div class="card-head">
+          <span class="num">B</span>
+          <h3>Skill: /update-what-we-used</h3>
+          <span class="tag ok">working</span>
+        </div>
+        <dl>
+          <dt>What it is</dt>
+          <dd>
+            A skill is a saved set of instructions in
+            <code>.claude/skills/&lt;name&gt;/SKILL.md</code>
+            that Claude follows on request or when it fits. This one adds new
+            tools to
+            <code>WHAT-WE-USED.md</code> using the real installed versions.
+          </dd>
+          <dt>Unity comparison</dt>
+          <dd>
+            A custom Editor menu item that runs the same steps every time.
+          </dd>
+          <dt>What happens here</dt>
+          <dd>
+            Loaded and used on 13 Nov 2026 to update
+            <code>WHAT-WE-USED.md</code>.
+          </dd>
+          <dt>If it goes wrong</dt>
+          <dd>
+            A skill is only instructions for Claude, unlike a hook that Claude
+            Code runs by itself, so it can be skipped. Check the file
+            afterwards.
+          </dd>
+        </dl>
+      </article>
+    </div>
+  </section>
+
+  <section class="deep" aria-label="Deep dives">
+    <h2>Deep dives</h2>
+    <p class="hint">
+      Plain-words explanations of the parts that need more than a card: the
+      checkers, the Prettier hook, and what "types" means.
+    </p>
+
+    <div class="panel" id="dd-checkers">
+      <h3>Checkers, each with its own job</h3>
+      <p>
+        Your code is looked at by several automatic checkers. They are easy to
+        mix up because several of them print warnings, but each one asks a
+        different question. A fourth check runs our tests, and the build then
+        proves the whole app really compiles.
+      </p>
+      <div class="tbl-wrap">
+        <table class="cmp">
+          <thead>
+            <tr>
+              <th>Tool</th>
+              <th>The question it asks</th>
+              <th>What it catches</th>
+              <th>Unity comparison</th>
+              <th>Changes your files?</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Prettier</strong></td>
+              <td>"Is it laid out consistently?"</td>
+              <td>Spacing, line breaks, quote style, aligned tables</td>
+              <td>
+                The editor's Format Document, with the same settings for
+                everyone
+              </td>
+              <td>Yes, layout only. It never changes what the code means.</td>
+            </tr>
+            <tr>
+              <td><strong>ESLint</strong> (the "lint" step)</td>
+              <td>"Does this look like a mistake?"</td>
+              <td>
+                Typical examples: a variable that is never used, or a React Hook
+                called in the wrong place
+              </td>
+              <td>Compiler warnings and Roslyn analyzers</td>
+              <td>No. In our setup it only reports.</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>TypeScript</strong> (<code>tsc</code>, the "types" step)
+              </td>
+              <td>"Do the values fit together?"</td>
+              <td>
+                Passing two numbers where three are needed, calling something
+                that does not exist
+              </td>
+              <td>The C# compiler's type checking</td>
+              <td>No. <code>--noEmit</code> means check only.</td>
+            </tr>
+            <tr>
+              <td><strong>Vitest</strong> (the "test" step)</td>
+              <td>"Does our logic give the results we expect?"</td>
+              <td>
+                Wrong results in the scene functions, such as removing a node
+                but leaving its children behind
+              </td>
+              <td>Unity Test Framework (Edit Mode tests)</td>
+              <td>No. It only runs the tests and reports.</td>
+            </tr>
+            <tr>
+              <td><strong>Build</strong> (<code>next build</code>)</td>
+              <td>"Does the whole app really build for production?"</td>
+              <td>Problems that only show up in a full build</td>
+              <td>Making a player build</td>
+              <td>
+                It writes build output into <code>.next</code>, which git
+                ignores.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="ba">
+        <div>
+          <span class="ba-label">Prettier changes the layout</span>
+          <pre class="code">
+before: const p={x:1,y:2}
+after:  const p = { x: 1, y: 2 };</pre>
+        </div>
+        <div>
+          <span class="ba-label">ESLint reports a likely mistake</span>
+          <pre class="code">
+const unused = 5;
+// typical report: defined but never used</pre>
+        </div>
+        <div>
+          <span class="ba-label">TypeScript reports a mismatch</span>
+          <pre class="code">
+type Vec3 = [number, number, number];
+const position: Vec3 = [1, 2];
+// error: needs 3 numbers, got 2</pre>
+        </div>
+      </div>
+      <p>
+        The ESLint and TypeScript lines are typical examples to show the kind of
+        thing each tool finds. Which exact ESLint rules are on depends on the
+        project's ESLint settings. All of them run on your Mac (automatically
+        before each push, apart from Prettier's own step) and again in CI.
+        Prettier is the only one that rewrites files.
+      </p>
+    </div>
+
+    <div class="panel" id="dd-hook">
+      <h3>What the Prettier hook really does</h3>
+      <h4>What Prettier is</h4>
+      <p>
+        Prettier is a <strong>code formatter</strong>: a program that rewrites
+        the layout of a file (spaces, line breaks, quotes, semicolons, table
+        alignment) into one consistent style. It never changes what the code
+        means. It works on JavaScript, TypeScript, JSON, CSS, Markdown, HTML and
+        more.
+      </p>
+      <h4>Why we use it</h4>
+      <p>
+        Everyone's files end up looking the same, nobody argues about spacing,
+        and git diffs show real changes instead of whitespace noise. CI also
+        runs <code>prettier --check</code>, so an unformatted file turns the
+        build red. The hook makes sure Claude's edits never cause that.
+      </p>
+      <p>
+        <strong>Unity comparison:</strong> it is like Visual Studio's or Rider's
+        "Format Document", except the settings are identical for everyone and it
+        runs automatically.
+      </p>
+      <h4>A real example from this project</h4>
+      <p>
+        We tested the hook's command on a scratch Markdown file with extra blank
+        lines and an uneven table. This is what came out:
+      </p>
+      <div class="ba">
+        <div>
+          <span class="ba-label">Before</span>
+          <pre class="code">
+# Test
+
+
+
+| a | b |
+|--|--|
+| longer cell | x |</pre>
+        </div>
+        <div>
+          <span class="ba-label">After Prettier</span>
+          <pre class="code">
+# Test
+
+| a           | b   |
+| ----------- | --- |
+| longer cell | x   |</pre>
+        </div>
+      </div>
+      <h4>What happens, in order</h4>
+      <ol class="steps">
+        <li>
+          Claude uses the <strong>Edit</strong> or <strong>Write</strong> tool
+          on a file.
+        </li>
+        <li>
+          If that tool call succeeds, Claude Code announces a
+          <code>PostToolUse</code> event ("a tool just finished").
+        </li>
+        <li>
+          The settings file has a hook whose <strong>matcher</strong> is
+          <code>Write|Edit</code>, so Claude Code runs the hook's command in a
+          shell. It sends the command a short JSON message about what just
+          happened, through the command's <strong>standard input</strong>
+          (its input pipe).
+        </li>
+        <li>
+          <code>jq</code>, a small program for reading JSON, pulls the edited
+          file's path out of that message.
+        </li>
+        <li>
+          The shell checks that the path is
+          <strong>inside the project folder</strong>. If it is not (for example
+          one of Claude's memory notes), it stops. That is why the hook never
+          touches files elsewhere.
+        </li>
+        <li>
+          Prettier runs on that one file and rewrites it in place if its layout
+          needs fixing.
+        </li>
+        <li>
+          Output and errors are thrown away, and the command always reports
+          success, so a formatting hiccup can never block Claude.
+        </li>
+      </ol>
+      <h4>The command, piece by piece</h4>
+      <div class="tbl-wrap">
+        <table class="cmp">
+          <thead>
+            <tr>
+              <th>Piece</th>
+              <th>What it does</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <code
+                  >jq -r '.tool_response.filePath // .tool_input.file_path //
+                  empty'</code
+                >
+              </td>
+              <td>
+                Reads the JSON message and takes out the edited file's path.
+              </td>
+            </tr>
+            <tr>
+              <td><code>| { read -r f; ... }</code></td>
+              <td>
+                Passes that path to the next part, which stores it in a variable
+                called <code>f</code>.
+              </td>
+            </tr>
+            <tr>
+              <td><code>case "$f" in "$CLAUDE_PROJECT_DIR"/*)</code></td>
+              <td>
+                Only continues if the path starts with the project folder.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <code
+                  >node_modules/.bin/prettier --write --ignore-unknown
+                  "$f"</code
+                >
+              </td>
+              <td>
+                Runs the project's own Prettier on that file.
+                <code>--write</code> rewrites it in place.
+                <code>--ignore-unknown</code> skips file types Prettier does not
+                know. Prettier also obeys <code>.prettierrc.json</code> and
+                <code>.prettierignore</code>.
+              </td>
+            </tr>
+            <tr>
+              <td><code>&gt;/dev/null 2&gt;&amp;1 || true</code></td>
+              <td>
+                Discards all output and reports success even if Prettier failed.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <h4>What it does not do</h4>
+      <p>
+        It does not lint or type-check. It does not run when you edit a file
+        yourself, or when a file changes through a shell command. It does not
+        commit anything. Running
+        <code>pnpm format</code> by hand formats the whole project, which is a
+        separate command.
+      </p>
+      <h4>Is it working?</h4>
+      <p>
+        Yes. On 13 Nov 2026 Claude Code reported that the hook had reformatted
+        files right after Claude wrote them.
+      </p>
+    </div>
+
+    <div class="panel" id="dd-types">
+      <h3>What "types" means: TypeScript, typegen and tsc</h3>
+      <h4>TypeScript and types</h4>
+      <p>
+        JavaScript lets you pass anything anywhere and only complains when the
+        code runs.
+        <strong>TypeScript</strong> is JavaScript plus labels that say what kind
+        of value each thing is, such as "three numbers". A
+        <strong>type check</strong> reads all the code and makes sure the values
+        fit their labels, before anything runs.
+      </p>
+      <p>
+        <strong>Unity comparison:</strong> C# already works this way, and the
+        compiler stops you from passing a <code>string</code> where a
+        <code>Vector3</code> is expected. TypeScript brings that safety to
+        JavaScript.
+      </p>
+      <h4>tsc</h4>
+      <p>
+        <code>tsc</code> is the TypeScript compiler. We run it as
+        <code>tsc --noEmit</code>, which means "check only, write no output
+        files". Next.js does the real compiling itself during the build.
+      </p>
+      <h4>typegen</h4>
+      <p>
+        Next.js builds your pages from the files in <code>src/app</code>: a file
+        named <code>page.tsx</code> or <code>layout.tsx</code> becomes part of
+        the site. <code>next typegen</code> writes
+        <strong>type definitions</strong> that describe those pages, for example
+        <code>LayoutProps</code>, the type of what our root layout receives.
+        They go into <code>.next/types</code>, plus a file called
+        <code>next-env.d.ts</code>.
+      </p>
+      <p>
+        <strong>Unity comparison:</strong> like Unity generating a C# class from
+        an asset, which the Input System can do from an Input Actions asset. The
+        generated file is not hand-written and is not committed.
+      </p>
+      <h4>Why the order matters, and why CI failed</h4>
+      <p>
+        Our <code>layout.tsx</code> uses <code>LayoutProps</code>. If the
+        generated file is missing, <code>tsc</code> says
+        <code>Cannot find name 'LayoutProps'</code>. On your Mac the files
+        existed from earlier builds. On GitHub's clean machine they did not, so
+        the first CI run failed. The script is now
+        <code>next typegen &amp;&amp; tsc --noEmit</code>, and
+        <code>&amp;&amp;</code> means "run the second command only if the first
+        succeeded".
+      </p>
+    </div>
+
+    <div class="panel" id="dd-glossary">
+      <h3>Words on this page</h3>
+      <dl class="gloss">
+        <div>
+          <dt>Claude Code</dt>
+          <dd>The AI assistant that works inside VS Code on your project.</dd>
+        </div>
+        <div>
+          <dt>Tool call</dt>
+          <dd>
+            One action Claude takes, such as reading a file, editing a file or
+            running a command.
+          </dd>
+        </div>
+        <div>
+          <dt>Hook</dt>
+          <dd>
+            A command that Claude Code runs automatically when a chosen event
+            happens.
+          </dd>
+        </div>
+        <div>
+          <dt>PostToolUse</dt>
+          <dd>The event "a tool call just finished successfully".</dd>
+        </div>
+        <div>
+          <dt>Matcher</dt>
+          <dd>
+            The filter that says which tools trigger a hook.
+            <code>Write|Edit</code> means the Write tool or the Edit tool.
+          </dd>
+        </div>
+        <div>
+          <dt>Standard input (stdin)</dt>
+          <dd>
+            The channel a command reads data from. Claude Code sends the hook
+            its message there.
+          </dd>
+        </div>
+        <div>
+          <dt>JSON</dt>
+          <dd>
+            A plain-text format for structured data, such as
+            <code>{"file_path": "..."}</code>.
+          </dd>
+        </div>
+        <div>
+          <dt>jq</dt>
+          <dd>A small command-line program for picking values out of JSON.</dd>
+        </div>
+        <div>
+          <dt>Prettier</dt>
+          <dd>
+            A formatter that rewrites a file's layout into one consistent style.
+          </dd>
+        </div>
+        <div>
+          <dt>ESLint</dt>
+          <dd>
+            A linter: it scans code for likely mistakes and risky patterns.
+          </dd>
+        </div>
+        <div>
+          <dt>Lint</dt>
+          <dd>
+            An automatic scan for likely mistakes. The name comes from picking
+            lint off clothes.
+          </dd>
+        </div>
+        <div>
+          <dt>TypeScript</dt>
+          <dd>
+            JavaScript with type labels, so mismatches are caught before the
+            code runs.
+          </dd>
+        </div>
+        <div>
+          <dt>Type check / tsc</dt>
+          <dd>
+            The check that values match their labels, run by the TypeScript
+            compiler (<code>tsc</code>).
+          </dd>
+        </div>
+        <div>
+          <dt>typegen</dt>
+          <dd>
+            A Next.js command that writes type definitions for your pages and
+            layouts.
+          </dd>
+        </div>
+        <div>
+          <dt>Build</dt>
+          <dd>
+            Turning the source into the real, optimized version that gets
+            deployed. Next.js writes it to <code>.next</code>.
+          </dd>
+        </div>
+        <div>
+          <dt>Production build</dt>
+          <dd>
+            The build meant for real visitors, as opposed to the dev server you
+            use while working.
+          </dd>
+        </div>
+        <div>
+          <dt>Turborepo</dt>
+          <dd>
+            A task runner for projects with several packages. It orders tasks
+            and reuses earlier results.
+          </dd>
+        </div>
+        <div>
+          <dt>Cache / FULL TURBO</dt>
+          <dd>
+            Turborepo reusing an earlier result when nothing changed. "FULL
+            TURBO" means every task was reused.
+          </dd>
+        </div>
+        <div>
+          <dt>pnpm</dt>
+          <dd>
+            The package manager: it installs libraries and runs the project's
+            scripts.
+          </dd>
+        </div>
+        <div>
+          <dt>package.json</dt>
+          <dd>
+            A package's ID card: its name, scripts and the libraries it needs.
+          </dd>
+        </div>
+        <div>
+          <dt>Lockfile</dt>
+          <dd>
+            <code>pnpm-lock.yaml</code> records the exact version of every
+            library, so everyone gets identical ones.
+          </dd>
+        </div>
+        <div>
+          <dt>Frozen lockfile</dt>
+          <dd>
+            Install exactly what the lockfile says, and fail instead of changing
+            it.
+          </dd>
+        </div>
+        <div>
+          <dt>Corepack</dt>
+          <dd>
+            A Node feature that makes <code>pnpm</code> use the version pinned
+            in <code>package.json</code>.
+          </dd>
+        </div>
+        <div>
+          <dt>Node.js</dt>
+          <dd>Runs JavaScript outside the browser. All our tools run on it.</dd>
+        </div>
+        <div>
+          <dt>.node-version</dt>
+          <dd>A one-line file naming the Node version this project uses.</dd>
+        </div>
+        <div>
+          <dt>fnm</dt>
+          <dd>
+            A tool that installs several Node versions and switches between them
+            per project.
+          </dd>
+        </div>
+        <div>
+          <dt>Commit</dt>
+          <dd>A saved snapshot of the files with a message, stored locally.</dd>
+        </div>
+        <div>
+          <dt>Push / pull / clone</dt>
+          <dd>
+            Push uploads commits to GitHub. Pull downloads new ones. Clone makes
+            the first full copy.
+          </dd>
+        </div>
+        <div>
+          <dt>Repository (repo)</dt>
+          <dd>The project folder together with its full history.</dd>
+        </div>
+        <div>
+          <dt>main</dt>
+          <dd>The name of the main line of history in the repo.</dd>
+        </div>
+        <div>
+          <dt>CI</dt>
+          <dd>
+            Continuous integration: a robot that checks every push
+            automatically.
+          </dd>
+        </div>
+        <div>
+          <dt>Workflow</dt>
+          <dd>
+            The file describing what GitHub Actions should do on a push. Ours is
+            <code>ci.yml</code>.
+          </dd>
+        </div>
+        <div>
+          <dt>Runner</dt>
+          <dd>
+            The fresh machine GitHub starts to run the workflow. It is thrown
+            away afterwards.
+          </dd>
+        </div>
+        <div>
+          <dt>GitHub Desktop</dt>
+          <dd>A visual app for pushing, pulling and browsing changes.</dd>
+        </div>
+        <div>
+          <dt>.env file</dt>
+          <dd>A local file for secrets and settings. It is never committed.</dd>
+        </div>
+        <div>
+          <dt>Git hook / pre-push</dt>
+          <dd>
+            A script git runs automatically at a set moment. A
+            <code>pre-push</code> hook runs just before a push and cancels it if
+            the script fails. Ours is in <code>.husky/pre-push</code>.
+          </dd>
+        </div>
+        <div>
+          <dt>Husky</dt>
+          <dd>
+            A small tool that keeps git hooks inside the repo, so every clone
+            gets them after <code>pnpm install</code>.
+          </dd>
+        </div>
+        <div>
+          <dt>Vitest</dt>
+          <dd>A test runner: it runs our test files and reports failures.</dd>
+        </div>
+        <div>
+          <dt>Vercel / preview deployment</dt>
+          <dd>
+            Vercel hosts the site. A preview deployment is a separate copy built
+            from a non-<code>main</code> branch, at its own URL.
+          </dd>
+        </div>
+        <div>
+          <dt>Pull request</dt>
+          <dd>A request to merge one branch into another. Ours triggers CI.</dd>
+        </div>
+        <div>
+          <dt>Skill</dt>
+          <dd>
+            A saved set of instructions Claude can follow, stored in
+            <code>.claude/skills/</code>.
+          </dd>
+        </div>
+        <div>
+          <dt>CLAUDE.md</dt>
+          <dd>
+            A file in the repo that tells Claude the project's rules and
+            commands.
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="status" aria-label="Status on 13 Nov 2026">
+    <div>
+      <h2><span class="dot ok"></span>Confirmed on 13 Nov 2026</h2>
+      <ul>
+        <li>Prettier hook fires on Claude's edits</li>
+        <li>Skill <code>/update-what-we-used</code> loads and runs</li>
+        <li>
+          Type-check, lint, 13 tests and build pass locally; the pre-push hook
+          blocks a push with a deliberate error (terminal test)
+        </li>
+        <li>
+          <code>sceneroom.vercel.app</code> answers with HTTP 200; the Vercel
+          dashboard has not been checked
+        </li>
+        <li>CI was last seen green on <code>b33fe6b</code></li>
+      </ul>
+    </div>
+    <div>
+      <h2><span class="dot pending"></span>Not confirmed yet</h2>
+      <ul>
+        <li>Pre-push hook from GitHub Desktop itself</li>
+        <li>CI result on commits after <code>b33fe6b</code></li>
+        <li>A Vercel preview deployment from a branch</li>
+        <li>
+          Second-PC setup: follow <code>docs/dev/SETUP-SECOND-PC.md</code> once
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <p class="foot">
+    Source file: docs/diagrams/dev/dev-workflow.html in the repository.
+  </p>
+</main>
+
+<script>
+  (function () {
+    var reduce =
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    function show(id) {
+      var card = document.getElementById(id);
+      if (!card) return;
+      var old = document.querySelectorAll(".card.active");
+      for (var i = 0; i < old.length; i++) old[i].classList.remove("active");
+      card.classList.add("active");
+      card.scrollIntoView({
+        behavior: reduce ? "auto" : "smooth",
+        block: "center",
+      });
+    }
+    var hits = document.querySelectorAll("[data-card]");
+    for (var i = 0; i < hits.length; i++) {
+      (function (el) {
+        el.addEventListener("click", function (e) {
+          e.stopPropagation();
+          show(el.getAttribute("data-card"));
+        });
+        el.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+            show(el.getAttribute("data-card"));
+          }
+        });
+      })(hits[i]);
+    }
+  })();
+</script>

@@ -13,6 +13,7 @@ import {
   openProjectFromFile,
   saveProjectToFile,
 } from "@/sceneFile/sceneFileActions";
+import { useCollabStore, type CollabStatus } from "@/collab/collabStore";
 import { saveOpenProjectNow } from "@/persistence/startPersistence";
 import { useImportStore } from "@/store/importStore";
 import {
@@ -21,6 +22,8 @@ import {
 } from "@/store/persistenceStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { Icon, type IconName } from "./icons";
+import PresenceBar from "./PresenceBar";
+import ShareDialog from "./ShareDialog";
 import SceneTabs from "./SceneTabs";
 
 const historyButton =
@@ -93,6 +96,68 @@ const SAVE_STATUS: Record<
     help: "This browser is not allowing saving, so the scene is lost when the page closes",
   },
 };
+
+/** What to show for each state of the online connection. */
+const COLLAB_STATUS: Record<
+  Exclude<CollabStatus, "off">,
+  { text: string; dot: string; help: string }
+> = {
+  connecting: {
+    text: "Connecting…",
+    dot: "bg-ed-text-3",
+    help: "Reaching the server for this shared project",
+  },
+  online: {
+    text: "Online",
+    dot: "bg-ed-y",
+    help: "Connected. Your changes are shared with everyone in this project. Undo takes back only your own changes.",
+  },
+  offline: {
+    text: "Offline, changes kept",
+    dot: "bg-ed-select",
+    help: "The connection is lost. You can keep working; your changes are kept here and shared when the connection returns.",
+  },
+  refused: {
+    text: "Link not accepted",
+    dot: "bg-[#e5545f]",
+    help: "The server did not accept this connection. A link may be wrong or expired, or you may not be a member of the project.",
+  },
+};
+
+/** "Online", "Offline, changes kept" and so on, only for a shared project. */
+function CollabStatusBadge() {
+  const status = useCollabStore((state) => state.status);
+  const readOnly = useCollabStore((state) => state.readOnly);
+  const slow = useCollabStore((state) => state.slow);
+  if (status === "off") return null;
+  const entry = COLLAB_STATUS[status];
+  const { dot } = entry;
+  // A host that sleeps when idle needs up to a minute to wake: say so after a few seconds of trying
+  const waking = slow && status === "connecting";
+  const text =
+    status === "online" && readOnly
+      ? "Online, view only"
+      : waking
+        ? "Waking the server…"
+        : entry.text;
+  const help =
+    status === "online" && readOnly
+      ? "You can look but not change anything: this link is view only. A change you try to make is put back."
+      : waking
+        ? "The server is slow to answer. A free host goes to sleep when nobody uses it and takes up to a minute to wake. Your work is kept here and shared as soon as it answers."
+        : entry.help;
+  return (
+    <span
+      role="status"
+      data-testid="collab-status"
+      title={help}
+      className="ml-1 flex items-center gap-1.5 text-xs text-ed-text-3"
+    >
+      <span className={`size-[7px] rounded-full ${dot}`} aria-hidden="true" />
+      {text}
+    </span>
+  );
+}
 
 /** The small "All changes saved" text with a coloured dot. */
 function SaveStatus() {
@@ -192,8 +257,29 @@ function HomeButton() {
   );
 }
 
+/** "Share": opens the box that makes links for other people. */
+function ShareButton({ projectId }: { projectId: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        title="Make a link so other people can open this project with you"
+        className={FILE_BUTTON}
+      >
+        Share
+      </button>
+      {open && (
+        <ShareDialog projectId={projectId} onClose={() => setOpen(false)} />
+      )}
+    </div>
+  );
+}
+
 /** Bar across the top of the editor: logo, Undo and Redo, the project and its scene tabs. */
-export default function TopBar() {
+export default function TopBar({ projectId }: { projectId: string }) {
   const undoLabel = useSceneStore((state) => nextUndoLabel(state.history));
   const redoLabel = useSceneStore((state) => nextRedoLabel(state.history));
   const undo = useSceneStore((state) => state.undo);
@@ -221,9 +307,12 @@ export default function TopBar() {
       </div>
       <span className="h-5 w-px bg-ed-line-strong" aria-hidden="true" />
       <FileButtons />
+      <ShareButton projectId={projectId} />
       <span className="h-5 w-px bg-ed-line-strong" aria-hidden="true" />
       <SceneTabs />
+      <PresenceBar />
       <SaveStatus />
+      <CollabStatusBadge />
     </header>
   );
 }

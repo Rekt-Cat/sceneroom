@@ -59,3 +59,5 @@ export * from "./meshPatch";
 export * from "./simplify";
 export * from "./surfaceSnap";
 export * from "./lscm";
+export * from "./sceneDoc";
+export * from "./selectiveUndo";

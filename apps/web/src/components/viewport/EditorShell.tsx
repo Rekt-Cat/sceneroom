@@ -3,6 +3,15 @@
 import { useEffect, useState, type DragEvent } from "react";
 import { importFiles } from "@/assets/importFile";
 import { watchEditMode } from "@/meshEdit/startEditing";
+import { parseCollabParams } from "@/collab/collabParams";
+import { connectCollab, disconnectCollab } from "@/collab/collabController";
+import { parseAccountParams } from "@/collab/accountParams";
+import {
+  connectionToken,
+  loadConnection,
+  saveConnection,
+} from "@/collab/savedConnection";
+import { collabServerUrl } from "@/collab/serverAddress";
 import { startPersistence } from "@/persistence/startPersistence";
 import { installTestHooks } from "@/testHooks";
 import { usePersistenceStore } from "@/store/persistenceStore";
@@ -51,8 +60,44 @@ export default function EditorShell({ projectId }: { projectId: string }) {
   // Keep the copies of a prefab in step while it is being edited
   useEffect(() => startPrefabEditing(), []);
 
-  // Restore the scene saved last time, then save every change (see startPersistence)
-  useEffect(() => startPersistence(projectId), [projectId]);
+  // Restore the scene saved last time, then save every change (see startPersistence). A link with ?collab= also
+  // goes online (below); if the project is not in this browser yet, it is created for the shared scene.
+  useEffect(() => {
+    // A link opened in this browser is remembered, so opening the project from the home screen later reconnects
+    const fromAddress = parseCollabParams(window.location.search);
+    // "?online=account": open it online with the signed-in person's account (no token in the address)
+    const withAccount = fromAddress
+      ? null
+      : parseAccountParams(window.location.search);
+    if (fromAddress) {
+      saveConnection(projectId, {
+        url: fromAddress.url,
+        token: fromAddress.token,
+      });
+    } else if (withAccount) {
+      saveConnection(projectId, { kind: "account", url: collabServerUrl() });
+    }
+    const connection =
+      fromAddress ??
+      (withAccount
+        ? { kind: "account" as const, url: collabServerUrl() }
+        : loadConnection(projectId));
+    const stopSaving = startPersistence(
+      projectId,
+      fromAddress?.sceneId ?? withAccount?.sceneId,
+    );
+    if (connection) {
+      connectCollab({
+        projectId,
+        url: connection.url,
+        token: connectionToken(projectId, connection),
+      });
+    }
+    return () => {
+      disconnectCollab();
+      stopSaving();
+    };
+  }, [projectId]);
   const missing = usePersistenceStore((state) => state.status === "missing");
 
   // Read the saved panel widths once the page is in the browser (not during the server render)
@@ -94,7 +139,7 @@ export default function EditorShell({ projectId }: { projectId: string }) {
 
   return (
     <div className="flex h-dvh flex-col bg-ed-bg text-ed-text">
-      <TopBar />
+      <TopBar projectId={projectId} />
       <div className="flex min-h-0 flex-1">
         <HierarchyPanel />
         {/* Same colour as the 3D background (Viewport.tsx) so there is no flash while it loads */}

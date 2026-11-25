@@ -19,6 +19,7 @@ import { decodePng, paintSettled } from "@/paint/paintSession";
 import { useBakeStore } from "@/store/bakeStore";
 import { usePaintStore } from "@/store/paintStore";
 import { useEditStore } from "@/store/editStore";
+import { useProjectStore } from "@/store/projectStore";
 import { useSceneStore } from "@/store/sceneStore";
 
 /** What the browser tests may ask about the mesh being edited (or the one selected object). */
@@ -85,6 +86,10 @@ export type SceneRoomHooks = {
     bumpyPixels: number;
     running: boolean;
   } | null>;
+  /** The id of the scene that is open (the online tests build the address of the shared scene from it). */
+  activeSceneId: () => string;
+  /** The names and colours of the objects in the open scene, by name (to compare two windows). */
+  sceneSummary: () => Record<string, { color: string; position: number[] }>;
   /** Sets the colour of the selected object (a hex colour). */
   setColor: (hex: string) => void;
   /** Sets the position, rotation (degrees) and scale of the selected object. */
@@ -296,6 +301,14 @@ export function installTestHooks(): () => void {
         selected: selected.length,
       };
     },
+    activeSceneId: () => useProjectStore.getState().activeSceneId,
+    sceneSummary: () =>
+      Object.fromEntries(
+        Object.values(useSceneStore.getState().scene.nodes).map((node) => [
+          node.name,
+          { color: node.color, position: node.transform.position },
+        ]),
+      ),
     setColor(hex) {
       const { selectedIds, setNodeColor } = useSceneStore.getState();
       const id = useEditStore.getState().nodeId ?? selectedIds[0];

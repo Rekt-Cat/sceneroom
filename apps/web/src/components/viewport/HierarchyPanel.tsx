@@ -11,6 +11,8 @@ import {
   type TreeRow,
 } from "@sceneroom/shared";
 import { useContextMenuStore } from "@/store/contextMenuStore";
+import { useCollabStore } from "@/collab/collabStore";
+import { EDIT_MODE_VERB } from "@/collab/editLocks";
 import { useLayoutStore } from "@/store/layoutStore";
 import { useSceneStore } from "@/store/sceneStore";
 import AddMenu from "./AddMenu";
@@ -357,6 +359,16 @@ function HierarchyRow({
   const setNodesLocked = useSceneStore((state) => state.setNodesLocked);
   const openContextMenu = useContextMenuStore((state) => state.open);
   const { node, depth, hasChildren, expanded } = row;
+  // Online: someone else is editing, painting or baking this object right now
+  const heldBy = useCollabStore((state) => state.locks[node.id]);
+  // ... someone has this object selected (selection lock), or something inside it or around it
+  const holder = useCollabStore((state) => state.holds[node.id]);
+  const blockedBy = useCollabStore((state) => state.blocked[node.id]);
+  // ... and who has selected it (a small circle in their colour)
+  const people = useCollabStore((state) => state.people);
+  const selectedBy = people.filter((person) =>
+    person.selection.includes(node.id),
+  );
 
   const beingDragged = drag?.ids.includes(node.id) ?? false;
   // The part of this row the pointer is over while dragging: the middle ("into"), or an edge ("before" / "after")
@@ -438,11 +450,60 @@ function HierarchyRow({
           <span
             className={`min-w-0 flex-1 truncate ${
               node.visible ? "" : "text-ed-text-3 italic"
-            }`}
+            } ${blockedBy ? "opacity-60" : ""}`}
           >
             {node.name}
           </span>
         </button>
+
+        {selectedBy.map((person) => (
+          <span
+            key={person.clientId}
+            role="img"
+            aria-label={`${person.name} has selected ${node.name}`}
+            title={`${person.name} has selected this`}
+            data-testid="selected-by"
+            style={{ backgroundColor: person.color }}
+            className="size-2 shrink-0 rounded-full"
+          />
+        ))}
+
+        {holder ? (
+          <span
+            role="img"
+            aria-label={`${holder.name} is working on ${node.name}`}
+            title={`${holder.name} is working on this object right now`}
+            data-testid="held-by"
+            style={{ backgroundColor: holder.color }}
+            className="shrink-0 truncate rounded-full px-1.5 text-[10px] font-medium text-[#13202a]"
+          >
+            {holder.name}
+          </span>
+        ) : (
+          blockedBy && (
+            <span
+              role="img"
+              aria-label={`Locked because ${blockedBy.name} is working on something inside it or around it`}
+              title={`Locked because ${blockedBy.name} is working on something inside it or around it`}
+              data-testid="blocked-by"
+              className="grid size-[26px] shrink-0 place-items-center text-ed-text-3"
+            >
+              <Icon name="lock" />
+            </span>
+          )
+        )}
+
+        {heldBy && (
+          <span
+            role="img"
+            aria-label={`${heldBy.name} is ${EDIT_MODE_VERB[heldBy.mode]} ${node.name}`}
+            title={`${heldBy.name} is ${EDIT_MODE_VERB[heldBy.mode]} this object right now`}
+            data-testid="edit-lock"
+            className="shrink-0 truncate rounded-full bg-ed-select/20 px-1.5 text-[10px] text-ed-select"
+          >
+            {heldBy.name}
+          </span>
+        )}
 
         {lockedByParent ? (
           <span

@@ -1,4 +1,6 @@
 import { isEffectivelyLocked, supportsModifiers } from "@sceneroom/shared";
+import { useCollabStore } from "@/collab/collabStore";
+import { editBlockedMessage } from "@/collab/editLocks";
 import { bakeNodeToMesh } from "@/mesh/bakeMesh";
 import { useEditStore } from "@/store/editStore";
 import { useImportStore } from "@/store/importStore";
@@ -22,6 +24,16 @@ export async function startEditing(nodeId: string): Promise<boolean> {
   }
   if (isEffectivelyLocked(store.scene, nodeId)) {
     say(`"${node.name}" is locked. Unlock it to edit its points.`);
+    return false;
+  }
+  // Online: someone else may be editing, painting or baking this object right now
+  const taken = editBlockedMessage(
+    useCollabStore.getState(),
+    nodeId,
+    node.name,
+  );
+  if (taken) {
+    say(taken);
     return false;
   }
   if (node.kind === "mesh" && node.modifiers.some((m) => m.enabled)) {

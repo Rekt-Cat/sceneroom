@@ -1,0 +1,17 @@
+# What the Docker build must not copy: dependencies (rebuilt inside), build output, secrets, git history and the web app
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.github
+docs
+apps/web
+packages/db
+**/test-results
+**/playwright-report
+**/*.log
+**/data
