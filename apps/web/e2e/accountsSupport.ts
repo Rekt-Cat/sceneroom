@@ -35,9 +35,11 @@ export function setUpAccountTests(): void {
     );
     await cleanAccounts();
   });
-  test.afterEach(async () => {
+  // Playwright runs this after a skipped test too. A skipped test made nothing, and where accounts are off (CI) there is no
+  // database to clean: connecting to it would turn the skip into a failure.
+  test.afterEach(async ({}, testInfo) => {
     await Promise.all(opened.splice(0).map((context) => context.close()));
-    await cleanAccounts();
+    if (testInfo.status !== "skipped") await cleanAccounts();
   });
 }
 
