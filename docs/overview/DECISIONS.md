@@ -1222,3 +1222,9 @@ Also learned: a test that clicks a button before the last change was stored race
 - **DNS:** the owner's router and ISP DNS could not resolve Neon's host names (public DNS could), so the Mac's DNS servers were set to `1.1.1.1` and `8.8.8.8`. This only affected commands run from the owner's computer; Render and Vercel are not affected. Recorded in `SETUP-DEPLOYMENT.md`.
 - **A `pg` warning to remember:** `pg` 8 treats `sslmode=require` as `verify-full` (stricter) and warns that pg 9 will change it to the standard meaning; to keep today's strictness after an upgrade, check the `pg` release notes before moving to version 9.
 - **Not yet done on Neon:** nothing else; the Neon free plan suspends compute after 5 idle minutes, so the first request after a pause is a little slower.
+
+## 2026-11-25: The build generates the Prisma client (Vercel deploy failure)
+
+- **What failed:** a Vercel deployment stopped with `Module not found: Can't resolve './generated/client'`. Vercel restored its cache, `pnpm install` answered "already up to date" in 20 ms and so ran no `postinstall`, and the generated client (git-ignored) was not there. The deployment before it had passed because that one still ran the install scripts.
+- **Fix:** `packages/db` has a `build` script (`prisma generate`), which Turborepo runs before the web build (`dependsOn: ["^build"]`). `packages/db/turbo.json` declares `src/generated/**` as its output, so a cached run puts the files back. `postinstall` stays for fresh clones and tests.
+- **Checked:** reproduced the same three errors in a fresh clone (generated files removed, install answering "already up to date"); with the fix the build passes, both on a cache miss and on a cache hit with the files removed first.
