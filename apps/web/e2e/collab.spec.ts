@@ -46,7 +46,11 @@ const summary = (page: Page) =>
   page.evaluate(() => window.__sceneroom!.sceneSummary());
 
 async function waitOnline(page: Page): Promise<void> {
-  await expect(page.getByTestId("collab-status")).toHaveText("Online");
+  // Longer than usual: a freshly opened page has to load the editor first, and CI draws the 3D views without a
+  // graphics card, so with several windows open this can take well over 15 seconds
+  await expect(page.getByTestId("collab-status")).toHaveText("Online", {
+    timeout: 45_000,
+  });
 }
 
 /** Window A makes a project and goes online; returns what window B needs to join it. */
@@ -453,6 +457,7 @@ test("Share: a view-only link shows the scene, and changes are put back", async 
 test("Share: only the person who started sharing can make links, and cancelling all links disconnects everyone", async ({
   browser,
 }) => {
+  test.setTimeout(150_000); // four windows, one after another
   const alice = await person(browser);
   const bob = await person(browser);
   await newProject(alice);
@@ -485,7 +490,9 @@ test("Share: only the person who started sharing can make links, and cancelling 
     "Link not accepted",
   );
 
-  // A new link works
+  // A new link works. The windows that are done are closed first: each draws a 3D view and slows the others down
+  await bob.context().close();
+  await late.context().close();
   const newLink = await makeLink(alice);
   const carol = await person(browser);
   await carol.goto(newLink);
