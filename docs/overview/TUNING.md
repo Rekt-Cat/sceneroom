@@ -799,3 +799,9 @@ value and what it does.
 | `S3_*` settings      | `apps/collab-server/.env` (see `.env.example`) | not set   | Where the big files go (a bucket). Not set = the folder `FILES_DIR`.                                                  |
 | `LINK_SHARING`       | `apps/collab-server/.env`                      | `true`    | `false` switches the share-link routes off (needed on a host whose disk is lost at every restart).                    |
 | `totalsCacheMs`      | `apps/collab-server/src/s3FileStore.ts`        | 60 000 ms | How long a project's total file size is remembered before the bucket is listed again (a listing is a billed request). |
+
+## Other people's changes on screen
+
+| Setting    | Where                                | Our value | What it does                                                                                                                    |
+| ---------- | ------------------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `GLIDE_MS` | `apps/web/src/collab/remoteGlide.ts` | 250       | How long an object someone else moved takes to glide to its new place. 0 would make it jump; longer looks softer but lags more. |

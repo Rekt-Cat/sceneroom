@@ -1,6 +1,6 @@
 # Deployment (step M9): where each part runs, and what has to be decided
 
-Written 2026-11-24, updated 2026-11-25. Status: **prepared, not deployed.** The owner chose (2026-11-25): the collab server on **Render's
+Written 2026-11-24, updated 2026-11-25. Status: **deployed 2026-11-25** (web app on Vercel, collab server on Render, Neon, Backblaze B2); the checks by hand are still open. The story of the deployment: `DEPLOYMENT-EXPLAINED.md`. The owner chose (2026-11-25): the collab server on **Render's
 free web service**, the big files in **Backblaze B2**, and **open sign-in with GitHub**. The accounts to create, step by step:
 `docs/dev/SETUP-DEPLOYMENT.md`. The question about files ("an alternative, like AWS") is answered in
 section 4. What can be built and checked without accounts is done (section 2); what needs an account of the owner is in section 6.

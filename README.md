@@ -3,9 +3,9 @@
 A browser-based, real-time collaborative 3D scene editor, like Figma but for 3D environments.
 Several people open the same scene and edit it together, live.
 
-> **Status: in development.** The editor works fully on its own in the browser; the online part (sharing, accounts) runs
-> locally and is not deployed yet (that is the next big step). An early version of the editor is live at
-> https://sceneroom.vercel.app.
+> **Status: in development.** Live at https://sceneroom.vercel.app. The editor works fully on its own in the browser;
+> sharing and accounts use a free collaboration server that sleeps when idle, so the first connection after a pause can take
+> about a minute. How it is deployed: `docs/backend/DEPLOYMENT-EXPLAINED.md`.
 
 ## What works today
 

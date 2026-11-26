@@ -2181,8 +2181,13 @@
       </p>
     </section>
     <section class="panel" id="j10">
-      <h3>J. Deployment (step M9, prepared, not deployed)</h3>
-      <p>The plan is in <code>docs/backend/DEPLOYMENT.md</code>.</p>
+      <h3>J. Deployment (step M9, live since 25 Nov 2026)</h3>
+      <p>
+        How it was set up:
+        <a href="../backend/deployment-explained.html"
+          >deployment-explained.html</a
+        >.
+      </p>
       <ol class="steps">
         <li>
           <strong>Web app</strong> on Vercel (builds from GitHub).
@@ -2207,10 +2212,8 @@
           (<code>LINK_SHARING=false</code>); accounts are the way in.
         </li>
         <li>
-          <strong>Still open:</strong> an address, the limits (sizes, quotas,
-          rate limits), creating the accounts
-          (<code>docs/dev/SETUP-DEPLOYMENT.md</code>) and the two-device check
-          on a second computer.
+          <strong>Still open:</strong> the checks by hand on two devices, the
+          limits (sizes, quotas, rate limits) and a custom address (optional).
         </li>
       </ol>
     </section>
@@ -2568,10 +2571,7 @@
     <div>
       <h2><span class="dot pending"></span>Planned</h2>
       <ul>
-        <li>
-          M9: deployment itself (prepared: health route, Docker image, files in
-          a bucket); the limits; a two-device check
-        </li>
+        <li>M9: deployed; still to do: the two-device check and the limits</li>
         <li>
           Comments, sculpting, layers and ambient-occlusion baking (see
           <code>docs/overview/PLAN.md</code>)

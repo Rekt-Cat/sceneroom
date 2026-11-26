@@ -254,3 +254,8 @@ Why these and not the alternatives: `WHY-THESE-TOOLS.md`. Playwright is already 
 | Waking hint           | After 8 s of connecting the badge says "Waking the server…" (a free host takes up to a minute to wake)           | `apps/web/src/collab/slowConnection.ts`, `TopBar.tsx`           |
 
 - **`migrate:remote`** (`packages/db/scripts/migrate-remote.mjs`, 2026-11-25): builds the tables on a remote Postgres (Neon) from this computer; reads `DATABASE_URL` from the git-ignored `packages/db/.env.remote`, refuses a local or pooled address, shows the target without the password, then runs `prisma migrate deploy` and `migrate status`.
+
+## Other people's changes on screen (2026-11-26)
+
+- **Remote glide** (`apps/web/src/collab/remoteGlide.ts`, `RemoteGlide` in `PresenceLayer.tsx`): objects moved by someone else glide there over 250 ms using three.js `lerp` and quaternion `slerp` each frame (Unity comparison: `Vector3.Lerp` and `Quaternion.Slerp` in `Update`). No new library.
+- **Keep the old shape while loading** (`NodeGeometry` in `SceneNodes.tsx`, `useMapTexture`): the previous mesh or picture stays on screen until the new file is here.

@@ -331,3 +331,32 @@ describe("shareUnchanged", () => {
     expect(result.nodes["b"]!.name).toBe("Renamed");
   });
 });
+
+describe("shareUnchanged and the parts of a changed object", () => {
+  it("keeps the old object for every field that did not change, so nothing is built again for a move", () => {
+    const current = addNode(createEmptyScene(), createNode("a", "cube"));
+    const old = current.nodes["a"]!;
+    const incoming = structuredClone(
+      setTransform(current, "a", {
+        ...old.transform,
+        position: [4, 0, 0],
+      }),
+    );
+    const node = shareUnchanged(current, incoming).nodes["a"]!;
+    expect(node).not.toBe(old);
+    expect(node.transform.position).toEqual([4, 0, 0]);
+    expect(node.transform).not.toBe(old.transform);
+    expect(node.modifiers).toBe(old.modifiers);
+    expect(node.material).toBe(old.material);
+  });
+
+  it("a changed colour leaves the transform as the same object (so nothing glides)", () => {
+    const current = addNode(createEmptyScene(), createNode("a", "cube"));
+    const incoming = structuredClone(
+      updateNode(current, "a", { color: "#ff0000" }),
+    );
+    const node = shareUnchanged(current, incoming).nodes["a"]!;
+    expect(node.color).toBe("#ff0000");
+    expect(node.transform).toBe(current.nodes["a"]!.transform);
+  });
+});

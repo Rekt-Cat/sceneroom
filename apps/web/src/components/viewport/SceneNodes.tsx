@@ -50,27 +50,6 @@ function isLightKind(kind: string): kind is LightKind {
 }
 
 /**
- * The geometry of a shape: its plain form cut into segments, with the object's modifiers (bend, twist,
- * taper) applied. Rebuilt only when the kind, the segments or the modifiers change; the old one is freed.
- */
-export function ShapeGeometry({
-  kind,
-  segments,
-  modifiers,
-}: {
-  kind: PrimitiveKind;
-  segments: number;
-  modifiers: readonly Modifier[];
-}) {
-  const geometry = useMemo(
-    () => buildShapeGeometry(kind, segments, modifiers),
-    [kind, segments, modifiers],
-  );
-  useEffect(() => () => geometry.dispose(), [geometry]);
-  return <primitive object={geometry} attach="geometry" />;
-}
-
-/**
  * What an editable mesh shows while its data is still being read: one triangle with no area, so nothing is
  * drawn. An object must never be left with NO points: the selection outline works out smoothed normals for
  * the geometry it sits on and fails on an empty one, which crashed the whole 3D view. Shared by all meshes
@@ -88,21 +67,35 @@ const PLACEHOLDER_GEOMETRY = (() => {
   return geometry;
 })();
 
-/**
- * The geometry of an editable mesh: its stored points and triangles with the object's modifiers applied.
- * The stored data is read once (it never changes: an edit makes a new one). While it is being read the
- * object shows nothing; if it is missing or damaged a plain box stands in, and the Inspector says why.
- */
-export function MeshGeometry({
-  assetId,
-  modifiers,
-}: {
-  assetId: string | null;
-  modifiers: readonly Modifier[];
-}) {
-  const [data, setData] = useState<
-    { id: string; mesh: ShapeMesh } | { id: string; failed: true } | null
-  >(null);
+/** Marks a geometry as not being the object's real mesh (edit mode waits for the real one). */
+function markAsStandIn(geometry: BufferGeometry): void {
+  geometry.userData[PLACEHOLDER_FLAG] = true;
+}
+
+/** What a geometry is built from. `mesh: null` = a stored mesh that could not be read (a plain box stands in). */
+type GeometrySource =
+  | {
+      type: "shape";
+      kind: PrimitiveKind;
+      segments: number;
+      modifiers: readonly Modifier[];
+    }
+  | { type: "mesh"; mesh: ShapeMesh | null; modifiers: readonly Modifier[] };
+
+function sameSource(a: GeometrySource, b: GeometrySource | null): boolean {
+  if (!b || a.modifiers !== b.modifiers) return false;
+  if (a.type === "shape") {
+    return b.type === "shape" && a.kind === b.kind && a.segments === b.segments;
+  }
+  return b.type === "mesh" && a.mesh === b.mesh;
+}
+
+/** The stored data of a mesh: undefined while it is being read, null if it is missing or damaged. */
+function useStoredMesh(assetId: string | null): ShapeMesh | null | undefined {
+  const [data, setData] = useState<{
+    id: string;
+    mesh: ShapeMesh | null;
+  } | null>(null);
 
   useEffect(() => {
     if (!assetId) return;
@@ -113,29 +106,96 @@ export function MeshGeometry({
       })
       .catch((error: unknown) => {
         console.warn("Could not load a mesh:", error);
-        if (current) setData({ id: assetId, failed: true });
+        if (current) setData({ id: assetId, mesh: null });
       });
     return () => {
       current = false;
     };
   }, [assetId]);
 
-  // Only the data that belongs to the current id (the old one may still be in state for a moment)
-  const ready = data && data.id === assetId ? data : null;
+  if (!assetId) return undefined;
   // A mesh that is already in memory (just stored by an edit, or brought back by Undo or Redo) is shown in
-  // the same frame, so there is no moment with nothing drawn
-  const cached = assetId ? peekMeshData(assetId) : undefined;
-  const mesh = cached ?? (ready && "mesh" in ready ? ready.mesh : null);
-  const geometry = useMemo(
-    () => (mesh ? buildMeshGeometry(mesh, modifiers) : null),
-    [mesh, modifiers],
+  // the same frame. Otherwise only data that belongs to the current id counts (an old one may be in state)
+  return (
+    peekMeshData(assetId) ?? (data?.id === assetId ? data.mesh : undefined)
   );
+}
+
+/**
+ * The geometry of a shape or an editable mesh, with the object's modifiers applied. It is rebuilt only when what
+ * it is made from changes, and the old one is freed.
+ *
+ * While a new stored mesh is still being read, **what was shown before stays on screen**: in a shared project the
+ * new file comes from the server and can take seconds, and the object must not vanish meanwhile. It is marked as
+ * a stand-in then, so edit mode does not take it for the real mesh. With nothing shown before (an object that
+ * has just appeared), an invisible placeholder is used.
+ */
+function NodeGeometry({
+  kind,
+  assetId,
+  segments,
+  modifiers,
+}: {
+  kind: PrimitiveKind | "mesh";
+  assetId: string | null;
+  segments: number;
+  modifiers: readonly Modifier[];
+}) {
+  const stored = useStoredMesh(kind === "mesh" ? assetId : null);
+  const wanted: GeometrySource | null =
+    kind !== "mesh"
+      ? { type: "shape", kind, segments, modifiers }
+      : stored === undefined
+        ? null
+        : { type: "mesh", mesh: stored, modifiers };
+
+  // The last source that could be drawn (remembered during render, React's way to keep the previous value)
+  const [held, setHeld] = useState<GeometrySource | null>(wanted);
+  if (wanted && !sameSource(wanted, held)) setHeld(wanted);
+  const source = wanted ?? held;
+
+  const type = source?.type;
+  const shapeKind = source?.type === "shape" ? source.kind : null;
+  const shapeSegments = source?.type === "shape" ? source.segments : 0;
+  const mesh = source?.type === "mesh" ? source.mesh : null;
+  const sourceModifiers = source?.modifiers;
+  const geometry = useMemo(() => {
+    if (type === "shape" && shapeKind && sourceModifiers) {
+      return buildShapeGeometry(shapeKind, shapeSegments, sourceModifiers);
+    }
+    return mesh && sourceModifiers
+      ? buildMeshGeometry(mesh, sourceModifiers)
+      : null;
+  }, [type, shapeKind, shapeSegments, mesh, sourceModifiers]);
   useEffect(() => () => geometry?.dispose(), [geometry]);
 
+  const standIn = wanted === null;
+  useEffect(() => {
+    // Edit mode must not mistake the previous shape for the mesh that is still on its way
+    if (standIn && geometry) markAsStandIn(geometry);
+  }, [standIn, geometry]);
+
   if (geometry) return <primitive object={geometry} attach="geometry" />;
-  if (ready && "failed" in ready) return <boxGeometry args={[1, 1, 1]} />;
-  // While the data is being read: an invisible placeholder, never an object with no geometry at all
+  if (type === "mesh") return <boxGeometry args={[1, 1, 1]} />;
+  // Nothing to show yet: an invisible placeholder, never an object with no geometry at all
   return <primitive object={PLACEHOLDER_GEOMETRY} attach="geometry" />;
+}
+
+/** The geometry of a shape (see NodeGeometry). */
+export function ShapeGeometry(props: {
+  kind: PrimitiveKind;
+  segments: number;
+  modifiers: readonly Modifier[];
+}) {
+  return <NodeGeometry assetId={null} {...props} />;
+}
+
+/** The geometry of an editable mesh (see NodeGeometry). */
+export function MeshGeometry(props: {
+  assetId: string | null;
+  modifiers: readonly Modifier[];
+}) {
+  return <NodeGeometry kind="mesh" segments={1} {...props} />;
 }
 
 /**
@@ -352,15 +412,13 @@ function NodeMesh({
       onPointerMove={painting ? handlePaintMove : undefined}
       onPointerUp={painting ? handlePaintUp : undefined}
     >
-      {node.kind === "mesh" ? (
-        <MeshGeometry assetId={node.assetId} modifiers={node.modifiers} />
-      ) : (
-        <ShapeGeometry
-          kind={node.kind}
-          segments={node.segments}
-          modifiers={node.modifiers}
-        />
-      )}
+      {/* One component for shapes and meshes, so a shape turned into a mesh keeps showing until the mesh is here */}
+      <NodeGeometry
+        kind={node.kind}
+        assetId={node.assetId}
+        segments={node.segments}
+        modifiers={node.modifiers}
+      />
       <SurfaceMaterial
         color={node.color}
         material={material}

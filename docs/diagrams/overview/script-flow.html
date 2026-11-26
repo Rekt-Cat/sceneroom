@@ -2930,6 +2930,13 @@
                   lookups from node id to three.js object, and the normal camera
                 </td>
               </tr>
+              <tr>
+                <td><code>NodeGeometry (SceneNodes.tsx)</code></td>
+                <td>
+                  builds shapes and meshes; keeps the previous shape on screen
+                  while a new mesh file is still being read
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -3667,6 +3674,14 @@
                   after 8 s of connecting sets <code>slow</code>; the badge then
                   says 'Waking the server…' (a free host takes up to a minute to
                   wake)
+                </td>
+              </tr>
+              <tr>
+                <td><code>remoteGlide.ts planGlides / stepGlides</code></td>
+                <td>
+                  before someone else's change is shown, notes where moved
+                  objects are drawn; RemoteGlide (PresenceLayer) then moves them
+                  there over 250 ms, frame by frame
                 </td>
               </tr>
               <tr>

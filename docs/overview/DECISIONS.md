@@ -1228,3 +1228,25 @@ Also learned: a test that clicks a button before the last change was stored race
 - **What failed:** a Vercel deployment stopped with `Module not found: Can't resolve './generated/client'`. Vercel restored its cache, `pnpm install` answered "already up to date" in 20 ms and so ran no `postinstall`, and the generated client (git-ignored) was not there. The deployment before it had passed because that one still ran the install scripts.
 - **Fix:** `packages/db` has a `build` script (`prisma generate`), which Turborepo runs before the web build (`dependsOn: ["^build"]`). `packages/db/turbo.json` declares `src/generated/**` as its output, so a cached run puts the files back. `postinstall` stays for fresh clones and tests.
 - **Checked:** reproduced the same three errors in a fresh clone (generated files removed, install answering "already up to date"); with the fix the build passes, both on a cache miss and on a cache hit with the files removed first.
+
+## 2026-11-25: Deployed
+
+- **Live:** web app `https://sceneroom.vercel.app` (Vercel), collab server `https://sceneroom-collab.onrender.com` (Render free, from `render.yaml` by Blueprint, `main` branch), Neon (Singapore), Backblaze B2 (EU Central).
+- **Checked from outside:** collab server health, share routes off, files refused without a token, CORS only for the web app, WebSocket upgrade; its log shows Postgres, the bucket and link sharing off. Web app: accounts on (`/api/me` 401 signed out), GitHub sign-in with the live callback, a database query answered, the collab address built into the page.
+- **Learned:** `sync: false` in `render.yaml` works (Render asked for the values). GitHub allows several redirect addresses per OAuth app, so one app serves local and live. Vercel: `NEXT_PUBLIC_*` must be "Config", and needs a Production redeploy.
+- **Not checked yet:** a real sign-in, sharing and an invitation between two devices, an upload through the live server, wake-up time after sleep. Vercel functions run in `iad1` (US), far from the database.
+- **Security follow-up:** a bucket application key was shown in a chat; it must be replaced (the key reaches only that bucket).
+
+## 2026-11-25: Vercel functions moved to Singapore
+
+- The functions ran in the default US region (`iad1`) while the database is in Singapore, so every query crossed the world. The owner changed Settings, Functions, Function Region to `sin1` and redeployed.
+- **Measured from India, signed out, warm:** a request with one database query went from about 0.55 to 0.62 s to about 0.31 to 0.35 s; a static page takes about 0.23 to 0.28 s, so the database part is now well under 0.1 s. The first request after a pause was about 1.5 to 5 s before and 2.7 s in the one sample after. Signed-in requests ask several queries, so they gain more, but they were not measured.
+
+## 2026-11-26: Other people's changes: no vanishing, and smooth movement
+
+- **Reported:** while multiplayer worked, an object another person changed disappeared for a while on the other screen and came back with the change.
+- **Cause (reproduced):** a change that makes a new file (moving points in edit mode, painting, baking) arrives as a new file id; the receiver switched to it at once and drew nothing until the file had downloaded. With the receiver's downloads delayed by 2 s the object was gone for about 5 s (71 empty frames); locally files arrive at once, which hid it. A plain move or turn did not make the object vanish in tests (development and production builds, software renderer and the Mac's GPU).
+- **Fix:** the shape on screen stays until the new mesh has been read (`NodeGeometry` in `SceneNodes.tsx`, one component for shapes and meshes so a shape turned into a mesh also keeps showing); it is marked as a stand-in so edit mode waits for the real one. Painted pictures keep the previous one while a new one loads (`useMapTexture`). Still true: an object that has just appeared has nothing older to show.
+- **Also found and fixed:** every remote change rebuilt the object's shape (and would regrow a plant or character), even a move, because all its parts were new objects. `shareUnchanged` now keeps each unchanged field of a changed object.
+- **Smooth movement (asked by the owner):** when someone else moves, turns or resizes an object it glides there in 250 ms with an ease-out (`collab/remoteGlide.ts`, one step per frame, quaternion turn). The scene data is updated at once; only the picture glides. No glide for new objects, a new parent, or your own changes.
+- **Tests:** unit tests for the glide and the field sharing; two browser tests (the cube is drawn on the way and arrives exactly; the object stays on screen while a delayed file downloads).
