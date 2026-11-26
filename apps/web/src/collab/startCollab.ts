@@ -1,4 +1,5 @@
 import { getAssetStorage, setAssetStorage } from "@/assets/assetStorage";
+import { getMesh } from "@/components/viewport/meshRegistry";
 import { bytesForFile } from "@/assets/meshStorage";
 import { useBakeStore } from "@/store/bakeStore";
 import { useEditStore } from "@/store/editStore";
@@ -22,6 +23,7 @@ import { createSceneSession, type SceneSession } from "./collabSession";
 import { createFileClient } from "./fileClient";
 import { createFileUploader, type FileUploader } from "./fileUploader";
 import { OnlineAssetStorage } from "./onlineAssetStorage";
+import { clearGlides, planGlides } from "./remoteGlide";
 import { watchSlowConnection } from "./slowConnection";
 import { asTokenSource, type TokenSource } from "./tokenSource";
 
@@ -214,7 +216,11 @@ export function startCollab(options: {
       url: options.url,
       token,
       scene: useSceneStore.getState().scene,
-      applyRemote: (scene) => useSceneStore.getState().applyRemoteScene(scene),
+      applyRemote: (scene) => {
+        // Moved objects glide to their new place instead of jumping (remoteGlide.ts)
+        planGlides(useSceneStore.getState().scene, scene, getMesh);
+        useSceneStore.getState().applyRemoteScene(scene);
+      },
     });
     shareAwareness(session);
     requestUpload();
@@ -304,6 +310,7 @@ export function startCollab(options: {
     stopSlowWatch();
     stopHistoryWatch?.();
     releaseLocks();
+    clearGlides();
     uploader?.destroy();
     putStorageBack?.();
     session?.destroy();

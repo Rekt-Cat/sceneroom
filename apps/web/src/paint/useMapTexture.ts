@@ -6,7 +6,8 @@ import { cachedTexture, liveTextureFor, loadMapTexture } from "./paintSession";
 
 /**
  * The picture an object's surface shows in one slot: the live one while the object is being painted in that slot,
- * otherwise the stored picture (read once, then kept). Null while it loads, or when the object has none.
+ * otherwise the stored picture (read once, then kept). While a new picture loads, the previous one is returned;
+ * null before the first one has loaded, or when the object has none.
  */
 export function useMapTexture(
   nodeId: string,
@@ -31,7 +32,6 @@ export function useMapTexture(
   const live = liveTextureFor(nodeId, slot);
   if (live) return live;
   if (!mapId) return null;
-  return (
-    cachedTexture(mapId, slot) ?? (loaded?.id === mapId ? loaded.texture : null)
-  );
+  // While a new picture is being read (in a shared project it comes from the server), the one shown before stays
+  return cachedTexture(mapId, slot) ?? loaded?.texture ?? null;
 }

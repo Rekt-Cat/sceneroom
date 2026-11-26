@@ -18,6 +18,8 @@ import { sendCursor } from "@/collab/activePresence";
 import { useCollabStore } from "@/collab/collabStore";
 import type { Holder } from "@/collab/objectHolds";
 import type { Cursor } from "@/collab/presence";
+import { stepGlides } from "@/collab/remoteGlide";
+import { useSceneStore } from "@/store/sceneStore";
 import { getMesh, getRegisteredObjects } from "./meshRegistry";
 
 /** The pointer is sent to the others at most this often (ms). */
@@ -242,12 +244,21 @@ function CursorBroadcaster() {
   return null;
 }
 
+/** Objects other people moved glide to their new place (collab/remoteGlide.ts), one step each frame. */
+function RemoteGlide() {
+  useFrame(() =>
+    stepGlides((id) => useSceneStore.getState().scene.nodes[id], getMesh),
+  );
+  return null;
+}
+
 /** Other people in the 3D view: their selections and their pointers; and sending yours. Nothing when not online. */
 export default function PresenceLayer() {
   const active = useCollabStore((state) => state.active);
   if (!active) return null;
   return (
     <>
+      <RemoteGlide />
       <HeldObjects />
       <RemoteCursors />
       <CursorBroadcaster />

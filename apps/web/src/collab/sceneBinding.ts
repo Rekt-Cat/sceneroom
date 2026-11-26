@@ -6,6 +6,7 @@ import {
   readSceneFromDoc,
   writeSceneToDoc,
   type Scene,
+  type SceneNode,
   type SceneDocIssue,
 } from "@sceneroom/shared";
 
@@ -62,6 +63,20 @@ function hasBeenSeeded(doc: Y.Doc): boolean {
 }
 
 /**
+ * A changed object with every field that did not change taken from the old one. What the 3D view builds from a field
+ * (a shape from `modifiers`, a plant from `plant`, a character from `character`) is then not built again just
+ * because the object was moved by someone else.
+ */
+function shareFields(old: SceneNode, incoming: SceneNode): SceneNode {
+  const node: Record<string, unknown> = { ...incoming };
+  for (const key of Object.keys(node)) {
+    const before = (old as unknown as Record<string, unknown>)[key];
+    if (plainEqual(before, node[key])) node[key] = before;
+  }
+  return node as SceneNode;
+}
+
+/**
  * `incoming` with every part that is the same in `current` replaced by the one from `current`, so the editor
  * redraws only what changed (and `current` itself if nothing did).
  */
@@ -74,7 +89,7 @@ export function shareUnchanged(current: Scene, incoming: Scene): Scene {
     if (old && plainEqual(old, node)) {
       nodes[id] = old;
     } else {
-      nodes[id] = node;
+      nodes[id] = old ? shareFields(old, node) : node;
       nodesSame = false;
     }
   }

@@ -13,6 +13,7 @@ import {
   newProject,
   setColor,
   setTransform,
+  moveSelected,
 } from "./helpers";
 
 /** The address of a shared project: the project, the server and the link token (and the scene, for a new browser). */
@@ -560,4 +561,101 @@ test("a hold ends after 30 seconds without activity, and the holder is told", as
   // Bob can take it now
   await bob.getByRole("button", { name: "Cube", exact: true }).first().click();
   await expect(bob.getByRole("button", { name: /Edit points/ })).toBeVisible();
+});
+
+test("an object someone else moves glides to its new place instead of jumping", async ({
+  browser,
+}) => {
+  const alice = await person(browser);
+  const bob = await person(browser);
+  const { projectId, sceneId } = await startShared(alice);
+  await addShape(alice, "Cube");
+  await bob.goto(sharedAddress(projectId, "editor", sceneId));
+  await waitOnline(bob);
+  await expect
+    .poll(() => bob.evaluate(() => window.__sceneroom!.drawnPosition("Cube")))
+    .toEqual([0, 0.5, 0]);
+
+  // Bob records where the cube is drawn, frame by frame, while Alice moves it far away
+  const recording = bob.evaluate(async () => {
+    const seen: number[] = [];
+    const start = performance.now();
+    while (performance.now() - start < 4000) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      seen.push(window.__sceneroom!.drawnPosition("Cube")![0]!);
+      if (seen.at(-1) === 8) break;
+    }
+    return seen;
+  });
+  await setTransform(alice, { position: [8, 0.5, 0] });
+  const seen = await recording;
+  expect(seen.at(-1)).toBe(8);
+  // It was drawn on the way, and only ever forwards
+  expect(seen.some((x) => x > 0.5 && x < 7.5)).toBe(true);
+  expect(seen.every((x, i) => i === 0 || x >= seen[i - 1]! - 0.001)).toBe(true);
+});
+
+test("an object stays on screen while its new mesh is still being downloaded", async ({
+  browser,
+}) => {
+  const alice = await person(browser);
+  const bob = await person(browser);
+  const { projectId, sceneId } = await startShared(alice);
+  await addShape(alice, "Cube");
+  await alice.getByRole("button", { name: /Edit points/ }).click();
+  await alice.getByRole("button", { name: "Done", exact: true }).click();
+  await bob.goto(sharedAddress(projectId, "editor", sceneId));
+  await waitOnline(bob);
+  await bob.waitForTimeout(4000);
+  // From now on Bob's downloads are slow, as over a real network
+  await bob.context().route("**/files/**", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await route.continue();
+  });
+  // Bob counts the bright pixels in the middle of the 3D view in every frame
+  const recording = bob.evaluate(async () => {
+    const canvas = document.querySelector("canvas")!;
+    const video = document.createElement("video");
+    video.muted = true;
+    video.srcObject = canvas.captureStream();
+    await video.play();
+    const picture = document.createElement("canvas");
+    picture.width = 360;
+    picture.height = 220;
+    const context = picture.getContext("2d", { willReadFrequently: true })!;
+    const counts: number[] = [];
+    const start = performance.now();
+    while (performance.now() - start < 8000) {
+      await new Promise<void>((resolve) =>
+        video.requestVideoFrameCallback(() => resolve()),
+      );
+      context.drawImage(
+        video,
+        video.videoWidth * 0.3,
+        video.videoHeight * 0.15,
+        video.videoWidth * 0.4,
+        video.videoHeight * 0.65,
+        0,
+        0,
+        360,
+        220,
+      );
+      const data = context.getImageData(0, 0, 360, 220).data;
+      let bright = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        if (Math.max(data[i]!, data[i + 1]!, data[i + 2]!) > 95) bright++;
+      }
+      // The first second is the recorder starting up
+      if (performance.now() - start > 1000) counts.push(bright);
+    }
+    return counts;
+  });
+  await bob.waitForTimeout(1800);
+  await alice.getByRole("button", { name: /Edit points/ }).click();
+  await alice.keyboard.press("a");
+  await moveSelected(alice, [0.6, 0, 0]);
+  const counts = await recording;
+  const before = counts[0]!;
+  expect(before).toBeGreaterThan(1000);
+  expect(Math.min(...counts)).toBeGreaterThan(before * 0.4);
 });

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 470" width="960" height="470" role="img" aria-labelledby="t d" font-family="Inter, system-ui, sans-serif">
+  <title id="t">How another person's change appears on your screen</title>
+  <desc id="d">Top: a changed object keeps every unchanged part, so only what changed is rebuilt, and a moved object glides from where it is drawn to its new place in a quarter of a second. Bottom: when a change refers to a new file, the old shape or picture stays on screen until the new file has downloaded.</desc>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#13202a"/></marker></defs>
+  <rect width="960" height="470" fill="#f2f5f6"/>
+  <text x="32" y="38" font-size="22" font-weight="700" fill="#13202a">How another person's change appears on your screen</text>
+  <text x="32" y="60" font-size="13" fill="#55656f">Fixed and added 2026-11-26. The scene data changes at once; these rules are only about the picture.</text>
+  <text x="32" y="94" font-size="13" font-weight="700" fill="#0a6c8a">A MOVE, TURN OR RESIZE</text>
+  <rect x="32" y="104" width="270" height="110" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="44" y="126" font-size="13" font-weight="700" fill="#13202a">1. The change arrives</text>
+  <text x="44" y="146" font-size="12" fill="#13202a">Read from the shared document</text>
+  <text x="44" y="163" font-size="12" fill="#13202a">and checked. Every part that did</text>
+  <text x="44" y="180" font-size="12" fill="#13202a">not change is kept as it was,</text>
+  <text x="44" y="197" font-size="12" fill="#13202a">so the shape is not built again.</text>
+  <path d="M302 159 H340" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="342" y="104" width="270" height="110" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="354" y="126" font-size="13" font-weight="700" fill="#13202a">2. Note where it is drawn</text>
+  <text x="354" y="146" font-size="12" fill="#13202a">Just before showing the change,</text>
+  <text x="354" y="163" font-size="12" fill="#13202a">remember the object's place on</text>
+  <text x="354" y="180" font-size="12" fill="#13202a">screen (also half way through an</text>
+  <text x="354" y="197" font-size="12" fill="#13202a">earlier glide).</text>
+  <path d="M612 159 H650" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="652" y="104" width="276" height="110" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="664" y="126" font-size="13" font-weight="700" fill="#13202a">3. Glide there</text>
+  <text x="664" y="146" font-size="12" fill="#13202a">Each frame, part of the way,</text>
+  <text x="664" y="163" font-size="12" fill="#13202a">fast first and gently at the end:</text>
+  <text x="664" y="180" font-size="12" fill="#13202a">250 ms. Your own change or a new</text>
+  <text x="664" y="197" font-size="12" fill="#13202a">parent: no glide, it jumps.</text>
+  <text x="32" y="258" font-size="13" font-weight="700" fill="#0a6c8a">A CHANGE THAT MADE A NEW FILE (points moved, painted, baked)</text>
+  <rect x="32" y="268" width="270" height="110" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="44" y="290" font-size="13" font-weight="700" fill="#13202a">1. The scene names a new file</text>
+  <text x="44" y="310" font-size="12" fill="#13202a">The change is only a new id.</text>
+  <text x="44" y="327" font-size="12" fill="#13202a">The bytes are not here yet: they</text>
+  <text x="44" y="344" font-size="12" fill="#13202a">come from the server, which can</text>
+  <text x="44" y="361" font-size="12" fill="#13202a">take seconds.</text>
+  <path d="M302 323 H340" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="342" y="268" width="270" height="110" rx="12" fill="#fff8e6" stroke="#8a5a00" stroke-width="2"/>
+  <text x="354" y="290" font-size="13" font-weight="700" fill="#13202a">2. Keep showing the old one</text>
+  <text x="354" y="310" font-size="12" fill="#13202a">The shape (or picture) that was on</text>
+  <text x="354" y="327" font-size="12" fill="#13202a">screen stays. Edit mode treats it</text>
+  <text x="354" y="344" font-size="12" fill="#13202a">as a stand-in. Before this fix the</text>
+  <text x="354" y="361" font-size="12" fill="#13202a">object vanished here.</text>
+  <path d="M612 323 H650" stroke="#13202a" stroke-width="2.2" fill="none" marker-end="url(#a)"/>
+  <rect x="652" y="268" width="276" height="110" rx="12" fill="#fff" stroke="#13202a" stroke-width="2"/>
+  <text x="664" y="290" font-size="13" font-weight="700" fill="#13202a">3. Swap when it has arrived</text>
+  <text x="664" y="310" font-size="12" fill="#13202a">Downloaded, its fingerprint</text>
+  <text x="664" y="327" font-size="12" fill="#13202a">checked, then drawn in place of</text>
+  <text x="664" y="344" font-size="12" fill="#13202a">the old one.</text>
+  <rect x="32" y="396" width="896" height="52" rx="12" fill="#fff" stroke="#8a97a0" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="44" y="418" font-size="13" font-weight="700" fill="#13202a">Still true</text>
+  <text x="44" y="436" font-size="12" fill="#13202a">An object that has just appeared has nothing older to show, so a new mesh or model stays invisible (or a wireframe box) until its file is here.</text>
+</svg>

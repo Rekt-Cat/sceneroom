@@ -90,6 +90,8 @@ export type SceneRoomHooks = {
   activeSceneId: () => string;
   /** The names and colours of the objects in the open scene, by name (to compare two windows). */
   sceneSummary: () => Record<string, { color: string; position: number[] }>;
+  /** Where the 3D view draws an object right now (by name), which can differ from the scene data while it glides. */
+  drawnPosition: (name: string) => number[] | null;
   /** Sets the colour of the selected object (a hex colour). */
   setColor: (hex: string) => void;
   /** Sets the position, rotation (degrees) and scale of the selected object. */
@@ -302,6 +304,13 @@ export function installTestHooks(): () => void {
       };
     },
     activeSceneId: () => useProjectStore.getState().activeSceneId,
+    drawnPosition: (name) => {
+      const node = Object.values(useSceneStore.getState().scene.nodes).find(
+        (entry) => entry.name === name,
+      );
+      const object = node ? getMesh(node.id) : undefined;
+      return object ? object.position.toArray() : null;
+    },
     sceneSummary: () =>
       Object.fromEntries(
         Object.values(useSceneStore.getState().scene.nodes).map((node) => [
