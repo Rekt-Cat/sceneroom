@@ -1,0 +1,2463 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SceneRoom: going live, explained</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@500;600;700&display=swap"
+/>
+<style>
+  /* Layout concept: one whiteboard-style figure in two lanes, then a numbered walkthrough that matches it. */
+  :root {
+    --bg: #f2f5f6;
+    --surface: #ffffff;
+    --lane: #e9eef0;
+    --ink: #13202a;
+    --muted: #55656f;
+    --line: #c4d0d6;
+    --accent: #0a6c8a;
+    --on-accent: #ffffff;
+    --ok: #1c7a4b;
+    --ok-bg: #e0f2e8;
+    --pending: #8a5a00;
+    --pending-bg: #fbeed2;
+    --warn: #b3342c;
+    --font-head: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
+    --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1417;
+      --surface: #172026;
+      --lane: #121a1f;
+      --ink: #e5ecef;
+      --muted: #93a4ae;
+      --line: #2c3b44;
+      --accent: #5cc4e0;
+      --on-accent: #0e1417;
+      --ok: #5fd09a;
+      --ok-bg: #153227;
+      --pending: #e8b65c;
+      --pending-bg: #332a12;
+      --warn: #ff918a;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1417;
+    --surface: #172026;
+    --lane: #121a1f;
+    --ink: #e5ecef;
+    --muted: #93a4ae;
+    --line: #2c3b44;
+    --accent: #5cc4e0;
+    --on-accent: #0e1417;
+    --ok: #5fd09a;
+    --ok-bg: #153227;
+    --pending: #e8b65c;
+    --pending-bg: #332a12;
+    --warn: #ff918a;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    line-height: 1.5;
+    padding-block: 28px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  main {
+    max-width: 1040px;
+    margin-inline: auto;
+    display: grid;
+    gap: 26px;
+  }
+  h1 {
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: clamp(1.7rem, 4vw, 2.3rem);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h2 {
+    font-family: var(--font-head);
+    font-size: 1.25rem;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .lede {
+    margin: 6px 0 0;
+    color: var(--muted);
+    max-width: 62ch;
+    font-size: 1rem;
+  }
+  figure {
+    margin: 0;
+    display: grid;
+    gap: 10px;
+  }
+  .fig-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+  }
+  svg.diagram {
+    display: block;
+    min-width: 860px;
+    width: 100%;
+    height: auto;
+    color: var(--accent);
+  }
+  figcaption,
+  .hint {
+    color: var(--muted);
+    font-size: 0.9rem;
+    max-width: 78ch;
+    min-width: 0;
+    margin: 0;
+  }
+
+  /* diagram parts */
+  .lane {
+    fill: var(--lane);
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .lane-label {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.12em;
+    fill: var(--muted);
+  }
+  .box {
+    fill: var(--surface);
+    stroke: var(--line);
+    stroke-width: 1.5;
+  }
+  .box.ok {
+    stroke: var(--ok);
+  }
+  .box.pending {
+    stroke: var(--pending);
+    stroke-dasharray: 5 4;
+  }
+  .box.warn {
+    stroke: var(--warn);
+  }
+  .group {
+    fill: var(--surface);
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .t-title {
+    font: 600 13px var(--font-head);
+    fill: var(--ink);
+  }
+  .t-sub {
+    font: 400 11px var(--font-ui);
+    fill: var(--muted);
+  }
+  .t-mono {
+    font: 500 10.5px var(--font-mono);
+    fill: var(--ink);
+  }
+  .t-mono-sm {
+    font: 500 9.5px var(--font-mono);
+    fill: var(--muted);
+  }
+  .t-step {
+    font: 600 11px var(--font-head);
+    fill: var(--ink);
+  }
+  .arrow {
+    stroke: var(--accent);
+    stroke-width: 1.75;
+    fill: none;
+  }
+  .arrow-label {
+    font: 500 10.5px var(--font-ui);
+    fill: var(--accent);
+  }
+  .chev {
+    fill: var(--accent);
+  }
+  .pill-ok {
+    fill: var(--ok-bg);
+    stroke: var(--ok);
+    stroke-width: 1;
+  }
+  .pill-pending {
+    fill: var(--pending-bg);
+    stroke: var(--pending);
+    stroke-width: 1;
+  }
+  .pt-ok {
+    font: 600 10px var(--font-ui);
+    fill: var(--ok);
+  }
+  .pt-pending {
+    font: 600 10px var(--font-ui);
+    fill: var(--pending);
+  }
+  .note-warn {
+    font: 500 10.5px var(--font-ui);
+    fill: var(--warn);
+  }
+  .chip {
+    fill: var(--lane);
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .chip.pending {
+    fill: var(--pending-bg);
+    stroke: var(--pending);
+    stroke-dasharray: 4 3;
+  }
+  .badge {
+    fill: var(--accent);
+  }
+  .badge-t {
+    font: 700 10.5px var(--font-head);
+    fill: var(--on-accent);
+  }
+  .hit {
+    cursor: pointer;
+  }
+  .hit:hover > .box,
+  .hit:hover > .group {
+    stroke-width: 2.5;
+  }
+  .hit:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  /* walkthrough */
+  .walk {
+    display: grid;
+    gap: 14px;
+  }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 14px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 16px 14px;
+    min-width: 0;
+    scroll-margin-top: 20px;
+  }
+  .card.wide {
+    grid-column: 1 / -1;
+  }
+  .card.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  .card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .num {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--on-accent);
+    font: 700 13px var(--font-head);
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+  .card h3 {
+    font-family: var(--font-head);
+    font-size: 1.05rem;
+    margin: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .tag {
+    font: 600 11px var(--font-ui);
+    padding: 2px 9px;
+    border-radius: 999px;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+  .tag.ok {
+    color: var(--ok);
+    background: var(--ok-bg);
+    border-color: var(--ok);
+  }
+  .tag.pending {
+    color: var(--pending);
+    background: var(--pending-bg);
+    border-color: var(--pending);
+  }
+  dl {
+    margin: 0;
+    display: grid;
+    gap: 8px;
+  }
+  dt {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  dd {
+    margin: 0;
+    font-size: 0.92rem;
+    min-width: 0;
+  }
+  dd code,
+  li code,
+  .hint code {
+    font-family: var(--font-mono);
+    font-size: 0.84em;
+    background: var(--lane);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  ol.ci {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    gap: 8px 22px;
+    counter-reset: ci;
+  }
+  ol.ci li {
+    counter-increment: ci;
+    padding-left: 30px;
+    position: relative;
+    font-size: 0.92rem;
+    min-width: 0;
+  }
+  ol.ci li::before {
+    content: counter(ci);
+    position: absolute;
+    left: 0;
+    top: 1px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    font: 600 11px var(--font-head);
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+  }
+  ol.ci li.fail::before {
+    border-color: var(--warn);
+    color: var(--warn);
+  }
+  ol.ci strong {
+    font-family: var(--font-head);
+  }
+
+  a {
+    color: var(--accent);
+  }
+
+  /* deep dives */
+  .deep {
+    display: grid;
+    gap: 14px;
+  }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 16px;
+    min-width: 0;
+    display: grid;
+    gap: 12px;
+    scroll-margin-top: 20px;
+  }
+  .panel h3 {
+    font-family: var(--font-head);
+    font-size: 1.1rem;
+    margin: 0;
+  }
+  .panel h4 {
+    font: 600 0.95rem var(--font-head);
+    margin: 6px 0 0;
+  }
+  .panel p {
+    margin: 0;
+    font-size: 0.92rem;
+    max-width: 78ch;
+  }
+  .panel code,
+  .gloss code,
+  td code {
+    font-family: var(--font-mono);
+    font-size: 0.84em;
+    background: var(--lane);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  pre.code {
+    margin: 0;
+    padding: 10px 12px;
+    background: var(--lane);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font: 500 12px/1.55 var(--font-mono);
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--ink);
+  }
+  .ba {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    gap: 12px;
+  }
+  .ba > div {
+    min-width: 0;
+    display: grid;
+    gap: 5px;
+    align-content: start;
+  }
+  .ba-label {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .tbl-wrap {
+    overflow-x: auto;
+  }
+  table.cmp {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 680px;
+    font-size: 0.88rem;
+  }
+  table.cmp th,
+  table.cmp td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  table.cmp th {
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  ol.steps {
+    margin: 0;
+    padding-left: 1.3rem;
+    display: grid;
+    gap: 6px;
+    font-size: 0.92rem;
+  }
+  ol.steps li {
+    padding-left: 4px;
+    min-width: 0;
+  }
+  .gloss {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 12px 26px;
+  }
+  .gloss > div {
+    min-width: 0;
+  }
+  .gloss dt {
+    text-transform: none;
+    letter-spacing: 0;
+    font: 600 0.9rem var(--font-head);
+    color: var(--ink);
+  }
+  .gloss dd {
+    font-size: 0.88rem;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  /* status note */
+  .status {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px 28px;
+  }
+  .status h2 {
+    font-size: 0.95rem;
+    margin: 0 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: none;
+  }
+  .dot.ok {
+    background: var(--ok);
+  }
+  .dot.pending {
+    background: var(--pending);
+  }
+  .status ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+  .status li + li {
+    margin-top: 3px;
+  }
+  .status code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    color: var(--ink);
+  }
+  .foot {
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin: 0;
+  }
+
+  dd,
+  li,
+  p,
+  td,
+  dd code,
+  li code,
+  p code,
+  td code {
+    overflow-wrap: anywhere;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  table.cmp td:first-child {
+    font-weight: 600;
+  }
+  .big {
+    font-size: 1rem;
+    max-width: 72ch;
+  }
+</style>
+<main>
+  <header>
+    <h1>SceneRoom: going live, explained</h1>
+    <p class="lede">
+      What we set up on 24 and 25 November 2026 to put SceneRoom on the
+      internet, why each piece exists, what went wrong and how it was fixed.
+      Click any box in a picture to jump to its explanation.
+    </p>
+    <p class="big">
+      <strong>The one-sentence version:</strong> your editor already worked on
+      your own computer, where one machine played every role; going live means
+      giving each role to a computer on the internet and telling them how to
+      trust each other.
+    </p>
+  </header>
+  <figure id="live">
+    <h2>1. What is running now</h2>
+    <div class="fig-scroll">
+      <svg
+        class="diagram"
+        viewBox="0 0 980 466"
+        role="group"
+        aria-label="The browser talks to Vercel for pages and accounts and to Render for live editing and files. Vercel stores accounts in Neon; Render stores documents in Neon and files in Backblaze; sign-in goes through GitHub; Vercel can tell Render to disconnect someone."
+      >
+        <defs>
+          <marker
+            id="ah"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+          </marker>
+        </defs>
+        <rect class="lane" x="10" y="10" width="960" height="120" rx="14" />
+        <text class="lane-label" x="28" y="34">PEOPLE</text>
+        <rect class="lane" x="10" y="146" width="960" height="150" rx="14" />
+        <text class="lane-label" x="28" y="170">
+          PROGRAMS THAT RUN ON THE INTERNET
+        </text>
+        <rect class="lane" x="10" y="312" width="960" height="140" rx="14" />
+        <text class="lane-label" x="28" y="336">PLACES WHERE DATA IS KEPT</text>
+        <g
+          class="hit"
+          data-card="w-browser"
+          tabindex="0"
+          role="button"
+          aria-label="Your browser (and a friend&#x27;s): show explanation"
+        >
+          <rect class="box ok" x="330" y="40" width="320" height="76" rx="10" />
+          <text class="t-title" x="342" y="62">
+            Your browser (and a friend&#x27;s)
+          </text>
+          <text class="t-sub" x="342" y="82">
+            the whole 3D editor runs here;
+          </text>
+          <text class="t-sub" x="342" y="97">
+            it keeps its own copy of the work
+          </text>
+        </g>
+        <g
+          class="hit"
+          data-card="w-vercel"
+          tabindex="0"
+          role="button"
+          aria-label="Vercel: the web app: show explanation"
+        >
+          <rect class="box ok" x="40" y="176" width="270" height="96" rx="10" />
+          <text class="t-title" x="52" y="198">Vercel: the web app</text>
+          <text class="t-sub" x="52" y="218">sceneroom.vercel.app</text>
+          <text class="t-sub" x="52" y="233">
+            sends the pages; sign-in, projects,
+          </text>
+          <text class="t-sub" x="52" y="248">invitations, tokens</text>
+        </g>
+        <g
+          class="hit"
+          data-card="w-render"
+          tabindex="0"
+          role="button"
+          aria-label="Render: the collab server: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="380"
+            y="176"
+            width="270"
+            height="96"
+            rx="10"
+          />
+          <text class="t-title" x="392" y="198">Render: the collab server</text>
+          <text class="t-sub" x="392" y="218">
+            sceneroom-collab.onrender.com
+          </text>
+          <text class="t-sub" x="392" y="233">live editing, file checks;</text>
+          <text class="t-sub" x="392" y="248">
+            sleeps after 15 idle minutes
+          </text>
+        </g>
+        <g
+          class="hit"
+          data-card="w-github"
+          tabindex="0"
+          role="button"
+          aria-label="GitHub: show explanation"
+        >
+          <rect class="box" x="720" y="176" width="230" height="96" rx="10" />
+          <text class="t-title" x="732" y="198">GitHub</text>
+          <text class="t-sub" x="732" y="218">proves who you are</text>
+          <text class="t-sub" x="732" y="233">(an OAuth app)</text>
+          <text class="t-sub" x="732" y="248">also holds the code</text>
+        </g>
+        <g
+          class="hit"
+          data-card="w-neon"
+          tabindex="0"
+          role="button"
+          aria-label="Neon: Postgres (Singapore): show explanation"
+        >
+          <rect
+            class="box ok"
+            x="180"
+            y="342"
+            width="270"
+            height="92"
+            rx="10"
+          />
+          <text class="t-title" x="192" y="364">
+            Neon: Postgres (Singapore)
+          </text>
+          <text class="t-sub" x="192" y="384">users, sessions, projects,</text>
+          <text class="t-sub" x="192" y="399">members, invitations,</text>
+          <text class="t-sub" x="192" y="414">and the scene documents</text>
+        </g>
+        <g
+          class="hit"
+          data-card="w-b2"
+          tabindex="0"
+          role="button"
+          aria-label="Backblaze B2: the bucket: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="560"
+            y="342"
+            width="270"
+            height="92"
+            rx="10"
+          />
+          <text class="t-title" x="572" y="364">Backblaze B2: the bucket</text>
+          <text class="t-sub" x="572" y="384">big files: models, meshes,</text>
+          <text class="t-sub" x="572" y="399">pictures, named by their</text>
+          <text class="t-sub" x="572" y="414">fingerprint</text>
+        </g>
+        <path
+          class="arrow"
+          d="M400 116 V145 H303 V174"
+          marker-start="url(#ah)"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="295" y="139" text-anchor="end">
+          1. pages, sign-in, tokens (https)
+        </text>
+        <path
+          class="arrow"
+          d="M515 116 V174"
+          marker-start="url(#ah)"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="521" y="139" text-anchor="start">
+          2. live edits (wss), files (https)
+        </text>
+        <path class="arrow" d="M650 92 H835 V174" marker-end="url(#ah)" />
+        <text class="arrow-label" x="668" y="86" text-anchor="start">
+          approve sign-in
+        </text>
+        <path class="arrow" d="M290 272 V340" marker-end="url(#ah)" />
+        <text class="arrow-label" x="282" y="307" text-anchor="end">
+          accounts
+        </text>
+        <path class="arrow" d="M400 272 V305 H330 V340" marker-end="url(#ah)" />
+        <text class="arrow-label" x="338" y="300" text-anchor="start">
+          documents
+        </text>
+        <path
+          class="arrow"
+          d="M590 272 V305 H660 V340"
+          marker-start="url(#ah)"
+          marker-end="url(#ah)"
+        />
+        <text class="arrow-label" x="668" y="300" text-anchor="start">
+          files
+        </text>
+        <path
+          class="arrow"
+          d="M310 224 H378"
+          marker-end="url(#ah)"
+          stroke-dasharray="5 4"
+        />
+        <text class="arrow-label" x="344" y="216" text-anchor="middle">
+          remove
+        </text>
+      </svg>
+    </div>
+    <figcaption>
+      Solid boxes are running today. Click a box for what it is, why it exists
+      and what it costs. The dashed arrow is the one message the web app sends
+      to the collab server: disconnect a removed person.
+    </figcaption>
+  </figure>
+  <section class="walk">
+    <h2>The six pieces</h2>
+    <div class="cards">
+      <section class="card" id="w-browser">
+        <div class="card-head">
+          <h3>Your browser</h3>
+          <span class="tag ok">running</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              The editor itself. It draws the 3D view, keeps your project in the
+              browser's database, and keeps its own copy of a shared scene.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>
+              The game client: it can keep playing locally and sync when
+              connected.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="w-vercel">
+        <div class="card-head">
+          <h3>Vercel (web app)</h3>
+          <span class="tag ok">running</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              Hosts the Next.js app: the pages and the <code>/api</code> routes.
+              Each request starts a short function and ends.
+            </dd>
+          </div>
+          <div>
+            <dt>Why we need it</dt>
+            <dd>
+              Somebody has to send the editor to browsers and answer sign-in,
+              project and invitation requests.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>The web backend and download server of a live game.</dd>
+          </div>
+          <div>
+            <dt>Cost and limits</dt>
+            <dd>
+              Free Hobby plan, for non-commercial use. Its functions run in
+              Singapore (<code>sin1</code>), next to the database (changed on 25
+              Nov 2026 from the US default, which nearly doubled the time of a
+              database request).
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="w-render">
+        <div class="card-head">
+          <h3>Render (collab server)</h3>
+          <span class="tag ok">running</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              Runs our own program <code>apps/collab-server</code> in a Docker
+              container. It keeps connections open and relays edits.
+            </dd>
+          </div>
+          <div>
+            <dt>Why we need it</dt>
+            <dd>
+              Vercel's functions end after a request, so they cannot hold a live
+              connection.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>A dedicated game server that relays state between players.</dd>
+          </div>
+          <div>
+            <dt>Cost and limits</dt>
+            <dd>
+              Free. Sleeps after 15 idle minutes, wakes in up to about a minute,
+              and its disk is wiped at every restart. That is why nothing
+              important is stored on it.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="w-github">
+        <div class="card-head">
+          <h3>GitHub</h3>
+          <span class="tag ok">running</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              Two jobs: it stores the code, and it vouches for who a person is
+              (an OAuth app named SceneRoom).
+            </dd>
+          </div>
+          <div>
+            <dt>Why we need it</dt>
+            <dd>So we never handle anyone's password.</dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>
+              Signing in with Steam or Google Play instead of making your own
+              account system.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="w-neon">
+        <div class="card-head">
+          <h3>Neon (Postgres)</h3>
+          <span class="tag ok">running</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              A managed database in Singapore. Holds accounts and also the
+              shared scene documents.
+            </dd>
+          </div>
+          <div>
+            <dt>Why we need it</dt>
+            <dd>
+              Accounts need rules (who owns what, who may enter). The documents
+              need a place that survives the collab server's restarts.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>The player database of a live game.</dd>
+          </div>
+          <div>
+            <dt>Cost and limits</dt>
+            <dd>
+              Free: about 1 GB; the database pauses after 5 idle minutes, so the
+              first request after a pause is slower.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="w-b2">
+        <div class="card-head">
+          <h3>Backblaze B2 (bucket)</h3>
+          <span class="tag ok">running</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              Storage for files. A file is named by the SHA-256 fingerprint of
+              its bytes.
+            </dd>
+          </div>
+          <div>
+            <dt>Why we need it</dt>
+            <dd>
+              Models and pictures are big, and the collab server's disk is
+              wiped.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>The remote Addressables / asset bundle host.</dd>
+          </div>
+          <div>
+            <dt>Cost and limits</dt>
+            <dd>
+              10 GB free. The code speaks the S3 standard, so Cloudflare R2 or
+              AWS S3 would work by changing settings only.
+            </dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+  </section>
+  <figure id="journey">
+    <h2>2. The journey, in order</h2>
+    <div class="fig-scroll">
+      <svg
+        class="diagram"
+        viewBox="0 0 980 300"
+        role="group"
+        aria-label="Ten steps in order: prepare the code, Backblaze, Neon, fix CI, fix the Vercel build, merge to main, Render, GitHub app, Vercel settings, and checks by hand."
+      >
+        <defs>
+          <marker
+            id="ah"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+          </marker>
+        </defs>
+        <g
+          class="hit"
+          data-card="s1"
+          tabindex="0"
+          role="button"
+          aria-label="Prepare the code: show explanation"
+        >
+          <rect class="box ok" x="20" y="20" width="170" height="104" rx="10" />
+          <circle class="badge" cx="37" cy="38" r="10" />
+          <text class="badge-t" x="37" y="42" text-anchor="middle">1</text>
+          <text class="t-title" x="54" y="42">Prepare the code</text>
+          <text class="t-sub" x="32" y="62">Docker image, health check,</text>
+          <text class="t-sub" x="32" y="77">files in a bucket, link</text>
+          <text class="t-sub" x="32" y="92">sharing off, waking hint</text>
+        </g>
+        <g
+          class="hit"
+          data-card="s2"
+          tabindex="0"
+          role="button"
+          aria-label="Backblaze B2: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="213"
+            y="20"
+            width="170"
+            height="104"
+            rx="10"
+          />
+          <circle class="badge" cx="230" cy="38" r="10" />
+          <text class="badge-t" x="230" y="42" text-anchor="middle">2</text>
+          <text class="t-title" x="247" y="42">Backblaze B2</text>
+          <text class="t-sub" x="225" y="62">private bucket and a key</text>
+          <text class="t-sub" x="225" y="77">limited to it; proven with</text>
+          <text class="t-sub" x="225" y="92">check-files</text>
+        </g>
+        <g
+          class="hit"
+          data-card="s3"
+          tabindex="0"
+          role="button"
+          aria-label="Neon database: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="406"
+            y="20"
+            width="170"
+            height="104"
+            rx="10"
+          />
+          <circle class="badge" cx="423" cy="38" r="10" />
+          <text class="badge-t" x="423" y="42" text-anchor="middle">3</text>
+          <text class="t-title" x="440" y="42">Neon database</text>
+          <text class="t-sub" x="418" y="62">project in Singapore;</text>
+          <text class="t-sub" x="418" y="77">tables built from your</text>
+          <text class="t-sub" x="418" y="92">computer (DNS problem)</text>
+        </g>
+        <g
+          class="hit"
+          data-card="s4"
+          tabindex="0"
+          role="button"
+          aria-label="CI went red: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="599"
+            y="20"
+            width="170"
+            height="104"
+            rx="10"
+          />
+          <circle class="badge" cx="616" cy="38" r="10" />
+          <text class="badge-t" x="616" y="42" text-anchor="middle">4</text>
+          <text class="t-title" x="633" y="42">CI went red</text>
+          <text class="t-sub" x="611" y="62">browser tests failed:</text>
+          <text class="t-sub" x="611" y="77">cleanup used a database</text>
+          <text class="t-sub" x="611" y="92">that was not there</text>
+        </g>
+        <g
+          class="hit"
+          data-card="s5"
+          tabindex="0"
+          role="button"
+          aria-label="Vercel build failed: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="792"
+            y="20"
+            width="170"
+            height="104"
+            rx="10"
+          />
+          <circle class="badge" cx="809" cy="38" r="10" />
+          <text class="badge-t" x="809" y="42" text-anchor="middle">5</text>
+          <text class="t-title" x="826" y="42">Vercel build failed</text>
+          <text class="t-sub" x="804" y="62">cached install skipped</text>
+          <text class="t-sub" x="804" y="77">making the database</text>
+          <text class="t-sub" x="804" y="92">client</text>
+        </g>
+        <g
+          class="hit"
+          data-card="s6"
+          tabindex="0"
+          role="button"
+          aria-label="Merge to main: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="792"
+            y="180"
+            width="170"
+            height="104"
+            rx="10"
+          />
+          <circle class="badge" cx="809" cy="198" r="10" />
+          <text class="badge-t" x="809" y="202" text-anchor="middle">6</text>
+          <text class="t-title" x="826" y="202">Merge to main</text>
+          <text class="t-sub" x="804" y="222">pull request merged;</text>
+          <text class="t-sub" x="804" y="237">Vercel and Render</text>
+          <text class="t-sub" x="804" y="252">build from main</text>
+        </g>
+        <g
+          class="hit"
+          data-card="s7"
+          tabindex="0"
+          role="button"
+          aria-label="Render: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="599"
+            y="180"
+            width="170"
+            height="104"
+            rx="10"
+          />
+          <circle class="badge" cx="616" cy="198" r="10" />
+          <text class="badge-t" x="616" y="202" text-anchor="middle">7</text>
+          <text class="t-title" x="633" y="202">Render</text>
+          <text class="t-sub" x="611" y="222">Blueprint read render.yaml;</text>
+          <text class="t-sub" x="611" y="237">secrets typed in;</text>
+          <text class="t-sub" x="611" y="252">server live</text>
+        </g>
+        <g
+          class="hit"
+          data-card="s8"
+          tabindex="0"
+          role="button"
+          aria-label="GitHub app: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="406"
+            y="180"
+            width="170"
+            height="104"
+            rx="10"
+          />
+          <circle class="badge" cx="423" cy="198" r="10" />
+          <text class="badge-t" x="423" y="202" text-anchor="middle">8</text>
+          <text class="t-title" x="440" y="202">GitHub app</text>
+          <text class="t-sub" x="418" y="222">one app, two redirect</text>
+          <text class="t-sub" x="418" y="237">addresses: your computer</text>
+          <text class="t-sub" x="418" y="252">and the live site</text>
+        </g>
+        <g
+          class="hit"
+          data-card="s9"
+          tabindex="0"
+          role="button"
+          aria-label="Vercel settings: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="213"
+            y="180"
+            width="170"
+            height="104"
+            rx="10"
+          />
+          <circle class="badge" cx="230" cy="198" r="10" />
+          <text class="badge-t" x="230" y="202" text-anchor="middle">9</text>
+          <text class="t-title" x="247" y="202">Vercel settings</text>
+          <text class="t-sub" x="225" y="222">8 values; one must be</text>
+          <text class="t-sub" x="225" y="237">public; rebuild so it is</text>
+          <text class="t-sub" x="225" y="252">baked in</text>
+        </g>
+        <g
+          class="hit"
+          data-card="s10"
+          tabindex="0"
+          role="button"
+          aria-label="Checks by hand: show explanation"
+        >
+          <rect
+            class="box pending"
+            x="20"
+            y="180"
+            width="170"
+            height="104"
+            rx="10"
+          />
+          <circle class="badge" cx="37" cy="198" r="10" />
+          <text class="badge-t" x="37" y="202" text-anchor="middle">10</text>
+          <text class="t-title" x="54" y="202">Checks by hand</text>
+          <text class="t-sub" x="32" y="222">sign in, share, invite</text>
+          <text class="t-sub" x="32" y="237">on a second device,</text>
+          <text class="t-sub" x="32" y="252">upload a model</text>
+        </g>
+        <path class="arrow" d="M190 72 H210" marker-end="url(#ah)" />
+        <path class="arrow" d="M792 232 H772" marker-end="url(#ah)" />
+        <path class="arrow" d="M383 72 H403" marker-end="url(#ah)" />
+        <path class="arrow" d="M599 232 H579" marker-end="url(#ah)" />
+        <path class="arrow" d="M576 72 H596" marker-end="url(#ah)" />
+        <path class="arrow" d="M406 232 H386" marker-end="url(#ah)" />
+        <path class="arrow" d="M769 72 H789" marker-end="url(#ah)" />
+        <path class="arrow" d="M213 232 H193" marker-end="url(#ah)" />
+        <path class="arrow" d="M877 124 V177" marker-end="url(#ah)" />
+      </svg>
+    </div>
+    <figcaption>
+      Read it like a snake: left to right on top, then right to left below.
+      Green is done; the dashed box still needs you. Click a box for the full
+      story of that step.
+    </figcaption>
+  </figure>
+  <section class="walk">
+    <h2>Each step: what we did, what broke, how it was fixed</h2>
+    <div class="cards">
+      <section class="card" id="s1">
+        <div class="card-head">
+          <span class="num">1</span>
+          <h3>Prepare the code</h3>
+          <span class="tag ok">done</span>
+        </div>
+        <dl>
+          <div>
+            <dt>Why we need it</dt>
+            <dd>
+              A program that runs fine on your Mac needs extras to run on
+              someone else's computer.
+            </dd>
+          </div>
+          <div>
+            <dt>What we did</dt>
+            <dd>
+              A <code>Dockerfile</code> (the recipe for a sealed box holding the
+              server), a <code>/health</code> address the host can ask, file
+              storage in a bucket (<code>S3FileStore</code>), a switch to turn
+              off the old share links (<code>LINK_SHARING=false</code>), a
+              <em>Waking the server…</em> message, and <code>render.yaml</code>.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>Preparing a headless server build and its launch settings.</dd>
+          </div>
+          <div>
+            <dt>Why link sharing is off</dt>
+            <dd>
+              The old share links remember their owner in a small file on the
+              server's disk. A wiped disk would forget a cancellation, so a
+              cancelled link could work again. Accounts and invitations replace
+              it.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="s2">
+        <div class="card-head">
+          <span class="num">2</span>
+          <h3>Backblaze B2</h3>
+          <span class="tag ok">done</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What we did</dt>
+            <dd>
+              You made a private bucket <code>sceneroom-files</code> and a key
+              allowed to use only that bucket. <code>check-files</code> uploaded
+              a tiny file, read it back and confirmed all five checks.
+            </dd>
+          </div>
+          <div>
+            <dt>What went wrong</dt>
+            <dd>
+              Secret keys were shown in screenshots and in the chat. A secret
+              anyone has seen must be treated as public.
+            </dd>
+          </div>
+          <div>
+            <dt>Fix</dt>
+            <dd>
+              Replace the key: delete it, make a new one, and put it in Render
+              and in <code>apps/collab-server/.env</code>. The master key was
+              already replaced.
+              <strong>The bucket key still needs replacing.</strong>
+            </dd>
+          </div>
+          <div>
+            <dt>Lesson</dt>
+            <dd>
+              Crop or hide secrets before sharing a screen. Use a key that can
+              do only the one thing it is for.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="s3">
+        <div class="card-head">
+          <span class="num">3</span>
+          <h3>Neon database</h3>
+          <span class="tag ok">done</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What we did</dt>
+            <dd>
+              Created the project in Singapore, then built the tables from your
+              computer with
+              <code>pnpm --filter @sceneroom/db migrate:remote</code>.
+            </dd>
+          </div>
+          <div>
+            <dt>Two addresses</dt>
+            <dd>
+              <em>Direct</em> goes straight to the database (used by the collab
+              server and for building tables). <em>Pooled</em> goes through a
+              queue that shares connections (used by Vercel, which opens many
+              short ones).
+            </dd>
+          </div>
+          <div>
+            <dt>What went wrong</dt>
+            <dd>
+              Your router's DNS could not look up Neon's name, so the command
+              could not reach it.
+            </dd>
+          </div>
+          <div>
+            <dt>Fix</dt>
+            <dd>
+              Added the public DNS servers 1.1.1.1 and 8.8.8.8 on your Mac.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>
+              A migration is like a versioned upgrade script for save data.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="s4">
+        <div class="card-head">
+          <span class="num">4</span>
+          <h3>CI went red</h3>
+          <span class="tag ok">done</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              CI is GitHub running our checks on a clean computer for every pull
+              request.
+            </dd>
+          </div>
+          <div>
+            <dt>What went wrong</dt>
+            <dd>
+              Four account tests skip when sign-in is not set up, but their
+              cleanup step still ran and tried to reach a database that job does
+              not have.
+            </dd>
+          </div>
+          <div>
+            <dt>Fix</dt>
+            <dd>
+              The cleanup does nothing after a skipped test. Reproduced first on
+              a fresh copy, then checked both with and without a database.
+            </dd>
+          </div>
+          <div>
+            <dt>Lesson</dt>
+            <dd>
+              Test the empty computer case: your own machine has settings and a
+              database that CI does not.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="s5">
+        <div class="card-head">
+          <span class="num">5</span>
+          <h3>Vercel build failed</h3>
+          <span class="tag ok">done</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What went wrong</dt>
+            <dd>
+              <code>Module not found: ./generated/client</code>. Prisma writes
+              database code into a folder that is not in git. Vercel reused
+              cached packages, so the step that writes it never ran.
+            </dd>
+          </div>
+          <div>
+            <dt>Fix</dt>
+            <dd>
+              The database package now has a <code>build</code> step that
+              generates it, and Turborepo runs that before the web app is built.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>
+              A build that only works because the Library folder happened to
+              exist, and fails on a clean machine.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="s6">
+        <div class="card-head">
+          <span class="num">6</span>
+          <h3>Merge into main</h3>
+          <span class="tag ok">done</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What we did</dt>
+            <dd>
+              The pull request from <code>feature/collab-design</code> was
+              merged. <code>main</code> is the branch the live site and Render
+              build from.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>Promoting a tested branch to the release branch.</dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="s7">
+        <div class="card-head">
+          <span class="num">7</span>
+          <h3>Render</h3>
+          <span class="tag ok">done</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What we did</dt>
+            <dd>
+              <em>New, Blueprint</em> read <code>render.yaml</code> and created
+              the service; you typed the secret values. The log said: documents
+              in Postgres, files in the bucket, link sharing off.
+            </dd>
+          </div>
+          <div>
+            <dt>Checked from outside</dt>
+            <dd>
+              Health answers; share route off; a file request without a pass is
+              refused; only the web app's address may call it from a browser;
+              live connections are accepted.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="s8">
+        <div class="card-head">
+          <span class="num">8</span>
+          <h3>GitHub sign-in app</h3>
+          <span class="tag ok">done</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              An OAuth app has a Client ID (public name), a client secret (its
+              password) and the addresses GitHub may send people back to.
+            </dd>
+          </div>
+          <div>
+            <dt>What we did</dt>
+            <dd>
+              One app now has two redirect addresses: your computer and the live
+              site.
+            </dd>
+          </div>
+          <div>
+            <dt>Note</dt>
+            <dd>
+              An earlier instruction to make a second app was based on an old
+              one-address rule; GitHub now allows several.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="s9">
+        <div class="card-head">
+          <span class="num">9</span>
+          <h3>Vercel settings</h3>
+          <span class="tag ok">done</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What we did</dt>
+            <dd>
+              Eight environment variables, filled from
+              <code>apps/web/.env.vercel</code>.
+            </dd>
+          </div>
+          <div>
+            <dt>What went wrong</dt>
+            <dd>
+              Saving twice said the names already existed (they did, from the
+              first save). <code>NEXT_PUBLIC_COLLAB_URL</code> was refused as a
+              secret. After adding it, the site still behaved as before.
+            </dd>
+          </div>
+          <div>
+            <dt>Fix</dt>
+            <dd>
+              That one is added as <em>Config</em> (it is sent to every browser,
+              so it cannot be secret). Then redeploy Production without the
+              build cache: names starting <code>NEXT_PUBLIC_</code> are baked
+              into the page when it is built.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>
+              A value compiled into the player build, compared with one the
+              server reads while running.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="s10">
+        <div class="card-head">
+          <span class="num">10</span>
+          <h3>Checks by hand</h3>
+          <span class="tag pending">to do</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What we did</dt>
+            <dd>
+              Not done yet. Sign in on the live site; open a project, Share,
+              <em>Put online with my account</em>; make an invitation; open it
+              on a second device; move things in both; import a model on one and
+              see it on the other; wait 15 minutes and reopen.
+            </dd>
+          </div>
+          <div>
+            <dt>Why a person</dt>
+            <dd>
+              No program can approve the GitHub sign-in for you, and two real
+              devices are the only proof that networking works.
+            </dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+  </section>
+  <figure id="secrets">
+    <h2>3. Where every secret lives</h2>
+    <div class="fig-scroll">
+      <svg
+        class="diagram"
+        viewBox="0 0 980 382"
+        role="group"
+        aria-label="Vercel settings and Render settings each hold their own secrets; COLLAB_SECRET is the same in both; three git-ignored files on your computer hold local copies."
+      >
+        <defs>
+          <marker
+            id="ah"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+          </marker>
+        </defs>
+        <rect class="lane" x="10" y="10" width="960" height="360" rx="14" />
+        <text class="lane-label" x="28" y="34">
+          WHO HOLDS WHICH SECRET (values are only in these settings pages and in
+          git-ignored files)
+        </text>
+        <g
+          class="hit"
+          data-card="k-vercel"
+          tabindex="0"
+          role="button"
+          aria-label="Vercel settings: show explanation"
+        >
+          <rect class="box ok" x="30" y="52" width="280" height="150" rx="10" />
+          <text class="t-title" x="42" y="74">Vercel settings</text>
+          <text class="t-sub" x="42" y="94">DATABASE_URL (pooled)</text>
+          <text class="t-sub" x="42" y="109">BETTER_AUTH_SECRET</text>
+          <text class="t-sub" x="42" y="124">GITHUB_CLIENT_ID and SECRET</text>
+          <text class="t-sub" x="42" y="139">COLLAB_SECRET</text>
+          <text class="t-sub" x="42" y="154">
+            BETTER_AUTH_URL, COLLAB_ADMIN_URL
+          </text>
+          <text class="t-sub" x="42" y="169">
+            NEXT_PUBLIC_COLLAB_URL (public)
+          </text>
+        </g>
+        <g
+          class="hit"
+          data-card="k-render"
+          tabindex="0"
+          role="button"
+          aria-label="Render settings: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="670"
+            y="52"
+            width="280"
+            height="150"
+            rx="10"
+          />
+          <text class="t-title" x="682" y="74">Render settings</text>
+          <text class="t-sub" x="682" y="94">DATABASE_URL (direct)</text>
+          <text class="t-sub" x="682" y="109">COLLAB_SECRET</text>
+          <text class="t-sub" x="682" y="124">S3_ACCESS_KEY_ID and SECRET</text>
+          <text class="t-sub" x="682" y="139">S3_ENDPOINT, REGION, BUCKET</text>
+          <text class="t-sub" x="682" y="154">ALLOWED_ORIGINS</text>
+          <text class="t-sub" x="682" y="169">LINK_SHARING = false</text>
+        </g>
+        <g
+          class="hit"
+          data-card="k-collab"
+          tabindex="0"
+          role="button"
+          aria-label="COLLAB_SECRET: show explanation"
+        >
+          <rect
+            class="box warn"
+            x="370"
+            y="70"
+            width="240"
+            height="84"
+            rx="10"
+          />
+          <text class="t-title" x="382" y="92">COLLAB_SECRET</text>
+          <text class="t-sub" x="382" y="112">
+            the same value on both sides:
+          </text>
+          <text class="t-sub" x="382" y="127">
+            Vercel signs a pass with it,
+          </text>
+          <text class="t-sub" x="382" y="142">Render checks the pass</text>
+        </g>
+        <path
+          class="arrow"
+          d="M310 112 H368"
+          marker-start="url(#ah)"
+          marker-end="url(#ah)"
+        />
+        <path
+          class="arrow"
+          d="M610 112 H668"
+          marker-start="url(#ah)"
+          marker-end="url(#ah)"
+        />
+        <g
+          class="hit"
+          data-card="k-local"
+          tabindex="0"
+          role="button"
+          aria-label="On your computer: apps/web: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="30"
+            y="240"
+            width="280"
+            height="110"
+            rx="10"
+          />
+          <text class="t-title" x="42" y="262">On your computer: apps/web</text>
+          <text class="t-sub" x="42" y="282">
+            .env.local: your LOCAL settings
+          </text>
+          <text class="t-sub" x="42" y="297">
+            .env.vercel: copy used to fill
+          </text>
+          <text class="t-sub" x="42" y="312">Vercel (delete it when done)</text>
+          <text class="t-sub" x="42" y="327">git ignores both</text>
+        </g>
+        <g
+          class="hit"
+          data-card="k-local"
+          tabindex="0"
+          role="button"
+          aria-label="apps/collab-server/.env: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="350"
+            y="240"
+            width="280"
+            height="110"
+            rx="10"
+          />
+          <text class="t-title" x="362" y="262">apps/collab-server/.env</text>
+          <text class="t-sub" x="362" y="282">
+            local server settings and the
+          </text>
+          <text class="t-sub" x="362" y="297">B2 keys used by check-files</text>
+          <text class="t-sub" x="362" y="312">git ignores it</text>
+        </g>
+        <g
+          class="hit"
+          data-card="k-local"
+          tabindex="0"
+          role="button"
+          aria-label="packages/db/.env.remote: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="670"
+            y="240"
+            width="280"
+            height="110"
+            rx="10"
+          />
+          <text class="t-title" x="682" y="262">packages/db/.env.remote</text>
+          <text class="t-sub" x="682" y="282">the Neon addresses, used to</text>
+          <text class="t-sub" x="682" y="297">build the tables from here</text>
+          <text class="t-sub" x="682" y="312">git ignores it</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption>
+      The repository is public, so no secret is ever in a committed file.
+      <code>render.yaml</code> lists only the names.
+    </figcaption>
+  </figure>
+  <section class="walk">
+    <h2>The secrets</h2>
+    <div class="cards">
+      <section class="card" id="k-vercel">
+        <div class="card-head">
+          <h3>Vercel's secrets</h3>
+          <span class="tag ok">set</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              Read by the web app while it runs, except
+              <code>NEXT_PUBLIC_COLLAB_URL</code>, which is read when the site
+              is built and visible to visitors.
+            </dd>
+          </div>
+          <div>
+            <dt>If one is missing</dt>
+            <dd>
+              Accounts switch off: <code>/api/me</code> answers
+              <em>Accounts are not set up on this server</em>.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="k-render">
+        <div class="card-head">
+          <h3>Render's secrets</h3>
+          <span class="tag ok">set</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              Read by the collab server when it starts. Saving a change restarts
+              it.
+            </dd>
+          </div>
+          <div>
+            <dt>If the database one is missing</dt>
+            <dd>
+              The log names a <code>.sqlite</code> file instead of Postgres, and
+              documents would be lost at the next restart.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="k-collab">
+        <div class="card-head">
+          <h3>COLLAB_SECRET</h3>
+          <span class="tag ok">must match</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              A random 64-character password shared by the two servers. The web
+              app signs a pass (token) saying who you are, which project and
+              what you may do. The collab server recomputes the signature.
+            </dd>
+          </div>
+          <div>
+            <dt>In Unity terms</dt>
+            <dd>A signed session ticket the game server verifies.</dd>
+          </div>
+          <div>
+            <dt>If they differ</dt>
+            <dd>Every connection is refused.</dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="k-local">
+        <div class="card-head">
+          <h3>Files on your computer</h3>
+          <span class="tag ok">local</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              Copies for local use. Git ignores any file named
+              <code>.env…</code> except the examples.
+            </dd>
+          </div>
+          <div>
+            <dt>Tidy up</dt>
+            <dd>
+              Delete <code>apps/web/.env.vercel</code> now that Vercel has the
+              values. Keep a copy of the secrets in a password manager.
+            </dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+  </section>
+  <figure id="using">
+    <h2>4. What happens when someone uses it</h2>
+    <div class="fig-scroll">
+      <svg
+        class="diagram"
+        viewBox="0 0 980 650"
+        role="group"
+        aria-label="Three journeys between the browser, Vercel, GitHub, Render and the data stores: signing in, putting a project online, and sending a file."
+      >
+        <defs>
+          <marker
+            id="ah"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+          </marker>
+        </defs>
+        <rect class="box ok" x="50" y="12" width="120" height="28" rx="8" />
+        <text class="t-title" x="110" y="31" text-anchor="middle">Browser</text>
+        <path
+          d="M110 42 V636"
+          stroke="var(--line)"
+          stroke-width="1"
+          stroke-dasharray="3 5"
+          fill="none"
+        />
+        <rect class="box ok" x="280" y="12" width="120" height="28" rx="8" />
+        <text class="t-title" x="340" y="31" text-anchor="middle">Vercel</text>
+        <path
+          d="M340 42 V636"
+          stroke="var(--line)"
+          stroke-width="1"
+          stroke-dasharray="3 5"
+          fill="none"
+        />
+        <rect class="box ok" x="470" y="12" width="120" height="28" rx="8" />
+        <text class="t-title" x="530" y="31" text-anchor="middle">GitHub</text>
+        <path
+          d="M530 42 V636"
+          stroke="var(--line)"
+          stroke-width="1"
+          stroke-dasharray="3 5"
+          fill="none"
+        />
+        <rect class="box ok" x="640" y="12" width="120" height="28" rx="8" />
+        <text class="t-title" x="700" y="31" text-anchor="middle">Render</text>
+        <path
+          d="M700 42 V636"
+          stroke="var(--line)"
+          stroke-width="1"
+          stroke-dasharray="3 5"
+          fill="none"
+        />
+        <rect class="box ok" x="820" y="12" width="120" height="28" rx="8" />
+        <text class="t-title" x="880" y="31" text-anchor="middle">
+          Neon / B2
+        </text>
+        <path
+          d="M880 42 V636"
+          stroke="var(--line)"
+          stroke-width="1"
+          stroke-dasharray="3 5"
+          fill="none"
+        />
+        <text class="lane-label" x="14" y="70">A. SIGN IN</text>
+        <path class="arrow" d="M110 102 H336" marker-end="url(#ah)" />
+        <text class="arrow-label" x="118" y="96" text-anchor="start">
+          who am I? / Sign in with GitHub
+        </text>
+        <path class="arrow" d="M110 136 H526" marker-end="url(#ah)" />
+        <text class="arrow-label" x="118" y="130" text-anchor="start">
+          you approve
+        </text>
+        <path class="arrow" d="M530 170 H344" marker-end="url(#ah)" />
+        <text class="arrow-label" x="348" y="164" text-anchor="start">
+          a one-time code comes back
+        </text>
+        <path class="arrow" d="M340 204 H876" marker-end="url(#ah)" />
+        <text class="arrow-label" x="348" y="198" text-anchor="start">
+          your user and session are saved
+        </text>
+        <text class="lane-label" x="14" y="234">B. PUT A PROJECT ONLINE</text>
+        <path class="arrow" d="M110 266 H336" marker-end="url(#ah)" />
+        <text class="arrow-label" x="118" y="260" text-anchor="start">
+          Put online with my account
+        </text>
+        <path class="arrow" d="M340 300 H876" marker-end="url(#ah)" />
+        <text class="arrow-label" x="348" y="294" text-anchor="start">
+          project saved, you are owner
+        </text>
+        <path class="arrow" d="M110 334 H336" marker-end="url(#ah)" />
+        <text class="arrow-label" x="118" y="328" text-anchor="start">
+          give me a pass (token), 1 hour
+        </text>
+        <path class="arrow" d="M110 368 H696" marker-end="url(#ah)" />
+        <text class="arrow-label" x="118" y="362" text-anchor="start">
+          connect, showing the pass
+        </text>
+        <path class="arrow" d="M700 402 H876" marker-end="url(#ah)" />
+        <text class="arrow-label" x="708" y="396" text-anchor="start">
+          load or save the scene document
+        </text>
+        <text class="lane-label" x="14" y="432">C. A MODEL OR PICTURE</text>
+        <path class="arrow" d="M110 464 H696" marker-end="url(#ah)" />
+        <text class="arrow-label" x="118" y="458" text-anchor="start">
+          upload (pass, role, size and fingerprint checked)
+        </text>
+        <path class="arrow" d="M700 498 H876" marker-end="url(#ah)" />
+        <text class="arrow-label" x="708" y="492" text-anchor="start">
+          stored in the bucket
+        </text>
+        <path class="arrow" d="M110 532 H696" marker-end="url(#ah)" />
+        <text class="arrow-label" x="118" y="526" text-anchor="start">
+          a friend downloads it the same way
+        </text>
+      </svg>
+    </div>
+    <figcaption>
+      The browser never talks to the database or the bucket directly. Everything
+      goes through a server that checks who is asking.
+    </figcaption>
+  </figure>
+  <figure id="ship">
+    <h2>5. How a code change reaches the live site</h2>
+    <div class="fig-scroll">
+      <svg
+        class="diagram"
+        viewBox="0 0 980 292"
+        role="group"
+        aria-label="Commit and push, continuous integration on the pull request, merge into main, then Vercel builds the web app and Render builds the collab server; database migrations are run separately."
+      >
+        <defs>
+          <marker
+            id="ah"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+          </marker>
+        </defs>
+        <rect class="lane" x="10" y="10" width="960" height="270" rx="14" />
+        <text class="lane-label" x="28" y="34">
+          FROM YOUR COMPUTER TO THE LIVE SITE
+        </text>
+        <g
+          class="hit"
+          data-card="c-push"
+          tabindex="0"
+          role="button"
+          aria-label="Commit and push: show explanation"
+        >
+          <rect class="box ok" x="30" y="60" width="180" height="96" rx="10" />
+          <text class="t-title" x="42" y="82">Commit and push</text>
+          <text class="t-sub" x="42" y="102">Claude commits,</text>
+          <text class="t-sub" x="42" y="117">you push with</text>
+          <text class="t-sub" x="42" y="132">GitHub Desktop</text>
+        </g>
+        <g
+          class="hit"
+          data-card="c-ci"
+          tabindex="0"
+          role="button"
+          aria-label="Pull request: CI: show explanation"
+        >
+          <rect class="box ok" x="262" y="60" width="190" height="96" rx="10" />
+          <text class="t-title" x="274" y="82">Pull request: CI</text>
+          <text class="t-sub" x="274" y="102">verify: checks and tests</text>
+          <text class="t-sub" x="274" y="117">with a Postgres container</text>
+          <text class="t-sub" x="274" y="132">e2e: a real browser</text>
+        </g>
+        <g
+          class="hit"
+          data-card="c-merge"
+          tabindex="0"
+          role="button"
+          aria-label="Merge into main: show explanation"
+        >
+          <rect class="box ok" x="504" y="60" width="180" height="96" rx="10" />
+          <text class="t-title" x="516" y="82">Merge into main</text>
+          <text class="t-sub" x="516" y="102">you merge when</text>
+          <text class="t-sub" x="516" y="117">both jobs are green</text>
+        </g>
+        <g
+          class="hit"
+          data-card="c-vercel"
+          tabindex="0"
+          role="button"
+          aria-label="Vercel builds the web app: show explanation"
+        >
+          <rect class="box ok" x="736" y="44" width="214" height="84" rx="10" />
+          <text class="t-title" x="748" y="66">Vercel builds the web app</text>
+          <text class="t-sub" x="748" y="86">also builds a preview of</text>
+          <text class="t-sub" x="748" y="101">every pushed branch</text>
+        </g>
+        <g
+          class="hit"
+          data-card="c-render"
+          tabindex="0"
+          role="button"
+          aria-label="Render builds the server: show explanation"
+        >
+          <rect
+            class="box ok"
+            x="736"
+            y="150"
+            width="214"
+            height="84"
+            rx="10"
+          />
+          <text class="t-title" x="748" y="172">Render builds the server</text>
+          <text class="t-sub" x="748" y="192">from main, using</text>
+          <text class="t-sub" x="748" y="207">
+            render.yaml and the Dockerfile
+          </text>
+        </g>
+        <path class="arrow" d="M210 108 H260" marker-end="url(#ah)" />
+        <path class="arrow" d="M452 108 H502" marker-end="url(#ah)" />
+        <path class="arrow" d="M684 96 H734" marker-end="url(#ah)" />
+        <path class="arrow" d="M684 128 H708 V190 H734" marker-end="url(#ah)" />
+        <g
+          class="hit"
+          data-card="c-db"
+          tabindex="0"
+          role="button"
+          aria-label="Database changes are separate: show explanation"
+        >
+          <rect
+            class="box pending"
+            x="262"
+            y="186"
+            width="422"
+            height="70"
+            rx="10"
+          />
+          <text class="t-title" x="274" y="208">
+            Database changes are separate
+          </text>
+          <text class="t-sub" x="274" y="228">
+            a new migration is applied by hand:
+          </text>
+          <text class="t-sub" x="274" y="243">
+            pnpm --filter @sceneroom/db migrate:remote
+          </text>
+        </g>
+      </svg>
+    </div>
+    <figcaption>
+      A settings change on Vercel or Render needs a new deployment to take
+      effect. A database change needs the migration command.
+    </figcaption>
+  </figure>
+  <section class="walk">
+    <h2>The stages of a change</h2>
+    <div class="cards">
+      <section class="card" id="c-push">
+        <div class="card-head">
+          <h3>Commit and push</h3>
+          <span class="tag ok">routine</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>A commit saves a step of work; a push sends it to GitHub.</dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="c-ci">
+        <div class="card-head">
+          <h3>CI checks</h3>
+          <span class="tag ok">routine</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              <code>verify</code> checks formatting, lint, types, unit tests and
+              a build, with a Postgres container. <code>e2e</code> drives a real
+              browser.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="c-merge">
+        <div class="card-head">
+          <h3>Merge</h3>
+          <span class="tag ok">routine</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>Only when both CI jobs are green.</dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="c-vercel">
+        <div class="card-head">
+          <h3>Vercel</h3>
+          <span class="tag ok">automatic</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              Builds automatically. <em>Preview</em> builds are test copies of
+              branches; <em>Production</em> is sceneroom.vercel.app.
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="c-render">
+        <div class="card-head">
+          <h3>Render</h3>
+          <span class="tag ok">automatic</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              Rebuilds from <code>main</code> when it changes (the Blueprint is
+              synced).
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <section class="card" id="c-db">
+        <div class="card-head">
+          <h3>Database changes</h3>
+          <span class="tag pending">by hand</span>
+        </div>
+        <dl>
+          <div>
+            <dt>What it is</dt>
+            <dd>
+              Hosts do not change the database. After adding a migration run
+              <code>migrate:remote</code> before the code that needs it goes
+              live.
+            </dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+  </section>
+  <section class="deep">
+    <h2>Before and after</h2>
+    <section class="panel">
+      <div class="tbl-wrap">
+        <table class="cmp">
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>On your computer (development)</th>
+              <th>Live (production)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Web app</td>
+              <td>pnpm dev, localhost:3000</td>
+              <td>Vercel</td>
+            </tr>
+            <tr>
+              <td>Collab server</td>
+              <td>serve, 127.0.0.1:1234</td>
+              <td>Render (Docker)</td>
+            </tr>
+            <tr>
+              <td>Database</td>
+              <td>Postgres in Docker</td>
+              <td>Neon</td>
+            </tr>
+            <tr>
+              <td>Big files</td>
+              <td>
+                a folder (or the bucket, while the S3 lines are in the local
+                .env)
+              </td>
+              <td>Backblaze B2</td>
+            </tr>
+            <tr>
+              <td>Sign-in return address</td>
+              <td>localhost callback</td>
+              <td>vercel.app callback (same GitHub app)</td>
+            </tr>
+            <tr>
+              <td>Settings</td>
+              <td>.env files (git-ignored)</td>
+              <td>each host's settings page</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </section>
+  <section class="deep">
+    <h2>If something goes wrong</h2>
+    <section class="panel">
+      <div class="tbl-wrap">
+        <table class="cmp">
+          <thead>
+            <tr>
+              <th>You see</th>
+              <th>Likely cause</th>
+              <th>What to do</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>The page says it cannot reach ws://127.0.0.1:1234</td>
+              <td>
+                The collab server was not deployed, or the site was built
+                without its address
+              </td>
+              <td>Deploy on Render, set NEXT_PUBLIC_COLLAB_URL, redeploy</td>
+            </tr>
+            <tr>
+              <td>Accounts are not set up on this server</td>
+              <td>
+                A Vercel variable is missing or invalid, or the running build is
+                older than the settings
+              </td>
+              <td>Check the eight names are Production, redeploy Production</td>
+            </tr>
+            <tr>
+              <td>GitHub shows a redirect_uri error</td>
+              <td>The address is not listed in the OAuth app</td>
+              <td>Add the exact callback address to the app</td>
+            </tr>
+            <tr>
+              <td>Connection refused in the editor</td>
+              <td>
+                COLLAB_SECRET differs between Vercel and Render, or you are not
+                a member
+              </td>
+              <td>Set the same value on both; check the invitation</td>
+            </tr>
+            <tr>
+              <td>Waking the server…</td>
+              <td>The free server was asleep</td>
+              <td>Wait up to about a minute</td>
+            </tr>
+            <tr>
+              <td>Module not found ./generated/client in a build</td>
+              <td>The database client was not generated</td>
+              <td>Fixed: the build generates it</td>
+            </tr>
+            <tr>
+              <td>Can't reach database server from your computer</td>
+              <td>Your DNS cannot look up Neon</td>
+              <td>Use 1.1.1.1 and 8.8.8.8</td>
+            </tr>
+            <tr>
+              <td>A file does not appear for the other person</td>
+              <td>The bucket settings on Render are wrong</td>
+              <td>Read Render's log; run check-files with the same values</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </section>
+  <section class="deep">
+    <h2>Words</h2>
+    <section class="panel">
+      <dl class="gloss">
+        <div>
+          <dt>Deploy</dt>
+          <dd>
+            Put a program on a computer on the internet so others can use it.
+          </dd>
+        </div>
+        <div>
+          <dt>Host</dt>
+          <dd>The company whose computer runs it.</dd>
+        </div>
+        <div>
+          <dt>Environment variable</dt>
+          <dd>
+            A setting given to a program from outside its code, such as a
+            password or an address.
+          </dd>
+        </div>
+        <div>
+          <dt>Secret</dt>
+          <dd>
+            A setting that lets someone act as you. Never in git, chat or
+            screenshots.
+          </dd>
+        </div>
+        <div>
+          <dt>Build</dt>
+          <dd>Turning the code into the thing that runs.</dd>
+        </div>
+        <div>
+          <dt>Redeploy</dt>
+          <dd>Build and start again, needed after a settings change.</dd>
+        </div>
+        <div>
+          <dt>Docker image / container</dt>
+          <dd>
+            A recipe and the sealed box made from it, so the program runs the
+            same anywhere.
+          </dd>
+        </div>
+        <div>
+          <dt>Health check</dt>
+          <dd>An address the host asks to see whether the program is alive.</dd>
+        </div>
+        <div>
+          <dt>Bucket</dt>
+          <dd>A named space for files in object storage.</dd>
+        </div>
+        <div>
+          <dt>Migration</dt>
+          <dd>A saved change to the database's structure.</dd>
+        </div>
+        <div>
+          <dt>Pooled connection</dt>
+          <dd>Many requests sharing a few database connections.</dd>
+        </div>
+        <div>
+          <dt>OAuth</dt>
+          <dd>
+            Letting GitHub confirm who you are without giving us your password.
+          </dd>
+        </div>
+        <div>
+          <dt>Token</dt>
+          <dd>A signed pass: who you are, what you may open, until when.</dd>
+        </div>
+        <div>
+          <dt>CORS</dt>
+          <dd>A browser rule: a server lists which websites may call it.</dd>
+        </div>
+        <div>
+          <dt>WebSocket (wss)</dt>
+          <dd>
+            A connection that stays open both ways; wss is the encrypted kind.
+          </dd>
+        </div>
+        <div>
+          <dt>CI</dt>
+          <dd>Automatic checks run by GitHub on every pull request.</dd>
+        </div>
+        <div>
+          <dt>DNS</dt>
+          <dd>The internet's phone book: names to addresses.</dd>
+        </div>
+      </dl>
+    </section>
+  </section>
+  <section class="status" aria-label="Status">
+    <div>
+      <h2><span class="dot ok"></span>Done and checked (25 Nov 2026)</h2>
+      <ul>
+        <li>
+          Collab server live: health, refusals and live connections checked from
+          outside; its log shows Postgres and the bucket
+        </li>
+        <li>
+          Web app: accounts switched on, GitHub sign-in points to the live
+          callback, the database answers, the collab address is built in
+        </li>
+        <li>Bucket and database proven from your computer</li>
+      </ul>
+    </div>
+    <div>
+      <h2><span class="dot pending"></span>Still to do</h2>
+      <ul>
+        <li>
+          The checks by hand (step 10), including a file upload through the live
+          server
+        </li>
+        <li>Replace the Backblaze bucket key that was exposed</li>
+        <li>Delete <code>apps/web/.env.vercel</code></li>
+
+        <li>Hide the old share-link button where link sharing is off</li>
+        <li>Decide the limits before inviting strangers</li>
+      </ul>
+    </div>
+  </section>
+  <p class="foot">
+    Related: <code>docs/backend/DEPLOYMENT-EXPLAINED.md</code> (the same story
+    in text), <code>docs/dev/SETUP-DEPLOYMENT.md</code> (the steps to repeat
+    it), <code>docs/backend/DEPLOYMENT.md</code> (research and choices).
+  </p>
+</main>
+<script>
+  (function () {
+    var reduce =
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    function show(id) {
+      var card = document.getElementById(id);
+      if (!card) return;
+      var old = document.querySelectorAll(".card.active");
+      for (var i = 0; i < old.length; i++) old[i].classList.remove("active");
+      card.classList.add("active");
+      card.scrollIntoView({
+        behavior: reduce ? "auto" : "smooth",
+        block: "center",
+      });
+    }
+    var hits = document.querySelectorAll("[data-card]");
+    for (var i = 0; i < hits.length; i++) {
+      (function (el) {
+        el.addEventListener("click", function (e) {
+          e.stopPropagation();
+          show(el.getAttribute("data-card"));
+        });
+        el.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+            show(el.getAttribute("data-card"));
+          }
+        });
+      })(hits[i]);
+    }
+  })();
+</script>

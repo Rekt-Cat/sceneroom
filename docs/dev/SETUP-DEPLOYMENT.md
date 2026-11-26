@@ -55,17 +55,22 @@ files back: a folder is used when the S3 settings are not there.)
 
 **Done 2026-11-25:** project `sceneroom` in Singapore (AWS `ap-southeast-1`), the three migrations applied, the direct and the pooled address both tested with the drivers the app uses, and the collab server's document store saved and read a test row (about 0.6 s per new connection from India).
 
-## 3. A second GitHub OAuth app (production sign-in)
+## 3. GitHub sign-in for the live site
 
-1. GitHub, Settings, Developer settings, OAuth Apps, **New OAuth App**. Name `SceneRoom`.
-2. Homepage URL: your web app's address (Vercel gives `https://<name>.vercel.app`; you can decide it in step 5, so do this step
-   after it). Callback URL: `https://<name>.vercel.app/api/auth/callback/github`.
-3. Register, **Generate a new client secret**, copy the **Client ID** and the **secret** (shown once).
+GitHub allows several redirect addresses on one OAuth app (up to 10, seen 2026-11-25), so the app you made for local work can
+serve both:
+
+1. GitHub, Settings, Developer settings, OAuth Apps, your app, **Edit**.
+2. Homepage URL: `https://sceneroom.vercel.app`. Redirect URIs: add **both**
+   `https://sceneroom.vercel.app/api/auth/callback/github` and `http://localhost:3000/api/auth/callback/github` (**Add redirect
+   URI**). Leave wildcard matching and device flow off. **Update application**.
+3. Copy the **Client ID** and generate a **client secret** for the live site (shown once). Do not delete the older secret: your
+   computer uses it. (A separate app for the live site also works and keeps the two apart.)
 
 ## 4. Render (the collab server)
 
 1. Sign up at render.com with GitHub. (**Check** whether it asks for a card for a free web service: reports differ.)
-2. **New, Blueprint**, pick the `sceneroom` repository, branch `main` (or the branch that has `render.yaml` once it is merged).
+2. Top right, **+ New, Blueprint** (it is not one of the cards on the create page), pick the `sceneroom` repository, branch `main` (or the branch that has `render.yaml` once it is merged).
    Render reads `render.yaml` at the repository root. **Check** each field it shows against what you expect: plan Free, runtime
    Docker, health check `/health`.
 3. Render asks for the values marked `sync: false`. Enter:
@@ -87,7 +92,12 @@ files back: a folder is used when the S3 settings are not there.)
    - `COLLAB_SECRET`: the same value as on Render.
    - `COLLAB_ADMIN_URL`: the Render address (`https://sceneroom-collab-<something>.onrender.com`).
    - `NEXT_PUBLIC_COLLAB_URL`: the same address with `wss://` instead of `https://`.
-2. Deploy again (a change of settings needs a new deploy).
+2. To enter them at once, put the lines in a git-ignored file (for example `apps/web/.env.vercel`) and use **Import .env**, or
+   paste the whole file into the first Key box. Names starting `NEXT_PUBLIC_` must be saved as **Config** (they are sent to the
+   browser), not as Secret. Delete the file afterwards.
+3. **Redeploy the Production deployment** (Deployments, the Current one, Redeploy), without the build cache:
+   `NEXT_PUBLIC_*` values are baked in when the site is built.
+4. Optional: Settings, Functions, set the function region to Singapore, near the database.
 
 ## 6. The checks (together)
 
